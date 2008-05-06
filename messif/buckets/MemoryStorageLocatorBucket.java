@@ -1,0 +1,118 @@
+/*
+ * MemoryStorageLocatorBucket.java
+ *
+ */
+
+package messif.buckets;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import messif.objects.LocalAbstractObject;
+
+/**
+ * Extension of {@link MemoryStorageBucket} that supports fast object retrieval by locators.
+ *
+ * @author  xbatko
+ * @see MemoryStorageBucket
+ */
+public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
+    /** class serial id for serialization */
+    private static final long serialVersionUID = 1L;
+    
+    /** Lookup table for object locators */
+    protected transient Map<String, LocalAbstractObject> locatorMap = new HashMap<String, LocalAbstractObject>();
+
+    /****************** Constructors ******************/
+
+    /**
+     * Constructs a new MemoryStorageLocatorBucket instance
+     *
+     * @param capacity maximal capacity of the bucket - cannot be exceeded
+     * @param softCapacity maximal soft capacity of the bucket
+     * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
+     * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
+     */
+    protected MemoryStorageLocatorBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+    }
+
+    /******************     Serialization     **********************/
+    
+    /** Deserialization -- restore the set using the objects already read by the ancestor */
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        locatorMap = new HashMap<String, LocalAbstractObject>(objects.size());
+        for (LocalAbstractObject object : objects.values())
+            locatorMap.put(object.getLocatorURI(), object);
+    }
+    
+    /****************** Storing duplicates override ******************/
+
+    /**
+     * Stores an object in a physical storage.
+     * It should return OBJECT_INSERTED value if the object was successfuly inserted.
+     *
+     * @param object The new object to be inserted
+     * @return error code - for details, see documentation of {@link BucketErrorCode}
+     */
+    protected BucketErrorCode storeObject(LocalAbstractObject object) {
+        BucketErrorCode errCode = super.storeObject(object);
+        if (errCode.equals(BucketErrorCode.OBJECT_INSERTED) && object.getLocatorURI() != null)
+            locatorMap.put(object.getLocatorURI(), object);
+        return errCode;
+    }
+
+    /****************** Iterator object ******************/
+    
+    /** Internal class for iterator implementation */
+    protected static class MemoryStorageLocatorBucketIterator<T extends MemoryStorageLocatorBucket> extends MemoryStorageBucket.MemoryStorageBucketIterator<T> {
+        /**
+         * Creates a new instance of MemoryStorageLocatorBucketIterator with the MemoryStorageLocatorBucket.
+         * This constructor is intended to be called only from MemoryStorageLocatorBucket class.
+         * @param bucket actual instance of MemoryStorageLocatorBucket on which this iterator should work
+         */
+        protected MemoryStorageLocatorBucketIterator(T bucket) {
+           super(bucket);
+        }
+
+        /**
+         * Physically remove the object this iterator points at.
+         * Simply calls the hashtable iterator remove method.
+         */
+        protected void removeInternal() {
+            super.removeInternal();
+            if (currentObject.getLocatorURI() != null)
+                bucket.locatorMap.remove(currentObject.getLocatorURI());
+        }
+
+        /**
+         * Returns the first instance of object, that has one of the specified locators.
+         * The locators are checked one by one using hash table. The first locator that
+         * has an object associated is returned. The locators without an object associated
+         * are also removed from the set if <code>removeFound</code> is <tt>true</tt>.
+         *
+         * @param locatorURIs the set of locators that we are searching for
+         * @param removeFound if <tt>true</tt> the locators which were found are removed from the <tt>locatorURIs</tt> set, otherwise, <tt>locatorURIs</tt> is not touched
+         * @return the first instance of object, that has one of the specified locators
+         * @throws NoSuchElementException if there is no object with any of the specified locators
+         */
+        public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
+            Iterator<String> iterator = locatorURIs.iterator();
+            while (iterator.hasNext()) {
+                currentObject = bucket.locatorMap.get(iterator.next());
+                if (removeFound)
+                    iterator.remove();
+                if (currentObject != null)
+                    return currentObject;
+            }
+
+            throw new NoSuchElementException("There is no object with the specified locator");
+        }
+
+    }
+
+}
