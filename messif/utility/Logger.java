@@ -34,7 +34,11 @@ public class Logger extends java.util.logging.Logger {
         /** The regular expression is matched against the record's text (the message that is logged) */
         MESSAGE,
         /** The regular expression is matched against the name of the logger that was used to dispatch the log record */
-        LOGGER_NAME
+        LOGGER_NAME,
+        /** The regular expression is matched against the name of the class from which the log record was invoked */
+        CLASS_NAME,
+        /** The regular expression is matched against the name of the method that from which the log record was invoked */
+        METHOD_NAME
     };
     
     /**
@@ -59,6 +63,12 @@ public class Logger extends java.util.logging.Logger {
             switch (regexpAgainst) {
                 case LOGGER_NAME:
                     text = record.getLoggerName();
+                    break;
+                case CLASS_NAME:
+                    text = record.getSourceClassName();
+                    break;
+                case METHOD_NAME:
+                    text = record.getSourceMethodName();
                     break;
                 case MESSAGE:
                 default:

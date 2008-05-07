@@ -31,6 +31,20 @@ public abstract class Convert {
     
     /**
      * Converts a string into object of the specified type.
+     * <p>
+     * Currently supported types are:
+     * <ul>
+     *   <li>all primitive types (int, long, boolean, double, byte, float, short, char)</li>
+     *   <li>all object wrappers for primitive types</li>
+     *   <li>{@link String}</li>
+     *   <li>{@link Class}</li>
+     *   <li>{@link StreamGenericAbstractObjectIterator} - parameter represents the name of an opened stream from <code>objectStreams</code></li>
+     *   <li>{@link LocalAbstractObject} - parameter represents the name of an opened stream from <code>objectStreams</code>, the next object is acquired</li>
+     *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
+     *   <li>any class with a <code>valueOf(String <i>parameter</i>)</code> factory method, e.g., {@link messif.network.NetworkNode#valueOf}</li>
+     * </ul>
+     * </p>
+     * 
      * @param string the string value to be converted
      * @param type the class of the value
      * @param objectStreams map of openned streams for getting {@link messif.objects.LocalAbstractObject objects}

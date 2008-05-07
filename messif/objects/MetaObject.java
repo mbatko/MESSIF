@@ -299,6 +299,7 @@ public class MetaObject extends LocalAbstractObject {
      * of "copy" may depend on the class of the object.
      * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
      * @return a clone of this instance.
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
@@ -320,6 +321,7 @@ public class MetaObject extends LocalAbstractObject {
      *      <li><b>minMetaObject</b> a meta object containing the minimal values for all objects</li>
      *      <li><b>maxMetaObject</b> a meta object containing the maximal values for all objects</li></ul>
      * @return a randomly modified clone of this instance.
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         // call the SUPER.clone here

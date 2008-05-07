@@ -243,7 +243,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
             throw new IOException("Cannot reset this stream, file name not provided");
         
         // Try to reopen the file (throws IOException if file was not found)
-        BufferedReader newStream = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
+        BufferedReader newStream = new BufferedReader(new InputStreamReader(openFileInputStream(fileName)));
         
         // Reset current stream
         stream.close();

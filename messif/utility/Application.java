@@ -411,7 +411,31 @@ public class Application {
         }
     }
 
-    /** Temporary copy-paste implementation */
+    /**
+     * Executes a specified operation on current algorithm in a new thread (i.e., on the background).
+     * Operations allows querying and manipulating data stored by the algorithm.
+     * If no argument for operationBgExecute is provided, a list of supported operations
+     * is shown. In order to execute an operation, an operation instance must be created.
+     * Similarly to the {@link #algorithmStart}, the name of operation's class
+     * must be provided and all the additional arguments are passed to its constructor.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationBgExecute messif.operations.RangeQueryOperation objects 1.3
+     * </pre>
+     * </p>
+     * 
+     * <p>
+     * Note that the last operation is updated, however, the control is returned immediately.
+     * So if there is another operation executed meanwhile (either background or normal), the results
+     * of this operation will be replaced. Use {@link #operationWaitBg} method to wait for the operation
+     * to finish.
+     * </p>
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
     @ExecutableMethod(description = "execute on background specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationBgExecute(PrintStream out, String... args) {       
         // Get class from the first argument
@@ -456,8 +480,23 @@ public class Application {
         }
     }
 
+    /**
+     * Synchronize on all operations run on the background.
+     * After this method finishes, there are no running operations on background.
+     *  
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationWaitBg
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "wait for all background operations", arguments = {})
-    public boolean operationWaitBg(PrintStream out, String... args) throws AlgorithmMethodException {
+    public boolean operationWaitBg(PrintStream out, String... args) {
         try {
             algorithm.waitBackgroundExecuteOperation();
             if (bindOperationStatsRegexp != null)
@@ -465,14 +504,24 @@ public class Application {
             return true;
         } catch (Exception e) {
             log.severe(e);
+            out.println(e.toString());
             return false;
         }
     }
     
     /**
      * Executes the last operation once more.
-     * Note that the operation instance (including answer) remains the same.
-     * Statistics are reset.
+     * Note that the operation instance remains the same except for its answer, which
+     * might be reset, if <tt>true</tt> is passed as an argument. The default behavior
+     * is <em>not</em> to reset the answer.
+     * Statistics are always reset.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationExecuteAgain true
+     * </pre>
+     * </p>
      * 
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
@@ -513,12 +562,61 @@ public class Application {
         }
     }
 
+    /**
+     * Show information about the last executed operation.
+     * Specifically, the information about the operation created by last call to
+     * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
+     * the operation might be still running if the {@link #operationBgExecute} was
+     * used and thus the results might not be complete. Use {@link #operationWaitBg}
+     * to wait for background operations to finish.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationInfo
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
     @ExecutableMethod(description = "show information about the last executed operation", arguments = {})
     public boolean operationInfo(PrintStream out, String... args) {
         out.println(lastOperation);
         return true;
     }
 
+    /**
+     * Show the answer of the last executed query operation.
+     * Specifically, the information about the operation created by last call to
+     * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
+     * the operation might be still running if the {@link #operationBgExecute} was
+     * used and thus the results might not be complete. Use {@link #operationWaitBg}
+     * to wait for background operations to finish.
+     * <p>
+     * If the last operation was not {@link messif.operations.QueryOperation query} operation,
+     * this method will fail.
+     * </p>
+     * <p>
+     * Two optional arguments are accepted:
+     *   <ul>
+     *     <li>answer print type, which can be either Object, DistanceObject (default) or URI</li>
+     *     <li>object separator (defaults to newline)</li>
+     *   </ul>
+     * </p>
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationAnswer U ,
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */  
     @ExecutableMethod(description = "list objects with distances retrieved by the last executed operation", arguments = {"answer print type: Object, DistanceObject, URI", "object separator (not required)"})
     public boolean operationAnswer(PrintStream out, String... args) {
         if (lastOperation == null || !(lastOperation instanceof QueryOperation)) {
@@ -559,39 +657,87 @@ public class Application {
 
     /****************** Direct algoritm methods execution ******************/
 
-    @ExecutableMethod(description = "directly execute method on the running algorithm", arguments = {"method name", "arguments for the method ..."})
+    /**
+     * Directly execute a method of the running algorithm.
+     * The method name and its arguments must be provided.
+     * Only {@link messif.utility.Convert#stringToType convertible} types can
+     * be passed as arguments and if there are several methods with the same name,
+     * the first one that matches the number of arguments is selected.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; methodExecute mySpecialAlgorithmMethod 1 false string_string
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */ 
+    @ExecutableMethod(description = "directly execute a method of the running algorithm", arguments = {"method name", "arguments for the method ..."})
     public boolean methodExecute(PrintStream out, String... args) {
-        // Get executed method
-        for (Method method : algorithm.getClass().getMethods()) {
-            // Check method name
-            if (!method.getName().equals(args[1]))
-                continue;
-            // Check method argument count
-            Class<?>[] argTypes = method.getParameterTypes();
-            if (argTypes.length != args.length - 2)
-                if (argTypes.length == 0 || !argTypes[argTypes.length - 1].isArray() || argTypes.length > args.length - 1)
+        try {
+            // Get executed method
+            for (Method method : algorithm.getClass().getMethods()) {
+                // Check method name
+                if (!method.getName().equals(args[1]))
                     continue;
-            try {
+
+                // Check method argument count
+                Class<?>[] argTypes = method.getParameterTypes();
+                if (argTypes.length != args.length - 2)
+                    if (argTypes.length == 0 || !argTypes[argTypes.length - 1].isArray() || argTypes.length > args.length - 1)
+                        continue;
+
                 // Try to invoke the method
                 Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, 2, objectStreams));
                 if (!method.getReturnType().equals(void.class))
                     out.println(rtv);
                 return true;
-            } catch (Throwable e) {
-                while (e.getCause() != null)
-                    e = e.getCause();
-                out.println(e.toString());
-                return false;
             }
+
+            out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
+            return false;
+        } catch (RuntimeException e) {
+            log.severe(e);
+            out.println(e.toString());
+            return false;
+        } catch (InvocationTargetException e) {
+            Throwable ex = e.getCause();
+            if (ex instanceof AlgorithmMethodException)
+                ex = ex.getCause();
+            log.severe(ex);
+            out.println(ex.toString());
+            return false;
+        } catch (Exception e) {
+            log.severe(e);
+            out.println(e.toString());
+            return false;
         }
-        
-        out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
-        return false;
     }
 
 
     /****************** Statistics command functions ******************/
-    
+
+    /**
+     * Disable (or enable) gathering of statistics.
+     * If passed without parameters, statistics are disabled, so the other
+     * Application's statistic methods are useless.
+     * If <tt>false</tt> is passed as parameter, statistics are enabled again.
+     * By default, statistics are enabled when Application starts.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsDisable false
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */ 
     @ExecutableMethod(description = "enable/disable statistics - if disabled, all statistics are useless", arguments = { "false to enable statistics (not required)" })
     public boolean statisticsDisable(PrintStream out, String... args) {
         if (args.length <= 1 || Boolean.parseBoolean(args[1]))
@@ -600,6 +746,27 @@ public class Application {
         return true;
     }
 
+    /**
+     * Print all global statistics.
+     * Statistics are shown as <code>name: value</code>.
+     * <p>
+     * Two optional arguments are accepted:
+     *   <ul>
+     *     <li>regular expression applied on names as a filter</li>
+     *     <li>separator of statistics (defaults to newline)</li>
+     *   </ul>
+     * </p>
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* ,
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */ 
     @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsGlobal(PrintStream out, String... args) {
         if (args.length >= 3)
@@ -610,6 +777,21 @@ public class Application {
         return true;
     }
 
+    /**
+     * Reset all global statistics.
+     * An optional parameter is a regular expression applied on names as a filter.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsResetGlobal DistanceComputations
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "reset global statistics", arguments = { "statistic name regexp (not required)" })
     public boolean statisticsResetGlobal(PrintStream out, String... args) {
         if (args.length > 1)
@@ -618,6 +800,30 @@ public class Application {
         return true;
     }
 
+    /**
+     * Print statistics gathered by the last executed operation.
+     * Only the {@link messif.statistics.Statistics#bindTo bound} statistics are
+     * reported. Usually, algorithms bind the relevant statistics automatically, but
+     * it can be done explicitely using the {@link #statisticsSetAutoBinding} method.
+     * Statistics are shown as <code>name: value</code>.
+     * <p>
+     * Two optional arguments are accepted:
+     *   <ul>
+     *     <li>regular expression applied on names as a filter</li>
+     *     <li>separator of statistics (defaults to newline)</li>
+     *   </ul>
+     * </p>
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* ,
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */ 
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsLastOperation(PrintStream out, String... args) {
         if (args.length >= 3)
@@ -628,6 +834,22 @@ public class Application {
         return true;
     }
 
+    /**
+     * Regular expression on global statistics' names that are bound for each executed operation.
+     * A required argument sets the regular expression applied on names as a filter.
+     * If the passed argument is <tt>null</tt>, the autobinding is disabled.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsSetAutoBinding .*
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */ 
     @ExecutableMethod(description = "set auto binding operation statistics to global ones", arguments = { "statistic name regexp (if null, auto binding is disabled)" })
     public boolean statisticsSetAutoBinding(PrintStream out, String... args) {
         if (args.length >= 2)
@@ -765,7 +987,7 @@ public class Application {
         return true;
     }
 
-    @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE or LOGGER_NAME" })
+    @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME" })
     public boolean loggingFileAdd(PrintStream out, String... args) {
         try {
             Logger.addLogFile(

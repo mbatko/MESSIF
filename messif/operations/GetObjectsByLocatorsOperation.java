@@ -7,6 +7,7 @@
 package messif.operations;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -25,13 +26,13 @@ import messif.objects.MeasuredAbstractObjectList;
 public class GetObjectsByLocatorsOperation extends QueryOperation {
     
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 1L;    
+    private static final long serialVersionUID = 2L;    
 
     
     /****************** Query request attributes ******************/
 
     /** The locators of the desired objects */
-    public final Collection<String> locators;
+    public final Set<String> locators;
 
     /** The object to compute distances to; if <tt>null</tt>, UNKNOWN_DISTANCE will be used in answer */
     public final LocalAbstractObject queryObjectForDistances;
@@ -57,7 +58,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
-        this.locators = locators;
+        this.locators = (locators == null)?Collections.EMPTY_SET:new HashSet<String>(locators);
         this.queryObjectForDistances = queryObjectForDistances;
         this.requireFullObjects = requireFullObjects;
     }
@@ -73,9 +74,17 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
 
     /** Create a new instance of GetObjectsByLocatorsOperation with empty locators set. */
     public GetObjectsByLocatorsOperation() {
-        this.locators = new HashSet<String>();
-        this.queryObjectForDistances = null;
-        this.requireFullObjects = true;
+        this(null);
+    }
+
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with empty locators set.
+     * 
+     * @param queryObjectForDistances the query object to use for computing distances
+     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     */
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
+        this(null, queryObjectForDistances, requireFullObjects);
     }
     
     /****************** Management of the set of locators ********************/
@@ -110,9 +119,8 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
     public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
         int count = 0;
         try {
-            Set<String> locatorsToSearch = new HashSet<String>(locators);
-            while (!locatorsToSearch.isEmpty()) {
-                LocalAbstractObject object = objects.getObjectByAnyLocator(locatorsToSearch, true);
+            while (!locators.isEmpty()) {
+                LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
                 addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE);
                 count++;
             }
