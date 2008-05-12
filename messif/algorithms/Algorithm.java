@@ -343,7 +343,7 @@ public abstract class Algorithm implements Serializable {
      * @return the list of operations that were executed
      * @throws AlgorithmMethodException 
      */
-    public <E> List<E> waitBackgroundExecuteOperation(Class<E> argClass) throws AlgorithmMethodException {
+    public <E extends AbstractOperation> List<E> waitBackgroundExecuteOperation(Class<E> argClass) throws AlgorithmMethodException {
         try {
             MethodThreadList list = bgExecutionList.get();
             

@@ -33,7 +33,7 @@ import messif.objects.ThresholdFunction;
 public class TopCombinedQueryOperation extends QueryOperation {
 
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /****************** Query request attributes ******************/
     
@@ -43,6 +43,11 @@ public class TopCombinedQueryOperation extends QueryOperation {
     public final int k;
     /** Number of sorted access objects to retrieve (accessible directly) */
     public final int sortedAccessInitial;
+    /**
+     * Progressive flag for the number of initial sorted accesses.
+     * If set to <tt>true</tt>, the number of sortedAccessInitial is multiplied by {@link #k k}.
+     */
+    public final boolean progressiveSortedAccessInitial;
     /** Number of random accesses to execute (accessible directly) */
     public final int numberOfRandomAccess;
     /** Query operation to execute for sorted accesses (accessible directly) */
@@ -71,11 +76,12 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * @param sortedQuery the query operation used to retrieve sorted access objects
      * @param thresholdFunction the aggregation function for combining the distances from sorted lists
      */
-    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
-    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int sortedAccessInitial, int numberOfRandomAccess, Class<? extends QueryOperation> sortedQuery, ThresholdFunction thresholdFunction) {
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Progressive sorted access flag", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
+    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int sortedAccessInitial, boolean progressiveSortedAccessInitial, int numberOfRandomAccess, Class<? extends QueryOperation> sortedQuery, ThresholdFunction thresholdFunction) {
         this.queryObject = (MetaObject)queryObject;
         this.k = k;
         this.sortedAccessInitial = sortedAccessInitial;
+        this.progressiveSortedAccessInitial = progressiveSortedAccessInitial;
         this.numberOfRandomAccess = numberOfRandomAccess;
         this.sortedQuery = sortedQuery;
         this.thresholdFunction = thresholdFunction;
@@ -99,10 +105,12 @@ public class TopCombinedQueryOperation extends QueryOperation {
         case 2:
             return sortedAccessInitial;
         case 3:
-            return numberOfRandomAccess;
+            return progressiveSortedAccessInitial;
         case 4:
-            return sortedQuery;
+            return numberOfRandomAccess;
         case 5:
+            return sortedQuery;
+        case 6:
             return thresholdFunction;
         default:
             throw new IndexOutOfBoundsException("TopCombinedQueryOperation has only four arguments");
@@ -115,7 +123,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return 6;
+        return 7;
     }
 
 

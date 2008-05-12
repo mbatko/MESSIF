@@ -58,7 +58,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
-        this.locators = (locators == null)?Collections.EMPTY_SET:new HashSet<String>(locators);
+        this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
         this.queryObjectForDistances = queryObjectForDistances;
         this.requireFullObjects = requireFullObjects;
     }
