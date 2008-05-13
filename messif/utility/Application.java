@@ -152,6 +152,9 @@ public class Application {
     /** Internal list of methods that can be executed */
     protected final MethodExecutor methodExecutor;
 
+    /** List of currently opened object streams */
+    protected final Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>>();
+    
     /**
      * Create new instance of Application.
      * The instance is initialized from the {@link #main} method.
@@ -861,8 +864,31 @@ public class Application {
     
     /****************** Object stream command functions ******************/
 
-    protected final Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>>();
-    
+    /**
+     * Open a named stream which allows to read {@link LocalAbstractObject objects} from a file.
+     * Two required arguments specify the file name from which to open the stream and
+     * the fully-qualified name of the stored object class.
+     * A third optional argument is the name under which the stream is opened
+     * (defaults to the file name if not specified). If this name is specified
+     * in place where {@link LocalAbstractObject} is argument required, the
+     * next object is read from the stream and used as the argument value.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamOpen /my/data/file.xx messif.objects.impl.ObjectByteVectorL1 my_data
+     * MESSIF &gt;&gt;&gt; operationExecute messif.operations.RangeQueryOperation my_data 1.3
+     * MESSIF &gt;&gt;&gt; operationExecute messif.operations.kNNQueryOperation my_data 10
+     * </pre>
+     * </p>
+     * 
+     * Note that the first two objects are read from the stream file /my/data/file.xx, first is used
+     * as a query object for the range query, the second is used in the k-NN query.
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream (not required)" })
     public boolean objectStreamOpen(PrintStream out, String... args) {
         try {
@@ -965,10 +991,30 @@ public class Application {
 
     /****************** Logging command functions ******************/
 
-    @ExecutableMethod(description = "set global level of logging", arguments = { "new logging level" })
+    /**
+     * Get or set global level of logging.
+     * If an argument is passed, the logging level is set.
+     * Allowed argument values are names of {@link Level logging level} constants.
+     * Otherwise the current logging level is printed out.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; loggingLevel warning
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "get/set global level of logging", arguments = { "[new logging level]" })
     public boolean loggingLevel(PrintStream out, String... args) {
         try {
-            Logger.setLogLevel(Level.parse(args[1].toUpperCase()));
+            if (args.length < 2)
+                out.println("Current global logging level: " + Logger.getLogLevel());
+            else
+                Logger.setLogLevel(Level.parse(args[1].toUpperCase()));
         } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return false;

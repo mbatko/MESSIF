@@ -25,7 +25,7 @@ import messif.objects.MeasuredAbstractObjectList;
  */
 public abstract class QueryOperation extends AbstractOperation {
     /** class id for serialization */
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 1L;
     
     /**
      * Returns <tt>true</tt> if this operation has finished successfuly.

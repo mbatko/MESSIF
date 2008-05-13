@@ -171,7 +171,7 @@ public class IncrementalNNQueryOperation extends QueryOperation {
             LocalAbstractObject object = objects.next();
             
             // Get distance to query object
-            float distance = object.getDistance(queryObject);
+            float distance = queryObject.getDistance(object);
 
             // Object satisfies the query (i.e. distance is smaller than radius)
             addToAnswer(object, distance);

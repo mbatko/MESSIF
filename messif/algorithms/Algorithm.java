@@ -99,6 +99,7 @@ public abstract class Algorithm implements Serializable {
     /**
      * Public destructor to stop the algorithm.
      * This should be overriden in order to clean up.
+     * @throws Throwable if there was an error finalizing
      */
     @Override
     public void finalize() throws Throwable {

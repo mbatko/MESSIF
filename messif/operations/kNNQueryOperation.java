@@ -94,7 +94,7 @@ public class kNNQueryOperation extends QueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
             
-            if (object.excludeUsingPrecompDist(queryObject, getRadius()))
+            if (queryObject.excludeUsingPrecompDist(object, getRadius()))
                 continue;
             
             // Get distance to query object (the second parameter defines a stop condition in getDistance() 

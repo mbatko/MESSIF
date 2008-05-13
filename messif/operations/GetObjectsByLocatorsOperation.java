@@ -7,7 +7,6 @@
 package messif.operations;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -44,7 +43,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
     /****************** Query answer attributes ******************/
 
     /** The list of objects forming the answer of this query */
-    protected final MeasuredAbstractObjectList<AbstractObject> answer = new MeasuredAbstractObjectList<AbstractObject>();
+    protected final MeasuredAbstractObjectList<AbstractObject> answer;
 
 
     /****************** Constructors ******************/
@@ -55,12 +54,26 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * @param locators the collection of locators to be found
      * @param queryObjectForDistances the query object to use for computing distances
      * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
      */
-    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required", "Limit for number of objects in answer"})
+    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects, int maxAnswerCount) {
         this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
         this.queryObjectForDistances = queryObjectForDistances;
         this.requireFullObjects = requireFullObjects;
+        this.answer = new MeasuredAbstractObjectList<AbstractObject>(maxAnswerCount);
+    }
+
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with the specified locators.
+     * 
+     * @param locators the collection of locators to be found
+     * @param queryObjectForDistances the query object to use for computing distances
+     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     */
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required"})
+    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
+        this(locators, queryObjectForDistances, requireFullObjects, Integer.MAX_VALUE);
     }
 
     /**
@@ -83,10 +96,21 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * @param queryObjectForDistances the query object to use for computing distances
      * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
      */
-    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
-        this(null, queryObjectForDistances, requireFullObjects);
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects, int maxAnswerCount) {
+        this(null, queryObjectForDistances, requireFullObjects, maxAnswerCount);
     }
-    
+
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with empty locators set.
+     * 
+     * @param queryObjectForDistances the query object to use for computing distances
+     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     */
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
+        this(queryObjectForDistances, requireFullObjects, Integer.MAX_VALUE);
+    }
+
+
     /****************** Management of the set of locators ********************/
     
     /**
@@ -95,6 +119,16 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      */
     public void addLocator(String locator) {
         locators.add(locator);
+    }
+
+    /**
+     * Replace the current locators of this query with the provided collection.
+     * @param locators the new collection of locators
+     */
+    public void setLocators(Collection<String> locators) {
+        this.locators.clear();
+        if (locators != null)
+            this.locators.addAll(locators);
     }
     
     /**
