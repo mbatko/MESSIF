@@ -144,6 +144,16 @@ public abstract class Convert {
             return (E)rtv; // This cast IS checked
         }
 
+        // Converting arrays
+        if (type.isArray()) {
+            String[] items = string.split("\\p{Space}*,\\p{Space}*");
+            Class<?> componentType = type.getComponentType();
+            Object array = Array.newInstance(componentType, items.length);
+            for (int i = 0; i < items.length; i++)
+                Array.set(array, i, stringToType(items[i], componentType, objectStreams));
+            return (E)array; // This cast IS checked
+        }
+
         // Try string public constructor
         if (!Modifier.isAbstract(type.getModifiers())) {
             try {
