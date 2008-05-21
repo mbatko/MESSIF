@@ -178,7 +178,11 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
      */
     @Override
     public String toString() {
-        return new StringBuffer("Partitioned range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects").toString();
+        StringBuffer buffer = new StringBuffer("Partitioned range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects:");
+        for (Map.Entry<T, MeasuredAbstractObjectList<AbstractObject>> entry : partitionedAnswer.entrySet()) {
+            buffer.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().size());
+        }
+        return buffer.toString();
     }
 
 }

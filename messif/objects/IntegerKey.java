@@ -110,7 +110,7 @@ public class IntegerKey extends AbstractObjectKey {
     /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer(key)).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
     }
     
 }
