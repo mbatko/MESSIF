@@ -8,7 +8,6 @@ package messif.buckets;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,7 +16,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import messif.objects.LocalAbstractObject;
 import java.io.Serializable;
 import java.util.ConcurrentModificationException;
@@ -33,12 +31,13 @@ import java.util.Set;
  *
  * Note that this class only uses disk to save memory, all data is lost
  * when {@link SimpleDiskBucket} is finalized. If a persistent bucket is needed,
- * use {@link DiskBucket} instead.
+ * use {@link DiskBucket} or {@link DiskBlockBucket} instead.
  *
  * @author  xbatko
  * @see BucketDispatcher
  * @see LocalBucket
  * @see DiskBucket
+ * @see DiskBlockBucket
  */
 public class SimpleDiskBucket extends LocalFilteredBucket implements Serializable {
     /** class serial id for serialization */
@@ -133,6 +132,7 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
      * Clean opened file descriptors and remove the bucket file.
      * @throws Throwable the <code>Exception</code> raised by this method
      */
+    @Override
     public void finalize() throws Throwable {
         bucketOutput.close();
         currentFileName.delete();
@@ -331,7 +331,10 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
 
     /****************** Iterator object ******************/
 
-    /** Internal class for iterator implementation */
+    /**
+     * Internal class for iterator implementation.
+     * @param T the type of the bucket this iterator operates on
+     */
     protected static class SimpleDiskBucketIterator<T extends SimpleDiskBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed stream of objects */
         protected final ObjectInputStream stream;
@@ -345,9 +348,8 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
         protected File deleteFile = null;
 
         /**
-         * Creates a new instance of MemoryStorageBucketIterator with the MemoryStorageBucket.
-         * This constructor is intended to be called only from MemoryStorageBucket class.
-         * The method also initialize the iterator from the hash table objects.
+         * Creates a new instance of SimpleDiskBucketIterator with the SimpleDiskBucket.
+         * This constructor is intended to be called only from SimpleDiskBucket class.
          *
          * @param bucket actual instance of AlgorithmStorageBucket on which this iterator should work
          * @throws IOException if there was an error reading the bucket's file
@@ -365,6 +367,7 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
          * Clean up of stream iterator
          * @throws Throwable if there was an error closing the stream
          */
+        @Override
         protected void finalize() throws Throwable {
             stream.close();
         }

@@ -374,8 +374,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     /****************** Bucket lower implementation overrides ******************/
 
     /**
-     * Returns current number of objects stored in bucket.
-     * @return current number of objects stored in bucket
+     * Returns current number of objects stored in this bucket.
+     * @return current number of objects stored in this bucket
      */
     public abstract int getObjectCount();
     

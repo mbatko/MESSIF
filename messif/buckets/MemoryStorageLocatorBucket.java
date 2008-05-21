@@ -23,9 +23,10 @@ import messif.objects.LocalAbstractObject;
 public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
     /** Lookup table for object locators */
     protected transient Map<String, LocalAbstractObject> locatorMap = new HashMap<String, LocalAbstractObject>();
+
 
     /****************** Constructors ******************/
 
@@ -41,15 +42,17 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
     }
 
+
     /******************     Serialization     **********************/
-    
+
     /** Deserialization -- restore the set using the objects already read by the ancestor */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         locatorMap = new HashMap<String, LocalAbstractObject>(objects.size());
-        for (LocalAbstractObject object : objects.values())
+        for (LocalAbstractObject object : objects)
             locatorMap.put(object.getLocatorURI(), object);
     }
-    
+
+
     /****************** Storing duplicates override ******************/
 
     /**
@@ -59,6 +62,7 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
      * @param object The new object to be inserted
      * @return error code - for details, see documentation of {@link BucketErrorCode}
      */
+    @Override
     protected BucketErrorCode storeObject(LocalAbstractObject object) {
         BucketErrorCode errCode = super.storeObject(object);
         if (errCode.equals(BucketErrorCode.OBJECT_INSERTED) && object.getLocatorURI() != null)
@@ -66,9 +70,13 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
         return errCode;
     }
 
+
     /****************** Iterator object ******************/
-    
-    /** Internal class for iterator implementation */
+
+    /**
+     * Internal class for iterator implementation
+     * @param T the bucket class on which this iterator is implemented
+     */
     protected static class MemoryStorageLocatorBucketIterator<T extends MemoryStorageLocatorBucket> extends MemoryStorageBucket.MemoryStorageBucketIterator<T> {
         /**
          * Creates a new instance of MemoryStorageLocatorBucketIterator with the MemoryStorageLocatorBucket.
@@ -83,6 +91,7 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
          * Physically remove the object this iterator points at.
          * Simply calls the hashtable iterator remove method.
          */
+        @Override
         protected void removeInternal() {
             super.removeInternal();
             if (currentObject.getLocatorURI() != null)
@@ -100,12 +109,13 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
          * @return the first instance of object, that has one of the specified locators
          * @throws NoSuchElementException if there is no object with any of the specified locators
          */
+        @Override
         public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
-            Iterator<String> iterator = locatorURIs.iterator();
-            while (iterator.hasNext()) {
-                currentObject = bucket.locatorMap.get(iterator.next());
+            Iterator<String> urisIterator = locatorURIs.iterator();
+            while (urisIterator.hasNext()) {
+                currentObject = bucket.locatorMap.get(urisIterator.next());
                 if (removeFound)
-                    iterator.remove();
+                    urisIterator.remove();
                 if (currentObject != null)
                     return currentObject;
             }

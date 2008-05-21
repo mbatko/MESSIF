@@ -13,7 +13,7 @@ import messif.algorithms.DistAlgReplyMessage;
 import messif.algorithms.DistAlgRequestMessage;
 import messif.algorithms.DistributedAlgorithm;
 import messif.buckets.CapacityFullException;
-import messif.buckets.MemoryStorageBucketNoDups;
+import messif.buckets.MemoryStorageNoDupsBucket;
 import messif.loadbalancing.HostList.HostLoad;
 import messif.loadbalancing.replication.Replica;
 import messif.loadbalancing.replication.ReplicateOperation;
@@ -763,7 +763,7 @@ public class Host extends DistributedAlgorithm implements Serializable {
                 if ((! operation.silent) && (! checkWaitingForHost(request.getSender())))
                     operation.endOperation(LoadBalancingErrorCode.ERROR_NOT_ASKED);
                 else {
-                    Replica replica = new Replica(this, operation.replicatedNode, MemoryStorageBucketNoDups.class);
+                    Replica replica = new Replica(this, operation.replicatedNode, MemoryStorageNoDupsBucket.class);
                     
                     operation.replicaId = replica.getThisNode();
                     operation.endOperation();

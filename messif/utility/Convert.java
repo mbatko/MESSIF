@@ -40,6 +40,7 @@ public abstract class Convert {
      *   <li>{@link Class}</li>
      *   <li>{@link StreamGenericAbstractObjectIterator} - parameter represents the name of an opened stream from <code>objectStreams</code></li>
      *   <li>{@link LocalAbstractObject} - parameter represents the name of an opened stream from <code>objectStreams</code>, the next object is acquired</li>
+     *   <li>static array of any "convertible" element type - parameter should be comma-separated values that will be converted using {@link #stringToType} into the array's items</li>
      *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
      *   <li>any class with a <code>valueOf(String <i>parameter</i>)</code> factory method, e.g., {@link messif.network.NetworkNode#valueOf}</li>
      * </ul>

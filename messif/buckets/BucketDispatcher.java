@@ -7,15 +7,11 @@
 package messif.buckets;
 
 import java.io.Serializable;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -124,7 +120,7 @@ public class BucketDispatcher implements Serializable {
     /**
      * Creates a new instance of BucketDispatcher only with maximal capacity specification.
      * The soft capacity and low-occupation limits are not set. The occupation and capacity
-     * is counted in bytes. The {@link MemoryStorageBucket} is used as default bucket class.
+     * is counted in bytes. The {@link MemoryStorageIDBucket} is used as default bucket class.
      *
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets

@@ -1,5 +1,5 @@
 /*
- * MemoryStorageBucket.java
+ * MemoryStorageNoDupsBucket.java
  *
  * Created on 24. duben 2004, 12:17
  */
@@ -26,7 +26,7 @@ import messif.objects.UniqueID;
  * @author  xbatko
  * @see MemoryStorageBucket
  */
-public class MemoryStorageBucketNoDups extends MemoryStorageBucket implements Serializable {
+public class MemoryStorageNoDupsBucket extends MemoryStorageBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 2L;
     
@@ -36,13 +36,13 @@ public class MemoryStorageBucketNoDups extends MemoryStorageBucket implements Se
     /****************** Constructors ******************/
 
     /**
-     * Constructs a new MemoryStorageBucketNoDups instance
+     * Constructs a new MemoryStorageNoDupsBucket instance
      * @param capacity maximal capacity of the bucket - cannot be exceeded
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      */
-    protected MemoryStorageBucketNoDups(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
+    protected MemoryStorageNoDupsBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
     }
 
@@ -51,7 +51,7 @@ public class MemoryStorageBucketNoDups extends MemoryStorageBucket implements Se
     /** Deserialization -- restore the set using the objects already read by the ancestor */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         uniqueObjects = new HashSet<LocalAbstractObject.DataEqualObject>(objects.size());
-        for (LocalAbstractObject object : objects.values())
+        for (LocalAbstractObject object : objects)
             uniqueObjects.add(new LocalAbstractObject.DataEqualObject(object));
     }
     
@@ -66,6 +66,7 @@ public class MemoryStorageBucketNoDups extends MemoryStorageBucket implements Se
      * @param object The new object to be inserted
      * @return error code - for details, see documentation of {@link BucketErrorCode}
      */
+    @Override
     protected BucketErrorCode storeObject(LocalAbstractObject object) {
         LocalAbstractObject.DataEqualObject wrappedObj = new LocalAbstractObject.DataEqualObject(object);
 
@@ -77,6 +78,7 @@ public class MemoryStorageBucketNoDups extends MemoryStorageBucket implements Se
         return super.storeObject(object);
     }
 
+    @Override
     public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException {
         LocalAbstractObject rtv = super.deleteObject(objectID);
         uniqueObjects.remove(new LocalAbstractObject.DataEqualObject(rtv));
