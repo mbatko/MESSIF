@@ -17,6 +17,7 @@ import messif.objects.StreamGenericAbstractObjectIterator;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -852,4 +853,46 @@ public abstract class Convert {
         return sb.toString();
     }
 
+    /**
+     * Returns the today's specified time in miliseconds.
+     * @param time the time in "hh:mm:ss.iii" format (seconds and miliseconds are optional)
+     * @return the today's specified time in miliseconds
+     * @throws NumberFormatException if the specified time has invalid format
+     */
+    public static long timeToMiliseconds(String time) throws NumberFormatException {
+        try {
+            Calendar calendar = Calendar.getInstance();
+            String[] hms = time.split("\\p{Space}*[:.]\\p{Space}*", 4);
+            switch (hms.length) {
+                case 4:
+                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                    calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
+                    calendar.set(Calendar.MILLISECOND, Integer.parseInt(hms[3]));
+                    break;
+                case 3:
+                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                    calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
+                    calendar.set(Calendar.MILLISECOND, 0);
+                    break;
+                case 2:
+                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                    calendar.set(Calendar.SECOND, 0);
+                    calendar.set(Calendar.MILLISECOND, 0);
+                    break;
+                default:
+                    throw new NumberFormatException("At least hours and minutes must be specified");
+            }
+            calendar.setLenient(false);
+            return calendar.getTimeInMillis();
+        } catch (IllegalArgumentException e) {
+            // The value for a field (message of the exception) was invalid
+            StringBuffer str = new StringBuffer("Value of ");
+            str.append(e.getMessage().toLowerCase());
+            str.append(" is invalid");
+            throw new NumberFormatException(str.toString()); 
+        }
+    }
 }

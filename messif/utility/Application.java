@@ -96,7 +96,8 @@ import java.util.logging.Level;
  *  ...
  *  &lt;actionName&gt;.repeat = &lt;repeats&gt;
  *  &lt;actionName&gt;.foreach = &lt;value&gt; &lt;value&gt; ...
- *  &lt;actionName&gt;.outputFile = &lt;filename&gt;</pre>
+ *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
+ *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
  * <ul>
  * <li>&lt;actionName&gt; is a user specified name for the action which can be reffered from other
  *                    actions (&lt;otherActionName1&gt; &lt;otherActionName2&gt;) or command line parameter <i>[action]</i>.</li>
@@ -115,6 +116,9 @@ import java.util.logging.Level;
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all succesive writes are appended to this file
  *  until this batch run finishes.
+ * <li><i>postponeUntil</i> parameter is optional and allows to postpone the action until the specified
+ *  time. The whole execution of the control file is paused. If the specified time is in the past,
+ *  this parameter is ignored. Note that the postponeUntil is working within one day.
  * </ul>
  * <p>
  * All parameters, method name and output file are subject to variable expansion.
@@ -154,7 +158,7 @@ public class Application {
 
     /** List of currently opened object streams */
     protected final Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>>();
-    
+
     /**
      * Create new instance of Application.
      * The instance is initialized from the {@link #main} method.
@@ -1164,8 +1168,30 @@ public class Application {
      *  <filename>. When this filename is reached for the first time, it is opened for writing
      *  (previous contents are destroyed) and all succesive writes are appended to this file
      *  until end.
+     * 
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables' environment
+     * @param outputStreams currently opened output streams
+     * @return <tt>true</tt> if the action was executed successfuly
      */
     protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
+        // Check for postponed execution
+        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, variables);
+        if (postponeUntil != null) {
+            try {
+                long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
+                if (sleepTime > 0)
+                    Thread.sleep(sleepTime);
+            } catch (NumberFormatException e) {
+                out.println(e.getMessage() + " in postponeUntil parameter of '" + actionName + "'");
+                return false;
+            } catch (InterruptedException e) {
+                out.println("Thread interrupted while waiting for posponed execution");
+            }
+        }
+
         // Prepare array for arguments
         List<String> arguments = new ArrayList<String>();
 
