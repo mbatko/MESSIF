@@ -3,7 +3,7 @@
  * 
  */
 
-package messif.buckets.io;
+package messif.objects.nio;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -237,12 +237,13 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      * Delete all objects from this bucket, that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
      * the specified object.
      * @param object the object to match against
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
      * @return the number of deleted objects
      */
     @Override
-    public synchronized int deleteObject(LocalAbstractObject object) throws OccupationLowException {
-        DeleteOperation operation = new DeleteOperation(object);
+    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException {
+        DeleteOperation operation = new DeleteOperation(object, deleteLimit);
         try {
             algorithm.executeOperation(operation);
         } catch (NoSuchMethodException e) {
@@ -255,7 +256,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
             throw new OccupationLowException();
 
         // Update occupation
-        occupation -= operation.getTotatlSizeDeleted();
+        occupation -= operation.getTotalSizeDeleted();
 
         // Update object count
         objectCount -= operation.getObjectsDeleted();

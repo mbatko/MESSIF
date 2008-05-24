@@ -252,18 +252,20 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
     /**
-     * Delete all objects from this bucket, that are {@link messif.objects.LocalAbstractObject#dataEquals data-equal} to
-     * the specified object.
+     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
+     * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
+     * data-equal objects found are deleted.
      * 
      * @param object the object to match against
-     * @return the number of objects actually deleted
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
+     * @return the number of deleted objects
+     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
-    public int deleteObject(LocalAbstractObject object) throws OccupationLowException, IllegalStateException {
+    public int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).deleteObject(object);
+            return netbucketDisp.getBucket(bucketID).deleteObject(object, deleteLimit);
         
         // Otherwise, send message to remote netnode
         try {

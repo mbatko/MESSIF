@@ -358,6 +358,9 @@ public abstract class Convert {
      */
     @SuppressWarnings("unchecked")
     public static <E> Class<E> genericCastToClass(Object classObject, Class<E> checkClass) throws ClassCastException {
+        if (classObject == null)
+            return null;
+
         Class<E> rtv = (Class<E>)classObject; // This cast IS checked on the next line
         if (checkClass.isAssignableFrom(rtv))
             return rtv;

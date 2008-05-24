@@ -9,7 +9,6 @@ package messif.buckets;
 import java.io.Serializable;
 import java.util.NoSuchElementException;
 import messif.objects.UniqueID;
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.statistics.StatisticRefCounter;
@@ -116,8 +115,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * This method is called by bucket dispatcher when this bucket is removed.
      * 
      * The method removes references to this bucket from statistics.
+     * @throws Exception if there was an error during releasing resources
      */
-    protected void cleanUp() {
+    public void cleanUp() throws Exception {
         // Remove statistics
         counterBucketAddObject.remove(this);
         counterBucketDelObject.remove(this);
@@ -257,24 +257,26 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     /**
-     * Delete all objects from this bucket, that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
-     * the specified object.
+     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
+     * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
+     * data-equal objects found are deleted.
      *
      * The <code>remove</code> method of the underlying <code>iterator</code> over all objects is used.
      * If a more efficient implementation is available for the specific storage
      * layer, this method should be reimplemented (however, do not forget to update statistics).
      *
      * @param object the object to match against
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting object
      */
-    public synchronized int deleteObject(LocalAbstractObject object) throws OccupationLowException {
+    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException {
         LocalBucketIterator<? extends LocalBucket> iterator = iterator();
-        
+
         // Search for the object using iterator
         int count = 0;
         try {
-            while (iterator.hasNext()) {
+            while (iterator.hasNext() && (deleteLimit <= 0 || count < deleteLimit)) {
                 iterator.getObjectByData(object);
                 deleteObject(iterator);
                 count++;
@@ -394,7 +396,10 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      */
     protected abstract LocalBucketIterator<? extends LocalBucket> iterator();
 
-    /** Internal class for bucket iterator implementation */
+    /**
+     * Internal class for bucket iterator implementation
+     * @param T the type of the bucket this iterator operates on
+     */
     protected static abstract class LocalBucketIterator<T extends LocalBucket> extends GenericObjectIterator<LocalAbstractObject> {
         /** Reference to the bucket this iterator is working on */
         protected final T bucket;
@@ -436,9 +441,10 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     /****************** String representation ******************/
 
     /**
-     * Returns a string representation of this bucket
-     * @return  a string representation of this bucket
+     * Returns a string representation of this bucket.
+     * @return a string representation of this bucket
      */
+    @Override
     public String toString() {
         String sID = new java.text.DecimalFormat("0000").format(getBucketID()); // Number <10000 gets formated with leading zeros, number >=10000 are printed as is.
         return "LocalBucket:" + sID;

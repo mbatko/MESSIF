@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import messif.pivotselection.AbstractPivotChooser;
 import messif.utility.Convert;
 import messif.utility.Logger;
@@ -452,9 +453,57 @@ public class BucketDispatcher implements Serializable {
      * Create new local bucket with specified storage class and storage capacity (different from default values).
      *
      * @param storageClass the class that represents the bucket implementation to use
+     * @param capacity the hard capacity of the new bucket
+     * @param softCapacity the soft capacity of the new bucket (soft &lt;= hard must hold otherwise hard is set to soft)
+     * @param lowOccupation the low-occupation limit for the new bucket
+     * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
+     * @param storageClassParams additional parameters for creating a new instance of the storageClass
+     * @return a new instance of the specified bucket class
+     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws InstantiationException if (1) the provided storageClass is not a part of LocalBucket hierarchy;
+     *                                   (2) the storageClass does not have a proper constructor (String,long,long);
+     *                                   (3) the correct constructor of storageClass is not accesible; or
+     *                                   (4) the constuctor of storageClass has failed.
+     */
+    public static LocalBucket createBucket(Class<? extends LocalBucket> storageClass, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> storageClassParams) throws CapacityFullException, InstantiationException {
+        // Update provided parameters to correct values
+        if (softCapacity < 0) softCapacity = 0;
+        if (capacity < softCapacity) capacity = softCapacity;
+        
+        // Create new bucket with specified capacity
+        try {
+            try {
+                // Try bucket class internal factory first
+                Method factoryMethod = storageClass.getDeclaredMethod("getBucket", long.class, long.class, long.class, boolean.class, Map.class);
+                if (!Modifier.isStatic(factoryMethod.getModifiers()))
+                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' is not static");
+                if (!storageClass.isAssignableFrom(factoryMethod.getReturnType()))
+                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' has wrong return type");
+                return (LocalBucket)factoryMethod.invoke(null, capacity, softCapacity, lowOccupation, occupationAsBytes, storageClassParams);
+            } catch (NoSuchMethodException ignore) {
+                // Factory method doesn't exist, try class constructor
+                return storageClass.getDeclaredConstructor(
+                            long.class, long.class, long.class, boolean.class
+                         ).newInstance(
+                            capacity, softCapacity, lowOccupation, occupationAsBytes
+                         );
+            }
+        } catch (NoSuchMethodException e) {
+            throw new InstantiationException("Storage class " + storageClass + " lacks proper constructor: " + e.getMessage());
+        } catch (IllegalAccessException e) {
+            throw new InstantiationException("Storage class " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            throw new InstantiationException("Storage class " + storageClass + " constructor invocation failed: " + e.getCause());
+        }
+    }
+
+    /**
+     * Create new local bucket with specified storage class and storage capacity (different from default values).
+     *
+     * @param storageClass the class that represents the bucket implementation to use
      * @param storageClassParams additional parameters for creating a new instance of the storageClass
      * @param capacity the hard capacity of the new bucket
-     * @param softCapacity the soft capacity of the new bucket (soft <= hard must hold otherwise hard is set to soft)
+     * @param softCapacity the soft capacity of the new bucket (soft &lt;= hard must hold otherwise hard is set to soft)
      * @param lowOccupation the low-occupation limit for the new bucket
      *
      * @return a new instance of the specified bucket class
@@ -465,36 +514,8 @@ public class BucketDispatcher implements Serializable {
      *                                   (4) the constuctor of storageClass has failed.
      */
     public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, InstantiationException {
-        // Update provided parameters to correct values
-        if (softCapacity < 0) softCapacity = 0;
-        if (capacity < softCapacity) capacity = softCapacity;
-        
         // Create new bucket with specified capacity
-        LocalBucket bucket;
-        try {
-            try {
-                // Try bucket class internal factory first
-                Method factoryMethod = storageClass.getDeclaredMethod("getBucket", long.class, long.class, long.class, boolean.class, Map.class);
-                if (!Modifier.isStatic(factoryMethod.getModifiers()))
-                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' is not static");
-                if (!storageClass.isAssignableFrom(factoryMethod.getReturnType()))
-                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' has wrong return type");
-                bucket = (LocalBucket)factoryMethod.invoke(null, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams);
-            } catch (NoSuchMethodException ignore) {
-                // Factory method doesn't exist, try class constructor
-                bucket = storageClass.getDeclaredConstructor(
-                            long.class, long.class, long.class, boolean.class
-                         ).newInstance(
-                            capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes()
-                         );
-            }
-        } catch (NoSuchMethodException e) {
-            throw new InstantiationException("Storage class " + storageClass + " lacks proper constructor: " + e.getMessage());
-        } catch (IllegalAccessException e) {
-            throw new InstantiationException("Storage class " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            throw new InstantiationException("Storage class " + storageClass + " constructor invocation failed: " + e.getCause());
-        }
+        LocalBucket bucket = createBucket(storageClass, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams);        
 
         // Create automatic filter for the bucket
         createAutoFilter(bucket);
@@ -620,7 +641,12 @@ public class BucketDispatcher implements Serializable {
 
         // Reset bucket ID and statistics
         bucket.setBucketID(UNASSIGNED_BUCKET_ID);
-        bucket.cleanUp();
+        try {
+            bucket.cleanUp();
+        } catch (Exception e) {
+            // Log the exception but continue cleanly
+            log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
+        }
 
         return bucket;
     }

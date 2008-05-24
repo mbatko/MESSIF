@@ -3,7 +3,7 @@
  * 
  */
 
-package messif.buckets.io;
+package messif.objects.nio;
 
 import java.io.IOException;
 
@@ -91,9 +91,10 @@ public interface NativeDataOutput {
      * Writes a string to this output.
      *
      * @param string the string to be written
+     * @return the number of bytes written to the output
      * @throws IOException if there was an I/O error
      */
-    public void writeString(String string) throws IOException;
+    public int writeString(String string) throws IOException;
 
     /**
      * Writes <code>len</code> bytes from the specified byte array 

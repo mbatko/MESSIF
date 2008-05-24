@@ -40,7 +40,7 @@ public class BucketManipulationRequestMessage extends Message {
     protected final QueryOperation query;
     protected final int bucketID;
     protected final UniqueID objectID;
-    protected final boolean deleteObject;
+    protected final int deleteObjects;
 
 
     /****************** Constructors ******************/
@@ -54,7 +54,7 @@ public class BucketManipulationRequestMessage extends Message {
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
     }
 
     /**
@@ -66,7 +66,7 @@ public class BucketManipulationRequestMessage extends Message {
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
 
         while (objects.hasNext())
             this.objects.add(objects.next().getLocalAbstractObject());
@@ -88,19 +88,19 @@ public class BucketManipulationRequestMessage extends Message {
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = remoteObjectID;
-        this.deleteObject = deleteObject;
+        this.deleteObjects = deleteObject?0:-1;
     }
 
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests addition/deletion of object from a remote bucket
      */
-    public BucketManipulationRequestMessage(LocalAbstractObject object, int remoteBucketID, boolean deleteObject) {
+    public BucketManipulationRequestMessage(LocalAbstractObject object, int remoteBucketID, int deleteObjects) {
         this.object = object;
         this.objects = null;
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = null;
-        this.deleteObject = deleteObject;
+        this.deleteObjects = deleteObjects;
     }
 
     /**
@@ -112,7 +112,7 @@ public class BucketManipulationRequestMessage extends Message {
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
     }
 
     /**
@@ -124,7 +124,7 @@ public class BucketManipulationRequestMessage extends Message {
         this.query = query;
         this.bucketID = remoteBucketID;
         this.objectID = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
     }
 
 
@@ -139,9 +139,9 @@ public class BucketManipulationRequestMessage extends Message {
                 log.info("Executing query " + query + " from " + getSender() + " in " + bucket);
                 return new BucketManipulationReplyMessage(this, bucket.processQuery(query), query);
             } else if (object != null) {
-                if (deleteObject) {
+                if (deleteObjects >= 0) {
                     log.info("Deleting from " + getSender() + " object " + object + " from " + bucket);
-                    return new BucketManipulationReplyMessage(this, bucket.deleteObject(object));
+                    return new BucketManipulationReplyMessage(this, bucket.deleteObject(object, deleteObjects));
                 } else {
                     log.info("Adding " + object + " from " + getSender() + " into " + bucket);
                     return new BucketManipulationReplyMessage(this, bucket.addObject(object));
@@ -150,7 +150,7 @@ public class BucketManipulationRequestMessage extends Message {
                 log.info("Adding set of " + objects.size() + " objects from " + getSender() + " into " + bucket);
                 bucket.addObjects(objects);
                 return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED);
-            } else if (deleteObject) {
+            } else if (deleteObjects >= 0) {
                 log.info("Deleting from " + getSender() + " object " + objectID + " from " + bucket);
                 return new BucketManipulationReplyMessage(this, bucket.deleteObject(objectID), true);
             } else if (objectID != null) {

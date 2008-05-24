@@ -353,14 +353,32 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
         // Ignore the classes that are not annotated by OperationName
         if (operationClass == null || !operationClass.isAnnotationPresent(OperationName.class))
             throw new IllegalArgumentException("There is no valid annotated constructor in '" + operationClass + "'");
-        
+
+        // Remember the constructor with smallest number of arguments if nArguments == -1
+        int minimalConstructorArgs = Integer.MAX_VALUE;
+        Constructor minimalConstructor = null;
+
         // Search all its constructors for proper annotation
         for (Constructor constructor : operationClass.getConstructors()) {
             if (constructor.isAnnotationPresent(OperationConstructor.class)) {
-                if ((nArguments == -1) || (constructor.getGenericParameterTypes().length == nArguments))
-                    return constructor;
+                int thisConstructorArgs = constructor.getParameterTypes().length;
+                if (nArguments == -1) {
+                    if (minimalConstructorArgs > thisConstructorArgs) {
+                        minimalConstructor = constructor;
+                        minimalConstructorArgs = thisConstructorArgs;
+                    }
+                } else {
+                    if (thisConstructorArgs == nArguments) {
+                        return constructor;
+                    }
+                }
             }
         }
+
+        // Return the minimal constructor if found
+        if (minimalConstructor != null)
+            return minimalConstructor;
+
         // Recurse
         return getAnnotatedConstructor(operationClass.getSuperclass(), nArguments);
     }

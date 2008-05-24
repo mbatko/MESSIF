@@ -3,18 +3,34 @@
  * 
  */
 
-package messif.buckets.io;
+package messif.objects.nio;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * This class implements an output stream with buffered data and
- * automatic flushing to an associated {@link FileChannel}.
- *
+ * Buffered output stream for operating over channels.
+ * The stream offers {@link NativeDataOutput write methods} for Java primitives as well as
+ * write support for {@link BinarySerializable} and {@link java.io.Serializable} objects.
+ * 
+ * <p>
+ * Note that it is <em>not safe</em> to use several BinarySerializingOutputStreams over the
+ * same channel (even if synchronized). For file channels, the {@link BinarySerializingFileOutputStream}
+ * can be used if you need this functionality. Use copy-pipes if you need it
+ * on other channel types.
+ * </p>
+ * 
+ * <p>
+ * If multiple threads use the same instance of this class, the access to the
+ * instance must be synchronized.
+ * </p>
+ * 
+ * @see BinarySerializingInputStream
  * @author xbatko
  */
 public class BinarySerializingOutputStream extends OutputStream implements NativeDataOutput {
@@ -29,24 +45,28 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
     protected final WritableByteChannel flushChannel;
 
     /** The current position in the flush channel */
-    protected long flushChanelPosition = 0;
+    protected long flushChannelPosition = 0;
 
     /** The maximal position written to the flush channel */
-    protected final long flushChanelMaximalPosition;
+    protected final long flushChannelMaximalPosition;
 
     /**
      * Creates a new instance of BinarySerializingOutputStream.
      * @param bufferSize the size of the internal buffer used for flushing
+     * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
      * @param flushChannel the channel into which to write data
      * @param maxLength the maximal length of data 
      * @throws IOException if there was an error using flushChannel
      */
-    public BinarySerializingOutputStream(int bufferSize, WritableByteChannel flushChannel, long maxLength) throws IOException {
+    public BinarySerializingOutputStream(int bufferSize, boolean bufferDirect, WritableByteChannel flushChannel, long maxLength) throws IOException {
         if (bufferSize < MINIMAL_BUFFER_SIZE)
             throw new IllegalArgumentException("Buffer must be at least " + MINIMAL_BUFFER_SIZE + " bytes long");
-        this.byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        if (bufferDirect)
+            this.byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        else
+            this.byteBuffer = ByteBuffer.allocate(bufferSize);
         this.flushChannel = flushChannel;
-        this.flushChanelMaximalPosition = maxLength;
+        this.flushChannelMaximalPosition = maxLength;
     }
 
     /**
@@ -83,15 +103,19 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
      * Writes <code>object</code> to this output stream.
      *
      * @param object the object to write
+     * @return the number of bytes actually written
      * @throws IOException if there was an error using flushChannel
      */
-    public void write(BinarySerializable object) throws IOException {
+    public int write(BinarySerializable object) throws IOException {
         // Write null as zero-sized object
         if (object == null) {
             writeInt(0);
+            return 4;
         } else {
-            writeInt(object.getSize());
+            int objectSize = object.getSize();
+            writeInt(objectSize);
             object.binarySerialize(this);
+            return objectSize + 4;
         }
     }
 
@@ -103,7 +127,17 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
      */
     @Override
     public void flush() throws IOException {
-        checkBufferSize(Integer.MAX_VALUE, false);
+        // Must empty the whole buffer, so require the capacity of the buffer
+        checkBufferSize(byteBuffer.capacity(), true);
+    }
+
+    /**
+     * Returns <tt>true</tt> if there are some bytes pending in the buffer.
+     * @return <tt>true</tt> if there are some bytes pending in the buffer
+     * @see #flush
+     */
+    public boolean isDirty() {
+        return byteBuffer.position() > 0;
     }
 
     /**
@@ -123,7 +157,7 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
      * @return current position from the beginning of the stream
      */
     public long position() {
-        return flushChanelPosition + byteBuffer.position();
+        return flushChannelPosition + byteBuffer.position();
     }
 
     /**
@@ -132,7 +166,7 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
      * @return the remaining number of bytes in the stream
      */
     public long remaining() {
-        long remaining = flushChanelMaximalPosition - position();
+        long remaining = flushChannelMaximalPosition - position();
         if (remaining > 0)
             return remaining;
         return -1;
@@ -168,7 +202,7 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
         if (byteBuffer.position() > 0)
             try {
                 byteBuffer.flip();
-                flushChanelPosition += flushChannel.write(byteBuffer);
+                flushChannelPosition += writeChannelData();
             } finally {
                 byteBuffer.compact();
             }
@@ -179,6 +213,76 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
 
         // Return either the required size, if it is smaller than the buffer, or the buffer size
         return Math.min(byteBuffer.remaining(), requiredSize);
+    }
+
+    /** 
+     * Write current buffered data to the flush channel.
+     * @return the number of bytes written
+     * @throws IOException if there was an error using flushChannel
+     */
+    protected int writeChannelData() throws IOException {
+        return flushChannel.write(byteBuffer);
+    }
+
+
+    //**************** Special data output methods ****************//
+
+    /**
+     * Writes a {@link Class} to this output stream.
+     *
+     * @param classToWrite the {@link Class} to be written
+     * @return the number of bytes written to the output
+     * @throws IOException if there was an I/O error using flushChannel
+     */
+    public int writeClass(Class<?> classToWrite) throws IOException {
+        return writeString((classToWrite == null)?null:classToWrite.getName());
+    }
+
+    /**
+     * Writes a {@link Method} to this output stream.
+     *
+     * @param method the {@link Method} to be written
+     * @return the number of bytes written to the output
+     * @throws IOException if there was an I/O error using flushChannel
+     */
+    public int writeMethod(Method method) throws IOException {
+        if (method == null)
+            return writeClass(null);
+
+        // Write method's declaring class and name
+        int bytesWritten = writeClass(method.getDeclaringClass());
+        bytesWritten += writeString(method.getName());
+
+        // Write prototype
+        Class<?>[] prototype = method.getParameterTypes();
+        writeInt(prototype.length); bytesWritten += 4;
+        for (int i = 0; i < prototype.length; i++)
+            bytesWritten += writeClass(prototype[i]);
+
+        return bytesWritten;
+    }
+
+    /**
+     * Writes a {@link Constructor} to this output stream.
+     *
+     * @param constructor the {@link Constructor} to be written
+     * @return the number of bytes written to the output
+     * @throws IOException if there was an I/O error using flushChannel
+     */
+    public int writeConstructor(Constructor<?> constructor) throws IOException {
+        if (constructor == null)
+            return writeClass(null);
+
+        // Write constructor's declaring class
+        int bytesWritten = writeClass(constructor.getDeclaringClass());
+
+        // Write prototype
+        Class<?>[] prototype = constructor.getParameterTypes();
+        writeInt(prototype.length); bytesWritten += 4;
+        for (int i = 0; i < prototype.length; i++)
+            bytesWritten += writeClass(prototype[i]);
+
+        return bytesWritten;
     }
 
 
@@ -275,11 +379,19 @@ public class BinarySerializingOutputStream extends OutputStream implements Nativ
      * Writes a string to this output stream.
      *
      * @param string the string to be written
+     * @return the number of bytes written to the output
      * @throws IOException if there was an I/O error using flushChannel
      */
-    public void writeString(String string) throws IOException {
-        writeInt(string.length());
-        write(string.getBytes());
+    public int writeString(String string) throws IOException {
+        if (string == null) {
+            writeInt(-1);
+            return 4;
+        } else {
+            byte[] stringBytes = string.getBytes();
+            writeInt(stringBytes.length); // Warning - this is NOT the string.length()!!!
+            write(stringBytes);
+            return 4 + stringBytes.length;
+        }
     }
 
 }

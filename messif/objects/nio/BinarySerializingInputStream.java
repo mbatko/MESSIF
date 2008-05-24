@@ -3,17 +3,35 @@
  * and open the template in the editor.
  */
 
-package messif.buckets.io;
+package messif.objects.nio;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import messif.utility.Convert;
 
 /**
- *
+ * Buffered input stream for operating over channels.
+ * The stream offers {@link NativeDataInput read methods} for Java primitives as well as
+ * read support for {@link BinarySerializable} and {@link java.io.Serializable} objects.
+ * 
+ * <p>
+ * Note that it is <em>not safe</em> to use several BinarySerializingInputStreams over the
+ * same channel (even if synchronized). For file channels, the {@link BinarySerializingFileInputStream}
+ * can be used if you need this functionality. Use copy-pipes if you need it
+ * on other channel types.
+ * </p>
+ * 
+ * <p>
+ * If multiple threads use the same instance of this class, the access to the
+ * instance must be synchronized.
+ * </p>
+ * 
+ * @see BinarySerializingOutputStream
  * @author xbatko
  */
 public class BinarySerializingInputStream extends InputStream implements NativeDataInput {
@@ -36,20 +54,23 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
     /**
      * Creates a new instance of BinarySerializingOutputStream.
      * @param bufferSize the size of the internal buffer used for flushing
+     * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
      * @param readChannel the channel from which to read data
      * @param maxLength the maximal length of data
      * @throws IOException if there was an error using readChannel
      */
-    public BinarySerializingInputStream(int bufferSize, ReadableByteChannel readChannel, long maxLength) throws IOException {
+    public BinarySerializingInputStream(int bufferSize, boolean bufferDirect, ReadableByteChannel readChannel, long maxLength) throws IOException {
         if (bufferSize < MINIMAL_BUFFER_SIZE)
             throw new IllegalArgumentException("Buffer must be at least " + MINIMAL_BUFFER_SIZE + " bytes long");
-        this.byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        if (bufferDirect)
+            this.byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        else
+            this.byteBuffer = ByteBuffer.allocate(bufferSize);
         this.readChannel = readChannel;
         this.readChannelMaximalPosition = maxLength;
 
-        // Read first chunk of data
-        readChannelPosition = readChannel.read(byteBuffer);
-        byteBuffer.flip();
+        // The buffer is empty first, first attempt to read will fill it
+        byteBuffer.limit(0);
     }
 
     /**
@@ -98,6 +119,74 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
     }
 
     /**
+     * Read the size of the object at the current position.
+     * This method will skip the deleted objects, i.e. the
+     * size stored in the stream is negative.
+     * Position is advanced to the beginning of the object's data.
+     * 
+     * @return the size of the object
+     * @throws IOException if there was an error reading from the input stream
+     */
+    protected int readObjectSize() throws IOException {
+        int objectSize = readInt();
+        while (objectSize < 0) {
+            skip(-objectSize);
+            objectSize = readInt();
+        }
+        return objectSize;
+    }
+
+    /**
+     * Skip the object at the current position.
+     * @param skipDeleted if <tt>true</tt> the deleted object are silently skipped (their sizes are not reported)
+     * @return the number of bytes skipped - it is negative if the object was deleted
+     * @throws IOException if there was an error reading from the input stream
+     */
+    public int skipObject(boolean skipDeleted) throws IOException {
+        // Compute object size
+        int objectSize;
+        if (skipDeleted)
+            objectSize = readObjectSize();
+        else
+            objectSize = readInt();
+        // Seek over object
+        if (objectSize < 0) {
+            skip(-objectSize);
+            return objectSize - 4; // integer for object size
+        } else {
+            skip(objectSize);
+            return objectSize + 4; // integer for object size
+        }
+    }
+
+    /**
+     * Read an instance created by <code>constructorOrFactory</code> from this input stream.
+     * If the constructorOrFactory is <tt>null</tt>, standard Java {@link Serializable deserialization}
+     * is used.
+     *
+     * @param constructorOrFactory the {@link java.lang.reflect.Constructor constructor} or
+     *          {@link java.lang.reflect.Method factory method} of the object class to read
+     * @return an instance of an serialized object
+     * @throws IOException if there was an error reading from the input stream
+     * @throws IllegalArgumentException if there is a constructor or a factory method for the <code>objectClass</code>, but it has a wrong prototype
+     * @throws ClassCastException if the <code>constructorOrFactory<code> is neither {@link Constructor} nor {@link Method}
+     */
+    public Object read(Object constructorOrFactory) throws IOException, IllegalArgumentException, ClassCastException {
+        int objectSize = readObjectSize();
+
+        // If the object size is zero, the object was null
+        if (objectSize == 0)
+            return null;
+
+        if (constructorOrFactory != null)
+            // Use the constructor or factory method to create the instance
+            return JavaToBinarySerializable.constructNativeSerializable(constructorOrFactory, this, objectSize);
+        else
+            // Use Java serialization
+            return JavaToBinarySerializable.binaryDeserialize(this, objectSize);
+    }
+
+    /**
      * Read an instance of <code>objectClass</code> from this input stream.
      *
      * @param objectClass the object class to read
@@ -122,39 +211,6 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
 
         // Read the object using the specified constructor, factory method or Java serialization
         return Convert.safeGenericCast(read(constructorOrMethod), objectClass);
-    }
-
-    /**
-     * Read an instance created by <code>constructorOrFactory</code> from this input stream.
-     * If the constructorOrFactory is <tt>null</tt>, standard Java {@link Serializable deserialization}
-     * is used.
-     *
-     * @param constructorOrFactory the {@link java.lang.reflect.Constructor constructor} or
-     *          {@link java.lang.reflect.Method factory method} of the object class to read
-     * @return an instance of an serialized object
-     * @throws IOException if there was an error reading from the input stream
-     * @throws IllegalArgumentException if there is a constructor or a factory method for the <code>objectClass</code>, but it has a wrong prototype
-     */
-    protected Object read(Object constructorOrFactory) throws IOException, IllegalArgumentException {
-        // Skip the deleted objects (the size stored in the stream is negative)
-        int objectSize;
-        for (;;) {
-            objectSize = readInt();
-            if (objectSize >= 0)
-                break;
-            skip(-objectSize);
-        }
-
-        // If the object size is zero, the object was null
-        if (objectSize == 0)
-            return null;
-
-        if (constructorOrFactory != null)
-            // Use the constructor or factory method to create the instance
-            return JavaToBinarySerializable.constructNativeSerializable(constructorOrFactory, this, objectSize);
-        else
-            // Use Java serialization
-            return JavaToBinarySerializable.binaryDeserialize(this, objectSize);
     }
 
     /**
@@ -207,7 +263,7 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
      * @return the size of the actually available data
      * @throws IOException if there was an error using readChannel
      */
-    protected synchronized int checkBufferSize(int requiredSize, boolean enforce) throws IOException {
+    protected int checkBufferSize(int requiredSize, boolean enforce) throws IOException {
         // If there is enough data in the buffer, we are done
         if (byteBuffer.remaining() >= requiredSize)
             return requiredSize;
@@ -223,7 +279,7 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
                     byteBuffer.limit(byteBuffer.position() + (int)(readChannelMaximalPosition - readChannelPosition));
 
                 // Read next chunk of data
-                int readBytes = readChannel.read(byteBuffer);
+                int readBytes = readChannelData();
                 if (readBytes == -1)
                     throw new EOFException("Cannot read more bytes");
                 readChannelPosition += readBytes;
@@ -240,8 +296,80 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
         return Math.min(byteBuffer.remaining(), requiredSize);
     }
 
+    /** 
+     * Reads next chunk of data into {@link #byteBuffer internal buffer}.
+     * @return the number of bytes read
+     * @throws IOException if there was an error using readChannel
+     */
+    protected int readChannelData() throws IOException {
+        return readChannel.read(byteBuffer);
+    }
 
-    //**************** DataOutput methods ****************//
+
+    //**************** Special data input methods ****************//
+
+    /**
+     * Returns a {@link Class} instance read from this input.
+     *
+     * @return a {@link Class} instance read from this input
+     * @throws IOException if there was an I/O error
+     * @throws ClassNotFoundException if the class stored in the stream cannot be resolved
+     */
+    public Class<?> readClass() throws IOException, ClassNotFoundException {
+        String className = readString();
+        if (className == null)
+            return null;
+        return Class.forName(className);
+    }
+
+    /**
+     * Returns a {@link Method} instance read from this input.
+     *
+     * @return a {@link Method} instance read from this input
+     * @throws IOException if there was an I/O error
+     * @throws ClassNotFoundException if the method's (or its parameters') class stored in the stream cannot be resolved
+     * @throws NoSuchMethodException if the method stored in the stream cannot be resolved
+     */
+    public Method readMethod() throws IOException, ClassNotFoundException, NoSuchMethodException {
+        // Read method class
+        Class<?> methodClass = readClass();
+        if (methodClass == null)
+            return null;
+        // Read method name
+        String methodName = readString();
+        // Read method prototype
+        int argCount = readInt();
+        Class[] argTypes = new Class[argCount];
+        for (int i = 0; i < argCount; i++)
+            argTypes[argCount] = readClass();
+        // Finally, create the method
+        return methodClass.getDeclaredMethod(methodName, argTypes);
+    }
+
+    /**
+     * Returns a {@link Constructor} instance read from this input.
+     *
+     * @return a {@link Constructor} instance read from this input
+     * @throws IOException if there was an I/O error
+     * @throws ClassNotFoundException if the constructor's (or its parameters') class stored in the stream cannot be resolved
+     * @throws NoSuchMethodException if the constructor stored in the stream cannot be resolved
+     */
+    public Constructor<?> readConstructor() throws IOException, ClassNotFoundException, NoSuchMethodException {
+        // Read constructor class
+        Class<?> constructorClass = readClass();
+        if (constructorClass == null)
+            return null;
+        // Read constructor prototype
+        int argCount = readInt();
+        Class[] argTypes = new Class[argCount];
+        for (int i = 0; i < argCount; i++)
+            argTypes[argCount] = readClass();
+        // Finally, create the method
+        return constructorClass.getDeclaredConstructor(argTypes);
+    }
+
+
+    //**************** DataInput methods ****************//
 
     /**
      * Returns a <code>boolean</code> value read from this input.
@@ -339,6 +467,8 @@ public class BinarySerializingInputStream extends InputStream implements NativeD
      */
     public String readString() throws IOException {
         int size = readInt();
+        if (size == -1)
+            return null;
         byte[] buffer = new byte[size];
         read(buffer);
         return new String(buffer);

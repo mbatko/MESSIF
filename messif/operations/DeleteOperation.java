@@ -28,11 +28,14 @@ public class DeleteOperation extends AbstractOperation {
     /** Inserted object (accessible directly) */
     public final LocalAbstractObject deletedObject;
 
+    /** The maximal number of deleted objects, zero means unlimited (accessible directly) */
+    public final int deleteLimit;
+
     /** The number of objects deleted by this operation */
     protected int objectsDeleted = 0;
 
-    /** The total size of objects delete by this operation */
-    protected int totatlSizeDeleted = 0;
+    /** The total size of objects deleted by this operation */
+    protected int totalSizeDeleted = 0;
 
     /**
      * Returns the number of objects deleted by this operation.
@@ -43,11 +46,11 @@ public class DeleteOperation extends AbstractOperation {
     }
 
     /**
-     * Returns the total size of objects delete by this operation.
-     * @return the total size of objects delete by this operation
+     * Returns the total size of objects deleted by this operation.
+     * @return the total size of objects deleted by this operation
      */
-    public int getTotatlSizeDeleted() {
-        return totatlSizeDeleted;
+    public int getTotalSizeDeleted() {
+        return totalSizeDeleted;
     }
 
 
@@ -56,10 +59,21 @@ public class DeleteOperation extends AbstractOperation {
     /**
      * Creates a new instance of DeleteOperation.
      * @param deletedObject the object to match the data against
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
+     */
+    @AbstractOperation.OperationConstructor({"Object to delete", "Limit for # of deletions"})
+    public DeleteOperation(LocalAbstractObject deletedObject, int deleteLimit) {
+        this.deletedObject = deletedObject;
+        this.deleteLimit = deleteLimit;
+    }
+
+    /**
+     * Creates a new instance of DeleteOperation.
+     * @param deletedObject the object to match the data against
      */
     @AbstractOperation.OperationConstructor({"Object to delete"})
     public DeleteOperation(LocalAbstractObject deletedObject) {
-        this.deletedObject = deletedObject;
+        this(deletedObject, 0);
     }
 
     /**
@@ -93,11 +107,22 @@ public class DeleteOperation extends AbstractOperation {
         return errValue.equals(BucketErrorCode.OBJECT_DELETED) || errValue.equals(BucketErrorCode.LOWOCCUPATION_EXCEEDED);
     }
 
-    /** End operation successfully */
+    /**
+     * End operation successfully.
+     */
     public void endOperation() {
+        endOperation(1, deletedObject.getSize());
+    }
+
+    /**
+     * End operation successfully.
+     * @param deletedObjects the number of objects deleted by this operation
+     * @param totalSizeDeleted total size of objects deleted by this operation
+     */
+    public void endOperation(int deletedObjects, int totalSizeDeleted) {
         this.errValue = BucketErrorCode.OBJECT_DELETED;
-        this.objectsDeleted = 1;
-        this.totatlSizeDeleted = deletedObject.getSize();
+        this.objectsDeleted = deletedObjects;
+        this.totalSizeDeleted = totalSizeDeleted;
     }
 
     /**
@@ -107,7 +132,7 @@ public class DeleteOperation extends AbstractOperation {
     public void addDeletedObject(LocalAbstractObject deletedObject) {
         this.errValue = BucketErrorCode.OBJECT_DELETED;
         this.objectsDeleted++;
-        this.totatlSizeDeleted += deletedObject.getSize();
+        this.totalSizeDeleted += deletedObject.getSize();
     }
 
     /**
@@ -118,7 +143,7 @@ public class DeleteOperation extends AbstractOperation {
     public void updateAnswer(AbstractOperation operation) {
         DeleteOperation castOperation = (DeleteOperation)operation;
         this.objectsDeleted += castOperation.objectsDeleted;
-        this.totatlSizeDeleted += castOperation.totatlSizeDeleted;
+        this.totalSizeDeleted += castOperation.totalSizeDeleted;
 
         if (errValue.equals(BucketErrorCode.OBJECT_NOT_FOUND) && operation.errValue.isSet())
             errValue = operation.errValue;

@@ -96,20 +96,35 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * Delete object with specified ID from this bucket.
      * 
      * @param objectID the ID of the object to delete
+     * @return the object deleted from this bucket
      * @throws NoSuchElementException if there is no object with the specified ID in this bucket
      * @throws OccupationLowException if the low occupation limit is reached when deleting object
-     * @return the object deleted from this bucket
      */
     public abstract LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException;
 
     /**
-     * Delete all objects from this bucket, that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
-     * the specified object.
+     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
+     * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
+     * data-equal objects found are deleted.
+     * 
      * @param object the object to match against
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting object
      */
-    public abstract int deleteObject(LocalAbstractObject object) throws OccupationLowException;
+    public abstract int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException;
+
+    /**
+     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
+     * the specified object.
+     * 
+     * @param object the object to match against
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     */
+    public int deleteObject(LocalAbstractObject object) throws OccupationLowException {
+        return deleteObject(object, 0);
+    }
 
     /**
      * Delete multiple objects with specified IDs.
@@ -119,8 +134,8 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      *
      * @param objectIDs List of object IDs to be deleted
      * @return List of objects that were delete from this bucket
-     * @throws NoSuchElementException This exception is thrown if there is not an object with one of the specified IDs in this bucket
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting objects
+     * @throws NoSuchElementException if there is not an object with one of the specified IDs in this bucket
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
      */
     public GenericAbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
         // Prepare return list
