@@ -1,6 +1,11 @@
 
 package messif.objects;
 
+import java.io.IOException;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
+
 /**
  * The object key that contains an Long and an locator URI.
  * 
@@ -125,6 +130,43 @@ public class LongKey extends AbstractObjectKey {
     @Override
     public String toString() {
         return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of LongKey loaded from binary input stream.
+     * 
+     * @param input the stream to read the LongKey from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected LongKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        key = serializator.readLong(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) + serializator.write(output, key);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + 8;
     }
     
 }

@@ -7,10 +7,15 @@
 
 package messif.objects;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
 
 /**
  *
@@ -172,6 +177,55 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
 
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException("PrecomputedDistancesPivotMapFilter can't be clonned");
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of PrecomputedDistancesPivotMapFilter loaded from binary input stream.
+     * 
+     * @param input the stream to read the PrecomputedDistancesPivotMapFilter from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected PrecomputedDistancesPivotMapFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        int items = serializator.readInt(input);
+        precompDistMapping = Collections.synchronizedMap(new HashMap<LocalAbstractObject, Float>(items));
+        for (int i = 0; i < items; i++)
+            precompDistMapping.put(serializator.readObject(input, LocalAbstractObject.class), serializator.readFloat(input));
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the data output this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        int size = super.binarySerialize(output, serializator);
+        size += serializator.write(output, precompDistMapping.size());
+        for (Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
+            size += serializator.write(output, entry.getKey());
+            size += serializator.write(output, entry.getValue().floatValue());
+        }
+        return size;
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        int size = super.getBinarySize(serializator) + 4;
+        for (LocalAbstractObject object : precompDistMapping.keySet())
+            size += serializator.getBinarySize(object) + 4;
+        return size;
     }
 
 }

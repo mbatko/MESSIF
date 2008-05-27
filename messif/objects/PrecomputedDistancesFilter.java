@@ -5,15 +5,32 @@
 
 package messif.objects;
 
+import java.io.IOException;
 import java.io.Serializable;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 import messif.statistics.StatisticCounter;
 
 /**
+ * This class provides a framework for metric-distance filtering techniques.
+ * Using a triangle inequality prperty of the metric space, some distance calculations
+ * can be avoided provided there is some additional information - the precomputed
+ * distances.
  * 
+ * <p>
+ * A filter is added to a {@link LocalAbstractObject} via its
+ * {@link LocalAbstractObject#chainFilter chainFilter} method. Objects can have
+ * several filters chained - if the first filter fails to avoid the computation,
+ * the next is used and so on. The filters are then used automatically whenever a
+ * {@link LocalAbstractObject#getDistance(LocalAbstractObject) distance computation}
+ * is evaluated.
+ * </p>
  *
  * @author xbatko
  */
-public abstract class PrecomputedDistancesFilter implements Cloneable, Serializable {
+public abstract class PrecomputedDistancesFilter implements Cloneable, Serializable, BinarySerializable {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
@@ -22,6 +39,15 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
 
     /** Global counter for saving distance computations by using precomputed */
     protected static StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
+
+
+    /****************** Constructor ******************/
+
+    /**
+     * Creates a new instance of PrecomputedDistancesFilter.
+     */
+    protected PrecomputedDistancesFilter() {
+    }
 
 
     /****************** Filter chaining ******************/
@@ -180,6 +206,40 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
         if (rtv.nextFilter != null)
             rtv.nextFilter = (PrecomputedDistancesFilter)rtv.nextFilter.clone();
         return rtv;
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of PrecomputedDistancesFilter loaded from binary input stream.
+     * 
+     * @param input the stream to read the PrecomputedDistancesFilter from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected PrecomputedDistancesFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        nextFilter = serializator.readObject(input, PrecomputedDistancesFilter.class);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return serializator.write(output, nextFilter);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    public int getBinarySize(BinarySerializator serializator) {
+        return serializator.getBinarySize(nextFilter);
     }
 
 }

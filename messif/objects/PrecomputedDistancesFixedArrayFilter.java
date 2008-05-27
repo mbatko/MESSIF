@@ -7,6 +7,11 @@
 
 package messif.objects;
 
+import java.io.IOException;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
+
 /**
  *
  * @author xbatko
@@ -23,20 +28,22 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     protected int actualSize = 0;
 
     /**
-     * Creates a new instance of PrecomputedDistancesFixedArrayFilter
+     * Creates a new instance of PrecomputedDistancesFixedArrayFilter.
      */
     public PrecomputedDistancesFixedArrayFilter() {
     }
 
     /**
-     * Creates a new instance of PrecomputedDistancesFixedArrayFilter
+     * Creates a new instance of PrecomputedDistancesFixedArrayFilter.
+     * @param object the object to which to add this filter
      */
     public PrecomputedDistancesFixedArrayFilter(LocalAbstractObject object) {
         object.chainFilter(this, true);
     }
 
     /**
-     * Creates a new instance of PrecomputedDistancesFixedArrayFilter
+     * Creates a new instance of PrecomputedDistancesFixedArrayFilter.
+     * @param initialSize the initial size for this filter's internal array of distances
      */
     public PrecomputedDistancesFixedArrayFilter(int initialSize) {
         precompDist = new float[initialSize];
@@ -44,6 +51,8 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     /**
      * Creates a new instance of PrecomputedDistancesFixedArrayFilter
+     * @param object the object to which to add this filter
+     * @param initialSize the initial size for this filter's internal array of distances
      */
     public PrecomputedDistancesFixedArrayFilter(LocalAbstractObject object, int initialSize) {
         this(initialSize);
@@ -259,10 +268,12 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     }
 
     /**
-     * Returns the precomputed distance by index
-     *      If there is no distance associated with the index <code>position</code>
-     *      the function returns LocalAbstractObject.UNKNOWN_DISTANCE.
+     * Returns the precomputed distance at the specified index.
+     * If there is no distance associated with the index <code>position</code>
+     * the function returns {@link LocalAbstractObject#UNKNOWN_DISTANCE}.
+     *
      * @param position the index to retrieve the distance from
+     * @return the precomputed distance at the specified index
      */
     public float getPrecompDist(int position) {
         if (position < 0 || position >= actualSize)
@@ -284,6 +295,12 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     
     /****************** Clonning ******************/
 
+    /**
+     * Creates and returns a copy of this object.
+     * @return a copy of this object
+     * @throws CloneNotSupportedException if this object cannot be cloned.
+     */
+    @Override
     public Object clone() throws CloneNotSupportedException {
         PrecomputedDistancesFixedArrayFilter rtv = (PrecomputedDistancesFixedArrayFilter)super.clone();
         if (rtv.precompDist != null) {
@@ -351,8 +368,10 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     }
 
 
-    /** Resize the internal precomputed distances array to the newSize. 
+    /**
+     * Resize the internal precomputed distances array to the newSize. 
      * The array can only be enlarged, i.e., the array cannot be truncated by calling this method.
+     * @param newSize the new size for the precomputed array
      */
     protected synchronized void resizePrecompDistArray(int newSize) {
         if (precompDist != null) {
@@ -363,6 +382,46 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
             System.arraycopy(precompDist, 0, newArray, 0, actualSize);        
             precompDist = newArray;
         } else precompDist = new float[newSize];
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of PrecomputedDistancesFixedArrayFilter loaded from binary input stream.
+     * 
+     * @param input the stream to read the PrecomputedDistancesFixedArrayFilter from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected PrecomputedDistancesFixedArrayFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        actualSize = serializator.readInt(input);
+        precompDist = serializator.readFloatArray(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, actualSize) +
+               serializator.write(output, precompDist);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + 4 + serializator.getBinarySize(precompDist);
     }
 
 }

@@ -333,7 +333,7 @@ public abstract class Convert {
     /**
      * Class loader with type check.
      * @param name the fully qualified name of the class
-     * @param checkClass the class that is returned - must be equal or the super class for the created one
+     * @param checkClass the superclass of the returned class for the generics check
      * @return the <code>Class</code> object associated with the class or
      *         interface with the given string name
      * @throws ClassNotFoundException if the class cannot be located

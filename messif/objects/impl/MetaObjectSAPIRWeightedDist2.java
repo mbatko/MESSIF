@@ -17,6 +17,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectSAPIR.XMLHandlerSAPIR;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinarySerializator;
 import org.xml.sax.SAXException;
 
 /**
@@ -87,5 +89,20 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
     public static String[] getVisualDescriptorNames() {
         return new String[] { "ScalableColorType", "ColorStructureType", "ColorLayoutType", "EdgeHistogramType", "HomogeneousTextureType" };
     }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of MetaObjectSAPIRWeightedDist2 loaded from binary input stream.
+     * 
+     * @param input the stream to read the MetaObjectSAPIRWeightedDist2 from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected MetaObjectSAPIRWeightedDist2(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+    }
+
 
 }

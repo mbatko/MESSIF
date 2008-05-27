@@ -1,6 +1,10 @@
 
 package messif.objects;
 
+import java.io.IOException;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinarySerializator;
+
 /**
  *
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
@@ -45,4 +49,7 @@ public class PrecompDistPerforatedArrayFilter extends PrecomputedDistancesFixedA
         return false;
     }
 
+    protected PrecompDistPerforatedArrayFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+    }
 }

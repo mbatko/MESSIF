@@ -25,6 +25,10 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -33,7 +37,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  * @author xbatko
  */
-public class MetaObjectSAPIR extends MetaObject {
+public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
@@ -414,6 +418,42 @@ public class MetaObjectSAPIR extends MetaObject {
             return xmlString;
         }
 
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of MetaObjectSAPIR loaded from binary input stream.
+     * 
+     * @param input the stream to read the MetaObjectSAPIR from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected MetaObjectSAPIR(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator);
     }
 
 }

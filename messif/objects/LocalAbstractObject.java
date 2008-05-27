@@ -16,6 +16,10 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 /**
  * This class is ancestor of all objects that hold some data the MESSI Framework can work with.
@@ -59,6 +63,15 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
 
     /** Global counter for upper-bound distance computations (any purpose) */
     protected static final StatisticCounter counterUpperBoundDistanceComputations = StatisticCounter.getStatistics("DistanceComputations.UpperBound");
+
+
+    /****************** Constructor ******************/
+
+    /**
+     * Creates a new instance of LocalAbstractObject.
+     */
+    protected LocalAbstractObject() {
+    }
 
 
     /****************** Local object converter ******************/
@@ -354,6 +367,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * sent back to client in order to minimize problems with unknown
      * classes after deserialization.
      */
+    @Override
     public void clearSurplusData() {
         suppData = null;
         distanceFilter = null;
@@ -432,6 +446,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
          * Returns a hash code value for the object data.
          * @return a hash code value for the data of this object
          */
+        @Override
         public int hashCode() {
             return object.dataHashCode();
         }
@@ -442,6 +457,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
          * @return  <code>true</code> if this object is the same as the obj
          *          argument; <code>false</code> otherwise.
          */
+        @Override
         public boolean equals(Object obj) {
             return object.dataEquals(obj);
         }
@@ -516,6 +532,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * @return a clone of this instance
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
+    @Override
     public final Object clone() throws CloneNotSupportedException {
         return clone(true);
     }
@@ -538,7 +555,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
         // Clone the supplemental data
         if ((suppData != null) && (suppData instanceof Cloneable))
             try {
-                rtv.suppData = rtv.suppData.getClass().getMethod("clone").invoke(rtv.suppData);
+                rtv.suppData = (BinarySerializable)rtv.suppData.getClass().getMethod("clone").invoke(rtv.suppData);
             } catch (IllegalAccessException e) {
                 throw new CloneNotSupportedException(e.toString());
             } catch (NoSuchMethodException e) {
@@ -694,5 +711,46 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * @throws IOException if there was an error while writing to stream
      */
     protected abstract void writeData(OutputStream stream) throws IOException;
+
+
+    //************ Protected methods of BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of LocalAbstractObject loaded from binary input stream.
+     * 
+     * @param input the stream to read the LocalAbstractObject from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected LocalAbstractObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        suppData = serializator.readObject(input, Object.class);
+        distanceFilter = serializator.readObject(input, PrecomputedDistancesFilter.class);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, suppData) +
+               serializator.write(output, distanceFilter);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    protected int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + serializator.getBinarySize(suppData) +
+                serializator.getBinarySize(distanceFilter);
+    }
 
 }

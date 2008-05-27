@@ -7,8 +7,12 @@
 
 package messif.objects;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.UUID;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
 
 /**
  * A class that represents an immutable universally unique identifier (UUID).
@@ -54,6 +58,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      * @param obj the object to compare with.
      * @return <tt>true</tt> if the objects are the same; <tt>false</tt> otherwise
      */
+    @Override
     public final boolean equals(Object obj) {
         try {
             UniqueID castObj = (UniqueID)obj;
@@ -67,6 +72,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      * Returns a hash code value for this unique ID.
      * @return a hash code value for this unique ID
      */
+    @Override
     public final int hashCode() {
         return (int)((mostSigBits >> 32) ^
                 mostSigBits ^
@@ -84,6 +90,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      * Returns a string representation of this unique ID.
      * @return a string representation of this unique ID
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(digits(mostSigBits >> 32, 8)).append('-');
         rtv.append(digits(mostSigBits >> 16, 4)).append('-');
@@ -101,6 +108,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      *       Thus it is protected and the class doesn't implement {@link java.lang.Cloneable} interface.
      * @return a copy of this object
      */
+    @Override
     protected Object clone() throws CloneNotSupportedException {
         UniqueID rtv = (UniqueID)super.clone();
 
@@ -132,4 +140,39 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
                    0))));
     }
 
+
+    //************ Protected methods of BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of UniqueID loaded from binary input stream.
+     * 
+     * @param input the stream to read the ID from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected UniqueID(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        this.mostSigBits = serializator.readLong(input);
+        this.leastSigBits = serializator.readLong(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return serializator.write(output, mostSigBits) +
+               serializator.write(output, leastSigBits);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    protected int getBinarySize(BinarySerializator serializator) {
+        return 16;
+    }
 }

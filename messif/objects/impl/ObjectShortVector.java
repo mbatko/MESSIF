@@ -10,18 +10,21 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
  *
  * @author xbatko
  */
-public abstract class ObjectShortVector extends LocalAbstractObject {
+public abstract class ObjectShortVector extends LocalAbstractObject implements BinarySerializable {
     
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
@@ -248,6 +251,43 @@ public abstract class ObjectShortVector extends LocalAbstractObject {
         
         return rtv;
     }
-    
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectShortVector loaded from binary input stream.
+     * 
+     * @param input the stream to read the ObjectShortVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected ObjectShortVector(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        data = serializator.readShortArray(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the data output this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, data);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + serializator.getBinarySize(data);
+    }
     
 }

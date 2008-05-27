@@ -6,9 +6,12 @@
 
 package messif.objects;
 
+import java.io.IOException;
 import java.io.Serializable;
-import java.util.UUID;
 import messif.netbucket.RemoteAbstractObject;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -126,6 +129,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable {
      * (or ID if locator is <tt>null</tt>) in brackets.
      * @return a string representation of this abstract object
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(getClass().getSimpleName()).append(" (");
         if (objectKey != null)
@@ -133,6 +137,44 @@ public abstract class AbstractObject extends UniqueID implements Serializable {
         else rtv.append(super.toString());
         rtv.append(")");
         return rtv.toString();
+    }
+
+
+    //************ Protected methods of BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of AbstractObject loaded from binary input stream.
+     * 
+     * @param input the stream to read the AbstractObject from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected AbstractObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        objectKey = serializator.readObject(input, AbstractObjectKey.class);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output stream this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, objectKey);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    protected int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + serializator.getBinarySize(objectKey);
     }
 
 }

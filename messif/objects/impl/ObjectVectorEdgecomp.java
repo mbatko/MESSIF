@@ -9,6 +9,8 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -142,6 +144,20 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     +TotalHistogram[5+45+j%5]
                     +TotalHistogram[5+50+j%5])/4.0;
         }
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectVectorEdgecomp loaded from binary input stream.
+     * 
+     * @param input the stream to read the ObjectVectorEdgecomp from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected ObjectVectorEdgecomp(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
 }

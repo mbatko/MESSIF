@@ -476,9 +476,9 @@ public class BucketDispatcher implements Serializable {
                 // Try bucket class internal factory first
                 Method factoryMethod = storageClass.getDeclaredMethod("getBucket", long.class, long.class, long.class, boolean.class, Map.class);
                 if (!Modifier.isStatic(factoryMethod.getModifiers()))
-                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' is not static");
+                    throw new InstantiationException("Factory method 'getBucket' in " + storageClass + " is not static");
                 if (!storageClass.isAssignableFrom(factoryMethod.getReturnType()))
-                    throw new InstantiationException("Factory method 'getBucket' in class '" + storageClass + "' has wrong return type");
+                    throw new InstantiationException("Factory method 'getBucket' in " + storageClass + " has wrong return type");
                 return (LocalBucket)factoryMethod.invoke(null, capacity, softCapacity, lowOccupation, occupationAsBytes, storageClassParams);
             } catch (NoSuchMethodException ignore) {
                 // Factory method doesn't exist, try class constructor
@@ -489,11 +489,11 @@ public class BucketDispatcher implements Serializable {
                          );
             }
         } catch (NoSuchMethodException e) {
-            throw new InstantiationException("Storage class " + storageClass + " lacks proper constructor: " + e.getMessage());
+            throw new InstantiationException("Storage " + storageClass + " lacks proper constructor: " + e.getMessage());
         } catch (IllegalAccessException e) {
-            throw new InstantiationException("Storage class " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
+            throw new InstantiationException("Storage " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
         } catch (java.lang.reflect.InvocationTargetException e) {
-            throw new InstantiationException("Storage class " + storageClass + " constructor invocation failed: " + e.getCause());
+            throw new InstantiationException("Storage " + storageClass + " constructor invocation failed: " + e.getCause());
         }
     }
 

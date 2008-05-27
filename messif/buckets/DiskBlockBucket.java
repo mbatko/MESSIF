@@ -11,8 +11,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.RandomAccessFile;
-import messif.objects.LocalAbstractObject;
 import java.io.Serializable;
+import messif.objects.LocalAbstractObject;
 import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
@@ -20,10 +20,11 @@ import java.nio.channels.FileChannel;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import messif.objects.nio.BinarySerializable;
-import messif.objects.nio.BinarySerializingFileInputStream;
-import messif.objects.nio.BinarySerializingFileOutputStream;
-import messif.objects.nio.JavaToBinarySerializable;
+import messif.buckets.LocalBucket.LocalBucketIterator;
+import messif.objects.nio.BinarySerializator;
+import messif.objects.nio.ByteBufferFileInputStream;
+import messif.objects.nio.ByteBufferFileOutputStream;
+import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
 
 /**
@@ -55,10 +56,10 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
 
     /** Buffer sizes for read/write operations */
-    protected static final int bufferSize = 4096;
+    protected final int bufferSize;
 
     /** Allocate the buffers for read/write operations as {@link ByteBuffer#allocateDirect direct} */
-    protected static final boolean bufferDirect = false;
+    protected final boolean bufferDirect;
 
     /** The number of objects currently stored in the bucket file */
     protected transient int objectCount;
@@ -78,15 +79,14 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
     /** The position in the file where the bucket starts */
     protected final long startPosition;
 
-    /** The class of objects stored in this bucket; mixed classes can be stored if <tt>null</tt> */
-    protected final Class<? extends LocalAbstractObject> storedObjectsClass;
-
-    /** Constructor or factory method used for deserializing objects */
-    protected transient final Object objectsConstructorOrFactory;
+    /** Serializator responsible for storing (and restoring) binary objects in this bucket */
+    protected final BinarySerializator serializator;
 
     /** Stream for writing data */
-    protected transient final BinarySerializingFileOutputStream outputStream;
+    protected transient final ByteBufferFileOutputStream outputStream;
 
+    /** Flag whether the bucket file is modified */
+    protected transient boolean modified;
 
     //****************** Constructors ******************//
 
@@ -108,18 +108,21 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param file the file in which to create the bucket
+     * @param bufferSize the size of the buffer used for reading/writing
+     * @param bufferDirect the bucket is either direct (<tt>true</tt>) or array-backed (<tt>false</tt>)
      * @param startPosition the position in the file where the bucket starts
-     * @param storedObjectsClass the class of objects stored in this bucket
+     * @param serializator the object responsible for storing (and restoring) binary objects
      * @throws IOException if there was an error opening the bucket file
      */
-    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file, long startPosition, Class<? extends LocalAbstractObject> storedObjectsClass) throws IOException {
+    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean bufferDirect, long startPosition, BinarySerializator serializator) throws IOException {
         super(capacity, softCapacity, lowOccupation, true);
 
         this.file = file;
+        this.bufferSize = bufferSize;
+        this.bufferDirect = bufferDirect;
         this.startPosition = startPosition;
-        this.storedObjectsClass = storedObjectsClass;
+        this.serializator = serializator;
         this.fileChannel = openFileChannel(file);
-        this.objectsConstructorOrFactory = createConstructorOrFactory(storedObjectsClass);
         this.outputStream = openOutputStream();
     }
 
@@ -141,12 +144,14 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param fileName the name of the file in which to create the bucket
+     * @param bufferSize the size of the buffer used for reading/writing
+     * @param bufferDirect the bucket is either direct (<tt>true</tt>) or array-backed (<tt>false</tt>)
      * @param startPosition the position in the file where the bucket starts
-     * @param storedObjectsClass the class of objects stored in this bucket
+     * @param serializator the object responsible for storing (and restoring) binary objects
      * @throws IOException if there was an error opening the bucket file
      */
-    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, String fileName, long startPosition, Class<? extends LocalAbstractObject> storedObjectsClass) throws IOException {
-        this(capacity, softCapacity, lowOccupation, new File(fileName), startPosition, storedObjectsClass);
+    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, String fileName, int bufferSize, boolean bufferDirect, long startPosition, BinarySerializator serializator) throws IOException {
+        this(capacity, softCapacity, lowOccupation, new File(fileName), bufferSize, bufferDirect, startPosition, serializator);
     }
 
     /**
@@ -209,6 +214,8 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             } catch (ClassCastException ignore) {
                 objectClass = Convert.getClassForName((String)parameters.get("class"), LocalAbstractObject.class);
             }
+        if (objectClass == null)
+            objectClass = LocalAbstractObject.class;
 
         // If a file was not specified - create a new file in given directory
         if (file == null) {
@@ -225,7 +232,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         }
 
         // Finally, create the bucket
-        return new DiskBlockBucket(capacity, softCapacity, lowOccupation, file, 0, objectClass);
+        return new DiskBlockBucket(capacity, softCapacity, lowOccupation, file, 16384, true, 0, new MultiClassSerializator(objectClass));
     }
 
 
@@ -249,7 +256,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         ByteBuffer buffer = ByteBuffer.allocate(headerSize);
         buffer.putLong(serialVersionUID);
         buffer.putLong(getCapacity());
-        buffer.putInt((storedObjectsClass == null)?-1:storedObjectsClass.getName().hashCode()); // Hash of the stored class name
+        buffer.putInt(serializator.hashCode()); // Hash of the serializator (hashes of the UUIDs of the cached objects)
         buffer.putInt(flags & ~FLAG_CLOSED); // Closed bits are set to zero for the first time even if closing
         buffer.putLong(fileOccupation);
         buffer.putInt(objectCount);
@@ -263,6 +270,9 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             buffer.rewind();
             fileChannel.force(true);
             fileChannel.write(buffer, position);
+            modified = false;
+        } else {
+            modified = true;
         }
     }
 
@@ -295,8 +305,8 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
 
             // Check if the stored class matches
             tmpLong = buffer.getInt();
-            if (tmpLong != ((storedObjectsClass == null)?-1:storedObjectsClass.getName().hashCode()))
-                throw new IOException("Hash codes for the stored object classes do not match");
+            if (tmpLong != serializator.hashCode())
+                throw new IOException("Hash codes for the serializator do not match");
 
             // Read flags
             int flags = buffer.getInt();
@@ -306,16 +316,15 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
                 objectCount = buffer.getInt();
                 deletedFragments = buffer.getInt();
                 occupation = buffer.getLong();
+                modified = false;
             } else {
                 // Header indicates pending close, so it is probably incorrect - reconstruct it from the file
                 reconstructHeader(fileChannel, position + headerSize);
+                writeHeader(fileChannel, position, FLAG_CLOSED);
             }
         } catch (BufferUnderflowException e) {
             throw new IOException("Header is corrupted, consider removing the file " + file);
         }
-
-        // Mark the bucket as open
-        writeHeader(fileChannel, position, 0);
     }
 
     /**
@@ -335,10 +344,10 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         occupation = 0;
 
         // Read all objects (by seeking)
-        BinarySerializingFileInputStream reader = new BinarySerializingFileInputStream(bufferSize, bufferDirect, fileChannel, position, getCapacity());
+        ByteBufferFileInputStream reader = new ByteBufferFileInputStream(bufferSize, bufferDirect, fileChannel, position, getCapacity());
         try {
             // End iterating one an "null" object is found
-            for (int objectSize = reader.skipObject(false); objectSize != 0; objectSize = reader.skipObject(false)) {
+            for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
                 if (objectSize > 0) {
                     objectCount++;
                     occupation += objectSize;
@@ -359,25 +368,12 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
     //****************** Construction methods ******************//
 
     /**
-     * Create constructor or factory method for creating BinarySerializable objects of the specified class.
-     * @param objectsClass the class to create instances for
-     * @return a {@link Constructor}, a {@link Method} or <tt>null</tt>
+     * Create input stream on the current file channel.
+     * @return the created input stream
+     * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected static Object createConstructorOrFactory(Class<?> objectsClass) {
-        // The stored objects' class is not limited or the stored objects are not BinarySerializable
-        if (objectsClass == null || !BinarySerializable.class.isAssignableFrom(objectsClass))
-            return null;
-
-        // Try the BinarySerializable constructor then factory method
-        try {
-            return JavaToBinarySerializable.getNativeSerializableConstructor(objectsClass);
-        } catch (NoSuchMethodException ignore) {
-            try {
-                return JavaToBinarySerializable.getNativeSerializableFactoryMethod(objectsClass);
-            } catch (NoSuchMethodException ignoretoo) {
-                return null;
-            }
-        }
+    protected ByteBufferFileInputStream openInputStream() throws IOException {
+        return new ByteBufferFileInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, capacity);
     }
 
     /**
@@ -385,8 +381,8 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @return the created output stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BinarySerializingFileOutputStream openOutputStream() throws IOException {
-        BinarySerializingFileOutputStream stream = new BinarySerializingFileOutputStream(bufferSize, bufferDirect, fileChannel, headerSize, capacity);
+    protected ByteBufferFileOutputStream openOutputStream() throws IOException {
+        ByteBufferFileOutputStream stream = new ByteBufferFileOutputStream(bufferSize, bufferDirect, fileChannel, headerSize, capacity);
         stream.position(fileOccupation);
         return stream;
     }
@@ -408,7 +404,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         if (fileExists)
             readHeader(chan, startPosition);
         else
-            writeHeader(chan, startPosition, 0);
+            writeHeader(chan, startPosition, FLAG_CLOSED);
 
         return chan;
     }
@@ -427,11 +423,6 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             field.setAccessible(true);
             field.set(this, openFileChannel(file));
 
-            // Reset the constructor / factory method
-            field = getClass().getDeclaredField("objectsConstructorOrFactory");
-            field.setAccessible(true);
-            field.set(this, createConstructorOrFactory(storedObjectsClass));
-            
             // Reopen the output stream
             field = getClass().getDeclaredField("outputStream");
             field.setAccessible(true);
@@ -484,19 +475,47 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      */
     protected synchronized BucketErrorCode storeObject(LocalAbstractObject object) throws IllegalStateException {
         try {
-            if (storedObjectsClass != null && !storedObjectsClass.isInstance(object))
-                return BucketErrorCode.OBJECT_REFUSED;
+            // Set modified flag
+            if (!modified)
+                writeHeader(fileChannel, startPosition, 0);
 
-            if (objectsConstructorOrFactory != null)
-                fileOccupation += outputStream.write((BinarySerializable)object);
-            else
-                fileOccupation += outputStream.write(new JavaToBinarySerializable(object));
+            // Write object
+            fileOccupation += serializator.write(outputStream, object);
+
+            // Update internal counters
             objectCount++;
 
             return BucketErrorCode.OBJECT_INSERTED;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     * Deletes the object at specified position.
+     * Practically, this method writes negative size of the deleted object into position.
+     * @param position the relative address of the begining of the object
+     * @param size the size of the object
+     * @throws IOException if there was an I/O error
+     */
+    protected synchronized void deleteObject(long position, int size) throws IOException {
+        // Set modified flag
+        if (!modified)
+            writeHeader(fileChannel, startPosition, 0);
+
+        // Remember position to be able to restore it after the write
+        long currentPosition = outputStream.position();
+        try {
+            outputStream.position(position);
+            // Write the negative object size to indicate deleted object
+            serializator.write(outputStream, -size);
+        } finally {
+            outputStream.position(currentPosition);
+        }
+
+        // Update internal counters
+        objectCount--;
+        deletedFragments++;
     }
 
     /**
@@ -532,7 +551,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         protected long nextObjectPosition;
         
         /** Input stream for reading objects */
-        protected final BinarySerializingFileInputStream inputStream;
+        protected final ByteBufferFileInputStream inputStream;
 
         /** Hash value for detection of concurrent modification */
         protected long detectConcurrent;
@@ -549,9 +568,9 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             detectConcurrent = getDetectConcurrent();
             try {
                 bucket.flush(false); // This is very fast unless there are some data pending
-                inputStream = new BinarySerializingFileInputStream(bufferSize, bufferDirect, bucket.fileChannel, bucket.startPosition + headerSize, bucket.capacity);
+                inputStream = bucket.openInputStream();
                 nextObjectPosition = 0;
-                nextObject = (LocalAbstractObject)inputStream.read(bucket.objectsConstructorOrFactory);
+                nextObject = bucket.serializator.readObject(inputStream, LocalAbstractObject.class);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -578,15 +597,11 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
                 /*
                  * Write negative object size to indicate deleted object. The length
                  * of the deleted space is the space between the current and the next
-                 * object position. The size is 4 bytes that must be subtracted.
-                 * If there were any deleted objects in between the space will be merged
+                 * object position. The size integer is 4 bytes and must be subtracted.
+                 * If there were any deleted objects in between, the space will be merged
                  */
-                synchronized (bucket) {
-                    bucket.outputStream.writeIntAt(currentObjectPosition, (int)(currentObjectPosition - nextObjectPosition + 4));
-                    currentObjectPosition = -1;
-                    bucket.objectCount--;
-                    bucket.deletedFragments++;
-                }
+                bucket.deleteObject(currentObjectPosition, (int)(nextObjectPosition - currentObjectPosition - 4));
+                currentObjectPosition = -1;
                 detectConcurrent = getDetectConcurrent();
             } catch (IOException e) {
                 throw new IllegalStateException(e);
@@ -618,7 +633,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             // Read next object and preserve any exception thrown (will throw it in the next call)
             try {
                 nextObjectPosition = inputStream.position();
-                nextObject = (LocalAbstractObject)inputStream.read(bucket.objectsConstructorOrFactory);
+                nextObject = bucket.serializator.readObject(inputStream, LocalAbstractObject.class);
             } catch (EOFException e) {
                 nextObject = null; // EOF is a correct exit
             } catch (IOException e) {
@@ -653,6 +668,5 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         }
 
     }    
-    
 
 }

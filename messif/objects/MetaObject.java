@@ -15,10 +15,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
 
 /**
@@ -63,6 +67,7 @@ public class MetaObject extends LocalAbstractObject {
      * @param objects collection of objects with their symbolic names
      * @param cloneObjects if <tt>true</tt> the provided <code>objects</code> will be cloned, otherwise the
      *        the locators of the provided <code>objects</code> will be replaced by the specified one
+     * @throws CloneNotSupportedException if the clonning of the <code>objects</code> was unsuccessful
      */
     public MetaObject(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI);
@@ -116,7 +121,7 @@ public class MetaObject extends LocalAbstractObject {
         do {
             line = stream.readLine();
             if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectString.");
+                throw new EOFException("EoF reached while initializing MetaObject.");
         } while (processObjectComment(line));
         
         try {
@@ -374,5 +379,54 @@ public class MetaObject extends LocalAbstractObject {
     public String toString() {
         return new StringBuffer(super.toString()).append(" ").append(objects.keySet()).toString();
     }
-    
+
+
+    //************ Protected methods of BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of MetaObject loaded from binary input stream.
+     * 
+     * @param input the stream to read the MetaObject from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected MetaObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        int items = serializator.readInt(input);
+        this.objects = new TreeMap<String, LocalAbstractObject>();
+        for (int i = 0; i < items; i++)
+            objects.put(serializator.readString(input), serializator.readObject(input, LocalAbstractObject.class));
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the data output this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        int size = super.binarySerialize(output, serializator);
+        size += serializator.write(output, objects.size());
+        for (Entry<String, LocalAbstractObject> entry : objects.entrySet()) {
+            size += serializator.write(output, entry.getKey());
+            size += serializator.write(output, entry.getValue());
+        }
+        return size;
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    protected int getBinarySize(BinarySerializator serializator) {
+        int size = super.getBinarySize(serializator) + 4;
+        for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
+            size += serializator.getBinarySize(entry.getKey()) + serializator.getBinarySize(entry.getValue());
+        return size;
+    }
+
 }

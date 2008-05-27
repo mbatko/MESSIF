@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 /**
- * Extending class for {@link BinarySerializingOutputStream} operating over a
+ * Extending class for {@link ByteBufferOutputStream} operating over a
  * file. The position is restored before every write operation, so it is safe
  * to use multiple instances of this class over the same file channel. However,
  * if multiple threads use the same instance of this class, the access to the
@@ -18,7 +18,7 @@ import java.nio.channels.FileChannel;
  * 
  * @author xbatko
  */
-public class BinarySerializingFileOutputStream extends BinarySerializingOutputStream {
+public class ByteBufferFileOutputStream extends ByteBufferOutputStream {
 
     /** The file to which to write data */
     protected final FileChannel flushChannelFile;
@@ -27,7 +27,7 @@ public class BinarySerializingFileOutputStream extends BinarySerializingOutputSt
     protected final long flushChannelStartPosition;
 
     /**
-     * Creates a new instance of BinarySerializingFileOutputStream.
+     * Creates a new instance of ByteBufferFileOutputStream.
      * @param bufferSize the size of the internal buffer used for flushing
      * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
      * @param flushChannel the channel into which to write data
@@ -35,7 +35,7 @@ public class BinarySerializingFileOutputStream extends BinarySerializingOutputSt
      * @param maxLength the maximal length of data
      * @throws IOException if there was an error using flushChannel
      */
-    public BinarySerializingFileOutputStream(int bufferSize, boolean bufferDirect, FileChannel flushChannel, long position, long maxLength) throws IOException {
+    public ByteBufferFileOutputStream(int bufferSize, boolean bufferDirect, FileChannel flushChannel, long position, long maxLength) throws IOException {
         super(bufferSize, bufferDirect, flushChannel, maxLength);
         this.flushChannelFile = flushChannel;
         this.flushChannelStartPosition = position;
@@ -69,21 +69,4 @@ public class BinarySerializingFileOutputStream extends BinarySerializingOutputSt
         flushChannelPosition = position;
     }
 
-    /**
-     * Writes the <code>value</code> at stream <code>position</code>.
-     * The current position of the stream is unchanged.
-     * 
-     * @param position the number of bytes from the beginning of the stream
-     * @param value the value to write
-     * @throws IOException if there was an error using flushChannel
-     */
-    public void writeIntAt(long position, int value) throws IOException {
-        long rememberedPos = position();
-        position(position);
-        try {
-            writeInt(value);
-        } finally {
-            position(rememberedPos);
-        }
-    }
 }

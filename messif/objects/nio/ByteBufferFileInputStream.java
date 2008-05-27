@@ -1,5 +1,5 @@
 /*
- * BinarySerializingFileInputStream
+ * ByteBufferFileInputStream
  *
  */
 
@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 /**
- * Extending class for {@link BinarySerializingInputStream} operating over a
+ * Extending class for {@link ByteBufferInputStream} operating over a
  * file. The position is restored before every read operation, so it is safe
  * to use multiple instances of this class over the same file channel. However,
  * if multiple threads use the same instance of this class, the access to the
@@ -17,7 +17,7 @@ import java.nio.channels.FileChannel;
  * 
  * @author xbatko
  */
-public class BinarySerializingFileInputStream extends BinarySerializingInputStream {
+public class ByteBufferFileInputStream extends ByteBufferInputStream {
 
     /** The file from which to read data */
     protected final FileChannel readChannelFile;
@@ -26,7 +26,7 @@ public class BinarySerializingFileInputStream extends BinarySerializingInputStre
     protected final long readChannelStartPosition;
 
     /**
-     * Creates a new instance of BinarySerializingFileInputStream.
+     * Creates a new instance of ByteBufferFileInputStream.
      * @param bufferSize the size of the internal buffer used for flushing
      * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
      * @param readChannel the channel from which to read data
@@ -34,7 +34,7 @@ public class BinarySerializingFileInputStream extends BinarySerializingInputStre
      * @param maxLength the maximal length of data
      * @throws IOException if there was an error using readChannel
      */
-    public BinarySerializingFileInputStream(int bufferSize, boolean bufferDirect, FileChannel readChannel, long position, long maxLength) throws IOException {
+    public ByteBufferFileInputStream(int bufferSize, boolean bufferDirect, FileChannel readChannel, long position, long maxLength) throws IOException {
         super(bufferSize, bufferDirect, readChannel, maxLength);
         this.readChannelFile = readChannel;
         this.readChannelStartPosition = position;
