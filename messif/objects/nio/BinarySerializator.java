@@ -17,6 +17,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
+import messif.utility.Logger;
 
 /**
  * This class provides a framework for {@link BinarySerializable binary serialization} of objects.
@@ -25,6 +26,9 @@ import java.nio.ShortBuffer;
  * @author xbatko
  */
 public abstract class BinarySerializator {
+
+    /** Logger for serializators */
+    protected static final Logger log = Logger.getLoggerEx("messif.objects.nio.serializator");
 
     /**
      * Returns a default class that is used for deserialization when a class is not specified.
@@ -1016,7 +1020,7 @@ public abstract class BinarySerializator {
      * Skip the object at the current position of the stream.
      * @param stream the stream in which to skip an object
      * @param skipDeleted if <tt>true</tt> the deleted object are silently skipped (their sizes are not reported)
-     * @return the number of bytes skipped - it is negative if the object was deleted
+     * @return the skipped object's size in bytes - it is negative if the object was deleted
      * @throws IOException if there was an error reading from the input stream
      */
     public int skipObject(BinaryInputStream stream, boolean skipDeleted) throws IOException {
@@ -1031,11 +1035,11 @@ public abstract class BinarySerializator {
         // Seek over object
         if (objectSize < 0) {
             stream.skip(-objectSize);
-            return objectSize - 4; // integer for object size
         } else {
             stream.skip(objectSize);
-            return objectSize + 4; // integer for object size
         }
+
+        return objectSize;
     }
 
     /**

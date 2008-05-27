@@ -40,9 +40,11 @@ public abstract class Convert {
      *   <li>{@link String}</li>
      *   <li>{@link Class}</li>
      *   <li>{@link StreamGenericAbstractObjectIterator} - parameter represents the name of an opened stream from <code>objectStreams</code></li>
+     *   <li>{@link GenericAbstractObjectList} - parameter represents the name of an opened stream from <code>objectStreams</code>, the number of objects to read can be specified after a colon</li>
      *   <li>{@link LocalAbstractObject} - parameter represents the name of an opened stream from <code>objectStreams</code>, the next object is acquired</li>
      *   <li>static array of any "convertible" element type - parameter should be comma-separated values that will be converted using {@link #stringToType} into the array's items</li>
      *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
+     *   <li>any class with a public constructor that has a single {@link String} parameter</li>
      *   <li>any class with a <code>valueOf(String <i>parameter</i>)</code> factory method, e.g., {@link messif.network.NetworkNode#valueOf}</li>
      * </ul>
      * </p>
@@ -819,6 +821,42 @@ public abstract class Convert {
         }
 
         return (Map<K, V>)rtv;
+    }
+
+    /**
+     * Returns an object from parameter table.
+     * If the parameter table is <tt>null</tt> or if it does not contain
+     * the parameter with the specified name, the default value is returned.
+     * Otherwise, the class of the parametr is checked and if it is not the
+     * requested class (but it is a {@link String}), the {@link #stringToType}
+     * conversion is tried.
+     *
+     * @param parameters the parameter table
+     * @param paramName the name of parameter to get from the table; if there is no parameter of that 
+     * @param paramClass the class to cast the value to
+     * @param defaultValue the deault value to return if there is no parameter
+     * @throws ClassCastException if there was an incompatible key or value or the object cannot be converted from string
+     * @return a value from the parameter table
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T getParameterValue(Map<String, ?> parameters, String paramName, Class<T> paramClass, T defaultValue) throws ClassCastException {
+        if (parameters == null)
+            return defaultValue;
+        
+        // Get the value from the parameters
+        Object value = parameters.get(paramName);
+        if (value == null)
+            return defaultValue;
+
+        if (paramClass.isInstance(value))
+            return (T)value; // This cast IS checked on the previous line
+
+        // Try to convert the value from string (there will be a class cast exception if the value is not string)
+        try {
+            return stringToType((String)value, paramClass);
+        } catch (InstantiationException e) {
+            throw new ClassCastException(e.getMessage());
+        }
     }
 
     /**

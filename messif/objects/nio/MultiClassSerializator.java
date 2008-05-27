@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.logging.Level;
 import messif.utility.Convert;
 
 /**
@@ -102,8 +103,11 @@ public class MultiClassSerializator extends BinarySerializator implements Serial
     protected int write(BinaryOutputStream stream, BinarySerializable object) throws IOException {
         byte position = (byte)getClassIndex(object);
         int size = write(stream, position);
-        if (position == CLASSNAME_SERIALIZATION)
+        if (position == CLASSNAME_SERIALIZATION) {
             size += write(stream, object.getClass().getName());
+            if (log.isLoggable(Level.FINE))
+                log.fine("Class " + object.getClass().getName() + " is name-serialized, consider adding it to CachingSerializator");
+        }
         size += object.binarySerialize(stream, this);
         return size;
     }

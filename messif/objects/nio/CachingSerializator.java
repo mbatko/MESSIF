@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import messif.utility.Convert;
 
 /**
  * This class extends the deserializing support of {@link MultiClassSerializator} with
@@ -55,7 +56,7 @@ public class CachingSerializator extends MultiClassSerializator {
      * @param cachedClasses the classes that are used frequently and should be cached
      * @throws IllegalArgumentException if there is an invalid value in <code>cachedClasses</code>
      */
-    public CachingSerializator(Class<?> defaultClass, Class<? extends BinarySerializable>... cachedClasses) throws IllegalArgumentException {
+    public CachingSerializator(Class<?> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
         super(defaultClass);
 
         if (cachedClasses == null || cachedClasses.length == 0)
@@ -66,9 +67,14 @@ public class CachingSerializator extends MultiClassSerializator {
         this.cachedFactoryMethods = new ArrayList<Method>(cachedClasses.length);
 
         // Fill the predefined data
-        for (Class<? extends BinarySerializable> selClass : cachedClasses)
-            this.cachedClasses.put(selClass, addToCache(selClass));
-
+        for (Class selClass : cachedClasses) {
+            try {
+                Class<? extends BinarySerializable> castClass = Convert.genericCastToClass(selClass, BinarySerializable.class);
+                this.cachedClasses.put(castClass, addToCache(castClass));
+            } catch (ClassCastException e) {
+                throw new IllegalArgumentException("Class '" + selClass.getName() + "' does not implement BinarySerializable");
+            }
+        }
     }
 
     /**

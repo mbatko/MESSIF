@@ -135,7 +135,7 @@ public class BucketDispatcher implements Serializable {
      * @throws java.lang.Throwable if there is an error durnig finalizing
      */
     @Override
-    protected void finalize() throws Throwable {
+    public void finalize() throws Throwable {
         for (LocalBucket bucket : getAllBuckets()) {
             bucket.cleanUp();
         }

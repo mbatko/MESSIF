@@ -24,6 +24,7 @@ import messif.buckets.LocalBucket.LocalBucketIterator;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.ByteBufferFileInputStream;
 import messif.objects.nio.ByteBufferFileOutputStream;
+import messif.objects.nio.CachingSerializator;
 import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
 
@@ -180,6 +181,10 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      *   <li><em>file</em> - the path to the particular bucket (either as File or as String)</li>
      *   <li><em>dir</em> - the path to a directory (either as File or as String) where a temporary file name is
      *       created in the format of "disk_block_bucket_XXXX.dbb"</li>
+     *   <li><em>cacheClasses</em> - comma-separated list of classes that will be cached for fast serialization</li>
+     *   <li><em>bufferSize</em> - the size of the buffers used for I/O operations</li>
+     *   <li><em>startPosition</em> - the position (in bytes) of the first block of the new bucket within the <em>file</em></li>
+     *   <li><em>oneFile</em> - if <tt>true</tt>, the startPosition will be automatically computed so that all the buckets are within one file</li>
      * </ul>
      * 
      * @param capacity maximal capacity of the bucket - cannot be exceeded
@@ -196,43 +201,42 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         if (!occupationAsBytes)
             throw new InstantiationException("DiskBlockBucket cannot count occupation in objects");
 
-        // Read file name from the parameters
-        File file = null;
-        if (parameters != null) // This will throw ClassCast exception, if the "file" is neither File nor String
-            try {
-                file = (File)parameters.get("file"); // if file is unspecified, this will NOT throw exception (it will be null)
-            } catch (ClassCastException ignore) {
-                file = new File((String)parameters.get("file"));
-            }
+        // Read the parameters
+        File file = Convert.getParameterValue(parameters, "file", File.class, null);
+        Class[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
+        int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, 16384);
+        long startPosition = Convert.getParameterValue(parameters, "startPosition", Long.class, 0L);
 
-        // Read class from the parameters
-        Class<? extends LocalAbstractObject> objectClass = null;
-        if (parameters != null)
-            try {
-                // If class is unspecified, this will NOT throw exception, but the objectClass will be null instead
-                objectClass = Convert.genericCastToClass(parameters.get("class"), LocalAbstractObject.class);
-            } catch (ClassCastException ignore) {
-                objectClass = Convert.getClassForName((String)parameters.get("class"), LocalAbstractObject.class);
-            }
-        if (objectClass == null)
-            objectClass = LocalAbstractObject.class;
+        // Capacity override hack...
+        Long capacityOverrideHack = Convert.getParameterValue(parameters, "capacityOverrideHack", Long.class, null);
+        if (capacityOverrideHack != null)
+            capacity = capacityOverrideHack;
+        
+        // Compute next extent if "oneFile" was requested
+        if (file == null) {
+            startPosition = 0;
+        } else {
+            if (Convert.getParameterValue(parameters, "oneFile", Boolean.class, Boolean.FALSE) && file != null)
+                parameters.put("startPosition", startPosition + capacity + headerSize);
+        }
 
         // If a file was not specified - create a new file in given directory
         if (file == null) {
-            File dir = null;
-            if (parameters != null)
-                try {
-                    dir = (File)parameters.get("dir");
-                } catch (ClassCastException ignore) {
-                    dir = new File((String)parameters.get("dir"));
-                }
+            File dir = Convert.getParameterValue(parameters, "dir", File.class, null);
             if (dir == null)
                 file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX);
             else file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX, dir);
         }
 
+        // Initialize serializator
+        BinarySerializator serializator;
+        if (cacheClasses == null)
+            serializator = new MultiClassSerializator(LocalAbstractObject.class);
+        else
+            serializator = new CachingSerializator(LocalAbstractObject.class, cacheClasses);
+
         // Finally, create the bucket
-        return new DiskBlockBucket(capacity, softCapacity, lowOccupation, file, 16384, true, 0, new MultiClassSerializator(objectClass));
+        return new DiskBlockBucket(capacity, softCapacity, lowOccupation, file, bufferSize, true, startPosition, serializator);
     }
 
 
@@ -382,7 +386,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected ByteBufferFileOutputStream openOutputStream() throws IOException {
-        ByteBufferFileOutputStream stream = new ByteBufferFileOutputStream(bufferSize, bufferDirect, fileChannel, headerSize, capacity);
+        ByteBufferFileOutputStream stream = new ByteBufferFileOutputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, capacity);
         stream.position(fileOccupation);
         return stream;
     }
@@ -395,7 +399,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      */
     protected FileChannel openFileChannel(File file) throws IOException {
         // Remember if file exists before it is auto-created by the RandomAccessFile constructor
-        boolean fileExists = file.length() > 0;
+        boolean fileExists = file.length() > startPosition;
 
         // Open the channel
         FileChannel chan = new RandomAccessFile(file, "rw").getChannel();
@@ -566,11 +570,19 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
         protected DiskBlockBucketIterator(T bucket) throws RuntimeException {
             super(bucket);
             detectConcurrent = getDetectConcurrent();
+
             try {
                 bucket.flush(false); // This is very fast unless there are some data pending
                 inputStream = bucket.openInputStream();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            try {
                 nextObjectPosition = 0;
                 nextObject = bucket.serializator.readObject(inputStream, LocalAbstractObject.class);
+            } catch (EOFException e) {
+                nextObject = null; // EOF is a correct exit
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -633,9 +645,11 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             // Read next object and preserve any exception thrown (will throw it in the next call)
             try {
                 nextObjectPosition = inputStream.position();
-                nextObject = bucket.serializator.readObject(inputStream, LocalAbstractObject.class);
-            } catch (EOFException e) {
-                nextObject = null; // EOF is a correct exit
+                // Check end-of-file to avoid exception
+                if (nextObjectPosition == bucket.fileOccupation)
+                    nextObject = null;
+                else
+                    nextObject = bucket.serializator.readObject(inputStream, LocalAbstractObject.class);
             } catch (IOException e) {
                 nextException = new NoSuchElementException(e.toString());
             } catch (RuntimeException e) {
@@ -652,7 +666,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
          * @return <tt>true</tt> if the iterator has more elements.
          */
         public boolean hasNext() {
-            return nextObject != null;
+            return nextObject != null || nextException != null; // The exception means that there are probably more objects, but something went wrong...
         }
 
         /**
