@@ -136,9 +136,8 @@ public class BucketDispatcher implements Serializable {
      */
     @Override
     public void finalize() throws Throwable {
-        for (LocalBucket bucket : getAllBuckets()) {
-            bucket.cleanUp();
-        }
+        for (LocalBucket bucket : getAllBuckets())
+            bucket.finalize();
         super.finalize();
     }
 
@@ -642,8 +641,8 @@ public class BucketDispatcher implements Serializable {
         // Reset bucket ID and statistics
         bucket.setBucketID(UNASSIGNED_BUCKET_ID);
         try {
-            bucket.cleanUp();
-        } catch (Exception e) {
+            bucket.finalize();
+        } catch (Throwable e) {
             // Log the exception but continue cleanly
             log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
         }

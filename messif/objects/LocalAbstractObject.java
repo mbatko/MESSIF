@@ -45,7 +45,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     /** Class serial id for serialization */
     private static final long serialVersionUID = 4L;
 
-    /****************** Internal attributes ******************/
+    //****************** Attributes ******************//
 
     /** Supplemental data object */
     public Object suppData = null;
@@ -53,7 +53,8 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     /** Object for storing and using precomputed distances */
     private PrecomputedDistancesFilter distanceFilter = null;
 
-    /****************** Statistics ******************/
+
+    //****************** Statistics ******************//
 
     /** Global counter for distance computations (any purpose) */
     protected static final StatisticCounter counterDistanceComputations = StatisticCounter.getStatistics("DistanceComputations");
@@ -65,16 +66,40 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     protected static final StatisticCounter counterUpperBoundDistanceComputations = StatisticCounter.getStatistics("DistanceComputations.UpperBound");
 
 
-    /****************** Constructor ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of LocalAbstractObject.
+     * A new unique object ID is generated and the
+     * object's key is set to <tt>null</tt>.
      */
     protected LocalAbstractObject() {
+        super();
+    }
+
+    /**
+     * Creates a new instance of LocalAbstractObject.
+     * A new unique object ID is generated and the 
+     * object's key is set to the specified key.
+     * @param objectKey the key to be associated with this object
+     */
+    protected LocalAbstractObject(AbstractObjectKey objectKey) {
+        super(objectKey);
+    }
+
+    /**
+     * Creates a new instance of LocalAbstractObject.
+     * A new unique object ID is generated and a
+     * new {@link AbstractObjectKey} is generated for
+     * the specified <code>locatorURI</code>.
+     * @param locatorURI the locator URI for the new object
+     */
+    protected LocalAbstractObject(String locatorURI) {
+        super(locatorURI);
     }
 
 
-    /****************** Local object converter ******************/
+    //****************** Local object converter ******************//
 
     /**
      * Returns this abstract object as local object.
@@ -86,7 +111,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Remote object converter ******************/
+    //****************** Remote object converter ******************//
 
     /**
      * Returns the RemoteAbstractObject that contains only the URI locator of this object.
@@ -98,7 +123,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Size function ******************/
+    //****************** Size function ******************//
 
     /**
      * Returns the size of this object in bytes.
@@ -107,7 +132,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     public abstract int getSize();
 
 
-    /****************** Unused/undefined, min, max distances ******************/
+    //****************** Unused/undefined, min, max distances ******************//
 
     /** Unknown distance constant */
     public static final float UNKNOWN_DISTANCE = -1.0f;
@@ -117,8 +142,8 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     public static final float MAX_DISTANCE = Float.MAX_VALUE;
 
 
-    /****************** Metric functions ******************/
-    
+    //****************** Metric functions ******************//
+
     /** 
      * Metric distance function.
      * Returns the distance between this object and the object that is supplied as argument.
@@ -244,7 +269,8 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
         return false;
     }
 
-    /****************** Distance filter manipulation ******************/
+
+    //****************** Distance filter manipulation ******************//
 
     /**
      * Returns a filter of specified class from this object's filter chain.
@@ -348,7 +374,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
             return false;
         }
     }
-    
+
     /**
      * Destroys whole filter chain of this object.
      * The first (head of the chain) filter is returned.
@@ -377,7 +403,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Random generators ******************/
+    //****************** Random generators ******************//
 
     /**
      * Returns a pseudorandom number.
@@ -390,7 +416,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
         for (int i = 0; i < 12; i++) rand += Math.random();
         return rand/12.0;
     }
-    
+
     /**
      * Returns a pseudorandom character.
      * @return a pseudorandom <code>char</code> greater than or equal 
@@ -401,7 +427,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Equality driven by object data ******************/
+    //****************** Equality driven by object data ******************//
 
     /** 
      * Indicates whether some other object has the same data as this one.
@@ -464,7 +490,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Construction ******************/
+    //****************** Factory method ******************//
 
     /**
      * Creates a new LocalAbstractObject of the specified type from string.
@@ -523,7 +549,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     }
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 
@@ -592,7 +618,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     public abstract LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException;
 
 
-    /****************** Serialization ******************/
+    //****************** Serialization ******************//
 
     /**
      * Processes the comment line of text representation of the object.
@@ -662,7 +688,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     public final void write(OutputStream stream) throws IOException {
         write(stream, true);
     }
-    
+
     /**
      * Writes the object comments and data - key and filters - into an output text stream.
      * Writes the following comments: <ul>

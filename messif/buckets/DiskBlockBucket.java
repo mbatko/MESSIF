@@ -20,6 +20,7 @@ import java.nio.channels.FileChannel;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import messif.buckets.LocalBucket.LocalBucketIterator;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.ByteBufferFileInputStream;
@@ -161,14 +162,20 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * 
      * The method updates header and closes the file.
      * 
-     * @throws Exception if there was an error during releasing resources
+     * @throws Throwable if there was an error during releasing resources
      */
     @Override
-    public void cleanUp() throws Exception {
-        writeHeader(fileChannel, startPosition, FLAG_CLOSED);
-        flush(true);
-        fileChannel.close();
-        super.cleanUp();
+    public void finalize() throws Throwable {
+        try {
+            if (modified) {
+                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+                flush(true);
+            }
+            fileChannel.close();
+        } catch (IOException e) {
+            BucketDispatcher.log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
+        }
+        super.finalize();
     }
 
 
@@ -341,6 +348,8 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected synchronized void reconstructHeader(FileChannel fileChannel, long position) throws IOException {
+        BucketDispatcher.log.info("Rebuilding header of bucket ID " + getBucketID());
+
         // Reset header values
         objectCount = 0;
         fileOccupation = 0;

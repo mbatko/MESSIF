@@ -73,6 +73,22 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
         this.algorithm = algorithm;
     }
 
+    /**
+     * Clean up bucket internals before deletion.
+     * This method is called by bucket dispatcher when this bucket is removed
+     * or when the bucket is garbage collected.
+     * 
+     * The method calls finalizer of the encapsulated algorithm.
+     * 
+     * @throws Throwable if there was an error during releasing resources
+     */
+    @Override
+    public void finalize() throws Throwable {
+        algorithm.finalize();
+        super.finalize();
+    }
+
+
     /***************** Factory method  *****************************************/
     
     /**
@@ -170,7 +186,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
 
         // Create new instance of algorithm
         try {
-            Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams = (Map)Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, StreamGenericAbstractObjectIterator.class); // This cast IS checked, because StreamGenericAbstractObjectIterator has LocalAbstractObject as default E
+            Map<String, StreamGenericAbstractObjectIterator> objectStreams = Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, StreamGenericAbstractObjectIterator.class); // This cast IS checked, because StreamGenericAbstractObjectIterator has LocalAbstractObject as default E
             return Convert.createInstanceWithStringArgs(
                     Algorithm.getAnnotatedConstructors(algClass),
                     algParams.toArray(new String[algParams.size()]),

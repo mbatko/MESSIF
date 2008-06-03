@@ -157,7 +157,7 @@ public class Application {
     protected final MethodExecutor methodExecutor;
 
     /** List of currently opened object streams */
-    protected final Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>>();
+    protected final Map<String, StreamGenericAbstractObjectIterator> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator>();
 
     /**
      * Create new instance of Application.
@@ -917,7 +917,7 @@ public class Application {
 
     @ExecutableMethod(description = "add parameter to the specified LocalAbstractObject constructor", arguments = { "name of the stream", "parameter class", "parameter value" })
     public boolean objectStreamAddParameter(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator<LocalAbstractObject> objectStream = objectStreams.get(args[1]);
+        StreamGenericAbstractObjectIterator<?> objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
             try {
                 Class<?> paramClass = Class.forName(args[2]);

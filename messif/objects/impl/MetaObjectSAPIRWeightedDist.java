@@ -11,9 +11,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import messif.objects.LocalAbstractObject;
@@ -46,15 +44,6 @@ public class MetaObjectSAPIRWeightedDist extends MetaObjectSAPIR {
         super(stream);
     }
 
-    /** Creates a new instance of MetaObjectSAPIRWeightedDist */
-    public MetaObjectSAPIRWeightedDist(BufferedReader stream, Set<String> restrictedNames) throws IOException {
-        super(stream, restrictedNames);
-    }
-
-    public MetaObjectSAPIRWeightedDist(BufferedReader stream, String restrictedName) throws IOException {
-        this(stream, Collections.singleton(restrictedName));
-    }
-
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the given File */
     public static MetaObjectSAPIRWeightedDist create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
@@ -76,33 +65,29 @@ public class MetaObjectSAPIRWeightedDist extends MetaObjectSAPIR {
         return new MetaObjectSAPIRWeightedDist(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
     }
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         MetaObjectSAPIR castObj = (MetaObjectSAPIR)obj;
         
         float rtv = 0;
-        LocalAbstractObject obj1, obj2;
-        
+
         // ScalableColorType
-        if ((obj1 = getObject("ScalableColorType")) != null && (obj2 = castObj.getObject("ScalableColorType")) != null)
-            rtv += ((ObjectIntVectorL1)obj1).getDistanceImpl(obj2, distThreshold)*2.0/3000.0;
-        if ((obj1 = getObject("ColorStructureType")) != null && (obj2 = castObj.getObject("ColorStructureType")) != null)
-            rtv += ((ObjectShortVectorL1)obj1).getDistanceImpl(obj2, distThreshold)*3.0/40.0/255.0;
-        if ((obj1 = getObject("ColorLayoutType")) != null && (obj2 = castObj.getObject("ColorLayoutType")) != null)
-            rtv += ((ObjectColorLayout)obj1).getDistanceImpl(obj2, distThreshold)*2.0/300.0;
-        if ((obj1 = getObject("EdgeHistogramType")) != null && (obj2 = castObj.getObject("EdgeHistogramType")) != null)
-            rtv += ((ObjectVectorEdgecomp)obj1).getDistanceImpl(obj2, distThreshold)*4.0/68.0;
-        if ((obj1 = getObject("HomogeneousTextureType")) != null && (obj2 = castObj.getObject("HomogeneousTextureType")) != null)
-            rtv += ((ObjectHomogeneousTexture)obj1).getDistanceImpl(obj2, distThreshold)*0.5/25.0;
+        if (objects[0] != null && castObj.objects[0] != null)
+            rtv += ((ObjectColorLayout)objects[0]).getDistanceImpl(castObj.objects[0], distThreshold)*2.0/300.0;
+        if (objects[1] != null && castObj.objects[1] != null)
+            rtv += ((ObjectShortVectorL1)objects[1]).getDistanceImpl(castObj.objects[1], distThreshold)*3.0/40.0/255.0;
+        if (objects[2] != null && castObj.objects[2] != null)
+            rtv += ((ObjectVectorEdgecomp)objects[2]).getDistanceImpl(castObj.objects[2], distThreshold)*4.0/68.0;
+        if (objects[3] != null && castObj.objects[3] != null)
+            rtv += ((ObjectHomogeneousTexture)objects[3]).getDistanceImpl(castObj.objects[3], distThreshold)*0.5/25.0;
+        if (objects[4] != null && castObj.objects[4] != null)
+            rtv += ((ObjectIntVectorL1)objects[4]).getDistanceImpl(castObj.objects[4], distThreshold)*2.0/3000.0;
         
         return rtv;
     }
 
     public static float[] getWeights() {
-        return new float[] { 2.0f, 3.0f, 2.0f, 4.0f, 0.5f };
-    }
-
-    public static String[] getVisualDescriptorNames() {
-        return new String[] { "ScalableColorType", "ColorStructureType", "ColorLayoutType", "EdgeHistogramType", "HomogeneousTextureType" };
+        return new float[] { 2.0f, 3.0f, 4.0f, 0.5f, 2.0f };
     }
 
 

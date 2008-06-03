@@ -7,7 +7,6 @@
 package messif.netbucket;
 
 import messif.objects.AbstractObject;
-import messif.objects.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 
 /**
@@ -19,19 +18,21 @@ import messif.objects.LocalAbstractObject;
  * @author  xbatko
  */
 public class RemoteAbstractObject extends AbstractObject {
-    
+
     /** Class version id for serialization. */
     private static final long serialVersionUID = 2L;
-    
-    
-    /****************** Constructors ******************/
-    
+
+    //****************** Constructors ******************//
+
     /**
-     * Creates a new instance of RemoteAbstractObject from the specified locator.
-     * @param locatorURI the locator URI of the new object
+     * Creates a new instance of RemoteAbstractObject using the specified locator.
+     * A new unique object ID is generated and a
+     * new {@link AbstractObjectKey} is generated for
+     * the specified <code>locatorURI</code>.
+     * @param locatorURI the locator URI for the new object
      */
     public RemoteAbstractObject(String locatorURI) {
-        this.objectKey = new AbstractObjectKey(locatorURI);
+        super(locatorURI);
     }
 
     /**
@@ -39,16 +40,12 @@ public class RemoteAbstractObject extends AbstractObject {
      * @param object the local object from which to create the new one
      */
     public RemoteAbstractObject(LocalAbstractObject object) {
-        super(object); // Copy object ID
-        AbstractObjectKey originalKey = object.getObjectKey();
-        if ((originalKey == null) || (AbstractObjectKey.class.equals(originalKey.getClass())))
-            this.objectKey = originalKey;
-        else this.objectKey = new AbstractObjectKey(object.getLocatorURI());
+        super(object); // Copy object ID and key
     }
-    
-    
-    /****************** Remote object converter ******************/
-    
+
+
+    //****************** Remote object converter ******************//
+
     /**
      * Returns the RemoteAbstractObject that contains only the URI locator of this object.
      * Ror RemoteAbstractObject return itself.
@@ -57,10 +54,10 @@ public class RemoteAbstractObject extends AbstractObject {
     public RemoteAbstractObject getRemoteAbstractObject() {
         return this;
     }
-    
-    
-    /****************** Local object converter ******************/
-    
+
+
+    //****************** Local object converter ******************//
+
     /**
      * Returns the actual object - this method is not implemented.
      * It should download the object and return it.

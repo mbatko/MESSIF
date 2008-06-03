@@ -13,13 +13,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
@@ -41,42 +40,186 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
-        
+
+    /****************** The list of supported names ******************/
+
+    /** The list of the names for the encapsulated objects */
+    protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","EdgeHistogramType","HomogeneousTextureType","ScalableColorType","Location"};
+
+    /*
+    ObjectColorLayout.class
+    ObjectShortVectorL1.class
+    ObjectVectorEdgecomp.class
+    ObjectHomogeneousTexture.class
+    ObjectIntVectorL1.class
+    ObjectGPSCoordinate.class
+    */ 
+
+
+    /****************** Attributes ******************/
+
+    /** List of encapsulated objects */
+    protected LocalAbstractObject[] objects = new LocalAbstractObject[descriptorNames.length];
+
+
     /****************** Constructors ******************/
 
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
-        super(locatorURI, objects, cloneObjects);
+        super(locatorURI);
+        if (cloneObjects)
+            addObjectClones(objects);
+        else
+            addObjects(objects);
     }
 
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects) {
-        super(locatorURI, objects);
+        super(locatorURI);
+        addObjects(objects);
     }
 
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(BufferedReader stream) throws IOException {
-        super(stream);
-    }
-
-    /** Creates a new instance of MetaObjectSAPIR */
-    public MetaObjectSAPIR(BufferedReader stream, Set<String> restrictedNames) throws IOException {
-        super(stream, restrictedNames);
+        readObjects(stream);
     }
 
     /**
      * Returns list of supported visual descriptor types that this object recognizes in XML.
      * @return list of supported visual descriptor types
      */
-    public static List<String> getSupportedVisualDescriptorTypes() {
-        List<String> rtv = new ArrayList<String>();
-        for (Method method : XMLHandlerSAPIR.class.getMethods()) {
-            Class[] methodPrototype = method.getParameterTypes();
-            if (method.getName().startsWith("new") && methodPrototype.length == 1 && Map.class.equals(methodPrototype[0]))
-                rtv.add(method.getName().substring(3));
-        }
+    public static String[] getSupportedVisualDescriptorTypes() {
+        return descriptorNames;
+    }
+
+
+    /****************** MetaObject overrides ******************/
+
+    /**
+     * Returns the number of encapsulated objects.
+     * @return the number of encapsulated objects
+     */
+    @Override
+    public int getObjectCount() {
+        int count = 0;
+        for (int i = 0; i < objects.length; i++)
+            if (objects[i] != null)
+                count++;
+        return count;
+    }
+
+    /**
+     * Returns the position of the encapsulated object with the specified
+     * <code>name</code> in the {@link #objects} array.
+     * @param name the symbolic name to look for
+     * @return index in {@link #objects} array or -1 if the specified name was not found
+     */
+    protected int getNamePos(String name) {
+        for (int i = 0; i < descriptorNames.length; i++)
+            if (descriptorNames[i].equals(name))
+                return i;
+        return -1;
+    }
+
+    /**
+     * Adds an object to the encapsulated collection.
+     * If the collection already contains that name, the object will be replaced.
+     * 
+     * @param name the symbolic name of the encapsulated object
+     * @param object the object to encapsulate
+     * @return the previous encapsulated object with the specified symbolic name
+     *         or <tt>null</tt> if the collection has been enlarged
+     * @throws IllegalArgumentException if the name or object is invalid
+     */
+    @Override
+    protected LocalAbstractObject addObject(String name, LocalAbstractObject object) throws IllegalArgumentException {
+        int pos = getNamePos(name);
+        if (pos == -1)
+            throw new IllegalArgumentException("Unsupported symbolic name");
+        LocalAbstractObject prevObject = objects[pos];
+        objects[pos] = object;
+        return prevObject;
+    }
+
+    /**
+     * Removes an object from the encapsulated collection.
+     * If the collection does not contains that name, <tt>null</tt> is
+     * returned and collection is left untouched.
+     * 
+     * @param name the symbolic name of the encapsulated object to remove
+     * @return the removed encapsulated object or <tt>null</tt> if the synbolic name was not found
+     */
+    @Override
+    protected LocalAbstractObject removeObject(String name) {
+        int pos = getNamePos(name);
+        if (pos == -1)
+            return null;
+        LocalAbstractObject prevObject = objects[pos];
+        objects[pos] = null;
+        return prevObject;
+    }
+
+    /**
+     * Removes all objects from the encapsulated collection.
+     */
+    @Override
+    protected void removeObjects() {
+        for (int i = 0; i < objects.length; i++)
+            objects[i] = null;
+    }
+
+    /**
+     * Returns the encapsulated object for given symbolic name.
+     *
+     * @param name the symbolic name of the object to return
+     * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
+     */
+    @Override
+    public LocalAbstractObject getObject(String name) {
+        int pos = getNamePos(name);
+        return (pos == -1)?null:objects[pos];
+    }
+
+    /**
+     * Returns the set of symbolic names of the encapsulated objects.
+     * @return the set of symbolic names of the encapsulated objects
+     */
+    @Override
+    public Collection<String> getObjectNames() {
+        return Arrays.asList(descriptorNames);
+    }
+
+    /**
+     * Returns a collection of all the encapsulated objects.
+     * Note that the collection can contain <tt>null</tt> values.
+     * @return a collection all the encapsulated objects
+     */
+    public Collection<LocalAbstractObject> getObjects() {
+        return Arrays.asList(objects);
+    }
+
+
+    /****************** Clonning ******************/
+
+    /**
+     * Creates and returns a copy of this object. The precise meaning 
+     * of "copy" may depend on the class of the object.
+     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
+     * @return a clone of this instance.
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    @Override
+    public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
+        MetaObjectSAPIR rtv = (MetaObjectSAPIR)super.clone(cloneFilterChain);
+
+        rtv.objects = new LocalAbstractObject[objects.length];
+        
+        for (int i = 0; i < objects.length; i++)
+            rtv.objects[i] = (objects[i] == null)?null:objects[i].clone(cloneFilterChain);
+
         return rtv;
     }
+
 
     /****************** XML parsing ******************/
 
@@ -103,14 +246,15 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     public String getObjectsXML() {
         StringBuffer rtv = new StringBuffer();
-        for (String name : objects.keySet())
-            XMLHandlerSAPIR.appendObjectXML(rtv, name, objects);
+        for (int i = 0; i < objects.length; i++)
+            if (objects[i] != null)
+                XMLHandlerSAPIR.appendObjectXML(rtv, descriptorNames[i], objects[i]);
         return rtv.toString();
     }
 
     public String getObjectXML(String name) throws NoSuchElementException {
         StringBuffer rtv = new StringBuffer();
-        XMLHandlerSAPIR.appendObjectXML(rtv, name, objects);
+        XMLHandlerSAPIR.appendObjectXML(rtv, name, getObject(name));
         return rtv.toString();
     }
 
@@ -228,23 +372,18 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
         public String getObjectsXML() {
             StringBuffer rtv = new StringBuffer();
-            for (String name : objects.keySet())
-                appendObjectXML(rtv, name, objects);
+            for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
+                appendObjectXML(rtv, entry.getKey(), entry.getValue());
             return rtv.toString();
         }
 
         public String getObjectXML(String name) throws NoSuchElementException {
             StringBuffer rtv = new StringBuffer();
-            appendObjectXML(rtv, name, objects);
+            appendObjectXML(rtv, name, objects.get(name));
             return rtv.toString();
         }
 
-        protected static StringBuffer appendObjectXML(StringBuffer xmlString, String name, Map<String, LocalAbstractObject> objects) throws NoSuchElementException {
-            // Get object for the specified name
-            LocalAbstractObject object = objects.get(name);
-            if (object == null)
-                throw new NoSuchElementException("There is no object for descriptor '" + name + "'");
-
+        protected static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
             // Append opening descriptor tag
             xmlString.append('<');
             xmlString.append(descriptorTagName);
@@ -432,6 +571,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     protected MetaObjectSAPIR(BinaryInputStream input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
+        for (int i = 0; i < objects.length; i++)
+            objects[i] = serializator.readObject(input, LocalAbstractObject.class);
     }
 
     /**
@@ -443,7 +584,10 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
-        return super.binarySerialize(output, serializator);
+        int size = super.binarySerialize(output, serializator);
+        for (int i = 0; i < objects.length; i++)
+            size += serializator.write(output, objects[i]);
+        return size;
     }
 
     /**
@@ -453,7 +597,10 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
-        return super.getBinarySize(serializator);
+        int size = super.getBinarySize(serializator);
+        for (LocalAbstractObject object : objects)
+            size += serializator.getBinarySize(object);
+        return size;
     }
 
 }

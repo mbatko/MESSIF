@@ -125,7 +125,8 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * Close the bucket file in cleaning this object
      * @throws Throwable the <code>Exception</code> raised by the parent method
      */
-    protected void finalize() throws Throwable {
+    @Override
+    public void finalize() throws Throwable {
         close();
         super.finalize();
     }
@@ -526,7 +527,10 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         } catch (IOException ignore) { }
     }
 
-    /** Internal class for iterator implementation */
+    /**
+     * Internal class for iterator implementation
+     * @param T the type of the bucket this iterator operates on
+     */
     protected static class DiskBucketIterator<T extends DiskBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Iterator over the records in the "records" array */
         private final Iterator<FileBlock> iterator;
@@ -619,6 +623,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
          * @return instance of object on the position of 'position' from the current object
          * @throws NoSuchElementException if such an object cannot be found.
          */
+        @Override
         public LocalAbstractObject getObjectByPosition(int position) throws NoSuchElementException {
             try {
                 for (; position >= 0; position--)
@@ -637,6 +642,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
          * @return the instance of object, that has specified ID
          * @throws NoSuchElementException if such an object cannot be found.
          */
+        @Override
         public LocalAbstractObject getObjectByID(UniqueID objectID) throws NoSuchElementException {
             try {
                 lastBlock = bucket.objectIDMap.get(objectID);
@@ -661,13 +667,14 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
          * @return the first instance of object, that has one of the specified locators
          * @throws NoSuchElementException if there is no object with any of the specified locators
          */
+        @Override
         public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
             try {
-                Iterator<String> iterator = locatorURIs.iterator();
-                while (iterator.hasNext()) {
-                    lastBlock = bucket.objectLocatorMap.get(iterator.next());
+                Iterator<String> uriIterator = locatorURIs.iterator();
+                while (uriIterator.hasNext()) {
+                    lastBlock = bucket.objectLocatorMap.get(uriIterator.next());
                     if (removeFound)
-                        iterator.remove();
+                        uriIterator.remove();
                     if (lastBlock != null)
                         return currentObject = lastBlock.readObject();
                 }

@@ -56,7 +56,7 @@ public abstract class Convert {
      * @throws InstantiationException if the type cannot be created from the string value
      */
     @SuppressWarnings("unchecked")
-    public static <E> E stringToType(String string, Class<E> type, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InstantiationException {
+    public static <E> E stringToType(String string, Class<E> type, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InstantiationException {
         if (string.equals("null"))
             return null;
         
@@ -99,10 +99,10 @@ public abstract class Convert {
         if ((objectStreams != null) && type.isAssignableFrom(GenericAbstractObjectList.class)) {
             int colonPos = string.lastIndexOf(':');
             if (colonPos != -1) {
-                StreamGenericAbstractObjectIterator<LocalAbstractObject> objectIterator = objectStreams.get(string.substring(0, colonPos));
+                StreamGenericAbstractObjectIterator<?> objectIterator = objectStreams.get(string.substring(0, colonPos));
                 if (objectIterator != null)
                     try {
-                        return (E)new GenericAbstractObjectList(objectIterator, Integer.parseInt(string.substring(colonPos + 1)));
+                        return (E)new GenericAbstractObjectList<LocalAbstractObject>(objectIterator, Integer.parseInt(string.substring(colonPos + 1))); // This cast IS checked
                     } catch (NumberFormatException e) {
                         // Ignored, might get converted later
                     }
@@ -112,7 +112,7 @@ public abstract class Convert {
         // Try to get LocalAbstractObject from string
         if (type.isAssignableFrom(LocalAbstractObject.class)) {
             if (objectStreams != null) {
-                StreamGenericAbstractObjectIterator<LocalAbstractObject> objectIterator = objectStreams.get(string);
+                StreamGenericAbstractObjectIterator objectIterator = objectStreams.get(string);
                 if (objectIterator != null)
                     // Returns next object or throws NoSuchElement exception if there is no next objects
                     return (E)objectIterator.next(); // This cast IS checked
@@ -382,7 +382,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InstantiationException {
         // Create return array
         Object[] rtv = new Object[types.length];
         
@@ -457,7 +457,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InstantiationException {
         return parseTypesFromString(strings, types, argStartIndex, strings.length - 1, objectStreams);
     }
     
@@ -489,7 +489,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InstantiationException {
         return parseTypesFromString(strings, types, 0, objectStreams);
     }
     
@@ -531,7 +531,7 @@ public abstract class Convert {
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, int argEndIndex, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InvocationTargetException {
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, int argEndIndex, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException {
         InstantiationException lastException = null;
         Constructor<E> lastConstructor = null;
         
@@ -649,7 +649,7 @@ public abstract class Convert {
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InvocationTargetException {
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException {
         return createInstanceWithStringArgs(constructors, arguments, argStartIndex, arguments.length - 1, objectStreams);
     }
 
@@ -706,7 +706,7 @@ public abstract class Convert {
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, Map<String, StreamGenericAbstractObjectIterator<LocalAbstractObject>> objectStreams) throws InvocationTargetException {
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException {
         return createInstanceWithStringArgs(constructors, arguments, 0, objectStreams);
     }
 

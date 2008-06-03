@@ -112,16 +112,21 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     /**
      * Clean up bucket internals before deletion.
-     * This method is called by bucket dispatcher when this bucket is removed.
+     * This method is called by bucket dispatcher when this bucket is removed
+     * or when the bucket is garbage collected.
      * 
-     * The method removes references to this bucket from statistics.
-     * @throws Exception if there was an error during releasing resources
+     * The method removes statistics for this bucket.
+     * 
+     * @throws Throwable if there was an error during releasing resources
      */
-    public void cleanUp() throws Exception {
+    @Override
+    public void finalize() throws Throwable {
         // Remove statistics
         counterBucketAddObject.remove(this);
         counterBucketDelObject.remove(this);
         counterBucketRead.remove(this);
+
+        super.finalize();
     }
 
 
