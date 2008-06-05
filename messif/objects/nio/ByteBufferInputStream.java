@@ -208,8 +208,12 @@ public class ByteBufferInputStream extends BinaryInputStream {
 
             // Read next chunk of data
             int readBytes = readChannelData();
-            if (readBytes < minBytes)
-                throw new EOFException("Cannot read more bytes - end of file encountered");
+            while (readBytes < minBytes) {
+                int additionalRead = readChannelData();
+                if (additionalRead == -1)
+                    throw new EOFException("Cannot read more bytes - end of file encountered");
+                readBytes += additionalRead;
+            }
             readChannelPosition += readBytes;
 
             return readBytes;
