@@ -8,9 +8,11 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
@@ -22,6 +24,7 @@ import java.util.NoSuchElementException;
 import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
+import messif.objects.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInputStream;
@@ -41,47 +44,76 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
-    /****************** The list of supported names ******************/
+    //****************** The list of supported names ******************//
 
     /** The list of the names for the encapsulated objects */
     protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","EdgeHistogramType","HomogeneousTextureType","ScalableColorType","Location"};
 
-    /*
-    ObjectColorLayout.class
-    ObjectShortVectorL1.class
-    ObjectVectorEdgecomp.class
-    ObjectHomogeneousTexture.class
-    ObjectIntVectorL1.class
-    ObjectGPSCoordinate.class
-    */ 
+    //****************** Attributes ******************//
 
-
-    /****************** Attributes ******************/
-
-    /** List of encapsulated objects */
-    protected LocalAbstractObject[] objects = new LocalAbstractObject[descriptorNames.length];
+    /** Object for the ColorLayoutType */
+    protected ObjectColorLayout colorLayout;
+    /** Object for the ColorStructureType */
+    protected ObjectShortVectorL1 colorStructure;
+    /** Object for the EdgeHistogramType */
+    protected ObjectVectorEdgecomp edgeHistogram;
+    /** Object for the HomogeneousTextureType */
+    protected ObjectHomogeneousTexture homogeneousTexture;
+    /** Object for the ScalableColorType */
+    protected ObjectIntVectorL1 scalableColor;
+    /** Object for the Location */
+    protected ObjectGPSCoordinate location;
 
 
     /****************** Constructors ******************/
 
     /** Creates a new instance of MetaObjectSAPIR */
-    public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
+    public MetaObjectSAPIR(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectHomogeneousTexture homogeneousTexture, ObjectIntVectorL1 scalableColor, ObjectGPSCoordinate location) {
         super(locatorURI);
-        if (cloneObjects)
-            addObjectClones(objects);
-        else
-            addObjects(objects);
-    }
-
-    /** Creates a new instance of MetaObjectSAPIR */
-    public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects) {
-        super(locatorURI);
-        addObjects(objects);
+        this.colorLayout = colorLayout;
+        this.colorStructure = colorStructure;
+        this.edgeHistogram = edgeHistogram;
+        this.homogeneousTexture = homogeneousTexture;
+        this.scalableColor = scalableColor;
+        this.location = location;
     }
 
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(BufferedReader stream) throws IOException {
-        readObjects(stream);
+        // Keep reading the lines while they are comments, then read the first line of the object
+        String line;
+        do {
+            line = stream.readLine();
+            if (line == null)
+                throw new EOFException("EoF reached while initializing MetaObject.");
+        } while (processObjectComment(line));
+
+        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
+        String[] uriNamesClasses = line.split(";");
+
+        // Skip the first name if the number of elements is odd
+        int i = uriNamesClasses.length % 2;
+
+        // If the URI locator is used (and it is not set from the previous - this is the old format)
+        if (i == 1) {
+            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
+                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+        }
+
+        for (; i < uriNamesClasses.length; i += 2) {
+            if ("ColorLayoutType".equals(uriNamesClasses[i]))
+                colorLayout = readObject(stream, ObjectColorLayout.class);
+            else if ("ColorStructureType".equals(uriNamesClasses[i]))
+                colorStructure = readObject(stream, ObjectShortVectorL1.class);
+            else if ("EdgeHistogramType".equals(uriNamesClasses[i]))
+                edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
+            else if ("HomogeneousTextureType".equals(uriNamesClasses[i]))
+                homogeneousTexture = readObject(stream, ObjectHomogeneousTexture.class);
+            else if ("ScalableColorType".equals(uriNamesClasses[i]))
+                scalableColor = readObject(stream, ObjectIntVectorL1.class);
+            else if ("Location".equals(uriNamesClasses[i]))
+                location = readObject(stream, ObjectGPSCoordinate.class);
+        }
     }
 
     /**
@@ -101,71 +133,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public int getObjectCount() {
-        int count = 0;
-        for (int i = 0; i < objects.length; i++)
-            if (objects[i] != null)
-                count++;
-        return count;
-    }
-
-    /**
-     * Returns the position of the encapsulated object with the specified
-     * <code>name</code> in the {@link #objects} array.
-     * @param name the symbolic name to look for
-     * @return index in {@link #objects} array or -1 if the specified name was not found
-     */
-    protected int getNamePos(String name) {
-        for (int i = 0; i < descriptorNames.length; i++)
-            if (descriptorNames[i].equals(name))
-                return i;
-        return -1;
-    }
-
-    /**
-     * Adds an object to the encapsulated collection.
-     * If the collection already contains that name, the object will be replaced.
-     * 
-     * @param name the symbolic name of the encapsulated object
-     * @param object the object to encapsulate
-     * @return the previous encapsulated object with the specified symbolic name
-     *         or <tt>null</tt> if the collection has been enlarged
-     * @throws IllegalArgumentException if the name or object is invalid
-     */
-    @Override
-    protected LocalAbstractObject addObject(String name, LocalAbstractObject object) throws IllegalArgumentException {
-        int pos = getNamePos(name);
-        if (pos == -1)
-            throw new IllegalArgumentException("Unsupported symbolic name");
-        LocalAbstractObject prevObject = objects[pos];
-        objects[pos] = object;
-        return prevObject;
-    }
-
-    /**
-     * Removes an object from the encapsulated collection.
-     * If the collection does not contains that name, <tt>null</tt> is
-     * returned and collection is left untouched.
-     * 
-     * @param name the symbolic name of the encapsulated object to remove
-     * @return the removed encapsulated object or <tt>null</tt> if the synbolic name was not found
-     */
-    @Override
-    protected LocalAbstractObject removeObject(String name) {
-        int pos = getNamePos(name);
-        if (pos == -1)
-            return null;
-        LocalAbstractObject prevObject = objects[pos];
-        objects[pos] = null;
-        return prevObject;
-    }
-
-    /**
-     * Removes all objects from the encapsulated collection.
-     */
-    @Override
-    protected void removeObjects() {
-        for (int i = 0; i < objects.length; i++)
-            objects[i] = null;
+        return 6;
     }
 
     /**
@@ -176,8 +144,20 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public LocalAbstractObject getObject(String name) {
-        int pos = getNamePos(name);
-        return (pos == -1)?null:objects[pos];
+        if ("ColorLayoutType".equals(name))
+            return colorLayout;
+        else if ("ColorStructureType".equals(name))
+            return colorStructure;
+        else if ("EdgeHistogramType".equals(name))
+            return edgeHistogram;
+        else if ("HomogeneousTextureType".equals(name))
+            return homogeneousTexture;
+        else if ("ScalableColorType".equals(name))
+            return scalableColor;
+        else if ("Location".equals(name))
+            return location;
+        else
+            return null;
     }
 
     /**
@@ -190,12 +170,25 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     }
 
     /**
-     * Returns a collection of all the encapsulated objects.
+     * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * Note that the collection can contain <tt>null</tt> values.
-     * @return a collection all the encapsulated objects
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
      */
-    public Collection<LocalAbstractObject> getObjects() {
-        return Arrays.asList(objects);
+    public Map<String, LocalAbstractObject> getObjectMap() {
+        Map<String, LocalAbstractObject> map = new HashMap<String, LocalAbstractObject>(6);
+        if (colorLayout != null)
+            map.put("ColorLayoutType", colorLayout);
+        if (colorStructure != null)
+            map.put("ColorStructureType", colorStructure);
+        if (edgeHistogram != null)
+            map.put("EdgeHistogramType", edgeHistogram);
+        if (homogeneousTexture != null)
+            map.put("HomogeneousTextureType", homogeneousTexture);
+        if (scalableColor != null)
+            map.put("ScalableColorType", scalableColor);
+        if (location != null)
+            map.put("Location", location);
+        return map;
     }
 
 
@@ -211,15 +204,75 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         MetaObjectSAPIR rtv = (MetaObjectSAPIR)super.clone(cloneFilterChain);
-
-        rtv.objects = new LocalAbstractObject[objects.length];
-        
-        for (int i = 0; i < objects.length; i++)
-            rtv.objects[i] = (objects[i] == null)?null:objects[i].clone(cloneFilterChain);
+        if (colorLayout != null)
+            rtv.colorLayout = (ObjectColorLayout)colorLayout.clone(cloneFilterChain);
+        if (colorStructure != null)
+            rtv.colorStructure = (ObjectShortVectorL1)colorStructure.clone(cloneFilterChain);
+        if (edgeHistogram != null)
+            rtv.edgeHistogram = (ObjectVectorEdgecomp)edgeHistogram.clone(cloneFilterChain);
+        if (homogeneousTexture != null)
+            rtv.homogeneousTexture = (ObjectHomogeneousTexture)homogeneousTexture.clone(cloneFilterChain);
+        if (scalableColor != null)
+            rtv.scalableColor = (ObjectIntVectorL1)scalableColor.clone(cloneFilterChain);
+        if (location != null)
+            rtv.location = (ObjectGPSCoordinate)location.clone(cloneFilterChain);
 
         return rtv;
     }
 
+    @Override
+    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+        MetaObjectSAPIR rtv = (MetaObjectSAPIR)super.clone(true);
+        if (colorLayout != null)
+            rtv.colorLayout = (ObjectColorLayout)colorLayout.cloneRandomlyModify(args);
+        if (colorStructure != null)
+            rtv.colorStructure = (ObjectShortVectorL1)colorStructure.cloneRandomlyModify(args);
+        if (edgeHistogram != null)
+            rtv.edgeHistogram = (ObjectVectorEdgecomp)edgeHistogram.cloneRandomlyModify(args);
+        if (homogeneousTexture != null)
+            rtv.homogeneousTexture = (ObjectHomogeneousTexture)homogeneousTexture.cloneRandomlyModify(args);
+        if (scalableColor != null)
+            rtv.scalableColor = (ObjectIntVectorL1)scalableColor.cloneRandomlyModify(args);
+        if (location != null)
+            rtv.location = (ObjectGPSCoordinate)location.cloneRandomlyModify(args);
+        return rtv;
+    }
+
+    /**
+     * Store this object to a text stream.
+     * This method should have the opposite deserialization in constructor of a given object class.
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected void writeData(OutputStream stream) throws IOException {
+        if (colorLayout != null)
+            stream.write("ColorLayoutType;messif.objects.impl.ObjectColorLayout;".getBytes());
+        if (colorStructure != null)
+            stream.write("ColorStructureType;messif.objects.impl.ObjectShortVectorL1;".getBytes());
+        if (edgeHistogram != null)
+            stream.write("EdgeHistogramType;messif.objects.impl.ObjectVectorEdgecomp;".getBytes());
+        if (homogeneousTexture != null)
+            stream.write("HomogeneousTextureType;messif.objects.impl.ObjectHomogeneousTexture;".getBytes());
+        if (scalableColor != null)
+            stream.write("ScalableColorType;messif.objects.impl.ObjectIntVectorL1;".getBytes());
+        if (location != null)
+            stream.write("Location;messif.objects.impl.ObjectGPSCoordinate;".getBytes());
+
+        // Write a line for every object from the list (skip the comments)
+        if (colorLayout != null)
+            colorLayout.writeData(stream);
+        if (colorStructure != null)
+            colorStructure.writeData(stream);
+        if (edgeHistogram != null)
+            edgeHistogram.writeData(stream);
+        if (homogeneousTexture != null)
+            homogeneousTexture.writeData(stream);
+        if (scalableColor != null)
+            scalableColor.writeData(stream);
+        if (location != null)
+            location.writeData(stream);
+    }
 
     /****************** XML parsing ******************/
 
@@ -227,28 +280,61 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     public static MetaObjectSAPIR create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), 
+                (ObjectColorLayout)objects.get("ColorLayoutType"),
+                (ObjectShortVectorL1)objects.get("ColorStructureType"),
+                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
+                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
+                (ObjectIntVectorL1)objects.get("ScalableColorType"),
+                (ObjectGPSCoordinate)objects.get("Location")
+        );
     }
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed URI */
-    public static MetaObjectSAPIRWeightedDist create(String uri) throws ParserConfigurationException, SAXException, IOException {
+    public static MetaObjectSAPIR create(String uri) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(uri, xmlHandler);
-        return new MetaObjectSAPIRWeightedDist(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(),
+                (ObjectColorLayout)objects.get("ColorLayoutType"),
+                (ObjectShortVectorL1)objects.get("ColorStructureType"),
+                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
+                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
+                (ObjectIntVectorL1)objects.get("ScalableColorType"),
+                (ObjectGPSCoordinate)objects.get("Location")
+        );
     }
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
-    public static MetaObjectSAPIRWeightedDist create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
+    public static MetaObjectSAPIR create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        return new MetaObjectSAPIRWeightedDist(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(),
+                (ObjectColorLayout)objects.get("ColorLayoutType"),
+                (ObjectShortVectorL1)objects.get("ColorStructureType"),
+                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
+                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
+                (ObjectIntVectorL1)objects.get("ScalableColorType"),
+                (ObjectGPSCoordinate)objects.get("Location")
+        );
     }
 
     public String getObjectsXML() {
         StringBuffer rtv = new StringBuffer();
-        for (int i = 0; i < objects.length; i++)
-            if (objects[i] != null)
-                XMLHandlerSAPIR.appendObjectXML(rtv, descriptorNames[i], objects[i]);
+        if (colorLayout != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "ColorLayoutType", colorLayout);
+        if (colorStructure != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "ColorStructureType", colorStructure);
+        if (edgeHistogram != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "EdgeHistogramType", edgeHistogram);
+        if (homogeneousTexture != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "HomogeneousTextureType", homogeneousTexture);
+        if (scalableColor != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "ScalableColorType", scalableColor);
+        if (location != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "Location", location);
         return rtv.toString();
     }
 
@@ -571,8 +657,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     protected MetaObjectSAPIR(BinaryInputStream input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-        for (int i = 0; i < objects.length; i++)
-            objects[i] = serializator.readObject(input, LocalAbstractObject.class);
+        colorLayout = serializator.readObject(input, ObjectColorLayout.class);
+        colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
+        edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
+        homogeneousTexture = serializator.readObject(input, ObjectHomogeneousTexture.class);
+        scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
+        location = serializator.readObject(input, ObjectGPSCoordinate.class);
     }
 
     /**
@@ -585,8 +675,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     @Override
     public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
-        for (int i = 0; i < objects.length; i++)
-            size += serializator.write(output, objects[i]);
+        size += serializator.write(output, colorLayout);
+        size += serializator.write(output, colorStructure);
+        size += serializator.write(output, edgeHistogram);
+        size += serializator.write(output, homogeneousTexture);
+        size += serializator.write(output, scalableColor);
+        size += serializator.write(output, location);
         return size;
     }
 
@@ -598,8 +692,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator);
-        for (LocalAbstractObject object : objects)
-            size += serializator.getBinarySize(object);
+        size += serializator.getBinarySize(colorLayout);
+        size += serializator.getBinarySize(colorStructure);
+        size += serializator.getBinarySize(edgeHistogram);
+        size += serializator.getBinarySize(homogeneousTexture);
+        size += serializator.getBinarySize(scalableColor);
+        size += serializator.getBinarySize(location);
         return size;
     }
 

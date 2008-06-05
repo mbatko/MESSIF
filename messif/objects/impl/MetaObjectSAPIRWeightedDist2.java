@@ -29,13 +29,8 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
     private static final long serialVersionUID = 1L;    
     
     /** Creates a new instance of MetaObjectSAPIRWeightedDist */
-    public MetaObjectSAPIRWeightedDist2(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
-        super(locatorURI, objects, cloneObjects);
-    }
-
-    /** Creates a new instance of MetaObjectSAPIRWeightedDist */
-    public MetaObjectSAPIRWeightedDist2(String locatorURI, Map<String, LocalAbstractObject> objects) {
-        super(locatorURI, objects);
+    public MetaObjectSAPIRWeightedDist2(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectHomogeneousTexture homogeneousTexture, ObjectIntVectorL1 scalableColor, ObjectGPSCoordinate location) {
+        super(locatorURI, colorLayout, colorStructure, edgeHistogram, homogeneousTexture, scalableColor, location);
     }
 
     /** Creates a new instance of MetaObjectSAPIRWeightedDist */
@@ -47,7 +42,15 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
     public static MetaObjectSAPIRWeightedDist2 create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
+        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(),
+                (ObjectColorLayout)objects.get("ColorLayoutType"),
+                (ObjectShortVectorL1)objects.get("ColorStructureType"),
+                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
+                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
+                (ObjectIntVectorL1)objects.get("ScalableColorType"),
+                (ObjectGPSCoordinate)objects.get("Location")
+        );
     }
 
     @Override
@@ -56,17 +59,16 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
         
         float rtv = 0;
 
-        // ScalableColorType
-        if (objects[0] != null && castObj.objects[0] != null)
-            rtv += ((ObjectColorLayout)objects[0]).getDistanceImpl(castObj.objects[0], distThreshold)*1.5/300.0;
-        if (objects[1] != null && castObj.objects[1] != null)
-            rtv += ((ObjectShortVectorL1)objects[1]).getDistanceImpl(castObj.objects[1], distThreshold)*2.5/40.0/255.0;
-        if (objects[2] != null && castObj.objects[2] != null)
-            rtv += ((ObjectVectorEdgecomp)objects[2]).getDistanceImpl(castObj.objects[2], distThreshold)*4.5/68.0;
-        if (objects[3] != null && castObj.objects[3] != null)
-            rtv += ((ObjectHomogeneousTexture)objects[3]).getDistanceImpl(castObj.objects[3], distThreshold)*0.5/25.0;
-        if (objects[4] != null && castObj.objects[4] != null)
-            rtv += ((ObjectIntVectorL1)objects[4]).getDistanceImpl(castObj.objects[4], distThreshold)*2.5/3000.0;
+        if (colorLayout != null && castObj.colorLayout != null)
+            rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)*1.5/300.0;
+        if (colorStructure != null && castObj.colorStructure != null)
+            rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)*2.5/40.0/255.0;
+        if (edgeHistogram != null && castObj.edgeHistogram != null)
+            rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)*4.5/68.0;
+        if (homogeneousTexture != null && castObj.homogeneousTexture != null)
+            rtv += homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold)*0.5/25.0;
+        if (scalableColor != null && castObj.scalableColor != null)
+            rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.5/3000.0;
         
         return rtv;
     }

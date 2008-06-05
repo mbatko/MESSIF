@@ -8,14 +8,14 @@
 package messif.objects;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
@@ -84,130 +84,31 @@ public abstract class MetaObject extends LocalAbstractObject {
             private static final long serialVersionUID = 1L;
 
             @Override
-            protected LocalAbstractObject addObject(String name, LocalAbstractObject object) throws IllegalArgumentException {
-                throw new UnsupportedOperationException("Not supported");
+            public Map<String, LocalAbstractObject> getObjectMap() {
+                return Collections.emptyMap();
             }
 
             @Override
-            protected LocalAbstractObject removeObject(String name) {
-                throw new UnsupportedOperationException("Not supported");
+            public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+               return clone(false);
             }
 
             @Override
-            protected void removeObjects() {
-                throw new UnsupportedOperationException("Not supported");
-            }
-
-            @Override
-            public LocalAbstractObject getObject(String name) {
-                return null;
-            }
-
-            @Override
-            public Collection<String> getObjectNames() {
-                return Collections.emptySet();
-            }
-
-            @Override
-            public Collection<LocalAbstractObject> getObjects() {
-                return Collections.emptyList();
-            }
-
-            @Override
-            public int getObjectCount() {
-                return 0;
+            protected void writeData(OutputStream stream) throws IOException {
+                throw new UnsupportedOperationException("This object cannot be stored into text file");
             }
         };
     }
 
 
-    //****************** Clonning ******************//
-
-    /** 
-     * Creates and returns a randomly modified copy of this object. 
-     * The modification depends on particular subclass implementation.
-     *
-     * @param args any parameters required by the subclass implementation - usually two objects with 
-     *        the miminal and the maximal possible values
-     * @return a randomly modified clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
-    @Override
-    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-        MetaObject objectClone = (MetaObject)clone(true);
-        // Replace all sub-objects with random-modified clones
-        for (String name : getObjectNames())
-            objectClone.addObject(name, getObject(name).cloneRandomlyModify(args));
-        return objectClone;
-    }
-
-
-    /****************** Attribute access ******************/
+    //****************** Attribute access ******************//
 
     /**
-     * Adds an object to the encapsulated collection.
-     * If the collection already contains that name, the object will be replaced.
-     * 
-     * @param name the symbolic name of the encapsulated object
-     * @param object the object to encapsulate
-     * @return the previous encapsulated object with the specified symbolic name
-     *         or <tt>null</tt> if the collection has been enlarged
-     * @throws IllegalArgumentException if the name or object is invalid
+     * Returns a collection of all the encapsulated objects associated with their symbolic names.
+     * Note that the collection can contain <tt>null</tt> values.
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
      */
-    protected abstract LocalAbstractObject addObject(String name, LocalAbstractObject object) throws IllegalArgumentException;
-
-    /**
-     * Add several objects to the encapsulated collection.
-     * The keys of the map provide the name of the encapsulated object.
-     * @param objects pairs of the symbolic name and the encapsulated object to add
-     * @throws IllegalArgumentException if any of the names or objects is invalid, note that some objects may have been already added
-     */
-    protected void addObjects(Map<String, ? extends LocalAbstractObject> objects) throws IllegalArgumentException {
-        for (Map.Entry<String, ? extends LocalAbstractObject> entry : objects.entrySet())
-                addObject(entry.getKey(), entry.getValue());
-    }
-
-    /**
-     * Adds an object clone to the encapsulated collection.
-     * If the collection already contains that name, the object will be replaced.
-     * 
-     * @param name the symbolic name of the encapsulated object
-     * @param object the object whose clone to encapsulate
-     * @return the previous encapsulated object with the specified symbolic name
-     *         or <tt>null</tt> if the collection has been enlarged
-     * @throws IllegalArgumentException if the name or object is invalid
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
-    protected LocalAbstractObject addObjectClone(String name, LocalAbstractObject object) throws IllegalArgumentException, CloneNotSupportedException {
-        return addObject(name, object.clone(objectKey));
-    }
-
-    /**
-     * Add several clones of specified objects to the encapsulated collection.
-     * The keys of the map provide the name of the encapsulated object.
-     * @param objects pairs of the symbolic name and the encapsulated object to add
-     * @throws IllegalArgumentException if any of the names or objects is invalid, note that some objects may have been already added
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
-    protected void addObjectClones(Map<String, ? extends LocalAbstractObject> objects) throws IllegalArgumentException, CloneNotSupportedException {
-        for (Map.Entry<String, ? extends LocalAbstractObject> entry : objects.entrySet())
-                addObjectClone(entry.getKey(), entry.getValue());
-    }
-
-    /**
-     * Removes an object from the encapsulated collection.
-     * If the collection does not contains that name, <tt>null</tt> is
-     * returned and collection is left untouched.
-     * 
-     * @param name the symbolic name of the encapsulated object to remove
-     * @return the removed encapsulated object or <tt>null</tt> if the synbolic name was not found
-     */
-    protected abstract LocalAbstractObject removeObject(String name);
-
-    /**
-     * Removes all objects from the encapsulated collection.
-     */
-    protected abstract void removeObjects();
+    public abstract Map<String, LocalAbstractObject> getObjectMap();
 
     /**
      * Returns the encapsulated object for given symbolic name.
@@ -215,20 +116,25 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param name the symbolic name of the object to return
      * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
      */
-    public abstract LocalAbstractObject getObject(String name);
+    public LocalAbstractObject getObject(String name) {
+        return getObjectMap().get(name);
+    }
 
     /**
-     * Returns the set of symbolic names of the encapsulated objects.
-     * @return the set of symbolic names of the encapsulated objects
+     * Returns a set of symbolic names of the encapsulated objects.
+     * @return a set of symbolic names of the encapsulated objects
      */
-    public abstract Collection<String> getObjectNames();
+    public Collection<String> getObjectNames() {
+        return getObjectMap().keySet();
+    }
 
     /**
      * Returns a collection of all the encapsulated objects.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a collection all the encapsulated objects
+     * @return a collection of all the encapsulated objects
      */
-    public abstract Collection<LocalAbstractObject> getObjects();
+    public Collection<LocalAbstractObject> getObjects() {
+        return getObjectMap().values();
+    }
 
     /**
      * Returns <tt>true</tt> if there is an encapsulated object for given symbolic name.
@@ -243,47 +149,12 @@ public abstract class MetaObject extends LocalAbstractObject {
      * Returns the number of encapsulated objects.
      * @return the number of encapsulated objects
      */
-    public abstract int getObjectCount();
-
-
-    /****************** Text stream I/O ******************/
-
-    /**
-     * Fills this instance of MetaObject from a text stream.
-     * @param stream the text stream to read the objects from
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     */
-    protected void readObjects(BufferedReader stream) throws IOException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing MetaObject.");
-        } while (processObjectComment(line));
-
-        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
-        String[] uriNamesClasses = line.split(";");
-
-        // Skip the first name if the number of elements is odd
-        int i = uriNamesClasses.length % 2;
-
-        // If the URI locator is used (and it is not set from the previous - this is the old format)
-        if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
-                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
-        }
-
-        // Read objects and add them to the collection
-        for (i++; i < uriNamesClasses.length; i += 2) {
-            LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
-            if (object != null) {
-                addObject(uriNamesClasses[i - 1], object);
-                object.objectKey = this.objectKey;
-            }
-        }
+    public int getObjectCount() {
+        return getObjectMap().size();
     }
+
+
+    //****************** Text stream I/O helper method ******************//
 
     /**
      * Reads one object with the specified class name from the stream.
@@ -299,9 +170,28 @@ public abstract class MetaObject extends LocalAbstractObject {
     protected LocalAbstractObject readObject(BufferedReader stream, String className) throws IOException {
         try {
             // Read the object
-            return Convert.getClassForName(className, LocalAbstractObject.class).getConstructor(BufferedReader.class).newInstance(stream);
+            return readObject(stream, Convert.getClassForName(className, LocalAbstractObject.class));
         } catch (ClassNotFoundException e) {
             throw new IOException("Can't create object from stream: " + e);
+        }
+    }
+
+    /**
+     * Reads one object with the specified class name from the stream.
+     * The class name is looked up first - it must be a descendant of {@link LocalAbstractObject}.
+     * Then, a constructor with {@link BufferedReader} argument is used to load the object up.
+     * 
+     * @param <E> the class of the object that is read from the stream
+     * @param stream the text stream to read the object from
+     * @param objectClass the class of the object that is read from the stream
+     * @return a new instance of the object
+     * @throws IOException if there was an error resolving the specified class or its constuctor or a problem
+     *         occurred while reading from the stream
+     */
+    protected <E> E readObject(BufferedReader stream, Class<E> objectClass) throws IOException {
+        try {
+            // Read the object
+            return objectClass.getConstructor(BufferedReader.class).newInstance(stream);
         } catch (InstantiationException e) {
             throw new IOException("Can't create object from stream: " + e);
         } catch (IllegalAccessException e) {
@@ -313,40 +203,8 @@ public abstract class MetaObject extends LocalAbstractObject {
         }
     }
 
-    /**
-     * Store this object to a text stream.
-     * This method should have the opposite deserialization in constructor of a given object class.
-     *
-     * @param stream the stream to store this object to
-     * @throws IOException if there was an error while writing to stream
-     */
-    protected void writeData(OutputStream stream) throws IOException {
-        Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(getObjectCount());
-        
-        // Create first line with semicolon-separated names of classes
-        for (String objectName : getObjectNames()) {
-            LocalAbstractObject object = getObject(objectName);
-            if (object != null) {
-                // Do not prepend semicolon for the first object in the header
-                if (!objects.isEmpty())
-                    stream.write(';');
-                // Write object name and class
-                stream.write(objectName.getBytes());
-                stream.write(';');
-                stream.write(object.getClass().getName().getBytes());
-                // Add object to collection that will be written later
-                objects.add(object);
-            }
-        }
-        stream.write('\n');
-        
-        // Write a line for every object from the list (skip the comments)
-        for (LocalAbstractObject object : objects)
-            object.write(stream, false);
-    }
 
-
-    /****************** Data equality ******************/
+    //****************** Data equality ******************//
 
     /**
      * Indicates whether some other object has the same data as this one.
@@ -359,17 +217,12 @@ public abstract class MetaObject extends LocalAbstractObject {
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof MetaObject))
             return false;
-        MetaObject castObj = (MetaObject)obj;
-        
-        // Get the names of this object and compare them to the other one
-        Collection<String> objectNames = getObjectNames();
-        if (!objectNames.equals(castObj.getObjectNames()))
-            return false;
+        Map<String, LocalAbstractObject> otherObjects = ((MetaObject)obj).getObjectMap();
 
         // Compare the data of the respective objects (name-compatible)
-        for (String objectName : objectNames) {
-            LocalAbstractObject o1 = getObject(objectName);
-            LocalAbstractObject o2 = castObj.getObject(objectName);
+        for (Entry<String, LocalAbstractObject> entry : getObjectMap().entrySet()) {
+            LocalAbstractObject o1 = entry.getValue();
+            LocalAbstractObject o2 = otherObjects.get(entry.getKey());
             if (o1 == null || o2 == null) {
                 if (o1 != null || o2 != null)
                     return false;

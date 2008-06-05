@@ -6,11 +6,14 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
-import java.util.Collection;
+import java.io.OutputStream;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import messif.objects.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInputStream;
@@ -19,7 +22,9 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
- *
+ * Implementation of {@link MetaObject} that stores encapsulated objects
+ * in a hash table.
+ * 
  * @author xbatko
  */
 public class MetaObjectMap extends MetaObject implements BinarySerializable {
@@ -30,7 +35,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     /****************** Attributes ******************/
 
     /** List of encapsulated objects */
-    protected Map<String, LocalAbstractObject> objects = new TreeMap<String, LocalAbstractObject>();
+    protected Map<String, LocalAbstractObject> objects;
 
 
     /****************** Constructors ******************/
@@ -47,10 +52,13 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      */
     public MetaObjectMap(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         super(locatorURI);
-        if (cloneObjects)
-            addObjectClones(objects);
-        else
-            addObjects(objects);
+        if (cloneObjects) {
+            this.objects = new TreeMap<String, LocalAbstractObject>();
+            for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
+                this.objects.put(entry.getKey(), entry.getValue().clone(objectKey));
+        } else {
+            this.objects = new TreeMap<String, LocalAbstractObject>(objects);
+        }
     }
 
     /**
@@ -62,7 +70,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      */
     public MetaObjectMap(String locatorURI, Map<String, LocalAbstractObject> objects) {
         super(locatorURI);
-        addObjects(objects);
+        this.objects = new TreeMap<String, LocalAbstractObject>(objects);
     }
 
     /**
@@ -72,6 +80,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      *         EOFException is returned if end of the given stream is reached.
      */
     public MetaObjectMap(BufferedReader stream) throws IOException {
+        this.objects = new TreeMap<String, LocalAbstractObject>();
         readObjects(stream);
     }    
 
@@ -97,81 +106,103 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         return rtv;
     }
 
+    /** 
+     * Creates and returns a randomly modified copy of this object. 
+     * The modification depends on particular subclass implementation.
+     *
+     * @param args any parameters required by the subclass implementation - usually two objects with 
+     *        the miminal and the maximal possible values
+     * @return a randomly modified clone of this instance
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    @Override
+    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+        MetaObjectMap objectClone = (MetaObjectMap)clone(true);
+        // Replace all sub-objects with random-modified clones
+        for (String name : getObjectNames())
+            objectClone.objects.put(name, getObject(name).cloneRandomlyModify(args));
+        return objectClone;
+    }
+
+
+    //****************** Text stream I/O ******************//
+
+    /**
+     * Fills this instance of MetaObject from a text stream.
+     * @param stream the text stream to read the objects from
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    protected void readObjects(BufferedReader stream) throws IOException {
+        // Keep reading the lines while they are comments, then read the first line of the object
+        String line;
+        do {
+            line = stream.readLine();
+            if (line == null)
+                throw new EOFException("EoF reached while initializing MetaObject.");
+        } while (processObjectComment(line));
+
+        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
+        String[] uriNamesClasses = line.split(";");
+
+        // Skip the first name if the number of elements is odd
+        int i = uriNamesClasses.length % 2;
+
+        // If the URI locator is used (and it is not set from the previous - this is the old format)
+        if (i == 1) {
+            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
+                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+        }
+
+        // Read objects and add them to the collection
+        for (i++; i < uriNamesClasses.length; i += 2) {
+            LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
+            if (object != null) {
+                object.setObjectKey(this.objectKey);
+                objects.put(uriNamesClasses[i - 1], object);
+            }
+        }
+    }
+
+    /**
+     * Store this object to a text stream.
+     * This method should have the opposite deserialization in constructor of a given object class.
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected void writeData(OutputStream stream) throws IOException {
+        // Create first line with semicolon-separated names of classes
+        Iterator<Entry<String, LocalAbstractObject>> iterator = objects.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<String, LocalAbstractObject> entry = iterator.next();
+            if (entry.getValue() != null) {
+                // Write object name and class
+                stream.write(entry.getKey().getBytes());
+                stream.write(';');
+                stream.write(entry.getValue().getClass().getName().getBytes());
+                // Do not append semicolon after the last object in the header
+                if (iterator.hasNext())
+                    stream.write(';');           }
+        }
+        stream.write('\n');
+        
+        // Write a line for every object from the list (skip the comments)
+        for (LocalAbstractObject object : objects.values())
+            object.write(stream, false);
+    }
+
 
     //****************** MetaObject implementation ******************//
 
     /**
-     * Returns the number of encapsulated objects.
-     * @return the number of encapsulated objects
-     */
-    @Override
-    public int getObjectCount() {
-        return objects.size();
-    }
-
-    /**
-     * Adds an object to the encapsulated collection.
-     * If the collection already contains that name, the object will be replaced.
-     * 
-     * @param name the symbolic name of the encapsulated object
-     * @param object the object to encapsulate
-     * @return the previous encapsulated object with the specified symbolic name
-     *         or <tt>null</tt> if the collection has been enlarged
-     * @throws IllegalArgumentException if the name or object is invalid
-     */
-    @Override
-    protected LocalAbstractObject addObject(String name, LocalAbstractObject object) throws IllegalArgumentException {
-        return objects.put(name, object);
-    }
-
-    /**
-     * Removes an object from the encapsulated collection.
-     * If the collection does not contains that name, <tt>null</tt> is
-     * returned and collection is left untouched.
-     * 
-     * @param name the symbolic name of the encapsulated object to remove
-     * @return the removed encapsulated object or <tt>null</tt> if the synbolic name was not found
-     */
-    @Override
-    protected LocalAbstractObject removeObject(String name) {
-        return objects.remove(name);
-    }
-
-    /**
-     * Removes all objects from the encapsulated collection.
-     */
-    @Override
-    protected void removeObjects() {
-        objects.clear();
-    }
-
-    /**
-     * Returns the encapsulated object for given symbolic name.
-     *
-     * @param name the symbolic name of the object to return
-     * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
-     */
-    @Override
-    public LocalAbstractObject getObject(String name) {
-        return objects.get(name);
-    }
-
-    /**
-     * Returns the set of symbolic names of the encapsulated objects.
-     * @return the set of symbolic names of the encapsulated objects
-     */
-    @Override
-    public Collection<String> getObjectNames() {
-        return objects.keySet();
-    }
-
-    /**
-     * Returns a collection of all the encapsulated objects.
+     * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * Note that the collection can contain <tt>null</tt> values.
-     * @return a collection all the encapsulated objects
+     * @return a map all the encapsulated objects
      */
-    public Collection<LocalAbstractObject> getObjects() {
-        return objects.values();
+    @Override
+    public Map<String, LocalAbstractObject> getObjectMap() {
+        return objects;
     }
 
 
@@ -186,6 +217,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      */
     protected MetaObjectMap(BinaryInputStream input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
+        this.objects = new TreeMap<String, LocalAbstractObject>();
         int items = serializator.readInt(input);
         for (int i = 0; i < items; i++)
             objects.put(serializator.readString(input), serializator.readObject(input, LocalAbstractObject.class));
