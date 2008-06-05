@@ -20,7 +20,7 @@ public class ApproxKNNQueryOperationPresentable extends ApproxKNNQueryOperationP
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects"})
     public ApproxKNNQueryOperationPresentable(LocalAbstractObject queryObject, int k) {
-        super(queryObject, Math.min(100, k), 0, 20, null, 25, LocalAbstractObject.UNKNOWN_DISTANCE);
+        super(queryObject, Math.min(100, k), 0, 20, null, 25, ApproxKNNQueryOperation.LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
         this.ceilingClustersToVisit = 4;
         this.ceilingNodesToVisit = 7;
     }

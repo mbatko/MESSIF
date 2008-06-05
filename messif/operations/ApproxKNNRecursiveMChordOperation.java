@@ -16,22 +16,21 @@ import messif.objects.LocalAbstractObject;
 public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
 
     /** Class serial id for serialization. */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
         
     /** If greater than 0 then taken as the fixed number of clusters to be visited by the operation. */
     public int clustersToVisit;
 
     /** 
-     * If greater than or equal to 1 then the clusters are taken in the order by the "score" and it is searched for a "score gap"
-     * greater than "basicDifferenceConst * previous score". The basicDifferenceConst is reduced by dividing
+     * If greater than 0 then the clusters are taken in the order by the "score" and it is searched for a "score gap"
+     * greater than basicDifferenceConst. The basicDifferenceConst is reduced by dividing by
      * differenceDivisionConst in each step of the loop.
      */
     public float basicDifferenceConst;
     
     /** 
-     * If greater than or equal to 1 then the clusters are taken in the order by the "score" and it is searched for a "score gap"
-     * greater than "basicDifferenceConst * previous score". The basicDifferenceConst is reduced by dividing
-     * differenceDivisionConst in each step of the loop.
+     * The basicDifferenceConst is reduced by dividing by differenceDivisionConst in each step of the loop.
+     * {@link ApproxKNNRecursiveMChordOperation#basicDifferenceConst}
      */
     public float differenceDivisionConst;
 
@@ -46,14 +45,11 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
      *  of the cluster score.
      */
     public List <Integer> peersInClusters;
-
-    /** Maximal percentage of local data to be explored */
-    public int maxLocalDataPercentage;
     
-    
-    /** Radius for which the answer is guaranteed */
-    public float radiusGuaranteed;
-    
+    /**
+     * This is an answer parameter: # of visited peers
+     */
+    public long visitedPeers = 0l;
     
     /**
      * Creates a new instance of ApproxKNNRecursiveMChordOperation with default parameters.
@@ -62,7 +58,7 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects"})
     public ApproxKNNRecursiveMChordOperation(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 30, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this(queryObject, k, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 6000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
     
     /**
@@ -75,22 +71,21 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
      * @param maximalClusterScore the maximal score of a cluster to be included in the search
      * @param maximumClustersToVisit maximal number of clusters to be visited by this operation
      * @param peersInClusters n array of maximal numbers of peers to be visited within each cluster; the clusters are taken in the order of the cluster score.
-     * @param maxLocalDataPercentage maximal percentage of local data to be explored
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
      * @param radiusGuaranteed radius for which the answer is guaranteed
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of objects", "Fixed # clusters<br/>to visit", "Gap seeking<br/>diff. const", "diff. division<br/>const", 
-            "max cluster<br/>score", "max # clusters<br/>to visit", "list of # of peers<br/>to visit per cluster", "Max % of local data<br/>to be explored", "guaranteed radius <br/>(-1 to switch off)"})
+            "max cluster<br/>score", "max # clusters<br/>to visit", "list of # of peers<br/>to visit per cluster", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
     public ApproxKNNRecursiveMChordOperation(LocalAbstractObject queryObject, int k, int clustersToVisit, float basicDifferenceConst, float differenceDivisionConst, 
-            float maximalClusterScore, int maximumClustersToVisit, Integer[] peersInClusters, int maxLocalDataPercentage, float radiusGuaranteed) {
-        super(queryObject, k);
+            float maximalClusterScore, int maximumClustersToVisit, Integer[] peersInClusters, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, k, localSearchParam, localSearchType, radiusGuaranteed);
         this.clustersToVisit = clustersToVisit;
         this.basicDifferenceConst = basicDifferenceConst;
         this.differenceDivisionConst = differenceDivisionConst;
         this.maxClusterScore = maximalClusterScore;
         this.maxClustersToVisit = maximumClustersToVisit;
         this.peersInClusters = Arrays.asList(peersInClusters);
-        this.maxLocalDataPercentage = maxLocalDataPercentage;
-        this.radiusGuaranteed = radiusGuaranteed;
     }
 
     /** 
@@ -122,21 +117,21 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
             case 1:
                 return k;
             case 2:
-                return clustersToVisit;
+                return visitedPeers;
             case 3:
+                return clustersToVisit;
+            case 4:
                 return basicDifferenceConst;
-            case 4: 
+            case 5: 
                 return differenceDivisionConst;
-            case 5:
-                return maxClusterScore;
             case 6:
-                return maxClustersToVisit;
+                return maxClusterScore;
             case 7:
-                return peersInClusters;
+                return maxClustersToVisit;
             case 8:
-                return maxLocalDataPercentage;
+                return peersInClusters;
             case 9:
-                return radiusGuaranteed;
+                return localSearchParam;
             default:
                 throw new IndexOutOfBoundsException("ApproxKNNMRecursiveMChordOperation has only nine arguments");
         }
@@ -164,8 +159,8 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
                 append("; max cluster score.: ").append(maxClusterScore).
                 append(";\nmax # of clusters to visit: ").append(maxClustersToVisit).
                 append("; # of visited peers in each cluster: ").append(Arrays.toString(peersInClusters.toArray())).
-                append("; max local data to explore: ").append(maxLocalDataPercentage).
-                append("%; guaranteed radius: ").append(radiusGuaranteed).
+                append("; local search param: ").append(localSearchParam).
+                append("; guaranteed radius: ").append(radiusGuaranteed).
                 toString();
     }
 
@@ -185,17 +180,9 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
 
         ApproxKNNRecursiveMChordOperation castObj = (ApproxKNNRecursiveMChordOperation)obj;
 
-        if (clustersToVisit != castObj.clustersToVisit)
-            return false;
-        if (basicDifferenceConst != castObj.basicDifferenceConst)
-            return false;
-        if (differenceDivisionConst != castObj.differenceDivisionConst)
-            return false;
-        if (maxClusterScore != castObj.maxClusterScore)
-            return false;
-        if (maxClustersToVisit != castObj.maxClustersToVisit)
-            return false;
-        if (maxLocalDataPercentage != castObj.maxLocalDataPercentage)
+        if ((clustersToVisit != castObj.clustersToVisit) || (basicDifferenceConst != castObj.basicDifferenceConst) ||(differenceDivisionConst != castObj.differenceDivisionConst)
+                || (maxClusterScore != castObj.maxClusterScore) || (maxClustersToVisit != castObj.maxClustersToVisit) 
+                || (localSearchParam != castObj.localSearchParam) || (localSearchType != castObj.localSearchType))
             return false;
         return (radiusGuaranteed == castObj.radiusGuaranteed);
     }
@@ -206,7 +193,7 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return super.dataHashCode() << 8 + clustersToVisit + (int) basicDifferenceConst + (int) differenceDivisionConst + (int) maxClusterScore + maxClustersToVisit + maxLocalDataPercentage + (int)radiusGuaranteed;
+        return super.dataHashCode() << 8 + clustersToVisit + (int) basicDifferenceConst + (int) differenceDivisionConst + (int) maxClusterScore + maxClustersToVisit + localSearchParam + (int)radiusGuaranteed;
     }
 
 }

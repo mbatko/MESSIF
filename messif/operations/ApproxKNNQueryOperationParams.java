@@ -16,7 +16,7 @@ import messif.objects.LocalAbstractObject;
 public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
 
     /** Class serial id for serialization. */
-    private static final long serialVersionUID = 3L;
+    private static final long serialVersionUID = 4L;
     
     /** Number of clusters to visit */
     public int clustersToVisit;
@@ -27,12 +27,6 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
     /** Number of nodes to visit in each cluster. */
     public String nodesToVisit = null;
     
-    /** Maximal percentage of local data to be explored */
-    public int maxLocalDataPercentage;
-
-    /** Radius for which the answer is guaranteed */
-    public float radiusGuaranteed = LocalAbstractObject.UNKNOWN_DISTANCE;
-        
     /** Internal ceiling of the number of clusters to visit.  */
     public int ceilingClustersToVisit = Integer.MAX_VALUE;
 
@@ -46,16 +40,16 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
      * @param clustersToVisit number of clusters to be visited by this approx. query; if is equal to 0, then determined adaptively
      * @param nodesToVisitPercentage percentage of individual clusters to be visited by the query
      * @param nodesToVisit this is a output string to determine particular clusters visited and nodes within the cluster
-     * @param maxLocalDataPercentage maximal percentage of local data to be explored
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius for which the answer is guaranteed
      */
-    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Number of clusters<br/>to visit", "% of nodes to<br/>visit in each cluster",  "Nodes visited in particular <br/> clusters: [cluster: number]", "Max % of local data<br/>to be explored", "The minimal radius of guaranteed answer (-1 to switch off)"})
-    public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k, int clustersToVisit, int nodesToVisitPercentage, String nodesToVisit, int maxLocalDataPercentage, float radiusGuaranteed) {
-        super(queryObject, k);
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Number of clusters<br/>to visit", "% of nodes to<br/>visit in each cluster",  "Nodes visited in particular <br/> clusters: [cluster: number]", "Local search param", "Type of <br/>local search param", "The minimal radius of guaranteed answer (-1 to switch off)"})
+    public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k, int clustersToVisit, int nodesToVisitPercentage, String nodesToVisit, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, k, localSearchParam, localSearchType, radiusGuaranteed);
         this.clustersToVisit = clustersToVisit;
         this.nodesToVisitPercentage = nodesToVisitPercentage;
         this.nodesToVisit = nodesToVisit;
-        this.maxLocalDataPercentage = maxLocalDataPercentage;
-        this.radiusGuaranteed = radiusGuaranteed;
     }
 
     /** 
@@ -99,8 +93,10 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
         case 4:
             return nodesToVisit;
         case 5:
-            return maxLocalDataPercentage;
+            return localSearchParam;
         case 6:
+            return localSearchType;
+        case 7:
             return radiusGuaranteed;
         default:
             throw new IndexOutOfBoundsException("ApproxKNNQueryOperationParams has only six arguments");
@@ -113,7 +109,7 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return 7;
+        return 8;
     }    
     
     /**
@@ -125,7 +121,7 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
         return new StringBuffer(super.toString()).
                 append("\nClusters: ").append(clustersToVisit).
                 append("; nodes in cluster: ").append(nodesToVisitPercentage).
-                append("%; max local data to explore: ").append(maxLocalDataPercentage).
+                append("%; local search param: ").append(localSearchParam).
                 append("%; guaranteed radius: ").append(radiusGuaranteed).
                 toString();
     }
@@ -146,13 +142,8 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
 
         ApproxKNNQueryOperationParams castObj = (ApproxKNNQueryOperationParams)obj;
 
-        if (clustersToVisit != castObj.clustersToVisit)
-            return false;
-        if (nodesToVisitPercentage != castObj.nodesToVisitPercentage)
-            return false;
-        if (maxLocalDataPercentage != castObj.maxLocalDataPercentage)
-            return false;
-        if (radiusGuaranteed != castObj.radiusGuaranteed)
+        if ((clustersToVisit != castObj.clustersToVisit) || (nodesToVisitPercentage != castObj.nodesToVisitPercentage) || (localSearchParam != castObj.localSearchParam)
+                || (localSearchType != castObj.localSearchType) || (radiusGuaranteed != castObj.radiusGuaranteed))
             return false;
         if (nodesToVisit == null)
             return castObj.nodesToVisit == null;
@@ -165,7 +156,7 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return super.dataHashCode() << 8 + clustersToVisit + nodesToVisitPercentage + maxLocalDataPercentage + (int)radiusGuaranteed;
+        return super.dataHashCode() << 8 + clustersToVisit + nodesToVisitPercentage + localSearchParam + (int)radiusGuaranteed;
     }
 
 }
