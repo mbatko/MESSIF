@@ -10,6 +10,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
@@ -38,19 +39,33 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
         super(stream);
     }
 
-    /** Factory method that creates MetaObjects from SAPIR XML files */
+    public MetaObjectSAPIRWeightedDist2(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
+        super(locatorURI, objects, cloneObjects);
+    }
+
+    public MetaObjectSAPIRWeightedDist2(String locatorURI, Map<String, LocalAbstractObject> objects) {
+        super(locatorURI, objects);
+    }
+
+    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the given File */
     public static MetaObjectSAPIRWeightedDist2 create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
-        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(),
-                (ObjectColorLayout)objects.get("ColorLayoutType"),
-                (ObjectShortVectorL1)objects.get("ColorStructureType"),
-                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
-                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
-                (ObjectIntVectorL1)objects.get("ScalableColorType"),
-                (ObjectGPSCoordinate)objects.get("Location")
-        );
+        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(),xmlHandler.getObjects());
+    }
+
+    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed URI */
+    public static MetaObjectSAPIRWeightedDist2 create(String uri) throws ParserConfigurationException, SAXException, IOException {
+        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
+        SAXParserFactory.newInstance().newSAXParser().parse(uri, xmlHandler);
+        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+    }
+
+    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
+    public static MetaObjectSAPIRWeightedDist2 create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
+        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
+        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
+        return new MetaObjectSAPIRWeightedDist2(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
     }
 
     @Override

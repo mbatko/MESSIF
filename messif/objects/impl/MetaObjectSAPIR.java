@@ -78,6 +78,28 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         this.location = location;
     }
 
+    public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
+        this(locatorURI, objects);
+        if (cloneObjects) {
+            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
+            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
+            this.homogeneousTexture = (ObjectHomogeneousTexture)this.homogeneousTexture.clone(objectKey);
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
+            this.location = (ObjectGPSCoordinate)this.location.clone(objectKey);
+        }
+    }
+
+    public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects) {
+        super(locatorURI);
+        this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
+        this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");
+        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get("EdgeHistogramType");
+        this.homogeneousTexture = (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType");
+        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
+        this.location = (ObjectGPSCoordinate)objects.get("Location");
+    }
+
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(BufferedReader stream) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
@@ -280,45 +302,21 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     public static MetaObjectSAPIR create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), 
-                (ObjectColorLayout)objects.get("ColorLayoutType"),
-                (ObjectShortVectorL1)objects.get("ColorStructureType"),
-                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
-                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
-                (ObjectIntVectorL1)objects.get("ScalableColorType"),
-                (ObjectGPSCoordinate)objects.get("Location")
-        );
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
     }
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed URI */
     public static MetaObjectSAPIR create(String uri) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(uri, xmlHandler);
-        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(),
-                (ObjectColorLayout)objects.get("ColorLayoutType"),
-                (ObjectShortVectorL1)objects.get("ColorStructureType"),
-                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
-                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
-                (ObjectIntVectorL1)objects.get("ScalableColorType"),
-                (ObjectGPSCoordinate)objects.get("Location")
-        );
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
     }
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
     public static MetaObjectSAPIR create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        Map<String, LocalAbstractObject> objects = xmlHandler.getObjects();
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(),
-                (ObjectColorLayout)objects.get("ColorLayoutType"),
-                (ObjectShortVectorL1)objects.get("ColorStructureType"),
-                (ObjectVectorEdgecomp)objects.get("EdgeHistogramType"),
-                (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType"),
-                (ObjectIntVectorL1)objects.get("ScalableColorType"),
-                (ObjectGPSCoordinate)objects.get("Location")
-        );
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
     }
 
     public String getObjectsXML() {
