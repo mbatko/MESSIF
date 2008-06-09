@@ -328,12 +328,60 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
         }
     }
 
+    /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        // If the bucket has some required lowest occupation, this method cannot be used
+        if (lowOccupation > 0)
+            throw new OccupationLowException();
+
+        // Invalidate all iterators currently executing on this bucket (since they can't continue anyway and will throw ConcurrentModificationException)
+        for (SimpleDiskBucketIterator iterator : runningIterators.keySet()) {
+            try {
+                iterator.stream.close();
+            } catch (NullPointerException e) {
+                // Ignored, since weak hash map can have unpredictable nulls in keys (but this should not happen very often)
+            } catch (IOException e) {
+                // Ignored, this is just a closing exception
+            }
+        }
+
+        int deleted = 0;
+        try {
+            // Open temporary file for writing
+            ObjectOutputStream compactedFile = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(compactedFileName)));
+        
+            // Switch compacted and current bucket files
+            bucketOutput.close();
+            bucketOutput = compactedFile;
+            File tmpVar = currentFileName;
+            currentFileName = compactedFileName;
+            compactedFileName = tmpVar;
+
+            // Clear deleted positions info and update stored count
+            storedObjectCount = 0;
+            deletedObjectPositions.clear();
+            occupation = 0;
+
+            // Update statistics
+            counterBucketDelObject.add(this, deleted);
+        } catch (IOException e) {
+            BucketDispatcher.log.warning("Cannot delete all objects from simple disk bucket: " + e);
+        }
+
+        return deleted;
+    }
+
 
     /****************** Iterator object ******************/
 
     /**
      * Internal class for iterator implementation.
-     * @param T the type of the bucket this iterator operates on
+     * @param <T> the type of the bucket this iterator operates on
      */
     protected static class SimpleDiskBucketIterator<T extends SimpleDiskBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed stream of objects */

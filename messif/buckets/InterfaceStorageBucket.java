@@ -10,13 +10,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import messif.objects.AbstractObject;
 import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.operations.QueryOperation;
 import java.util.NoSuchElementException;
-import messif.algorithms.Algorithm;
-import messif.objects.MeasuredAbstractObjectList;
 import messif.objects.UniqueID;
 import messif.utility.Convert;
 
@@ -76,19 +73,23 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
      * @return a new DiskBucket instance
      */
     protected static InterfaceStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
+        // Get class parameter
         Class<? extends BucketInterface> algClass;
         try {
-            algClass = (Class<? extends BucketInterface>) parameters.get("class"); // This cast IS checked on the next line
-            if ((algClass == null) || ! BucketInterface.class.isAssignableFrom(algClass))
+            algClass = Convert.genericCastToClass(parameters.get("class"), BucketInterface.class);
+            if (algClass == null)
                 throw new IllegalArgumentException("The parameters map must contain key 'class' implementing the BucketInterface");
         } catch (ClassCastException e) {
             throw new IllegalArgumentException("The parameters map must contain key 'class' implementing the BucketInterface");
         }
+
+        // Read parameters
         List<Object> algParams = new ArrayList<Object>(parameters.size() - 1);
         Object param;
-        while ((param = parameters.get("param."+(algParams.size()+1))) != null) {
+        while ((param = parameters.get("param."+(algParams.size()+1))) != null)
             algParams.add(param);
-        }
+
+        // Create instance
         try {
             BucketInterface alg = Convert.createInstanceWithInheritableArgs(algClass, algParams.toArray());
             return new InterfaceStorageBucket(alg, capacity, softCapacity, lowOccupation, occupationAsBytes);
@@ -119,6 +120,7 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
      * @param query query operation that is to be processed on this bucket
      * @return the number of objects that were added to answer
      */
+    @Override
     public int processQuery(QueryOperation query) {
         return stub.processQuery(query);
     }
@@ -141,7 +143,10 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
 
     /****************** Iterator object ******************/
 
-    /** Internal class for iterator implementation */
+    /**
+     * Internal class for iterator implementation
+     * @param <T> the type of the bucket this iterator operates on
+     */
     protected static class InterfaceStorageBucketIterator<T extends InterfaceStorageBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed iterator */
         protected final GenericAbstractObjectIterator<LocalAbstractObject> iterator;
@@ -164,6 +169,7 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
          * @return object with specified ID from this bucket
          * @throws NoSuchElementException if there is no object with the specified ID in this bucket
          */
+        @Override
         public LocalAbstractObject getObjectByID(UniqueID objectID) throws NoSuchElementException {       
             return iterator.getObjectByID(objectID);
         }

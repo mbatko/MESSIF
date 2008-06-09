@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import messif.objects.UniqueID;
+import messif.utility.Convert;
 
 
 /**
@@ -77,6 +78,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     private Map<UniqueID, FileBlock> objectIDMap = new HashMap<UniqueID, FileBlock>();
 
     private Map<String, FileBlock> objectLocatorMap = new HashMap<String, FileBlock>();
+
 
     /******************  Constructors ******************/
 
@@ -150,20 +152,11 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * @return a new DiskBucket instance
      */
     protected static DiskBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException {
-        File file = null;
-        try {
-            file = (File) parameters.get("file");
-        } catch (ClassCastException ignore) {
-            file = new File((String) parameters.get("file"));
-        }
+        File file = Convert.getParameterValue(parameters, "file", File.class, null);
+
         // if a file was not specified - create a new file in given directory
         if (file == null) {
-            File dir = null;
-            try {
-                dir = (File) parameters.get("path");
-            } catch (ClassCastException ignore) {
-                dir = new File((String) parameters.get("path"));
-            }
+            File dir = Convert.getParameterValue(parameters, "path", File.class, null);
             if (dir == null)
                 throw new InstantiationException("Neither file nor directory specified in the 'params' array");
             
@@ -172,7 +165,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         
         return new DiskBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, file);
     }
-    
+
     /**
      * Adds DiskBuckets from all files in a directory to the given bucketDispatcher.
      * Uses default settings of the bucket dispatcher (capacity etc.) and
@@ -188,7 +181,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     public static Set<DiskBucket> createBucketsFromDir(BucketDispatcher dispatcher) throws IOException, InstantiationException, CapacityFullException {
         return createBucketsFromDir(dispatcher, (String) dispatcher.defaultBucketClassParams.get("path"));
     }
-    
+
     /**
      * Adds DiskBuckets from all files in a directory to the given bucketDispatcher.
      * Uses default settings of the bucket dispatcher (capacity etc.) and the specified directory path.
@@ -205,7 +198,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         return createBucketsFromDir(dispatcher, dispatcher.bucketCapacity, dispatcher.bucketSoftCapacity, dispatcher.bucketLowOccupation,
                 dispatcher.bucketOccupationAsBytes, directory);
     }
-    
+
     /**
      * Adds DiskBuckets from all files in a directory to the given bucketDispatcher.
      * All paramters and limits must be specified.
@@ -247,35 +240,42 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         
         return buckets;
     }
-    
+
+
     /******************  Serrialization   *************/
+
+    /** 
+     * Serialize this object into the output stream <code>out</code>.
+     * @param out the stream to serialize this object into
+     * @throws IOException if there was an I/O error during serialization
+     */
     private void writeObject(ObjectOutputStream out) throws IOException {
-        // Store limits
-        /*out.writeLong(capacity);
-        out.writeLong(softCapacity);
-        out.writeLong(lowOccupation);
-        out.writeBoolean(occupationAsBytes);
-        */
+        // Only the bucket file is stored instead of attributes
         out.writeObject(file);
     }
-    
+
+    /**
+     * Deserialize this object from the input stream <code>in</code>.
+     * @param in the stream to deserialize this object from
+     * @throws IOException if there was an I/O error during serialization
+     * @throws ClassNotFoundException if there was an unknown class serialized
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        // Set limits        
-        /*this.capacity = in.readLong();
-        this.softCapacity = in.readLong();
-        this.lowOccupation = in.readLong();
-        this.occupationAsBytes = in.readBoolean();
-        */
+        // Restore the internal bucket structures from the file header
         try {
             initBucket((File) in.readObject());
         } catch (InstantiationException e) {
             throw new IOException(e.getMessage());
         }
     }
-    
+
+
     /******************  Internal methods ************/
-    
-    /** init an empty file - insert one empty block */
+
+    /**
+     * Initialize the bucket file.
+     * One empty block is stored into the file.
+     */
     private void initFile() throws IOException {
         raFile.setLength(RESIZE_BLOCK_SIZE);
         FileBlock block = new FileBlock(false, RESIZE_BLOCK_SIZE - BLOCK_HEADER_SIZE, 0);
@@ -285,9 +285,11 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         freeList.clear();
         freeList.put(block.position, block);
     }
-    
-    /** empty the internal structures and - given an existing file - read it structure
-     * @throws IOException - probably means that the file is not valid DiskBucket file
+
+    /**
+     * Restored the internal structures from the given bucket file.
+     * @throws IOException if the file does not contain a valid {@link DiskBucket}
+     *         or there was another error reading the file
      */
     private void readFileStructure() throws IOException {
         try {
@@ -308,9 +310,11 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             throw new IOException("Not a valid DiskBucket: "+e.getMessage());
         }
     }
-    
-    /** adds a given block to the list of empty blocks
-     *  join adjacent free blocks
+
+    /**
+     * Adds a given block to the list of empty blocks.
+     * The adjacent free blocks are joined.
+     * @param block an empty block to add
      */
     private void addToFreeList(FileBlock block) throws IOException {
         block.occupied = false;
@@ -339,7 +343,9 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         freeList.put(block.position, block);
     }
 
-    /** shrink the file and deallocate unnecessary blocks */
+    /**
+     * Shrinks the file and deallocate unnecessary blocks.
+     */
     private void shrinkFile() throws IOException {
         // get last block
         FileBlock lastBlock = freeList.get(freeList.lastKey());
@@ -352,8 +358,11 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             raFile.setLength(raFile.length() - shrinkBy);
         }
     }
-    
-    /** find the most appropriate empty block and if none found enlarge the file */
+
+    /**
+     * Find the most appropriate empty block or enlarge the file.
+     * @return an allocated block
+     */
     private FileBlock allocateSpace(long size) throws IOException {
         // FirstFit algorithm to allocate free block of disk space
         FileBlock block = null;
@@ -384,7 +393,8 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         }
     }
     
-    /** this class encapsulates a block of the file.
+    /**
+     * This class encapsulates a block of the file.
      * It either contains a record or it's free (flag "occupied")
      * The "size" is without the header of the block (only size of data itself)
      * The position is the position of the block in the file.
@@ -472,11 +482,12 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             }
         }
     }
-    
+
+
     /****************** Overrides ******************/
-    
+
     /**
-     * Stores an object into disk block.
+     * Stores an object into a disk block.
      *
      * @param object the new object to be inserted
      * @return OBJECT_REFUSED if there was an IOException during storage or
@@ -503,7 +514,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         }
         return BucketErrorCode.OBJECT_INSERTED;
     }
-    
+
     /**
      * Returns current number of objects stored in bucket.
      * @return current number of objects stored in bucket
@@ -511,7 +522,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     public int getObjectCount() {
         return records.size();
     }
-    
+
     /**
      * Returns iterator through all the objects in this bucket.
      * @return iterator through all the objects in this bucket
@@ -519,7 +530,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     protected LocalBucketIterator<? extends DiskBucket> iterator() {
         return new DiskBucketIterator<DiskBucket>(this);
     }
-    
+
     /** Close the opened bucket file */
     public void close() {
         try {
@@ -528,19 +539,47 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     }
 
     /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        // If the bucket has some required lowest occupation, this method cannot be used
+        if (lowOccupation > 0)
+            throw new OccupationLowException();
+
+        int deleted = 0;
+        try {
+            deleted = records.size();
+            initFile();
+            objectIDMap.clear();
+            objectLocatorMap.clear();
+            occupation = 0;
+
+            // Update statistics
+            counterBucketDelObject.add(this, deleted);
+        } catch (IOException e) {
+            BucketDispatcher.log.warning("Cannot delete all objects from disk bucket: " + e);
+        }
+
+        return deleted;
+    }
+
+    /**
      * Internal class for iterator implementation
-     * @param T the type of the bucket this iterator operates on
+     * @param <T> the type of the bucket this iterator operates on
      */
     protected static class DiskBucketIterator<T extends DiskBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Iterator over the records in the "records" array */
         private final Iterator<FileBlock> iterator;
-        
+
         /** Iterator over the records in the "records" array */
         private FileBlock lastBlock = null;
-        
+
         /** Current object */
         protected LocalAbstractObject currentObject = null;
-        
+
         /**
          * Creates a new instance of DiskBucketIterator with the DiskBucket.
          * This constructor is intended to be called only from DiskBucket class.
@@ -551,7 +590,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             super(bucket);
             this.iterator = bucket.records.values().iterator();
         }
-        
+
         /**
          * Returns <tt>true</tt> if the iteration has more elements. (In other
          * words, returns <tt>true</tt> if <tt>next</tt> would return an element
@@ -562,7 +601,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
         public boolean hasNext() {
             return iterator.hasNext();
         }
-        
+
         /**
          * Returns the next element in the iteration.
          *
@@ -578,7 +617,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
                 throw new NoSuchElementException(e.getMessage());
             }
         }
-        
+
         /**
          * Returns the object returned by the last call to next().
          * @return the object returned by the last call to next()
@@ -590,7 +629,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             
             return currentObject;
         }
-        
+
         /** 
          * Physically removes the last object returned by this iterator.
          * 
@@ -611,10 +650,10 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
                 throw new NoSuchElementException(e.getMessage());
             }
         }
-        
-        
+
+
         /************   MORE EFFICIENT IMPLEMENTATIONS - OVERRIDES FROM GenericObjectIterator *************************/
-        
+
         /**
          * Returns an instance of object on the position of 'position' from the current object.
          * Naive solution: next() is called 'position' times and that object is returned.
@@ -686,5 +725,5 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             }
         }
     }
-    
+
 }

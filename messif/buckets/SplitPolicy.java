@@ -245,7 +245,10 @@ public abstract class SplitPolicy implements ObjectMatcher {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.FIELD)
     protected @interface ParameterField {
-        /** The name of the policy parameter stored in this field */
+        /**
+         * The name of the policy parameter stored in this field.
+         * @return name of the policy parameter stored in this field
+         */
         String value();
     }
 

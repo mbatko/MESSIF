@@ -13,8 +13,8 @@ import messif.operations.QueryOperation;
 /**
  * This interface allows any algorithm, structure, or storage to implement
  * the basic bucket operations.
- * Such a structure then can be used in <code>InterfaceLocalBucket</code>
- * stub to support internals of a bucket.
+ * Such a structure then can be used as a regular {@link LocalBucket} using
+ * the {@link InterfaceStorageBucket} encapsulation.
  *
  * @see InterfaceStorageBucket
  *

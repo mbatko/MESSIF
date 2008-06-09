@@ -78,6 +78,13 @@ public class MemoryStorageNoDupsBucket extends MemoryStorageBucket implements Se
         return super.storeObject(object);
     }
 
+    /**
+     * Delete object with specified ID from this bucket.
+     * @param objectID ID of the object to delete
+     * @throws NoSuchElementException This exception is thrown if there is no object with the specified ID in this bucket
+     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
+     * @return The object deleted from this bucket
+     */
     @Override
     public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException {
         LocalAbstractObject rtv = super.deleteObject(objectID);
@@ -85,5 +92,16 @@ public class MemoryStorageNoDupsBucket extends MemoryStorageBucket implements Se
         return rtv;
     }
 
+    /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        int deleted = super.deleteAllObjects();
+        uniqueObjects.clear();
+        return deleted;
+    }
 
 }

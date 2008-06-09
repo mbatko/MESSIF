@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.objects.LocalAbstractObject;
+import messif.objects.UniqueID;
 
 /**
  * Extension of {@link MemoryStorageBucket} that supports fast object retrieval by locators.
@@ -71,11 +72,38 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
     }
 
 
+    /**
+     * Delete object with specified ID from this bucket.
+     * @param objectID ID of the object to delete
+     * @throws NoSuchElementException This exception is thrown if there is no object with the specified ID in this bucket
+     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
+     * @return The object deleted from this bucket
+     */
+    @Override
+    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException {
+        LocalAbstractObject rtv = super.deleteObject(objectID);
+        locatorMap.remove(rtv.getLocatorURI());
+        return rtv;
+    }
+
+    /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        int deleted = super.deleteAllObjects();
+        locatorMap.clear();
+        return deleted;
+    }
+
+
     /****************** Iterator object ******************/
 
     /**
      * Internal class for iterator implementation
-     * @param T the bucket class on which this iterator is implemented
+     * @param <T> the bucket class on which this iterator is implemented
      */
     protected static class MemoryStorageLocatorBucketIterator<T extends MemoryStorageLocatorBucket> extends MemoryStorageBucket.MemoryStorageBucketIterator<T> {
         /**

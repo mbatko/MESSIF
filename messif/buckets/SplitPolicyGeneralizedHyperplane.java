@@ -90,6 +90,7 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
      * @throws NoSuchElementException if there is no parameter for the specified name
      * @throws NullPointerException if the specified value is <tt>null</tt>
      */
+    @Override
     public void setParameter(String parameter, Object value) throws IllegalStateException, NoSuchElementException, NullPointerException {
         super.setParameter(parameter, value);
         if (leftPivot != null && rightPivot != null)

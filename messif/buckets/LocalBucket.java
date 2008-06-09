@@ -31,7 +31,7 @@ import messif.statistics.StatisticRefCounter;
 public abstract class LocalBucket extends Bucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;    
-    
+
     /****************** Statistics ******************/
 
     /** Number of bucket reads statistic per bucket */
@@ -40,13 +40,13 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     protected static final StatisticRefCounter counterBucketAddObject = StatisticRefCounter.getStatistics("BucketAddObject");
     /** Number of object deletions statistic per bucket */
     protected static final StatisticRefCounter counterBucketDelObject = StatisticRefCounter.getStatistics("BucketDelObject");
-    
-    
+
+
     /****************** Bucket ID ******************/
 
     /** Unique identifier of this bucket */
     private int bucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
-    
+
     /**
      * Returns the unique ID of this bucket.
      * @return this bucket ID
@@ -71,9 +71,10 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     void setBucketID(int bucketID) { // Only settable from BucketDispatcher
         this.bucketID = bucketID;
     }
-    
+
+
     /****************** Constructors ******************/
-    
+
     /**
      * Constructs a new LocalBucket instance without any limits (everything is unlimited).
      * Occupation is counted in bytes.
@@ -184,7 +185,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * @return the current occupation of this bucket
      */
     public long getOccupation() { return occupation; }
-    
+
     /**
      * Returns an occupation ratio with respect to the bucket's soft capacity, i.e. the current occupation
      * divided by the soft capacity.
@@ -194,7 +195,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     public double getOccupationRatio() {
         return (double)getOccupation() / (double)getSoftCapacity();
     }
-    
+
     /**
      * Returns true if the soft-capacity of the bucket has been exceeded.
      * @return true if the soft-capacity of the bucket has been exceeded or false otherwise
@@ -323,7 +324,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
         return rtv;
     }
-    
+
     /**
      * Get an object with specified ID from this bucket.
      *
@@ -365,7 +366,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
         return rtv;
     }
-    
+
     /**
      * Returns iterator over all objects from this bucket.
      * @return iterator over all objects from this bucket
@@ -385,7 +386,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * @return current number of objects stored in this bucket
      */
     public abstract int getObjectCount();
-    
+
     /**
      * Stores an object in a physical storage.
      * It should return OBJECT_INSERTED value if the object was successfuly inserted.
@@ -394,7 +395,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * @return error code - for details, see documentation of {@link BucketErrorCode}
      */
     protected abstract BucketErrorCode storeObject(LocalAbstractObject object);
-    
+
     /**
      * Returns iterator through all the objects in this bucket.
      * @return iterator through all the objects in this bucket
@@ -403,12 +404,12 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     /**
      * Internal class for bucket iterator implementation
-     * @param T the type of the bucket this iterator operates on
+     * @param <T> the type of the bucket this iterator operates on
      */
     protected static abstract class LocalBucketIterator<T extends LocalBucket> extends GenericObjectIterator<LocalAbstractObject> {
         /** Reference to the bucket this iterator is working on */
         protected final T bucket;
-        
+
         /**
          * Constructs a new LocalBucketIterator instance that iterates over objects in the specified bucket
          * @param bucket the bucket this iterator is working on
@@ -442,7 +443,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
          */
         protected abstract void removeInternal();
     }    
-    
+
+
     /****************** String representation ******************/
 
     /**

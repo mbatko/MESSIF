@@ -80,12 +80,31 @@ public class MemoryStorageBucket extends LocalFilteredBucket implements Serializ
         return new MemoryStorageBucketIterator<MemoryStorageBucket>(this);
     }
 
+    /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        // If the bucket has some required lowest occupation, this method cannot be used
+        if (lowOccupation > 0)
+            throw new OccupationLowException();
+
+        int deleted = objects.size();
+        objects.clear();
+        // Update statistics
+        occupation = 0;
+        counterBucketDelObject.add(this, deleted);
+        return deleted;
+    }
+
 
     /****************** Iterator object ******************/
 
     /**
      * Internal class for iterator implementation.
-     * @param T the bucket class on which this iterator is implemented
+     * @param <T> the bucket class on which this iterator is implemented
      */
     protected static class MemoryStorageBucketIterator<T extends MemoryStorageBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed iterator */

@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import messif.buckets.LocalBucket.LocalBucketIterator;
+import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.ByteBufferFileInputStream;
 import messif.objects.nio.ByteBufferFileOutputStream;
@@ -505,6 +506,41 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
     }
 
     /**
+     * Delete all objects from this bucket.
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    @Override
+    public synchronized int deleteAllObjects() throws OccupationLowException {
+        // If the bucket has some required lowest occupation, this method cannot be used
+        if (lowOccupation > 0)
+            throw new OccupationLowException();
+
+        int deleted = 0;
+        try {
+            // Reset the output stream (and also clear the buffer)
+            outputStream.position(0);
+
+            // Reset header values
+            deleted = objectCount;
+            objectCount = 0;
+            fileOccupation = 0;
+            deletedFragments = 0;
+            occupation = 0;
+
+            // Update statistics
+            counterBucketDelObject.add(this, deleted);
+
+            // Unset modified flag
+            writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+        } catch (IOException e) {
+            BucketDispatcher.log.warning("Cannot delete all objects from disk bucket: " + e);
+        }
+
+        return deleted;
+    }
+
+    /**
      * Deletes the object at specified position.
      * Practically, this method writes negative size of the deleted object into position.
      * @param position the relative address of the begining of the object
@@ -544,7 +580,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
 
     /**
      * Internal class for iterator implementation
-     * @param T the type of the bucket this iterator operates on
+     * @param <T> the type of the bucket this iterator operates on
      */
     protected static class DiskBlockBucketIterator<T extends DiskBlockBucket> extends LocalBucket.LocalBucketIterator<T> {
 

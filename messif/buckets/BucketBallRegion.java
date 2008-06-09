@@ -41,7 +41,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
     }
 
     /**
-     * Creates a new instance of BucketBallRegion
+     * Creates a new instance of BucketBallRegion.
      * @param bucket the bucket on which the ball region should be maintained
      * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
      */
@@ -50,16 +50,19 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
     }
 
     /**
-     * Creates a new instance of BucketBallRegion
+     * Creates a new instance of BucketBallRegion.
      * @param bucket the bucket on which the ball region should be maintained
      * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
+     * @param pivot the pivot for the new ball region
      */
     public BucketBallRegion(LocalBucket bucket, boolean registerAsFilter, LocalAbstractObject pivot) {
         this(bucket, registerAsFilter, pivot, LocalAbstractObject.MIN_DISTANCE);
     }
 
     /**
-     * Creates a new instance of BallRegion with specified pivot and radius
+     * Creates a new instance of BucketBallRegion with specified pivot and radius.
+     * @param bucket the bucket on which the ball region should be maintained
+     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
      * @param pivot the pivot for the new ball region
      * @param radius the radius for the new ball region
      */
@@ -75,9 +78,18 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
     /****************** Data getter/setter methods ******************/
 
     /**
+     * Returns the bucket associated with this ball region.
+     * @return the bucket associated with this ball region
+     */
+    public LocalBucket getBucket() {
+        return bucket;
+    }
+
+    /**
      * Returns current radius of this ball region.
      * @return current radius of this ball region
      */
+    @Override
     public synchronized float getRadius() {
         return radius;
     }
@@ -87,6 +99,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
      * @param radius the new radius
      * @throws IllegalArgumentException if the specified radius is negative
      */
+    @Override
     public void setRadius(float radius) throws IllegalArgumentException {
         if (radius < 0)
             throw new IllegalArgumentException("Radius must be non-negative");

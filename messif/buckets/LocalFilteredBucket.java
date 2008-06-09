@@ -82,6 +82,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
     
     /**
      * Returns the first registered filter that has the specified class
+     * @param <T> the class of the filter
      * @param filterClass filter class to search for
      * @throws NoSuchElementException if there was no filter with the specified class
      * @return the first registered filter that has the specified class
@@ -111,6 +112,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * @throws CapacityFullException if the hard capacity of the bucket is exceeded
      * @throws FilterRejectException if any associated filter aborts the insertion by throwing the exception
      */
+    @Override
     public synchronized BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException, FilterRejectException {
         filterAddObjectBefore(object);
         BucketErrorCode rtv = super.addObject(object);
@@ -154,6 +156,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
      * @throws FilterRejectException if any associated filter aborts the deletion by throwing the exception
      */
+    @Override
     protected synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, OccupationLowException, FilterRejectException {
         LocalAbstractObject object = iterator.getCurrentObject();
         

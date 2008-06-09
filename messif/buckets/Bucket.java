@@ -148,6 +148,32 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
         return rtv;
     }
 
+    /**
+     * Delete all objects from this bucket.
+     * 
+     * This method can be overriden if there is more efficient implementation
+     * available at the storage level.
+     *
+     * @return the number of deleted objects
+     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     */
+    public int deleteAllObjects() throws OccupationLowException {
+        GenericObjectIterator<LocalAbstractObject> allObjects = getAllObjects();
+        int count = 0;
+        while (allObjects.hasNext()) {
+            try {
+                allObjects.next();
+                allObjects.remove();
+                count++;
+            } catch (UnsupportedOperationException e) {
+                if (e.getCause() instanceof OccupationLowException)
+                    throw (OccupationLowException) e.getCause();
+                throw e;
+            }
+        }
+        return count;
+    }
+
 
     /****************** Splitting ******************/
 
