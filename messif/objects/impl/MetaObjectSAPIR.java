@@ -268,32 +268,57 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      * @throws IOException if there was an error while writing to stream
      */
     protected void writeData(OutputStream stream) throws IOException {
-        if (colorLayout != null)
-            stream.write("ColorLayoutType;messif.objects.impl.ObjectColorLayout;".getBytes());
-        if (colorStructure != null)
-            stream.write("ColorStructureType;messif.objects.impl.ObjectShortVectorL1;".getBytes());
-        if (edgeHistogram != null)
-            stream.write("EdgeHistogramType;messif.objects.impl.ObjectVectorEdgecomp;".getBytes());
-        if (homogeneousTexture != null)
-            stream.write("HomogeneousTextureType;messif.objects.impl.ObjectHomogeneousTexture;".getBytes());
-        if (scalableColor != null)
-            stream.write("ScalableColorType;messif.objects.impl.ObjectIntVectorL1;".getBytes());
-        if (location != null)
-            stream.write("Location;messif.objects.impl.ObjectGPSCoordinate;".getBytes());
-
-        // Write a line for every object from the list (skip the comments)
-        if (colorLayout != null)
-            colorLayout.writeData(stream);
-        if (colorStructure != null)
-            colorStructure.writeData(stream);
-        if (edgeHistogram != null)
-            edgeHistogram.writeData(stream);
-        if (homogeneousTexture != null)
-            homogeneousTexture.writeData(stream);
-        if (scalableColor != null)
-            scalableColor.writeData(stream);
-        if (location != null)
-            location.writeData(stream);
+        boolean written = false;
+        if (colorLayout != null) {
+            stream.write("ColorLayoutType;messif.objects.impl.ObjectColorLayout".getBytes());
+            written = true;
+        }
+        if (colorStructure != null) {
+            if (written)
+                stream.write(';');
+            stream.write("ColorStructureType;messif.objects.impl.ObjectShortVectorL1".getBytes());
+            written = true;
+        }
+        if (edgeHistogram != null) {
+            if (written)
+                stream.write(';');
+            stream.write("EdgeHistogramType;messif.objects.impl.ObjectVectorEdgecomp".getBytes());
+            written = true;
+        }
+        if (homogeneousTexture != null) {
+            if (written)
+                stream.write(';');
+            stream.write("HomogeneousTextureType;messif.objects.impl.ObjectHomogeneousTexture".getBytes());
+            written = true;
+        }
+        if (scalableColor != null) {
+            if (written)
+                stream.write(';');
+            stream.write("ScalableColorType;messif.objects.impl.ObjectIntVectorL1".getBytes());
+            written = true;
+        }
+        if (location != null) {
+            if (written)
+                stream.write(';');
+            stream.write("Location;messif.objects.impl.ObjectGPSCoordinate".getBytes());
+            written = true;
+        }
+        if (written) {
+            stream.write('\n');
+            // Write a line for every object from the list (skip the comments)
+            if (colorLayout != null)
+                colorLayout.writeData(stream);
+            if (colorStructure != null)
+                colorStructure.writeData(stream);
+            if (edgeHistogram != null)
+                edgeHistogram.writeData(stream);
+            if (homogeneousTexture != null)
+                homogeneousTexture.writeData(stream);
+            if (scalableColor != null)
+                scalableColor.writeData(stream);
+            if (location != null)
+                location.writeData(stream);
+        }
     }
 
     /****************** XML parsing ******************/
