@@ -88,7 +88,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
 
     /** Remove a statistic from list */
-    protected void removeBoundStat(Statistics stat) {
+    protected void removeBoundStat(TSelf stat) {
         boundStatistics.remove(stat);
     }
 

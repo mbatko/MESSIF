@@ -10,7 +10,6 @@ import java.io.Serializable;
 import messif.buckets.BucketFilterInterface.FilterSituations;
 import messif.buckets.FilterRejectException;
 import messif.buckets.LocalFilteredBucket;
-import messif.objects.AbstractObject;
 import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.GenericAbstractObjectList;
 import messif.objects.GenericObjectIterator;
@@ -22,12 +21,6 @@ import messif.objects.LocalAbstractObject;
  * Benjamin Bustos, Gonzalo Navarro, Edgar Chavez in 2001.
  *
  * @author  Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
- *
- *
- * WARNING: This class is not transaction safe. It should be rewritten to support transaction management. Also notice
- *          the method getPivotValidList() which returns currently valid list of pivots (if a transaction is running, it is
- *          transactionSavedPivots, otherwise it is preselectedPivots.
- *          This comment should be removed once the implementation is adjusted to support transactions.
  */
 public class IncrementalPivotChooser extends AbstractPivotChooser implements Serializable {
     /** Class version id for serialization */
@@ -89,7 +82,7 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
         
         // Store the current state of internal attributes
         backupSampleSize = sampleSize;
-        backupLeftPair = leftPair;
+        backupLeftPair = leftPair;      // This is ok, since no changes are done to existing list, but new lists are created upon any change.
         backupRightPair = rightPair;
         backupDistsFormer = (distsFormer != null) ? distsFormer.clone() : null;
         backupChangesFromLastSampleSetSelection = changesFromLastSampleSetSelection;
@@ -182,7 +175,8 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
         changesFromLastSampleSetSelection = 0;
         
         // Set a new size of sample sets
-        sampleSize = (Math.sqrt(SAMPLE_SET_SIZE) > objectList.size()) ? objectList.size() * objectList.size() : SAMPLE_SET_SIZE;
+        //sampleSize = (Math.sqrt(SAMPLE_SET_SIZE) > objectList.size()) ? objectList.size() * objectList.size() : SAMPLE_SET_SIZE;
+        sampleSize = (SAMPLE_SET_SIZE > 2*objectList.size()) ? 2*objectList.size() : SAMPLE_SET_SIZE;
         
         // Select objects randomly, allow repetitions.
         leftPair = new GenericAbstractObjectList<LocalAbstractObject>();

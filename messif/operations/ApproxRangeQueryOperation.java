@@ -1,8 +1,6 @@
 /*
- * ApproxKNNQueryOperation.java
- *
- * Created on 21. cerven 2007, 16:52
- *
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
  */
 
 package messif.operations;
@@ -10,16 +8,16 @@ package messif.operations;
 import messif.objects.LocalAbstractObject;
 
 /**
- * Approximate k-nearest neighbors query with specific early termination parameters
+ * Approximate range query with specific early termination parameters
  * and support for obtaining some guarantees on results.
  *
- * @author Michal Batko, <xbatko@fi.muni.cz>
+ * @author Vlastislav Dohnal, Masaryk University, dohnal@fi.muni.cz
  */
-@AbstractOperation.OperationName("Approximate k-nearest neighbors query")
-public class ApproxKNNQueryOperation extends kNNQueryOperation {
+@AbstractOperation.OperationName("Approximate range query")
+public class ApproxRangeQueryOperation extends RangeQueryOperation {    
     
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 3L;
+    private static final long serialVersionUID = 1L;
     
     /** Type of the local approximation parameter: PERCENTAGE, ABS_OBJ_COUNT, ABS_DC_COUNT.
      * It can be view as a type of stop condition for early termination strategy of approximation.
@@ -55,16 +53,16 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
     protected float radiusGuaranteed;
 
     
-    /** Creates a new instance of ApproxKNNQueryOperation
+    /** Creates a new instance of ApproxRangeQueryOperation
      * @param queryObject query object
-     * @param k number of objects to be returned
+     * @param r query radius
      * @param localSearchParam local search parameter - typically approximation parameter
      * @param localSearchType type of the local search parameter
      * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
      */
-    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
-    public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
-        super(queryObject, k);
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
+    public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, r);
         this.localSearchParam = localSearchParam;
         this.localSearchType = localSearchType;
         this.radiusGuaranteed = radiusGuaranteed;
