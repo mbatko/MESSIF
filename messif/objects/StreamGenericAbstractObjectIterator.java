@@ -23,7 +23,7 @@ import messif.utility.Convert;
  * The objects are instantiated one by one every time the {@link #next next} method is called.
  * The file should be created using {@link LocalAbstractObject#write} method.
  *
- * @param E the class of objects provided by this stream iterator (must be descendant of {@link LocalAbstractObject})
+ * @param <E> the class of objects provided by this stream iterator (must be descendant of {@link LocalAbstractObject})
  * @author xbatko
  */
 public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends GenericObjectIterator<E> {
@@ -76,7 +76,24 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName) throws IllegalArgumentException, IOException {
         this(objClass, new BufferedReader(new InputStreamReader(openFileInputStream(fileName))));
-        this.fileName = fileName;
+
+        // Set file name to provided value - it is used in reset functionality
+        if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
+            this.fileName = null;
+        else
+            this.fileName = fileName;
+    }
+
+    /**
+     * Creates a new instance of StreamGenericAbstractObjectIterator from standard input.
+     * The objects are loaded from the standard input on the fly as the contents are iterated.
+     *
+     * @param objClass the class used to create the instances of objects in this stream
+     * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
+     * @throws IOException if there was an error opening the file
+     */
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass) throws IllegalArgumentException, IOException {
+        this(objClass, (String)null);
     }
 
     /**
@@ -86,10 +103,13 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @return a new instance of InputStream
      */
     private static InputStream openFileInputStream(String fileName) throws IOException {
-        if (fileName.endsWith("gz"))
+        if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
+            return System.in;
+        else if (fileName.endsWith("gz"))
             return new GZIPInputStream(new FileInputStream(fileName));
         else return new FileInputStream(fileName);
     }
+
 
     /****************** Adding parameters ******************/
 

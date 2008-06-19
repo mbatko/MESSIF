@@ -11,9 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import messif.objects.AbstractObject;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
 import messif.objects.MeasuredAbstractObjectList;
 
 /**
@@ -32,11 +30,10 @@ import messif.objects.MeasuredAbstractObjectList;
  *    }
  * </pre>
  * 
- * @param T the type for the parameter used to distinguish partitions
  * @author David Novak, david.novak@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
 @AbstractOperation.OperationName("Partitioned range query")
-public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
+public class PartitionedRangeQueryOperation extends RangeQueryOperation {
 
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
@@ -45,8 +42,8 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
     /****************** Query answer attributes ******************/
 
     /** The answer holder */
-    protected final Map<T, MeasuredAbstractObjectList<AbstractObject>> partitionedAnswer = 
-            new HashMap<T, MeasuredAbstractObjectList<AbstractObject>>();
+    protected final Map<Object, MeasuredAbstractObjectList<AbstractObject>> partitionedAnswer = 
+            new HashMap<Object, MeasuredAbstractObjectList<AbstractObject>>();
 
     /** The locking flag for {@link #setCurrentPartition setCurrentPartition} */
     protected boolean isPartitionLocked = false;
@@ -72,7 +69,7 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
      * Sets the current partition differentiation object.
      * @param currentPartition the object to differentiate the answer partition
      */
-    public void setCurrentPartition(T currentPartition) {
+    public void setCurrentPartition(Object currentPartition) {
         if (isPartitionLocked)
             return;
         answer = partitionedAnswer.get(currentPartition);
@@ -140,7 +137,7 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
      * @param partitionIdentifier the idetifier to select a particular partition
      * @return the partial answer for the specified partition
      */
-    public MeasuredAbstractObjectList<AbstractObject> getPartitionAnswer(T partitionIdentifier) {
+    public MeasuredAbstractObjectList<AbstractObject> getPartitionAnswer(Object partitionIdentifier) {
         return partitionedAnswer.get(partitionIdentifier);
     }
 
@@ -148,7 +145,7 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
      * Returns the whole answer divided by partitions.
      * @return the whole answer divided by partitions
      */
-    public Map<T, MeasuredAbstractObjectList<AbstractObject>> getAllPartitionsAnswer() {
+    public Map<Object, MeasuredAbstractObjectList<AbstractObject>> getAllPartitionsAnswer() {
         return Collections.unmodifiableMap(partitionedAnswer);
     }
 
@@ -160,8 +157,8 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
     @Override
     protected void updateAnswer(QueryOperation operation) {
         if (operation instanceof PartitionedRangeQueryOperation) {
-            Map<T, MeasuredAbstractObjectList<AbstractObject>> sourceAnswer = ((PartitionedRangeQueryOperation<T>)operation).partitionedAnswer; // This is UNCHECKED, but it can't be checked
-            for (Map.Entry<T, MeasuredAbstractObjectList<AbstractObject>> entry : sourceAnswer.entrySet()) {
+            Map<Object, MeasuredAbstractObjectList<AbstractObject>> sourceAnswer = ((PartitionedRangeQueryOperation)operation).partitionedAnswer;
+            for (Map.Entry<Object, MeasuredAbstractObjectList<AbstractObject>> entry : sourceAnswer.entrySet()) {
                 MeasuredAbstractObjectList<AbstractObject> actualList = partitionedAnswer.get(entry.getKey());
                 if (actualList == null) {
                     actualList = new MeasuredAbstractObjectList<AbstractObject>();
@@ -179,7 +176,7 @@ public class PartitionedRangeQueryOperation<T> extends RangeQueryOperation {
     @Override
     public String toString() {
         StringBuffer buffer = new StringBuffer("Partitioned range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects:");
-        for (Map.Entry<T, MeasuredAbstractObjectList<AbstractObject>> entry : partitionedAnswer.entrySet()) {
+        for (Map.Entry<Object, MeasuredAbstractObjectList<AbstractObject>> entry : partitionedAnswer.entrySet()) {
             buffer.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().size());
         }
         return buffer.toString();

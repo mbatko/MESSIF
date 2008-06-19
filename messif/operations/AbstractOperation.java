@@ -352,7 +352,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     private static Constructor getAnnotatedConstructor(Class<?> operationClass, int nArguments) throws IllegalArgumentException {
         // Ignore the classes that are not annotated by OperationName
         if (operationClass == null || !operationClass.isAnnotationPresent(OperationName.class))
-            throw new IllegalArgumentException("There is no valid annotated constructor in '" + operationClass + "'");
+            throw new IllegalArgumentException("There is no valid annotated constructor in '" + operationClass + "' for " + nArguments + " parameters");
 
         // Remember the constructor with smallest number of arguments if nArguments == -1
         int minimalConstructorArgs = Integer.MAX_VALUE;
@@ -445,6 +445,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     
     /**
      * Creates a new operation of the specified class.
+     * @param <E> the class of the operation that should be created
      * @param operationClass the class of the operation that should be created
      * @param arguments arguments supplied to the constructor; they should match the types of getConstructorArguments(operationClass)
      * @return a new instance of operation
