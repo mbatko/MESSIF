@@ -156,16 +156,16 @@ public class kNNQueryOperation extends QueryOperation {
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
     @Override
-    public boolean addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
-        boolean retVal = false;
+    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
+        int retVal = 0;
         while (iterator.hasNext()) {
             MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
             if (RemoteAbstractObject.class.isInstance(pair.getObject())) {
                 if (answer.add(pair))
-                    retVal = true;
+                    retVal++;
             } else {
                 if (answer.add(pair.getObject().getRemoteAbstractObject(), pair.getDistance()))
-                    retVal = true;
+                    retVal++;
             }
         }
         return retVal;

@@ -65,10 +65,11 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * available at the storage level.
      * 
      * @param objects List of the new objects
+     * @return number of objects actually added to bucket
      * @throws CapacityFullException if the hard capacity of the bucket is exceeded
      */
-    public void addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
-        addObjects(objects.iterator());
+    public int addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
+        return addObjects(objects.iterator());
     }
     
     /**
@@ -78,15 +79,20 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * available at the storage level.
      * 
      * @param objects Iterator over the new objects
+     * @return number of objects actually added to bucket
      * @throws CapacityFullException if the hard capacity of the bucket is exceeded
      */
-    public void addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
         if (objects == null)
-            return;
+            return 0;
         
         // Iterate through all objects and add one by one
-        while (objects.hasNext())
+        int ret = 0;
+        while (objects.hasNext()) {
             addObject(objects.next().getLocalAbstractObject());
+            ret++;
+        }
+        return ret;
     }
     
     

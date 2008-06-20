@@ -212,16 +212,17 @@ public class RemoteBucket extends Bucket implements Serializable {
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
     @Override
-    public void addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException, IllegalStateException {
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
-            netbucketDisp.getBucket(bucketID).addObjects(objects);
+            return netbucketDisp.getBucket(bucketID).addObjects(objects);
         
         // Otherwise, send message to remote netnode
         try {
             BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objects, bucketID), remoteNetworkNode);
             if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
                 throw new CapacityFullException();
+            return msg.getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while adding " + objects + " to " + toString(), e);
         } catch (NoSuchElementException e) {

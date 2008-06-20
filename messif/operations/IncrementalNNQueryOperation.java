@@ -239,16 +239,18 @@ public class IncrementalNNQueryOperation extends QueryOperation {
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
     @Override
-    public boolean addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
+    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
+        int retVal = 0;
         while (iterator.hasNext()) {
             MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
             if (RemoteAbstractObject.class.isInstance(pair.getObject()))
                 answer.add(pair);
-            else 
+            else
                 answer.add(pair.getObject().getRemoteAbstractObject(), pair.getDistance());
-            ++nnAddedToAnswer;
+            retVal++;
+            nnAddedToAnswer++;
         }
-        return true;
+        return retVal;
     }
 
     /**

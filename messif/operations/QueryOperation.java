@@ -89,12 +89,12 @@ public abstract class QueryOperation extends AbstractOperation {
      * @param iterator iterator over object-distance pairs that should be added to this operation's answer
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
-    public boolean addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) {
-        boolean retVal = false;
+    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) {
+        int retVal = 0;
         while (iterator.hasNext()) {
             MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
             if (addToAnswer(pair.getObject(), pair.getDistance()))
-                retVal = true;
+                retVal++;
         }
         return retVal;
     }

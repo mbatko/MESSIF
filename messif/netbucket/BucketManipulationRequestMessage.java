@@ -144,12 +144,11 @@ public class BucketManipulationRequestMessage extends Message {
                     return new BucketManipulationReplyMessage(this, bucket.deleteObject(object, deleteObjects));
                 } else {
                     log.info("Adding " + object + " from " + getSender() + " into " + bucket);
-                    return new BucketManipulationReplyMessage(this, bucket.addObject(object));
+                    return new BucketManipulationReplyMessage(this, bucket.addObject(object), 1);
                 }
             } else if (objects != null) {
                 log.info("Adding set of " + objects.size() + " objects from " + getSender() + " into " + bucket);
-                bucket.addObjects(objects);
-                return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED);
+                return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED, bucket.addObjects(objects));
             } else if (deleteObjects >= 0) {
                 log.info("Deleting from " + getSender() + " object " + objectID + " from " + bucket);
                 return new BucketManipulationReplyMessage(this, bucket.deleteObject(objectID), true);
@@ -161,11 +160,11 @@ public class BucketManipulationRequestMessage extends Message {
                 return new BucketManipulationReplyMessage(this, bucket.getAllObjects());
             }
         } catch (NoSuchElementException e) {
-            return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_NOT_FOUND);
+            return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_NOT_FOUND, 0);
         } catch (CapacityFullException e) {
-            return new BucketManipulationReplyMessage(this, BucketErrorCode.HARDCAPACITY_EXCEEDED);            
+            return new BucketManipulationReplyMessage(this, BucketErrorCode.HARDCAPACITY_EXCEEDED, 0);            
         } catch (OccupationLowException e) {
-            return new BucketManipulationReplyMessage(this, BucketErrorCode.LOWOCCUPATION_EXCEEDED);
+            return new BucketManipulationReplyMessage(this, BucketErrorCode.LOWOCCUPATION_EXCEEDED, 0);
         }
     }
                 

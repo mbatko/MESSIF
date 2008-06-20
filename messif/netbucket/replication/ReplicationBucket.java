@@ -28,7 +28,6 @@ import messif.objects.AbstractObject;
 import messif.objects.GenericAbstractObjectList;
 import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
 import messif.objects.UniqueID;
 import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
@@ -160,27 +159,31 @@ public class ReplicationBucket extends LocalBucket {
     
     /****************** Overrides for all manipulation methods of LocalBucket ******************/
     
-    public void addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
         replicaManipulationLock.readLock().lock();
         try {
-            encapsulatedBucket.addObjects(objects);
+            int ret = encapsulatedBucket.addObjects(objects);
             
             // Update all replicas
             for (RemoteBucket replica : replicas)
                 replica.addObjects(objects);
+
+            return ret;
         } finally {
             replicaManipulationLock.readLock().unlock();
         }
     }
     
-    public void addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
+    public int addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
         replicaManipulationLock.readLock().lock();
         try {
-            encapsulatedBucket.addObjects(objects);
+            int ret = encapsulatedBucket.addObjects(objects);
             
             // Update all replicas
             for (RemoteBucket replica : replicas)
                 replica.addObjects(objects);
+
+            return ret;
         } finally {
             replicaManipulationLock.readLock().unlock();
         }

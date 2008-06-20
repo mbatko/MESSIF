@@ -6,10 +6,8 @@
 
 package messif.netbucket;
 
-import java.util.Iterator;
 import messif.buckets.BucketErrorCode;
 import messif.network.ReplyMessage;
-import messif.objects.AbstractObject;
 import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MeasuredAbstractObjectList;
@@ -59,12 +57,12 @@ public class BucketManipulationReplyMessage extends ReplyMessage {
     /**
      * Creates a new instance of BucketManipulationReplyMessage for adding object
      */
-    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, BucketErrorCode errorCode) {
+    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, BucketErrorCode errorCode, int changesCount) {
         super(message);
         this.errorCode = errorCode;
         this.object = null;
         this.objects = null;
-        this.changesCount = 0;
+        this.changesCount = changesCount;
         this.query = null;
     }
     
