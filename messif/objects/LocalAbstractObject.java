@@ -196,6 +196,48 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
     protected abstract float getDistanceImpl(LocalAbstractObject obj, float distThreshold);
 
     /**
+     * Normalized metric distance function.
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance (see {@link #getDistance} for explanation)
+     * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
+     */
+    public final float getNormDistance(LocalAbstractObject obj, float distThreshold) {
+        if (distanceFilter != null && distanceFilter.isGetterSupported()) {
+            float distance = distanceFilter.getPrecomputedDistance(obj);
+            if (distance != UNKNOWN_DISTANCE)
+                return distance / getMaxDistance();
+        }
+
+        // This check is to enhance performance when statistics are disabled
+        if (Statistics.isEnabledGlobally())
+            counterDistanceComputations.add();
+
+        return getNormDistanceImpl(obj, distThreshold);
+    }
+
+    /**
+     * The actual implementation of the normalized metric function (see {@link #getDistance} for full explanation).
+     * Default implementation divides the result of {@link #getDistance} by {@link #getMaxDistance}.
+     *
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
+     */
+    protected float getNormDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        return getDistanceImpl(obj, distThreshold) / getMaxDistance();
+    }
+
+    /**
+     * Returns a maximal possible distance for this class.
+     * This method <i>must</i> return the same value for all instances of this class.
+     * Default implementation returns {@link #MAX_DISTANCE}.
+     * @return a maximal possible distance for this class
+     */
+    public float getMaxDistance() {
+        return MAX_DISTANCE;
+    }
+
+    /**
      * Lower bound of a metric distance.
      *    Returns the lower bound of the distance between this object and the object that is supplied 
      *    as argument. The function allows several levels of precision (parameter accuracy).
