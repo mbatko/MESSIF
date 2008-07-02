@@ -18,9 +18,9 @@ import messif.buckets.LocalBucket;
 import messif.buckets.OccupationLowException;
 import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
+import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
 
 
@@ -163,7 +163,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * @return iterator over all objects from the remote bucket
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
-    public GenericObjectIterator<LocalAbstractObject> getAllObjects() throws IllegalStateException {
+    public AbstractObjectIterator<LocalAbstractObject> getAllObjects() throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).getAllObjects();

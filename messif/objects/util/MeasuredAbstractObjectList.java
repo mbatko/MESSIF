@@ -4,89 +4,36 @@
  * Created on 19. kveten 2004, 19:03
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.TreeSet;
+import messif.objects.AbstractObject;
+import messif.objects.MeasuredAbstractObject;
 
 
 /**
  *
  * @author  xbatko
  */
-public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSet<MeasuredAbstractObjectList.Pair<T>> implements Serializable {
+public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSet<MeasuredAbstractObject<? extends T>> implements Serializable {
     
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Pair class ******************/
-
-    public static class Pair<T extends AbstractObject> implements Comparable<Pair>, Serializable {
-
-        /** Class serial id for serialization */
-        private static final long serialVersionUID = 1L;
+    //****************** InternalIteration class ******************//
     
-        /****************** Pair attributes ******************/
-        protected final T object;
-        protected final float distance;
-        /****************** Pair constructor ******************/
-        public Pair(T object, float distance) {
-            this.object = object;
-            this.distance = distance;
-        }
-        
-        public int compareTo(Pair o) {
-            if (distance < o.distance) return -1;
-            if (distance > o.distance) return 1;
-            if (object == null)
-                return (o.object == null)?0:-1;
-            if (o.object == null)
-                return 1;
-            return object.compareTo(o.object);
-        }
-        
-        public boolean equals(Object obj) {
-            try {
-                Pair pair = (Pair) obj;
-                if (pair.distance != this.distance)
-                    return false;
-                if (object == null)
-                    return pair.object == null;
-                if (pair.object == null)
-                    return false;
-                return this.object.equals(pair.object);
-            } catch (ClassCastException e) {
-                return false;
-            }
-        }
-        
-        public String toString() {
-            return "<" + distance + ": " + object + ">";
-        }
-        
-        public T getObject() {
-            return object;
-        }
-        
-        public float getDistance() {
-            return distance;
-        }
-
-    }
-    
-    /****************** InternalIteration class ******************/
-    
-    private static class InternalIterator<T extends AbstractObject> extends GenericObjectIterator<T> {
+    private static class InternalIterator<T extends AbstractObject> extends AbstractObjectIterator<T> {
         private T currentObject = null;
-        private final Iterator<Pair<T>> pairEnum;
-        public InternalIterator(Iterator<Pair<T>> pairEnum) {
+        private final Iterator<MeasuredAbstractObject<? extends T>> pairEnum;
+        public InternalIterator(Iterator<MeasuredAbstractObject<? extends T>> pairEnum) {
             this.pairEnum = pairEnum;
         }
         public boolean hasNext() { return pairEnum.hasNext(); }
-        public T next() { return currentObject = pairEnum.next().object; }
+        public T next() { return currentObject = pairEnum.next().getObject(); }
         public void remove() { throw new UnsupportedOperationException(); }
 
         /**
@@ -101,7 +48,7 @@ public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSe
         }
     }
     
-    /****************** Objects and distances list ******************/
+    //****************** Objects and distances list ******************//
     protected final int maxPairCount;
     
     
@@ -118,16 +65,16 @@ public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSe
     }
 
     /** Creates a new instance of MeasuredAbstractObjectList */
-    public MeasuredAbstractObjectList(Iterator<Pair<T>> iterator) {
+    public MeasuredAbstractObjectList(Iterator<MeasuredAbstractObject<? extends T>> iterator) {
         this(Integer.MAX_VALUE, iterator);
     }
 
     /** Creates a new instance of MeasuredAbstractObjectList */
-    public MeasuredAbstractObjectList(int maxPairCount, Iterator<Pair<T>> iterator) {
+    public MeasuredAbstractObjectList(int maxPairCount, Iterator<MeasuredAbstractObject<? extends T>> iterator) {
         this(maxPairCount);
         while (iterator.hasNext()) {
-            Pair<T> pair = iterator.next();
-            add(pair.getObject(), pair.getDistance());
+            MeasuredAbstractObject<? extends T> measuredObj = iterator.next();
+            add(measuredObj.getObject(), measuredObj.getDistance());
         }
     }
 
@@ -143,11 +90,11 @@ public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSe
         if ((size() >= maxPairCount) && (distance >= getLastDistance()))
             return false;
         
-        add(new Pair<T>(object, distance));
+        add(new MeasuredAbstractObject<T>(object, distance));
         return true;
     }
 
-    public boolean add(MeasuredAbstractObjectList.Pair<T> pair) {
+    public boolean add(MeasuredAbstractObject<? extends T> pair) {
         if (!super.add(pair))
             return false;
 
@@ -158,7 +105,7 @@ public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSe
         return true;
     }
 
-    public boolean addAll(Collection<? extends MeasuredAbstractObjectList.Pair<T>> source) {
+    public boolean addAll(Collection<? extends MeasuredAbstractObject<? extends T>> source) {
         if (!super.addAll(source))
             return false;
 
@@ -173,32 +120,32 @@ public class MeasuredAbstractObjectList<T extends AbstractObject> extends TreeSe
      * @param source  list of objects to be added to this
      * @return <code>true</code> if at least one object has been added. Otherwise <code>false</code>.
      */
-    public boolean add(MeasuredAbstractObjectList<T> source) {
+    public boolean add(MeasuredAbstractObjectList<? extends T> source) {
         boolean retVal = false;
-        for (Pair<T> pair : source) {
-            if (add(pair.object, pair.distance))
+        for (MeasuredAbstractObject<? extends T> item : source) {
+            if (add(item.getObject(), item.getDistance()))
                 retVal = true;
         }
         return retVal;
     }
     
     /** Enumerate all stored measured object */
-    public GenericObjectIterator<T> objects() {
+    public AbstractObjectIterator<T> objects() {
         return new InternalIterator<T>(iterator());
     }
     
     /** Get last stored measured object
      *  Throws NoSuchElementException if list is empty
      */
-    public T getLastObject() {
-        return last().object;
+    public AbstractObject getLastObject() {
+        return last().getObject();
     }
     
     /** Get last stored measured object distance 
      *  Throws NoSuchElementException if list is empty
      */
     public float getLastDistance() {
-        return last().distance;
+        return last().getDistance();
     }
     
 }

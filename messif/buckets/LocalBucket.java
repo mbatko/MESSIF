@@ -9,8 +9,8 @@ package messif.buckets;
 import java.io.Serializable;
 import java.util.NoSuchElementException;
 import messif.objects.UniqueID;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 import messif.statistics.StatisticRefCounter;
 
 /**
@@ -371,7 +371,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * Returns iterator over all objects from this bucket.
      * @return iterator over all objects from this bucket
      */
-    public synchronized GenericObjectIterator<LocalAbstractObject> getAllObjects() {
+    public synchronized AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         // Update statistics
         counterBucketRead.add(this);
         
@@ -406,7 +406,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * Internal class for bucket iterator implementation
      * @param <T> the type of the bucket this iterator operates on
      */
-    protected static abstract class LocalBucketIterator<T extends LocalBucket> extends GenericObjectIterator<LocalAbstractObject> {
+    protected static abstract class LocalBucketIterator<T extends LocalBucket> extends AbstractObjectIterator<LocalAbstractObject> {
         /** Reference to the bucket this iterator is working on */
         protected final T bucket;
 

@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.util.AbstractObjectIterator;
 
 
 /**
@@ -169,7 +169,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
      * @return Returns an array of two short values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    static public short[] getMinMaxOverCoords(GenericAbstractObjectIterator<? extends ObjectShortVector> iterator) {
+    static public short[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectShortVector> iterator) {
         short[] range = {Short.MAX_VALUE, Short.MIN_VALUE};
         while (iterator.hasNext()) {
             ObjectShortVector obj = iterator.next();
@@ -189,7 +189,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    static public short[][] getMinMaxForEveryCoord(GenericAbstractObjectIterator<? extends ObjectShortVector> iterator) {
+    static public short[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectShortVector> iterator) {
         short[][] range = null;
         int dims = -1;
         

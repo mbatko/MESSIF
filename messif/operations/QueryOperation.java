@@ -8,9 +8,10 @@ package messif.operations;
 
 import java.util.Iterator;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+
 
 /**
  * The base class for query operations.
@@ -50,7 +51,7 @@ public abstract class QueryOperation extends AbstractOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public abstract int evaluate(GenericObjectIterator<LocalAbstractObject> objects);
+    public abstract int evaluate(AbstractObjectIterator<LocalAbstractObject> objects);
     
 
     /**
@@ -72,7 +73,7 @@ public abstract class QueryOperation extends AbstractOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public abstract Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances();
+    public abstract Iterator<MeasuredAbstractObject<?>> getAnswerDistances();
     
     /**
      * Add an object with a measured distance to the answer.
@@ -89,10 +90,10 @@ public abstract class QueryOperation extends AbstractOperation {
      * @param iterator iterator over object-distance pairs that should be added to this operation's answer
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
-    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) {
+    public int addToAnswer(Iterator<MeasuredAbstractObject<?>> iterator) {
         int retVal = 0;
         while (iterator.hasNext()) {
-            MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
+            MeasuredAbstractObject pair = iterator.next();
             if (addToAnswer(pair.getObject(), pair.getDistance()))
                 retVal++;
         }

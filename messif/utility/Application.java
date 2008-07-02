@@ -6,14 +6,37 @@
 
 package messif.utility;
 
+import java.io.BufferedReader;
 import java.io.EOFException;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.rmi.registry.Registry;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -23,35 +46,14 @@ import messif.executor.MethodNameExecutor;
 import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
-import messif.objects.StreamGenericAbstractObjectIterator;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.rmi.registry.Registry;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.logging.Level;
+
+
 
 /**
  * This class implements a standalone client for MESSIF-enabled algorithms.
@@ -633,7 +635,7 @@ public class Application {
 
         // Separator is second argument (get newline if not specified)
         String separator = (args.length > 2)?args[2]:System.getProperty("line.separator");
-        Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iter = ((QueryOperation)lastOperation).getAnswerDistances();
+        Iterator<MeasuredAbstractObject<?>> iter = ((QueryOperation)lastOperation).getAnswerDistances();
         
         // Check first argument for print type
         switch ((args.length > 1)?Character.toUpperCase(args[1].charAt(0)):'D') {

@@ -9,9 +9,10 @@ package messif.operations;
 import java.util.Iterator;
 import messif.netbucket.RemoteAbstractObject;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
 
 /**
  * Range query operation.
@@ -105,7 +106,7 @@ public class RangeQueryOperation extends QueryOperation {
      * @return number of objects satisfying the query
      */
     @Override
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         int count = 0;
 
         // Iterate through all supplied objects
@@ -165,7 +166,7 @@ public class RangeQueryOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         return answer.iterator();
     }
 
@@ -187,10 +188,10 @@ public class RangeQueryOperation extends QueryOperation {
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
     @Override
-    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
+    public int addToAnswer(Iterator<MeasuredAbstractObject<?>> iterator) { 
         int retVal = 0;
         while (iterator.hasNext()) {
-            MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
+            MeasuredAbstractObject<?> pair = iterator.next();
             if (RemoteAbstractObject.class.isInstance(pair.getObject())) {
                 if (answer.add(pair))
                     retVal++;

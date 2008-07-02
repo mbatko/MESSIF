@@ -10,11 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
+import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.objects.UniqueID;
+import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
 
 
@@ -143,9 +143,9 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @throws NoSuchElementException if there is not an object with one of the specified IDs in this bucket
      * @throws OccupationLowException if the low occupation limit is reached when deleting objects
      */
-    public GenericAbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
+    public AbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
         // Prepare return list
-        GenericAbstractObjectList<LocalAbstractObject> rtv = new GenericAbstractObjectList<LocalAbstractObject>(objectIDs.size());
+        AbstractObjectList<LocalAbstractObject> rtv = new AbstractObjectList<LocalAbstractObject>(objectIDs.size());
         
         // Enumerate deleted objects and delete one by one
         for (UniqueID id : objectIDs)
@@ -164,7 +164,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @throws OccupationLowException if the low occupation limit is reached when deleting objects
      */
     public int deleteAllObjects() throws OccupationLowException {
-        GenericObjectIterator<LocalAbstractObject> allObjects = getAllObjects();
+        AbstractObjectIterator<LocalAbstractObject> allObjects = getAllObjects();
         int count = 0;
         while (allObjects.hasNext()) {
             try {
@@ -212,7 +212,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
         
         // Get all objects and use policy's matcher to mark the moved ones
         int count = 0;
-        GenericObjectIterator<LocalAbstractObject> iterator = getAllObjects();
+        AbstractObjectIterator<LocalAbstractObject> iterator = getAllObjects();
         while (iterator.hasNext()) {
             LocalAbstractObject object = iterator.next();
             int partId = policy.match(object);
@@ -260,7 +260,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * Returns iterator over all objects from this bucket.
      * @return iterator over all objects from this bucket
      */
-    public abstract GenericObjectIterator<LocalAbstractObject> getAllObjects();
+    public abstract AbstractObjectIterator<LocalAbstractObject> getAllObjects();
 
     /**
      * Process a query operation on objects from this bucket.
@@ -282,7 +282,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * The iterator for provided objects for ObjectProvider interface.
      * @return iterator for provided objects
      */
-    public GenericObjectIterator<LocalAbstractObject> provideObjects() {
+    public AbstractObjectIterator<LocalAbstractObject> provideObjects() {
         return getAllObjects();
     }
 

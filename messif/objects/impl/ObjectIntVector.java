@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.util.AbstractObjectIterator;
 
 
 /**
@@ -169,7 +169,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      * @return Returns an array of two integer values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    static public int[] getMinMaxOverCoords(GenericAbstractObjectIterator<? extends ObjectIntVector> iterator) {
+    static public int[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectIntVector> iterator) {
         int[] range = {Integer.MAX_VALUE, Integer.MIN_VALUE};
         while (iterator.hasNext()) {
             ObjectIntVector obj = iterator.next();
@@ -189,7 +189,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    static public int[][] getMinMaxForEveryCoord(GenericAbstractObjectIterator<? extends ObjectIntVector> iterator) {
+    static public int[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectIntVector> iterator) {
         int[][] range = null;
         int dims = -1;
         

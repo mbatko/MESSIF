@@ -13,8 +13,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 
 
 /**
@@ -238,7 +238,7 @@ public abstract class ObjectVector extends LocalAbstractObject {
      * @return Returns an array of two float values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    static public float[] getMinMaxOverCoords(GenericAbstractObjectIterator<? extends ObjectVector> iterator) {
+    static public float[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectVector> iterator) {
         float[] range = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
         while (iterator.hasNext()) {
             ObjectVector obj = iterator.next();
@@ -258,7 +258,7 @@ public abstract class ObjectVector extends LocalAbstractObject {
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    static public float[][] getMinMaxForEveryCoord(GenericAbstractObjectIterator<? extends ObjectVector> iterator) {
+    static public float[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectVector> iterator) {
         float[][] range = null;
         int dims = -1;
         

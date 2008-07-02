@@ -11,92 +11,140 @@ import messif.buckets.BucketFilterInterface;
 import messif.buckets.BucketFilterInterface.FilterSituations;
 import messif.buckets.FilterRejectException;
 import messif.buckets.LocalFilteredBucket;
-import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectIterator;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 
 
 /**
- *
+ * This class provides a privot chooser that selects maximally two pivots.
+ * The chooser is incrementally maintaining two objects that have a maximal distance.
+ * 
  * @author  xbatko
  */
 public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser implements Serializable, BucketFilterInterface {
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
-
-    /****************** Selected pivots ******************/
-    
-    public LocalAbstractObject getLeftPivot() { return getPivot(0); }
-    public LocalAbstractObject getRightPivot() { return getPivot(1); }
-
+    /** Actual selected pivots' distance */
     private float pivotsDistance = 0;
-    public float getPivotsDistance() { return pivotsDistance; }
-    
 
-    /****************** Construcotrs ******************/
 
-    /** Creates a new instance of GHTPivotChooser */
+    //****************** Selected pivots ******************//
+
+    /**
+     * Returns the left (first) pivot.
+     * @return the left pivot
+     */
+    public LocalAbstractObject getLeftPivot() {
+        return getPivot(0);
+    }
+
+    /**
+     * Returns the right (second) pivot.
+     * @return the right pivot
+     */
+    public LocalAbstractObject getRightPivot() {
+        return getPivot(1);
+    }
+
+    /**
+     * Returns the distance of the actually selected pivots or zero if there is not enough objects seen yet.
+     * @return the distance of the actually selected pivots
+     */
+    public float getPivotsDistance() {
+        return pivotsDistance;
+    }
+
+
+    //****************** Construcotrs ******************//
+
+    /**
+     * Creates a new instance of TwoDistantIncrementalPivotChooser.
+     */
     public TwoDistantIncrementalPivotChooser() {
     }
-    
-    
-    /****************** Pivot choosing ******************/
 
-    /** Preselect pivots */
+
+    //****************** Pivot choosing ******************//
+
+    /**
+     * Method for preselecting pivots as they are added to a bucket.
+     *
+     * @param object the inserted/deleted object
+     * @param situation actual situation in which the method is called (see FilterSituations constants for detailed description)
+     * @param inBucket bucket, where the object will be/was stored
+     * @throws FilterRejectException if the current operation should be aborted (should be thrown only in BEFORE situations)
+     */
     public void filterObject(LocalAbstractObject object, FilterSituations situation, LocalFilteredBucket inBucket) throws FilterRejectException {
         // Ignore other situations than after insert...
         if (situation == FilterSituations.AFTER_ADD)
             try {
                 counterPivotDistComp.bindTo(counterObjectDistComp);
-                selectPivot(1, new GenericAbstractObjectIterator<LocalAbstractObject>(object));
+                updateSelectedPivots(object);
             } finally {
                 counterPivotDistComp.unbind();
             }
     }
-    
-    
-    /****************** Overrides ******************/
-    
-    protected void selectPivot(int count, GenericObjectIterator<? extends LocalAbstractObject> samplesList) {
-        while (samplesList.hasNext() && count-- > 0) {
-            LocalAbstractObject object = samplesList.next();
-        
-            synchronized (preselectedPivots) {
-                switch (preselectedPivots.size()) {
-                    // Get first two objects as pivots
-                    case 1:
-                        pivotsDistance = object.getDistance(getPivot(0));
-                        preselectedPivots.add(object);
-                        break;
-                    case 0:
-                        preselectedPivots.add(object);
-                        break;
-                    // Measure the next ones
-                    default:
-                        // Compute distance to the left and right pivots
-                        float leftDistance = object.getDistance(getPivot(0));
-                        float rightDistance = object.getDistance(getPivot(1));
 
-                        if (leftDistance > rightDistance) {
-                            if (leftDistance > pivotsDistance) {
-                                preselectedPivots.set(1, object);
-                                pivotsDistance = leftDistance;
-                            }
-                        } else {
-                            if (rightDistance > pivotsDistance) {
-                                preselectedPivots.set(0, object);
-                                pivotsDistance = rightDistance;
-                            }
+
+    //****************** Overrides ******************//
+    
+    /**
+     * Select at least <i>count</i> pitvots and
+     * add them by <code>addPivot</code> method.
+     * @param count Number of pivots to generate
+     * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
+     * @throws IllegalArgumentException if more than two pivots are requested
+     */
+    protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) throws IllegalArgumentException {
+        if (count > 2)
+            throw new IllegalArgumentException("Pivot chooser only supports two pivots");
+        while (sampleSetIterator.hasNext() && count-- > 0)
+            updateSelectedPivots(sampleSetIterator.next());
+    }
+
+    /**
+     * Updates the selected pivots.
+     * If the distance between the left or the right pivot is bigger than current pivots'
+     * distance, the object replaces the other pivot.
+     * @param object the object to check
+     */
+    protected void updateSelectedPivots(LocalAbstractObject object) {
+        synchronized (preselectedPivots) {
+            switch (preselectedPivots.size()) {
+                // Get first two objects as pivots
+                case 1:
+                    pivotsDistance = object.getDistance(getPivot(0));
+                    preselectedPivots.add(object);
+                    break;
+                case 0:
+                    preselectedPivots.add(object);
+                    break;
+                // Measure the next ones
+                default:
+                    // Compute distance to the left and right pivots
+                    float leftDistance = object.getDistance(getPivot(0));
+                    float rightDistance = object.getDistance(getPivot(1));
+
+                    if (leftDistance > rightDistance) {
+                        if (leftDistance > pivotsDistance) {
+                            preselectedPivots.set(1, object);
+                            pivotsDistance = leftDistance;
                         }
-                }
+                    } else {
+                        if (rightDistance > pivotsDistance) {
+                            preselectedPivots.set(0, object);
+                            pivotsDistance = rightDistance;
+                        }
+                    }
             }
         }
     }
 
-    /** Clears the list of preselected pivots and reset the distance between them.
+    /**
+     * Clears the list of preselected pivots and reset the distance between them.
      */
+    @Override
     public void clear() {
         synchronized (preselectedPivots) {
             super.clear();

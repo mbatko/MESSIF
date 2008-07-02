@@ -7,20 +7,21 @@
 
 package messif.objects;
 
+import messif.objects.util.AbstractObjectIterator;
+
 /**
- * Interaface for providing objects through iterator.
+ * Interface for providing objects through iterator.
  * 
- * Common object providers: {@link GenericAbstractObjectList}, {@link GenericMatchingObjectList}, {@link messif.buckets.LocalBucket}
+ * @param <E> the class of the iterated objects
  * @author xbatko
  */
 public interface ObjectProvider<E extends AbstractObject> {
     
     
     /**
-     * The iterator returning provided objects must be returned.
-     *
-     * @return iterator for provided objects
+     * Returns an iterator over the {@link ObjectProvider provided} objects.
+     * @return an iterator over the {@link ObjectProvider provided} objects
      */
-    public GenericObjectIterator<E> provideObjects();
+    public AbstractObjectIterator<E> provideObjects();
 
 }

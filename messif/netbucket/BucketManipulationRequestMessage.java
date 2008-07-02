@@ -7,20 +7,21 @@
 
 package messif.netbucket;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketErrorCode;
 import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
 import messif.buckets.OccupationLowException;
+import messif.network.Message;
 import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectList;
 import messif.objects.LocalAbstractObject;
+import messif.objects.UniqueID;
+import messif.objects.util.AbstractObjectList;
 import messif.operations.QueryOperation;
 import messif.utility.Logger;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import messif.network.Message;
-import messif.objects.UniqueID;
+
 
 /**
  *
@@ -36,7 +37,7 @@ public class BucketManipulationRequestMessage extends Message {
     /****************** Attributes ******************/
 
     protected final LocalAbstractObject object;
-    protected final GenericAbstractObjectList<LocalAbstractObject> objects;
+    protected final AbstractObjectList<LocalAbstractObject> objects;
     protected final QueryOperation query;
     protected final int bucketID;
     protected final UniqueID objectID;
@@ -62,7 +63,7 @@ public class BucketManipulationRequestMessage extends Message {
      */
     public BucketManipulationRequestMessage(Iterator<? extends AbstractObject> objects, int remoteBucketID) {
         this.object = null;
-        this.objects = new GenericAbstractObjectList<LocalAbstractObject>();
+        this.objects = new AbstractObjectList<LocalAbstractObject>();
         this.query = null;
         this.bucketID = remoteBucketID;
         this.objectID = null;

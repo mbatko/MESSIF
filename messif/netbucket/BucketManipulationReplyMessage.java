@@ -8,9 +8,9 @@ package messif.netbucket;
 
 import messif.buckets.BucketErrorCode;
 import messif.network.ReplyMessage;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
 import messif.operations.QueryOperation;
 
 /**
@@ -88,7 +88,7 @@ public class BucketManipulationReplyMessage extends ReplyMessage {
     /**
      * Creates a new instance of BucketManipulationReplyMessage for getting all objects
      */
-    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, GenericObjectIterator<? extends LocalAbstractObject> objects) {
+    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         super(message);
         errorCode = null;
         object = null;

@@ -8,9 +8,9 @@ package messif.pivotselection;
 
 import java.io.IOException;
 import java.io.Serializable;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.StreamGenericAbstractObjectIterator;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.StreamGenericAbstractObjectIterator;
 
 
 /**
@@ -47,7 +47,7 @@ public class StreamSequencePivotChooser extends AbstractPivotChooser implements 
      * @param count number of pivots to generate
      * @param sampleSetIterator ignored by this chooser, since the pivots are provided externally
      */
-    protected void selectPivot(int count, GenericObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
+    protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
         for (;count > 0;count--)
             addPivot(stream.next());
     }

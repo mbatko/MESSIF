@@ -8,12 +8,10 @@ package messif.pivotselection;
 
 import java.io.Serializable;
 import java.util.Iterator;
-import messif.buckets.Bucket;
 import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectIterator;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
 
 
 /**
@@ -52,7 +50,8 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
         return preselectedPivot;
     }
     
-    /** Selects new pivots.
+    /**
+     * Selects new pivots.
      * Implementation of the incremental pivot selection algorithm.
      * This method is not intended to be called directly. It is automatically called from getPivot(int).
      *
@@ -62,17 +61,18 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
      * If the list of pivots is not passed it is assumed that no pivots were selected.
      *
      * Statistics are maintained automatically.
+     * @param pivots number of pivots to generate
+     * @param objectIter Iterator over the sample set of objects to choose new pivots from
      */
-    protected void selectPivot(int pivots, GenericObjectIterator<? extends LocalAbstractObject> objectIter) {
+    protected void selectPivot(int pivots, AbstractObjectIterator<? extends LocalAbstractObject> objectIter) {
         // Store all passed objects temporarily
-        GenericAbstractObjectList<LocalAbstractObject> objectList = new GenericAbstractObjectList<LocalAbstractObject>(objectIter);
+        AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);
         
         int sampleSize = (Math.sqrt(sampleSetSize) > objectList.size()) ? objectList.size() * objectList.size() : sampleSetSize;
-        int idx;
 
         // Select objects randomly
-        GenericAbstractObjectList<LocalAbstractObject> leftPair  = objectList.randomList(sampleSize, false, new GenericAbstractObjectList<LocalAbstractObject>());
-        GenericAbstractObjectList<LocalAbstractObject> rightPair = objectList.randomList(sampleSize, false, new GenericAbstractObjectList<LocalAbstractObject>());
+        AbstractObjectList<LocalAbstractObject> leftPair  = objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>());
+        AbstractObjectList<LocalAbstractObject> rightPair = objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>());
         
         
         LocalAbstractObject leftObj;
@@ -84,8 +84,8 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
         float[] distsRightClosest = new float[sampleSize];     // stored distances between right objects and the best pivot
         
         // initialize array of distances to former pivots
-        GenericAbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
-        GenericAbstractObjectIterator<LocalAbstractObject> rightIter= rightPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> rightIter= rightPair.iterator();
         
         for (int i = 0; i < sampleSize; i++) {
             leftObj = leftIter.next();
@@ -106,7 +106,7 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
         for (int p = 0; p < pivots; p++) {
             System.out.println("Selecting pivot number "+p);//", DistanceComputations: "+Statistics.printStatistics("DistanceComputations"));
             
-            GenericAbstractObjectList<LocalAbstractObject> candidatePivots = objectList.randomList(samplePivotSize, true, new GenericAbstractObjectList<LocalAbstractObject>());
+            AbstractObjectList<LocalAbstractObject> candidatePivots = objectList.randomList(samplePivotSize, true, new AbstractObjectList<LocalAbstractObject>());
             
             float[] distsLeftToBestCand = new float[sampleSize];      // stored distances between left objects and the best pivot
             float[] distsRightToBestCand = new float[sampleSize];     // stored distances between right objects and the best pivot
@@ -122,7 +122,7 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
             
             // go through all candidate pivots and compute their mu
             System.out.print("Candidates: "); int iter = 1;
-            for (GenericAbstractObjectIterator<LocalAbstractObject> pivotIter = candidatePivots.iterator(); pivotIter.hasNext(); ) {
+            for (AbstractObjectIterator<LocalAbstractObject> pivotIter = candidatePivots.iterator(); pivotIter.hasNext(); ) {
                 System.out.print(iter++ +", "); System.out.flush();
                 LocalAbstractObject pivot = pivotIter.next();
                 

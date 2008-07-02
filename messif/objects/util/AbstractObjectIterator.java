@@ -1,10 +1,10 @@
 /*
- * GenericObjectIterator.java
+ * AbstractObjectIterator.java
  *
  * Created on 23. kveten 2006, 11:37
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,39 +13,67 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.buckets.FilterRejectException;
 import messif.buckets.OccupationLowException;
+import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
+import messif.objects.ObjectProvider;
+import messif.objects.UniqueID;
 
 /**
- *
+ * Implementation of an iterator over a collection of {@link AbstractObject abstract objects}.
+ * It provides methods for getting objects by their position, ID, data-equality, locator or
+ * {@link ObjectMatcher}.
+ * 
+ * <p>
+ * All methods are implemented in a "stream" fashion, i.e.
+ * only the {@link #next()} method is used to accomplish all the getting methods.
+ * Note that iterator cannot go back, so for example the {@link #getObjectByID(messif.objects.UniqueID) get-by-id}
+ * method will only find the object if it has not been skipped in the iterator before.
+ * </p>
+ * 
+ * @param <E> the class of the iterated objects
+ * @author xbatko
  * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
-public abstract class GenericObjectIterator<E extends AbstractObject> implements Iterator<E>, ObjectProvider<E> {
-    
-    /****************** Just for convenience *************/
-    
-    /** Returns an ID of the object returned by next().
-     * That is the result of 'next().getObjectID()' is returned;
-     */
-    public UniqueID nextObjectID() { 
-        return next().getObjectID();
-    }
-    
-    /** Returns an instance of object returned by the last call to next().
-     * @throws NoSuchElementException if next() has not been called yet.
+public abstract class AbstractObjectIterator<E extends AbstractObject> implements Iterator<E>, ObjectProvider<E> {
+
+    //****************** Methods for current object access ******************//
+
+    /**
+     * Returns an object returned by the last call to {@link #next()}.
+     * @return an object returned by the last call to {@link #next()}
+     * @throws NoSuchElementException if {@link #next()} has not been called yet
      */
     public abstract E getCurrentObject() throws NoSuchElementException;
-    
-    /** Returns an ID of object returned by the last call to next().
+
+    /**
+     * Returns an ID of the object returned by the last call to {@link #next()}.
+     * @return an ID of the object returned by the last call to {@link #next()}.
      * @throws NoSuchElementException if next() has not been called yet.
      */
     public UniqueID getCurrentObjectID() throws NoSuchElementException {
         return getCurrentObject().getObjectID();
     }
-    
+
+    /**
+     * Returns an ID of the object returned by a call to {@link #next()}.
+     * That is, the next object is obtained from the iterator via {@link #next()}
+     * and its {@link AbstractObject#getObjectID() ID} is returned.
+     * @return an ID of the object returned by a call to {@link #next()}
+     */
+    public UniqueID nextObjectID() { 
+        return next().getObjectID();
+    }
+
+
+    //****************** GetBySomething methods ******************//
+
     /**
      * Returns an instance of object on the position of <code>position</code> from the current object.
      * Specifically, next() is called <code>position</code> times and then the current object is returned.
      * That is, position 0 means current object, 1 means the next object, etc.
      *
+     * @param position the position from the current object
+     * @return an instance of object on the position of <code>position</code> from the current object
      * @throws NoSuchElementException if such an object cannot be found.
      */
     public E getObjectByPosition(int position) throws NoSuchElementException {
@@ -115,17 +143,28 @@ public abstract class GenericObjectIterator<E extends AbstractObject> implements
             }
     }
 
-    /****************** Object matching ******************/
-    
-    /** Get matching objects
+
+    //****************** ObjectProvider implementation ******************//
+
+    /**
+     * Returns an iterator over the {@link ObjectProvider provided} objects.
+     * This implementation of the {@link ObjectProvider} interface returns itself as an iterator.
+     * @return an iterator over the {@link ObjectProvider provided} objects
+     */
+    public AbstractObjectIterator<E> provideObjects() {
+        return this;
+    }
+
+
+    //****************** Object matching ******************//
+
+    /**
+     * Returns matching objects.
      * Method returns all objects that satisfy the matching contraints specified by matcher,
-     * i.e. <code>match</code> method in the matcher returns non-zero when applied on them.
+     * i.e. {@link ObjectMatcher#match} method in the matcher returns non-zero when applied on them.
      * 
      * @param matcher The matching condition implemented in the ObjectMatcher interface.
-     *
-     * @return
-     * Returns list of objects which satisfy the matching condition.
-     *
+     * @return a list of objects which satisfy the matching condition
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
@@ -134,16 +173,16 @@ public abstract class GenericObjectIterator<E extends AbstractObject> implements
         return getMatchingObjects(matcher, false);
     }
 
-    /** Get matching objects
+    /**
+     * Returns matching objects.
      * Method returns all objects that satisfy the matching contraints specified by matcher
-     * (i.e. <code>match</code> method in the matcher returns non-zero when applied on them)
+     * (i.e. {@link ObjectMatcher#match} method in the matcher returns non-zero when applied on them)
      * and deletes matching objects from the bucket when required.
      * 
      * @param matcher The matching condition implemented in the ObjectMatcher interface.
      * @param removeMatching Matching objects are also deleted from the bucket.
      *
-     * @return
-     * Returns list of objects which satisfy the matching condition.
+     * @return a list of objects which satisfy the matching condition
      *
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
@@ -153,19 +192,18 @@ public abstract class GenericObjectIterator<E extends AbstractObject> implements
         return getMatchingObjects(matcher, removeMatching, 0);
     }
 
-        
-    /** Get matching objects
+    /**
+     * Returns matching objects.
      * Method returns all objects that satisfy the matching contraints specified by matcher and deletes matching
      * objects from the bucket when required. An object is considered as matching if and only if
-     * ObjectMatcher.match() returns value different from whoStays.
+     * {@link ObjectMatcher#match} returns value different from whoStays.
      * 
      * @param matcher        The matching condition implemented in the ObjectMatcher interface.
      * @param removeMatching Matching objects are also deleted from the bucket.
      * @param whoStays       Identification of a partition whose objects stay in this bucket.
      *
-     * @return
-     * Returns list of objects which satisfy the matching condition (i.e. ObjectMatcher.match() is not equal 
-     * to whoStays when applied on them).
+     * @return a list of objects which satisfy the matching condition (i.e. {@link ObjectMatcher#match} is not equal 
+     * to <code>whoStays</code> when applied on them)
      *
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
@@ -245,14 +283,4 @@ public abstract class GenericObjectIterator<E extends AbstractObject> implements
         return rtv;
     }
 
-
-
-    /**
-     * The iterator returning provided objects must be returned.
-     *
-     * @return iterator for provided objects
-     */
-    public GenericObjectIterator<E> provideObjects() {
-        return this;
-    }
 }

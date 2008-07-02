@@ -6,8 +6,8 @@
 
 package messif.buckets;
 
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
 
 /**
@@ -43,7 +43,7 @@ public interface BucketInterface {
      *
      * @return iterator over all objects from this bucket
      */
-    public GenericAbstractObjectIterator<LocalAbstractObject> getAllObjects();
+    public AbstractObjectIterator<LocalAbstractObject> getAllObjects();
 
     /**
      * Process a query operation on objects from this bucket.

@@ -10,10 +10,9 @@ import java.io.Serializable;
 import messif.buckets.BucketFilterInterface.FilterSituations;
 import messif.buckets.FilterRejectException;
 import messif.buckets.LocalFilteredBucket;
-import messif.objects.GenericAbstractObjectIterator;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
 
 /**
  * Incremental selection of pivots. This pivot chooser is based on the technique called Incremental selection
@@ -54,8 +53,8 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
     /** Two lists of objects used as samples to estimate the quality of pivots.
      * They are randomly picked among all objects in the bucket.
      */
-    private GenericAbstractObjectList<LocalAbstractObject> leftPair  = null;
-    private GenericAbstractObjectList<LocalAbstractObject> rightPair = null;
+    private AbstractObjectList<LocalAbstractObject> leftPair  = null;
+    private AbstractObjectList<LocalAbstractObject> rightPair = null;
     
     /** Using pivots we transform the metric space into (R^np,L_max) space where np is the number of pivots.
      * This array caches maximum distances between a left and a right sample objects with respect to the 
@@ -71,8 +70,8 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
     /** TEMPORARY ONLY until a correct transaction management of subclass' attributes gets implemented in AbstractPivotChooser
      */
     private int backupSampleSize = 0;
-    private GenericAbstractObjectList<LocalAbstractObject> backupLeftPair  = null;
-    private GenericAbstractObjectList<LocalAbstractObject> backupRightPair = null;
+    private AbstractObjectList<LocalAbstractObject> backupLeftPair  = null;
+    private AbstractObjectList<LocalAbstractObject> backupRightPair = null;
     private float[] backupDistsFormer = null;
     private int backupChangesFromLastSampleSetSelection = 0;
 
@@ -148,9 +147,11 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
      * If the list of pivots is not passed it is assumed that no pivots were selected.
      *
      * Statistics are maintained automatically.
+     * @param pivots number of pivots to generate
+     * @param objectIter Iterator over the sample set of objects to choose new pivots from
      */
-    protected void selectPivot(int pivots, GenericObjectIterator<? extends LocalAbstractObject> objectIter) {
-        GenericAbstractObjectList<LocalAbstractObject> objectList = new GenericAbstractObjectList<LocalAbstractObject>(objectIter);
+    protected void selectPivot(int pivots, AbstractObjectIterator<? extends LocalAbstractObject> objectIter) {
+        AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);
         
         // Initialize sample sets
         initializeSampleSets(objectList);
@@ -162,7 +163,7 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
         
     /** Sets the size of sample sets to be used and initializes lists of sample objects 
      */
-    private void initializeSampleSets(GenericAbstractObjectList<LocalAbstractObject> objectList) {
+    private void initializeSampleSets(AbstractObjectList<LocalAbstractObject> objectList) {
         // Samples have already been initialized & insufficient bucket changes, skip this phase
         if (sampleSize != 0 && 
                (objectList.size() == 0 ? BUCKETCHANGE_THRESHOLD_TO_RESELECT
@@ -179,18 +180,18 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
         sampleSize = (SAMPLE_SET_SIZE > 2*objectList.size()) ? 2*objectList.size() : SAMPLE_SET_SIZE;
         
         // Select objects randomly, allow repetitions.
-        leftPair = new GenericAbstractObjectList<LocalAbstractObject>();
-        for (LocalAbstractObject o : objectList.randomList(sampleSize, false, new GenericAbstractObjectList<LocalAbstractObject>()))
+        leftPair = new AbstractObjectList<LocalAbstractObject>();
+        for (LocalAbstractObject o : objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>()))
             leftPair.add(o);
-        rightPair = new GenericAbstractObjectList<LocalAbstractObject>();
-        for (LocalAbstractObject o : objectList.randomList(sampleSize, false, new GenericAbstractObjectList<LocalAbstractObject>()))
+        rightPair = new AbstractObjectList<LocalAbstractObject>();
+        for (LocalAbstractObject o : objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>()))
             rightPair.add(o);
         
         // Initialize the array of distances between left and right sample objects according to current pivots
         distsFormer = new float[sampleSize];    
 
-        GenericAbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
-        GenericAbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
         for (int i = 0; i < sampleSize; i++) {
             LocalAbstractObject leftObj = leftIter.next();
             LocalAbstractObject rightObj = rightIter.next();
@@ -214,9 +215,9 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
      * (preferable way) or directly set using setAdditionalInfo() method.
      * If the list of pivots is not passed it is assumed that no pivots were selected.
      */
-    private void selectOnePivot(GenericAbstractObjectList<LocalAbstractObject> objectList) {
+    private void selectOnePivot(AbstractObjectList<LocalAbstractObject> objectList) {
         // Randomly pick a list of candidate pivots, do now allow duplicates.
-        GenericAbstractObjectList<LocalAbstractObject> candidatePivots = objectList.randomList(SAMPLE_PIVOT_SIZE, true, new GenericAbstractObjectList<LocalAbstractObject>());
+        AbstractObjectList<LocalAbstractObject> candidatePivots = objectList.randomList(SAMPLE_PIVOT_SIZE, true, new AbstractObjectList<LocalAbstractObject>());
 
         // Separate arrays for distance were used to remeber distances from objects to pivots and subsequently to save them among precomputed distance of sample objects
         // This is no longer used
@@ -239,8 +240,8 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
             LocalAbstractObject pivot = p;
             
             // compute distance between sample objects and the pivot
-            GenericAbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
-            GenericAbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
+            AbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
+            AbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
             for (int i = 0; i < sampleSize; i++) {
                 LocalAbstractObject leftObj = leftIter.next();
                 LocalAbstractObject rightObj = rightIter.next();
@@ -321,8 +322,8 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
             return;
         
         // compute distance between sample objects and the pivot
-        GenericAbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
-        GenericAbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> leftIter = leftPair.iterator();
+        AbstractObjectIterator<LocalAbstractObject> rightIter = rightPair.iterator();
         for (int i = 0; i < sampleSize; i++) {
             LocalAbstractObject leftObj = leftIter.next();
             LocalAbstractObject rightObj = rightIter.next();

@@ -6,13 +6,12 @@
 
 package messif.operations;
 
-import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectIterator;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
 import java.util.Iterator;
-import messif.objects.GenericObjectIterator;
+import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
 
 
 /**
@@ -31,7 +30,7 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
     /****************** Query answer attributes ******************/
 
     /** The answer list of this operation */
-    protected final GenericAbstractObjectList<AbstractObject> answer = new GenericAbstractObjectList<AbstractObject>();
+    protected final AbstractObjectList<AbstractObject> answer = new AbstractObjectList<AbstractObject>();
 
 
     /****************** Constructors ******************/
@@ -86,7 +85,7 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         int count = 0;
         while (objects.hasNext()) {
             LocalAbstractObject object = objects.next();
@@ -122,15 +121,15 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
-        final GenericAbstractObjectIterator<AbstractObject> iterator = answer.iterator();
-        return new Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>>() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
+        final AbstractObjectIterator<AbstractObject> iterator = answer.iterator();
+        return new Iterator<MeasuredAbstractObject<?>>() {
             public boolean hasNext() {
                 return iterator.hasNext();
             }
 
-            public MeasuredAbstractObjectList.Pair<AbstractObject> next() {
-                return new MeasuredAbstractObjectList.Pair<AbstractObject>(iterator.next(), 0.0f);
+            public MeasuredAbstractObject<?> next() {
+                return new MeasuredAbstractObject<AbstractObject>(iterator.next(), 0.0f);
             }
 
             public void remove() {

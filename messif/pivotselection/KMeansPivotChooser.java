@@ -3,13 +3,11 @@ package messif.pivotselection;
 
 import java.util.ArrayList;
 import java.util.List;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
-import messif.objects.LocalAbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.PrecompDistPerforatedArrayFilter;
-import messif.objects.PrecomputedDistancesFixedArrayFilter;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
+
 
 /**
  * This class uses the k-means algorithm adapted for metric spaces to cluster the objects
@@ -27,24 +25,31 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
     /** Maximal number of iterations to let run */
     public static final int MAX_ITERATIONS = 100;
     
-    protected GenericAbstractObjectList<LocalAbstractObject> initialPivots;
+    /** List of initial pivots */
+    protected AbstractObjectList<LocalAbstractObject> initialPivots;
     
+    /**
+     * Creates a new instance of KMeansPivotChooser with empty initial list of pivots.
+     */
     public KMeansPivotChooser() {
         this(null);
     }
     
-    /** Creates a new instance of KMeansPivotChooser */
-    public KMeansPivotChooser(GenericAbstractObjectList<LocalAbstractObject> initialPivots) {
+    /**
+     * Creates a new instance of KMeansPivotChooser.
+     * @param initialPivots the list of initial pivots
+     */
+    public KMeansPivotChooser(AbstractObjectList<LocalAbstractObject> initialPivots) {
         this.initialPivots = initialPivots;
     }
     
     /**
      *  This method only uses the preselected pivots as initial pivots for k-means and rewrites the pivots completely
      */
-    protected void selectPivot(int count, GenericObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
+    protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
         
         // Store all passed objects temporarily
-        GenericAbstractObjectList<LocalAbstractObject> objectList = new GenericAbstractObjectList<LocalAbstractObject>(sampleSetIterator);
+        AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(sampleSetIterator);
         
         List<LocalAbstractObject> pivots = new ArrayList<LocalAbstractObject>(count);
         // initially select "count" pivots at random - or use (partly) preselected pivots
@@ -58,13 +63,13 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
         }
         if (count > pivots.size()) {
             System.out.println("Selecting: "+(count - pivots.size()) +" pivots at random");
-            pivots.addAll(objectList.randomList(count - pivots.size(), true, new GenericAbstractObjectList<LocalAbstractObject>()));
+            pivots.addAll(objectList.randomList(count - pivots.size(), true, new AbstractObjectList<LocalAbstractObject>()));
         }
         
         boolean continueKMeans = true;
         
         // one step of the k-means algorithm
-        List<GenericAbstractObjectList<LocalAbstractObject>> actualClusters;
+        List<AbstractObjectList<LocalAbstractObject>> actualClusters;
         int nIterations = 0;
         while (continueKMeans && (nIterations++ < MAX_ITERATIONS)) {
             System.out.println("Running "+nIterations+"th iteration");
@@ -72,7 +77,7 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
             actualClusters = voronoiLikePartitioning(objectList, pivots);
             System.out.println("done");
             StringBuffer buf = new StringBuffer("       cluster sizes: ");
-            for (GenericAbstractObjectList<LocalAbstractObject> cluster : actualClusters) {
+            for (AbstractObjectList<LocalAbstractObject> cluster : actualClusters) {
                 buf.append(cluster.size()).append(", ");
             }
             System.out.println(buf.toString());
@@ -81,7 +86,7 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
             // now calculate the new pivots for the new clusters
             int i = 0;
             List<SelectClustroidThread> selectingThreads = new ArrayList<SelectClustroidThread>();
-            for (GenericAbstractObjectList<LocalAbstractObject> cluster : actualClusters) {
+            for (AbstractObjectList<LocalAbstractObject> cluster : actualClusters) {
                 SelectClustroidThread thread = new SelectClustroidThread(cluster, pivots.get(i++));
                 thread.start();
                 selectingThreads.add(thread);
@@ -118,8 +123,8 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
     }
     
     /** Given a set of objects, a set of pivots, */
-    private List<GenericAbstractObjectList<LocalAbstractObject>> voronoiLikePartitioning(GenericAbstractObjectList<LocalAbstractObject> objects, List<LocalAbstractObject> pivots) {
-        List<GenericAbstractObjectList<LocalAbstractObject>> clusters =  new ArrayList<GenericAbstractObjectList<LocalAbstractObject>>(pivots.size());
+    private List<AbstractObjectList<LocalAbstractObject>> voronoiLikePartitioning(AbstractObjectList<LocalAbstractObject> objects, List<LocalAbstractObject> pivots) {
+        List<AbstractObjectList<LocalAbstractObject>> clusters =  new ArrayList<AbstractObjectList<LocalAbstractObject>>(pivots.size());
         
         // precompute the mutual distances between the pivots
         for (LocalAbstractObject pivot : pivots) {
@@ -133,7 +138,7 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
                 filter.addPrecompDist(pivot.getDistance(pivot2));
             }
             //  init the cluster for this pivot
-            clusters.add(new GenericAbstractObjectList<LocalAbstractObject>());
+            clusters.add(new AbstractObjectList<LocalAbstractObject>());
         }
         
         for (LocalAbstractObject object : objects) {
@@ -166,10 +171,11 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
         return clusters;
     }
     
+    /** Internal thread for selecting the "center" of a cluster. */
     protected class SelectClustroidThread extends Thread {
         
         // parameter
-        GenericAbstractObjectList<LocalAbstractObject> cluster;
+        AbstractObjectList<LocalAbstractObject> cluster;
         
         // always try the original pivot - put it to the sample pivots list
         LocalAbstractObject originalPivot;
@@ -177,13 +183,19 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
         // result
         LocalAbstractObject clustroid;
         
-        protected SelectClustroidThread(GenericAbstractObjectList<LocalAbstractObject> cluster, LocalAbstractObject originalPivot) {
+        /**
+         * Creates a new SelectClustroidThread for computing the "center" of a cluster.
+         * @param cluster the list of objects that form a cluster
+         * @param originalPivot the original pivot that is improved
+         */
+        protected SelectClustroidThread(AbstractObjectList<LocalAbstractObject> cluster, LocalAbstractObject originalPivot) {
             this.cluster = cluster;
             this.originalPivot = originalPivot;
         }
         
+        @Override
         public void run() {
-            GenericAbstractObjectList<LocalAbstractObject> samplePivots = cluster.randomList(PIVOTS_SAMPLE_SIZE, true, new GenericAbstractObjectList<LocalAbstractObject>(PIVOTS_SAMPLE_SIZE));
+            AbstractObjectList<LocalAbstractObject> samplePivots = cluster.randomList(PIVOTS_SAMPLE_SIZE, true, new AbstractObjectList<LocalAbstractObject>(PIVOTS_SAMPLE_SIZE));
             samplePivots.add(this.originalPivot);
             
             double minRowSum = Double.MAX_VALUE;

@@ -8,8 +8,8 @@
 package messif.buckets;
 
 import messif.objects.BallRegion;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 
 /**
  *
@@ -144,7 +144,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
             synchronized (this) {
                 if (pivot != null) {
                     radius = LocalAbstractObject.MIN_DISTANCE;
-                    GenericObjectIterator<LocalAbstractObject> iterator = bucket.getAllObjects();
+                    AbstractObjectIterator<LocalAbstractObject> iterator = bucket.getAllObjects();
                     while (iterator.hasNext()) {
                         float distance = pivot.getDistance(iterator.next());
                         if (distance > radius)

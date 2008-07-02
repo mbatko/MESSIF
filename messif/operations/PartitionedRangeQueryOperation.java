@@ -12,7 +12,8 @@ import java.util.Iterator;
 import java.util.Map;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.MeasuredAbstractObjectList;
 
 /**
  * This class represents a range query that distinguish the partition
@@ -101,7 +102,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     @Override
     public int getAnswerCount() { 
         int retVal = 0;
-        for (MeasuredAbstractObjectList<AbstractObject> part : partitionedAnswer.values())
+        for (MeasuredAbstractObjectList part : partitionedAnswer.values())
             retVal += part.size();
         return retVal;
     }
@@ -125,7 +126,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
     @Override
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         MeasuredAbstractObjectList<AbstractObject> totalAnswer = new MeasuredAbstractObjectList<AbstractObject>();
         for (MeasuredAbstractObjectList<AbstractObject> part : partitionedAnswer.values())
             totalAnswer.add(part);
@@ -137,7 +138,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
      * @param partitionIdentifier the idetifier to select a particular partition
      * @return the partial answer for the specified partition
      */
-    public MeasuredAbstractObjectList<AbstractObject> getPartitionAnswer(Object partitionIdentifier) {
+    public MeasuredAbstractObjectList getPartitionAnswer(Object partitionIdentifier) {
         return partitionedAnswer.get(partitionIdentifier);
     }
 

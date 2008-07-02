@@ -10,9 +10,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
+
 
 /**
  * This query retrieves from the structure a set of objects given their locators.
@@ -57,7 +59,7 @@ public class GetObjectByLocatorOperation extends QueryOperation {
      * @param objects set of objects to evaluate the operation on
      * @return number of objects satisfying the query (should be zero or one object if the locator is unique)
      */    
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         // Iterate through all supplied objects
         try {
             addToAnswer(objects.getObjectByLocator(locator), LocalAbstractObject.UNKNOWN_DISTANCE);
@@ -93,7 +95,7 @@ public class GetObjectByLocatorOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         MeasuredAbstractObjectList<AbstractObject> list = new MeasuredAbstractObjectList<AbstractObject>();
         list.add(answer, LocalAbstractObject.UNKNOWN_DISTANCE);
         return list.iterator();

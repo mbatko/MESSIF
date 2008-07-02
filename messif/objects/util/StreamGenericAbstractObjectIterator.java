@@ -5,7 +5,7 @@
  *
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -16,6 +16,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.NoSuchElementException;
 import java.util.zip.GZIPInputStream;
+import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
 
 /**
@@ -26,7 +27,7 @@ import messif.utility.Convert;
  * @param <E> the class of objects provided by this stream iterator (must be descendant of {@link LocalAbstractObject})
  * @author xbatko
  */
-public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends GenericObjectIterator<E> {
+public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends AbstractObjectIterator<E> {
     
     /** An input stream for reading objects of this iterator from */
     protected BufferedReader stream;

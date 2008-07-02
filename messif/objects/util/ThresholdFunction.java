@@ -5,12 +5,14 @@
  *
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.utility.Convert;
 
 /**

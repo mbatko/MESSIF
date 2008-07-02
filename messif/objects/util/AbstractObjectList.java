@@ -4,7 +4,7 @@
  * Created on 3. kveten 2005, 11:22
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -12,6 +12,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import messif.objects.AbstractObject;
+import messif.objects.ObjectProvider;
+import messif.objects.UniqueID;
 
 
 /**
@@ -22,9 +26,9 @@ import java.util.List;
  * Additionally, the list returns <code>GenericObjectIterator</code>
  * through <code>iterator</code> method.
  * 
- * @param E the type of abstract objects stored in this list
+ * @param <E> the type of abstract objects stored in this list
  */
-public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayList<E> implements Serializable, ObjectProvider<E> {
+public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> implements Serializable, ObjectProvider<E> {
     
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
@@ -37,14 +41,14 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * @param capacity the initial capacity of the list
      * @exception IllegalArgumentException if the specified initial capacity is negative
      */
-    public GenericAbstractObjectList(int capacity) throws IllegalArgumentException {
+    public AbstractObjectList(int capacity) throws IllegalArgumentException {
         super(capacity);
     }
     
     /**
      * Constructs an empty AbstractObject list with an initial capacity of ten.
      */
-    public GenericAbstractObjectList() {
+    public AbstractObjectList() {
     }
     
     /**
@@ -55,7 +59,7 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * @param source the collection whose elements are to be placed into this list
      * @throws NullPointerException if the specified collection is null
      */
-    public GenericAbstractObjectList(Collection<? extends E> source) throws NullPointerException {
+    public AbstractObjectList(Collection<? extends E> source) throws NullPointerException {
         super(source);
     }
     
@@ -68,7 +72,7 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      *              (negative number means unlimited)
      * @throws NullPointerException if the specified iterator is null
      */
-    public GenericAbstractObjectList(Iterator<? extends E> iterator, int count) throws NullPointerException {
+    public AbstractObjectList(Iterator<? extends E> iterator, int count) throws NullPointerException {
         super((count > 0)?count:10);
         while (iterator.hasNext() && (count-- != 0))
             add(iterator.next());
@@ -81,7 +85,7 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * @param iterator the iterator returing elements that are to be placed into this list
      * @throws NullPointerException if the specified iterator is null
      */
-    public GenericAbstractObjectList(Iterator<? extends E> iterator) throws NullPointerException {
+    public AbstractObjectList(Iterator<? extends E> iterator) throws NullPointerException {
         this(iterator, -1);
     }
 
@@ -104,8 +108,26 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * @return an iterator over the elements in this list in proper sequence
      */
     @Override
-    public GenericAbstractObjectIterator<E> iterator() { 
-        return new GenericAbstractObjectIterator<E>(super.iterator());
+    public AbstractObjectIterator<E> iterator() {
+        final Iterator<E> iterator = super.iterator();
+        return new AbstractObjectIterator<E>() {
+            protected E currentObject = null;
+            @Override
+            public E getCurrentObject() throws NoSuchElementException {
+                if (currentObject == null)
+                    throw new NoSuchElementException("Can't call getCurrentObject before next was called");
+                return currentObject;
+            }
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+            public E next() {
+                return currentObject = iterator.next();
+            }
+            public void remove() {
+                iterator.next();
+            }
+        };
     }
 
     /**
@@ -113,7 +135,7 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      *
      * @return iterator for provided objects
      */
-    public GenericObjectIterator<E> provideObjects() {
+    public AbstractObjectIterator<E> provideObjects() {
         return iterator();
     }
 
@@ -196,14 +218,14 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * only added to this list.
      * If the passed list contains some objects they are left untouched.
      *
+     * @param <T> the list class that receives random objects
      * @param count   Number of object to return.
      * @param unique  Flag if returned list contains each object only once.
      * @param list    An instance of a class extending ObjectList<E> used to carry selected objects.
      *
-     * @return
-     * The instance passed in list is returned. It contains randomly selected objects as requested.
+     * @return the instance passed in list which contains randomly selected objects as requested
      */
-    public <T extends GenericAbstractObjectList<E>> T randomList(int count, boolean unique, T list) {
+    public <T extends List<E>> T randomList(int count, boolean unique, T list) {
         if (list == null)
             return null;
         
@@ -273,15 +295,16 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
      * The returned instance is exactly the same as passed in the parameter 'list'. Chosen objects are 
      * only added to this list. If the passed list contains some objects they are left untouched.
      *
+     * @param <F> the class of objects that are stored in the list
+     * @param <T> the list class that receives random objects
      * @param count      Number of object to return.
      * @param unique     Flag if returned list contains each object only once.
      * @param list       An instance of a class extending ObjectList<E> used to carry selected objects.
      * @param iterSource Iterator from which objects are randomly picked.
      *
-     * @return
-     * The instance passed in list is returned. It contains randomly selected objects as requested.
+     * @return the instance passed in list which contains the randomly selected objects as requested
      */
-    public static <F extends AbstractObject, T extends GenericAbstractObjectList<F>> T randomList(int count, boolean unique, T list, GenericObjectIterator<F> iterSource) {
+    public static <F extends AbstractObject, T extends List<F>> T randomList(int count, boolean unique, T list, Iterator<F> iterSource) {
         if (list == null || iterSource == null)
             return null;
         
@@ -355,23 +378,24 @@ public class GenericAbstractObjectList<E extends AbstractObject> extends ArrayLi
         return list;
     }
 
-    /** Returns a list containing randomly choosen objects from the passed iterator.
+    /**
+     * Returns a list containing randomly choosen objects from the passed iterator.
      * If the uniqueness of objects in the retrieved list is not required, the number of objects
      * in the response is equal to 'count'. If a unique list is requested, the number of objects
      * can vary from zero to 'count' and depends on the number of objects in the passed iterator. 
      * When the iterator consists of fewer objects than 'count', all objects are returned at any case.
      *
-     * The returned instance is a new GenericAbstractObjectList with the iterator's type of objects.
+     * The returned instance is a new AbstractObjectList with the iterator's type of objects.
      *
+     * @param <F> the class of objects that are stored in the list
      * @param count      Number of object to return.
      * @param unique     Flag if returned list contains each object only once.
      * @param iterSource Iterator from which objects are randomly picked.
      *
-     * @return
-     * The instance passed in list is returned. It contains randomly selected objects as requested.
+     * @return the instance passed in list which contains the randomly selected objects as requested
      */
-    public static <T extends AbstractObject> GenericAbstractObjectList<T> randomList(int count, boolean unique, GenericObjectIterator<T> iterSource) {
-        return randomList(count, unique, new GenericAbstractObjectList<T>(count), iterSource);
+    public static <F extends AbstractObject> AbstractObjectList<F> randomList(int count, boolean unique, Iterator<F> iterSource) {
+        return randomList(count, unique, new AbstractObjectList<F>(count), iterSource);
     }
     
 }

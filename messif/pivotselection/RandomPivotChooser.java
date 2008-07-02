@@ -7,12 +7,12 @@
 package messif.pivotselection;
 
 import java.io.Serializable;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
 
 /**
- * RandomPivotChooser provides the capability of selecting a random object from the whole bucket
+ * RandomPivotChooser provides the capability of selecting a random object from the whole bucket.
  * 
  * @author  Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
@@ -28,9 +28,10 @@ public class RandomPivotChooser extends AbstractPivotChooser implements Serializ
      * It is used in getPivot() function for automatic selection of missing pivots.
      *
      * Statistics are maintained automatically.
+     * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
      */
-    protected void selectPivot(int count, GenericObjectIterator<? extends LocalAbstractObject> samplesIter) {
-        for (LocalAbstractObject o : GenericAbstractObjectList.randomList(count, false, samplesIter))
+    protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
+        for (LocalAbstractObject o : AbstractObjectList.randomList(count, false, sampleSetIterator))
             preselectedPivots.add(o);
     }
     

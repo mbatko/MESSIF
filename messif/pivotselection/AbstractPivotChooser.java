@@ -11,11 +11,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
-import messif.objects.ObjectProvidersIterator;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
+import messif.objects.util.ObjectProvidersIterator;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticRefCounter;
 import messif.transactions.TransactionList;
@@ -40,7 +40,7 @@ import messif.transactions.TransactionList;
 public abstract class AbstractPivotChooser {
     
     /** List of selected pivots */
-    protected final TransactionList<LocalAbstractObject> preselectedPivots = new TransactionList<LocalAbstractObject>(new GenericAbstractObjectList<LocalAbstractObject>());
+    protected final TransactionList<LocalAbstractObject> preselectedPivots = new TransactionList<LocalAbstractObject>(new AbstractObjectList<LocalAbstractObject>());
     
     /** Statistic counter for pivot chooser distance computations */    
     protected static final StatisticCounter counterPivotDistComp = StatisticCounter.getStatistics("DistanceComputations.PivotChooser");
@@ -193,7 +193,7 @@ public abstract class AbstractPivotChooser {
      * @param count Number of pivots to generate
      * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
      */
-    protected abstract void selectPivot(int count, GenericObjectIterator<? extends LocalAbstractObject> sampleSetIterator);
+    protected abstract void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator);
 
 
     /****************** Sample set management methods ******************/

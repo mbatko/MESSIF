@@ -25,10 +25,10 @@ import messif.buckets.OccupationLowException;
 import messif.netbucket.RemoteBucket;
 import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
-import messif.objects.GenericAbstractObjectList;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractObjectList;
 import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
@@ -223,10 +223,10 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public GenericAbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
+    public AbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
         replicaManipulationLock.readLock().lock();
         try {
-            GenericAbstractObjectList<LocalAbstractObject> objects = encapsulatedBucket.deleteObjects(objectIDs);
+            AbstractObjectList<LocalAbstractObject> objects = encapsulatedBucket.deleteObjects(objectIDs);
             
             if (objects.size() > 0) {
                 // Update all replicas
@@ -274,7 +274,7 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public GenericObjectIterator<LocalAbstractObject> getAllObjects() {
+    public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         replicaManipulationLock.readLock().lock();
         try {
             return encapsulatedBucket.getAllObjects();
@@ -292,7 +292,7 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public GenericObjectIterator<LocalAbstractObject> provideObjects() {
+    public AbstractObjectIterator<LocalAbstractObject> provideObjects() {
         replicaManipulationLock.readLock().lock();
         try {
             return encapsulatedBucket.provideObjects();

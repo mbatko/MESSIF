@@ -7,12 +7,13 @@
 package messif.operations;
 
 import messif.objects.AbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.util.MeasuredAbstractObjectList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import messif.objects.GenericObjectIterator;
+import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MeasuredAbstractObject;
 import messif.objects.UniqueID;
 
 
@@ -83,7 +84,7 @@ public class GetObjectQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         // Iterate through all supplied objects
         try {
             addToAnswer(objects.getObjectByID(objectID), LocalAbstractObject.UNKNOWN_DISTANCE);
@@ -121,7 +122,7 @@ public class GetObjectQueryOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         MeasuredAbstractObjectList<AbstractObject> list = new MeasuredAbstractObjectList<AbstractObject>();
         list.add(answer, LocalAbstractObject.UNKNOWN_DISTANCE);
         return list.iterator();

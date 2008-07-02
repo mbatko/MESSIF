@@ -5,12 +5,14 @@
  *
  */
 
-package messif.objects;
+package messif.objects.util;
 
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import messif.objects.AbstractObject;
+import messif.objects.ObjectProvider;
 
 /**
  * This class allows iterating over multiple ObjectProviders.
@@ -20,12 +22,12 @@ import java.util.Queue;
  *
  * @author xbatko
  */
-public class ObjectProvidersIterator<E extends AbstractObject> extends GenericObjectIterator<E> {
+public class ObjectProvidersIterator<E extends AbstractObject> extends AbstractObjectIterator<E> {
     /** Queue of providers that are waiting to be scanned */
     protected final Queue<ObjectProvider<? extends E>> providers;
     
     /** Iterator from current provider */
-    protected GenericObjectIterator<? extends E> currentIterator;
+    protected AbstractObjectIterator<? extends E> currentIterator;
     
     /** Stored instance of object returned by the last call to next() */
     protected E currentObject = null;

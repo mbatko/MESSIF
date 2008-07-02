@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import messif.objects.ThresholdFunction;
+import messif.objects.util.ThresholdFunction;
 
 /**
  *

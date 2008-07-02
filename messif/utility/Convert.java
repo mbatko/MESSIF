@@ -11,9 +11,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
-import messif.objects.GenericAbstractObjectList;
+import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
-import messif.objects.StreamGenericAbstractObjectIterator;
+import messif.objects.util.StreamGenericAbstractObjectIterator;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -40,7 +40,7 @@ public abstract class Convert {
      *   <li>{@link String}</li>
      *   <li>{@link Class}</li>
      *   <li>{@link StreamGenericAbstractObjectIterator} - parameter represents the name of an opened stream from <code>objectStreams</code></li>
-     *   <li>{@link GenericAbstractObjectList} - parameter represents the name of an opened stream from <code>objectStreams</code>, the number of objects to read can be specified after a colon</li>
+     *   <li>{@link AbstractObjectList} - parameter represents the name of an opened stream from <code>objectStreams</code>, the number of objects to read can be specified after a colon</li>
      *   <li>{@link LocalAbstractObject} - parameter represents the name of an opened stream from <code>objectStreams</code>, the next object is acquired</li>
      *   <li>static array of any "convertible" element type - parameter should be comma-separated values that will be converted using {@link #stringToType} into the array's items</li>
      *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
@@ -96,13 +96,13 @@ public abstract class Convert {
         }
 
         // Try to get LocalAbstractObject from string
-        if ((objectStreams != null) && type.isAssignableFrom(GenericAbstractObjectList.class)) {
+        if ((objectStreams != null) && type.isAssignableFrom(AbstractObjectList.class)) {
             int colonPos = string.lastIndexOf(':');
             if (colonPos != -1) {
                 StreamGenericAbstractObjectIterator<?> objectIterator = objectStreams.get(string.substring(0, colonPos));
                 if (objectIterator != null)
                     try {
-                        return (E)new GenericAbstractObjectList<LocalAbstractObject>(objectIterator, Integer.parseInt(string.substring(colonPos + 1))); // This cast IS checked
+                        return (E)new AbstractObjectList<LocalAbstractObject>(objectIterator, Integer.parseInt(string.substring(colonPos + 1))); // This cast IS checked
                     } catch (NumberFormatException e) {
                         // Ignored, might get converted later
                     }

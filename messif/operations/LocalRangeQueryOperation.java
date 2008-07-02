@@ -1,3 +1,7 @@
+/*
+ * LocalRangeQueryOperation
+ * 
+ */
 
 package messif.operations;
 

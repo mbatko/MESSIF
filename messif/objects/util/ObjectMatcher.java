@@ -4,7 +4,10 @@
  * Created on 4. kveten 2003, 21:10
  */
 
-package messif.objects;
+package messif.objects.util;
+
+import messif.objects.LocalAbstractObject;
+
 
 /**
  * Interface which provides matching capabilities. 

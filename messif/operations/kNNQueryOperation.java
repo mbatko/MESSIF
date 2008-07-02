@@ -9,9 +9,10 @@ package messif.operations;
 import java.util.Iterator;
 import messif.netbucket.RemoteAbstractObject;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
 
 /**
  * K-nearest neighbors query operation.
@@ -86,7 +87,7 @@ public class kNNQueryOperation extends QueryOperation {
     /****************** Default implementation of query evaluation ******************/
     
     /** @return all objects tested, whiche were not filtered out */
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
         
         // Iterate through all supplied objects
@@ -134,7 +135,7 @@ public class kNNQueryOperation extends QueryOperation {
      *  The object of a pair is accessible through getObject().
      *  The associated distance of a pair is accessible through getDistance().
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         return answer.iterator();
     }
 
@@ -156,10 +157,10 @@ public class kNNQueryOperation extends QueryOperation {
      * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
      */
     @Override
-    public int addToAnswer(Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> iterator) { 
+    public int addToAnswer(Iterator<MeasuredAbstractObject<?>> iterator) { 
         int retVal = 0;
         while (iterator.hasNext()) {
-            MeasuredAbstractObjectList.Pair<AbstractObject> pair = iterator.next();
+            MeasuredAbstractObject<?> pair = iterator.next();
             if (RemoteAbstractObject.class.isInstance(pair.getObject())) {
                 if (answer.add(pair))
                     retVal++;

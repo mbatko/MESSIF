@@ -9,7 +9,7 @@ package messif.buckets;
 
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;
-import messif.objects.ObjectMatcher;
+import messif.objects.util.ObjectMatcher;
 
 /**
  * This class a ball-partitioning policy for bucket splitting.

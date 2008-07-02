@@ -9,11 +9,13 @@ package messif.operations;
 
 import java.util.Iterator;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.ThresholdFunction;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
+import messif.objects.util.ThresholdFunction;
+
 
 /**
  * Top-k combined query operation.
@@ -72,6 +74,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * @param queryObject the query object
      * @param k the number of results to retrieve
      * @param sortedAccessInitial the number of initial sorted access objects
+     * @param progressiveSortedAccessInitial flag whether the <code>sortedAccessInitial</code> is a multiplier of <code>k</code> (<tt>true</tt>) or an absolute number (<tt>false</tt>)
      * @param numberOfRandomAccess the maximal number of random accesses
      * @param sortedQuery the query operation used to retrieve sorted access objects
      * @param thresholdFunction the aggregation function for combining the distances from sorted lists
@@ -136,7 +139,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
         float[] descriptorDistances = new float[thresholdFunction.getParameterNames().length];
 
@@ -160,7 +163,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * @return the number of objects with smaller-or-equal distance
      */
     public int getAnswerCountUnderDistance(float distance) {
-        return answer.headSet(new MeasuredAbstractObjectList.Pair<AbstractObject>(null, distance + Float.MIN_VALUE)).size();
+        return answer.headSet(new MeasuredAbstractObject<AbstractObject>(null, distance + Float.MIN_VALUE)).size();
     }
 
     /**
@@ -186,7 +189,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         return answer.iterator();
     }
 

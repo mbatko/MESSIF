@@ -3,8 +3,6 @@
  * 
  * Created on 6.8.2007, 13:49:45
  * 
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
  */
 
 package messif.operations;

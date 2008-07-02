@@ -7,6 +7,7 @@
 
 package messif.objects;
 
+import messif.objects.util.AbstractObjectList;
 import java.io.IOException;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
@@ -123,7 +124,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      * @param obj      second object
      * @return The total number of precomputed distances stored.
      */
-    public synchronized int addPrecompDist(GenericAbstractObjectList<LocalAbstractObject> pivots, LocalAbstractObject obj) {
+    public synchronized int addPrecompDist(AbstractObjectList<LocalAbstractObject> pivots, LocalAbstractObject obj) {
         if (pivots == null || obj == null)
             return actualSize;
         

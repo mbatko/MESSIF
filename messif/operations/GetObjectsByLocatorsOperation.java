@@ -12,9 +12,10 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.objects.AbstractObject;
-import messif.objects.GenericObjectIterator;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObjectList;
+import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.MeasuredAbstractObjectList;
 
 /**
  * This operation returns objects with given locators.
@@ -95,6 +96,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * 
      * @param queryObjectForDistances the query object to use for computing distances
      * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
      */
     public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects, int maxAnswerCount) {
         this(null, queryObjectForDistances, requireFullObjects, maxAnswerCount);
@@ -150,7 +152,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(GenericObjectIterator<LocalAbstractObject> objects) {
+    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
         int count = 0;
         try {
             while (!locators.isEmpty()) {
@@ -188,7 +190,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * 
      * @return an iterator over pairs of objects and their distances from the query object of this query
      */
-    public Iterator<MeasuredAbstractObjectList.Pair<AbstractObject>> getAnswerDistances() {
+    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
         return answer.iterator();
     }
 
@@ -259,7 +261,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
 
         // Clear the answered objects if they are not just RemoteAbstractObjects
         if (requireFullObjects)
-            for (MeasuredAbstractObjectList.Pair<AbstractObject> pair : answer)
+            for (MeasuredAbstractObject<?> pair : answer)
                 pair.getObject().clearSurplusData();
     }
 

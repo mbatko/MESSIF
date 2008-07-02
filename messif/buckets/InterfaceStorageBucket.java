@@ -10,13 +10,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import messif.objects.GenericAbstractObjectIterator;
-import messif.objects.LocalAbstractObject;
-import messif.operations.QueryOperation;
 import java.util.NoSuchElementException;
+import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
+import messif.objects.util.AbstractObjectIterator;
+import messif.operations.QueryOperation;
 import messif.utility.Convert;
-
 
 
 /**
@@ -149,7 +148,7 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
      */
     protected static class InterfaceStorageBucketIterator<T extends InterfaceStorageBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed iterator */
-        protected final GenericAbstractObjectIterator<LocalAbstractObject> iterator;
+        protected final AbstractObjectIterator<LocalAbstractObject> iterator;
 
         /**
          * Creates a new instance of InterfaceStorageBucketIterator with the InterfaceStorageBucket.

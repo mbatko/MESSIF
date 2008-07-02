@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.objects.BallRegion;
-import messif.objects.ObjectMatcher;
+import messif.objects.util.ObjectMatcher;
 
 /**
  * This class defines an abstract policy for bucket splitting.

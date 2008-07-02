@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
-import messif.objects.GenericAbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.util.AbstractObjectIterator;
 
 
 /**
@@ -169,7 +169,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      * @return Returns an array of two byte values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    static public byte[] getMinMaxOverCoords(GenericAbstractObjectIterator<? extends ObjectByteVector> iterator) {
+    static public byte[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectByteVector> iterator) {
         byte[] range = {Byte.MAX_VALUE, Byte.MIN_VALUE};
         while (iterator.hasNext()) {
             ObjectByteVector obj = iterator.next();
@@ -189,7 +189,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    static public byte[][] getMinMaxForEveryCoord(GenericAbstractObjectIterator<? extends ObjectByteVector> iterator) {
+    static public byte[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectByteVector> iterator) {
         byte[][] range = null;
         int dims = -1;
         
