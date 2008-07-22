@@ -109,4 +109,18 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
     }
     
     
+    /**
+     * Returns a string representation of this operation.
+     * @return a string representation of this operation.
+     */
+    @Override
+    public String toString() {
+        return new StringBuffer("Approximate Range query <").
+                append(queryObject).append(',').
+                append(radius).append(',').
+                append(radiusGuaranteed).append("> returned ").
+                append(getAnswerCount()).append(" objects").
+                toString();
+    }
+
 }
