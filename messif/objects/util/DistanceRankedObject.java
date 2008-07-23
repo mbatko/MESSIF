@@ -4,13 +4,18 @@
 
 package messif.objects.util;
 
+import java.io.Serializable;
+
 /**
  * Ranked object where the rank is based on distances.
  * 
  * @param <T> the encapsulated object class
  * @author xbatko
  */
-public class DistanceRankedObject<T> implements DistanceRanked, Comparable<DistanceRankedObject<?>> {
+public class DistanceRankedObject<T> implements Serializable, DistanceRanked, Comparable<DistanceRankedObject<?>> {
+
+    /** Class serial id for serialization */
+    private static final long serialVersionUID = 50201L;
 
     //****************** Attributes ******************//
 

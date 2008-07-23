@@ -4,7 +4,6 @@
  */
 package messif.objects.util;
 
-import java.io.Serializable;
 import messif.objects.AbstractObject;
 import messif.utility.Clearable;
 
@@ -15,7 +14,7 @@ import messif.utility.Clearable;
  * 
  * @author xbatko
  */
-public class RankedAbstractObject extends DistanceRankedObject<AbstractObject> implements Serializable, Clearable {
+public class RankedAbstractObject extends DistanceRankedObject<AbstractObject> implements Clearable {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
