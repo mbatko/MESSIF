@@ -55,7 +55,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         if (cloneObjects) {
             this.objects = new TreeMap<String, LocalAbstractObject>();
             for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
-                this.objects.put(entry.getKey(), entry.getValue().clone(objectKey));
+                this.objects.put(entry.getKey(), (LocalAbstractObject)entry.getValue().clone(objectKey));
         } else {
             this.objects = new TreeMap<String, LocalAbstractObject>(objects);
         }

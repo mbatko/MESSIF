@@ -6,13 +6,10 @@
 
 package messif.operations;
 
-import java.util.Iterator;
 import messif.netbucket.RemoteAbstractObject;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.MeasuredAbstractObjectList;
+import messif.objects.util.RankedAbstractObject;
 
 /**
  * Range query operation.
@@ -22,51 +19,85 @@ import messif.objects.util.MeasuredAbstractObjectList;
  * @author  Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
 @AbstractOperation.OperationName("Range query")
-public class RangeQueryOperation extends QueryOperation {
-    
+public class RangeQueryOperation extends RankingQueryOperation {
+
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Query request attributes ******************/
-    
-    /** Range query object (accessible directly) */
-    public final LocalAbstractObject queryObject;
-    /** Range query radius (accessible directly) */
-    public final float radius;
-    
-    
-    /****************** Query answer attributes ******************/
 
-    /** The list of answer objects */
-    protected MeasuredAbstractObjectList<AbstractObject> answer;
-     
-    
-    /****************** Constructors ******************/
+    //****************** Attributes ******************//
+
+    /** Range query object */
+    protected final LocalAbstractObject queryObject;
+    /** Range query radius */
+    protected final float radius;
+
+
+    //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of RangeQueryOperation given the query object and radius.
+     * Creates a new instance of RangeQueryOperation for a given query object and radius.
+     * Reduced objects ({@link messif.netbucket.RemoteAbstractObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius) {
-        this(queryObject, radius, Integer.MAX_VALUE);
+        this(queryObject, radius, AnswerType.REMOTE_OBJECTS, Integer.MAX_VALUE);
     }
 
     /**
-     * Creates a new instance of RangeQueryOperation given the query object, radius and maximal number of objects to return.
+     * Creates a new instance of RangeQueryOperation for a given query object and radius.
      * @param queryObject the query object
      * @param radius the query radius
-     * @param k max number of objects to carry (default is Integer.MAX_VALUE)
+     * @param answerType the type of objects this operation stores in its answer
      */
-    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, int k) {
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType) {
+        this(queryObject, radius, answerType, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
+     * Reduced objects ({@link messif.netbucket.RemoteAbstractObject}) will be used.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param maxAnswerSize sets the maximal answer size
+     */
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, int maxAnswerSize) {
+        this(queryObject, radius, AnswerType.REMOTE_OBJECTS, maxAnswerSize);
+    }
+
+    /**
+     * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize sets the maximal answer size
+     */
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize) {
+        super(answerType, maxAnswerSize);
         this.queryObject = queryObject;
         this.radius = radius;
-        if (k == Integer.MAX_VALUE)
-            this.answer = new MeasuredAbstractObjectList<AbstractObject>();
-        else this.answer = new MeasuredAbstractObjectList<AbstractObject>(k);
     }
-    
+
+
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns the query object of this range query.
+     * @return the query object of this range query
+     */
+    public LocalAbstractObject getQueryObject() {
+        return queryObject;
+    }
+
+    /**
+     * Returns the radius of this range query.
+     * @return the radius of this range query
+     */
+    public float getRadius() {
+        return this.radius;
+    }
+
     /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.
@@ -96,8 +127,8 @@ public class RangeQueryOperation extends QueryOperation {
     }
 
 
-    /****************** Default implementation of query evaluation ******************/
-    
+    //****************** Implementation of query evaluation ******************//
+
     /**
      * Evaluate this query on a given set of objects.
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
@@ -106,118 +137,39 @@ public class RangeQueryOperation extends QueryOperation {
      * @return number of objects satisfying the query
      */
     @Override
-    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
-        int count = 0;
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
+        int beforeCount = getAnswerCount();
 
         // Iterate through all supplied objects
         while (objects.hasNext()) {
             // Get current object
             LocalAbstractObject object = objects.next();
-            
+
             if (object.excludeUsingPrecompDist(queryObject, getRadius())) 
                 continue;
-                
+
             // Get distance to query object (the second parameter defines a stop condition in getDistance() 
             // which stops further computations if the distance will be greater than this value).
             float distance = queryObject.getDistance(object, getRadius());
-            
-            if (distance <= radius) {
-                // Object satisfies the query (i.e. distance is smaller than radius)
+
+            // Object satisfies the query (i.e. distance is smaller than radius)
+            if (distance <= radius)
                 addToAnswer(object, distance);
-                count++;
-            }
         }
-        
-        return count;
+
+        return getAnswerCount() - beforeCount;
     }
 
-    
-    /****************** Answer methods ******************/
-    
-    /**
-     * Returns the radius of this range query.
-     * The radius is accessible directly using the attribute {@link #radius radius}.
-     * @return the radius of this range query
-     */
-    public float getRadius() {
-        return this.radius;
-    }
+
+    //****************** Overrides ******************//
 
     /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
-    public int getAnswerCount() { 
-        return answer.size();
-    }
-    
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
-    public Iterator<AbstractObject> getAnswer() { 
-        return answer.objects();
-    }
-    
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The object of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getObject}.
-     * The associated distance of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getDistance}.
-     * 
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        return answer.iterator();
-    }
-
-    /**
-     * Add an object with a measured distance to the answer.
-     * 
-     * @param object the object to add
-     * @param distance the distance of the object
-     * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     */
-    public boolean addToAnswer(AbstractObject object, float distance) { 
-        return answer.add(object.getRemoteAbstractObject(), distance);
-    }
-
-    /**
-     * Add all objects with distances from the passed iterator to the answer of this operation.
-     *
-     * @param iterator iterator over object-distance pairs that should be added to this operation's answer
-     * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
+     * Returns the class of objects this operation stores in its answer.
+     * @return the class of objects this operation stores in its answer
      */
     @Override
-    public int addToAnswer(Iterator<MeasuredAbstractObject<?>> iterator) { 
-        int retVal = 0;
-        while (iterator.hasNext()) {
-            MeasuredAbstractObject<?> pair = iterator.next();
-            if (RemoteAbstractObject.class.isInstance(pair.getObject())) {
-                if (answer.add(pair))
-                    retVal++;
-            } else {
-                if (answer.add(pair.getObject().getRemoteAbstractObject(), pair.getDistance()))
-                    retVal++;
-            }
-        }
-        return retVal;
-    }
-
-    /**
-     * Reset the current query answer.
-     */
-    @Override
-    public void resetAnswer() {
-        answer.clear();
-    }
-
-    /**
-     * Returns a string representation of this operation.
-     * @return a string representation of this operation.
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer("Range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects").toString();
+    public Class<? extends RankedAbstractObject> getAnswerClass() {
+        return RankedAbstractObject.class;
     }
 
     /**
@@ -227,13 +179,13 @@ public class RangeQueryOperation extends QueryOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         queryObject.clearSurplusData();
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

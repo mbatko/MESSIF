@@ -6,12 +6,8 @@
 
 package messif.operations;
 
-import java.util.Iterator;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.AbstractObjectList;
 
 
 /**
@@ -21,23 +17,29 @@ import messif.objects.util.AbstractObjectList;
  * @author  xbatko
  */
 @AbstractOperation.OperationName("Get all objects query")
-public class GetAllObjectsQueryOperation extends QueryOperation {
+public class GetAllObjectsQueryOperation extends ListingQueryOperation {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
 
-    /****************** Query answer attributes ******************/
-
-    /** The answer list of this operation */
-    protected final AbstractObjectList<AbstractObject> answer = new AbstractObjectList<AbstractObject>();
-
-
     /****************** Constructors ******************/
 
-    /** Creates a new instance of GetAllObjectsQuery */
+    /**
+     * Creates a new instance of GetAllObjectsQuery.
+     * Stored objects will be {@link messif.netbucket.RemoteAbstractObject}.
+     */
     @AbstractOperation.OperationConstructor({})
     public GetAllObjectsQueryOperation() {
+        super();
+    }
+
+    /**
+     * Creates a new instance of GetAllObjectsQuery.
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    public GetAllObjectsQueryOperation(AnswerType answerType) {
+        super(answerType);
     }
 
     /**
@@ -62,20 +64,6 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
     }
 
 
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
-        for (AbstractObject obj : answer) {
-            obj.clearSurplusData();
-        }
-    }
-
     /****************** Default implementation of query evaluation ******************/
 
     /**
@@ -85,98 +73,17 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
+    @Override
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int count = 0;
-        while (objects.hasNext()) {
-            LocalAbstractObject object = objects.next();
-            addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE);
-            count++;
-        }
+        while (objects.hasNext())
+            if (addToAnswer(objects.next()))
+                count++;
         return count;
     }
 
 
-    /****************** Answer methods ******************/
-
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
-    public int getAnswerCount() { 
-        return answer.size();
-    }
-
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
-    public Iterator<AbstractObject> getAnswer() { 
-        return answer.iterator();
-    }
-
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The object of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getObject}.
-     * The associated distance of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getDistance}.
-     * 
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        final AbstractObjectIterator<AbstractObject> iterator = answer.iterator();
-        return new Iterator<MeasuredAbstractObject<?>>() {
-            public boolean hasNext() {
-                return iterator.hasNext();
-            }
-
-            public MeasuredAbstractObject<?> next() {
-                return new MeasuredAbstractObject<AbstractObject>(iterator.next(), 0.0f);
-            }
-
-            public void remove() {
-                throw new UnsupportedOperationException("Cannot delete from operation answer");
-            }
-        };
-    }
-
-
-    /**
-     * Add an object with a measured distance to the answer.
-     * 
-     * @param object the object to add
-     * @param distance the distance of the object
-     * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     */
-    public boolean addToAnswer(AbstractObject object, float distance) { 
-        if (object instanceof LocalAbstractObject)
-            try {
-                answer.add(((LocalAbstractObject) object).clone(false));
-            } catch (CloneNotSupportedException e) {
-                answer.add(object.getRemoteAbstractObject());
-            }
-        else 
-            answer.add(object);
-        return true;
-    }
-
-    /**
-     * Reset the current query answer.
-     */
-    @Override
-    public void resetAnswer() {
-        answer.clear();
-    }
-
-    /**
-     * Returns a string representation of this operation.
-     * @return a string representation of this operation.
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer("Get all objects query").append(" returned ").append(getAnswerCount()).append(" objects").toString();
-    }
-
-
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.
@@ -186,7 +93,6 @@ public class GetAllObjectsQueryOperation extends QueryOperation {
      */
     @Override
     protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always GetAllObjectsQueryOperation or its descendant, because it has only abstract ancestors
         return true;
     }
 

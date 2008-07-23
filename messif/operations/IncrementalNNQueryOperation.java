@@ -9,13 +9,10 @@
 
 package messif.operations;
 
-import java.util.Iterator;
 import messif.netbucket.RemoteAbstractObject;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.MeasuredAbstractObjectList;
 import messif.utility.ErrorCode;
 
 
@@ -40,39 +37,32 @@ import messif.utility.ErrorCode;
  * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
 @AbstractOperation.OperationName("incremental nearest neighbors query")
-public class IncrementalNNQueryOperation extends QueryOperation {
-
+public class IncrementalNNQueryOperation extends RankingQueryOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 2L;
-    
-    
-    //****************** Query request attributes ******************/
-    
-    /** kNN query object (accessible directly) */
-    public final LocalAbstractObject queryObject;
-    
-    /** Minimum number of objects returned by this query.
+
+    //****************** Attributes ******************//
+
+    /** kNN query object */
+    protected final LocalAbstractObject queryObject;
+
+    /**
+     * Minimum number of objects returned by this query.
      * Default value is 1.
      * It can be set to any larger value in order to optimize the process of 
      * searching for nearest neighbors. This feature is usually used by 
      * distributed incremental search algoritms.
      */
-    public final int minNN;
-    
+    protected final int minNN;
+
     /** 
      * The number of nearest neighbors added to the answer since the last call to endOperation().
      * I.e., how many NN were added in one evaluation of this operation.
      */
     protected int nnAddedToAnswer;
-    
-    
-    //****************** Query answer attributes ******************/
 
-    /** The answer list of this operation */
-    protected final MeasuredAbstractObjectList<AbstractObject> answer;
-     
-    
-    //****************** Constructors ******************/
+
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of IncrementalNNQueryOperation.
@@ -83,10 +73,9 @@ public class IncrementalNNQueryOperation extends QueryOperation {
     public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN) {
         this.queryObject = queryObject;
         this.minNN = minNN;
-        this.answer = new MeasuredAbstractObjectList<AbstractObject>();
         this.nnAddedToAnswer = 0;
     }
-    
+
     /**
      * Creates a new instance of IncrementalNNQueryOperation.
      * @param queryObject the object to which the nearest neighbors are searched
@@ -94,6 +83,25 @@ public class IncrementalNNQueryOperation extends QueryOperation {
     @AbstractOperation.OperationConstructor({"Query object"})
     public IncrementalNNQueryOperation(LocalAbstractObject queryObject) {
         this(queryObject, 1);
+    }
+
+
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns the kNN query object.
+     * @return the kNN query object
+     */
+    public LocalAbstractObject getQueryObject() {
+        return queryObject;
+    }
+
+    /**
+     * Returns the minimum number of objects returned by this query.
+     * @return the minimum number of objects returned by this query
+     */
+    public int getMinNN() {
+        return minNN;
     }
 
     /**
@@ -125,16 +133,7 @@ public class IncrementalNNQueryOperation extends QueryOperation {
     }
 
 
-    /**
-     * Returns <code>true</code> if this operation has finished successfuly.
-     * Otherwise, <code>false</code> is returned - the operation was either unsuccessful or is has not finished yet.
-     *
-     * @return <code>true</code> if this operation has finished successfuly
-     */
-    @Override
-    public boolean wasSuccessful() {
-        return errValue.equals(OperationErrorCode.RESPONSE_RETURNED) || errValue.equals(OperationErrorCode.HAS_NEXT);
-    }
+    //****************** End operation overrides ******************//
 
     /** End operation successfully */
     @Override
@@ -155,7 +154,7 @@ public class IncrementalNNQueryOperation extends QueryOperation {
     }
 
     
-    //****************** Default implementation of query evaluation ******************/
+    //****************** Implementation of query evaluation ******************/
     
     /**
      * Evaluate this query on a given set of objects.
@@ -165,13 +164,14 @@ public class IncrementalNNQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
+    @Override
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int beforeSize = getAnswerCount();
 
         // Iterate through all supplied objects
         while (objects.hasNext()) {
             LocalAbstractObject object = objects.next();
-            
+
             // Get distance to query object
             float distance = queryObject.getDistance(object);
 
@@ -183,15 +183,7 @@ public class IncrementalNNQueryOperation extends QueryOperation {
     }
 
     
-    //****************** Answer methods ******************/
-
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
-    public int getAnswerCount() {
-        return answer.size();
-    }
+    //****************** Overrides ******************//
 
     /**
      * Returns <tt>true</tt> if the minimum number of objects has been inserted to 
@@ -202,75 +194,12 @@ public class IncrementalNNQueryOperation extends QueryOperation {
         return nnAddedToAnswer >= minNN;
     }
 
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
-    public Iterator<AbstractObject> getAnswer() { 
-        return answer.objects();
-    }
-    
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The object of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getObject}.
-     * The associated distance of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getDistance}.
-     * 
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        return answer.iterator();
-    }
-
-    /**
-     * Add an object with a measured distance to the answer.
-     * 
-     * @param object the object to add
-     * @param distance the distance of the object
-     * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     */
-    public boolean addToAnswer(AbstractObject object, float distance) { 
-        answer.add(object.getRemoteAbstractObject(), distance);
-        ++nnAddedToAnswer;
+    @Override
+    public boolean addToAnswer(AbstractObject object, float distance) {
+        if (!super.addToAnswer(object, distance))
+            return false;
+        nnAddedToAnswer++;
         return true;
-    }
-    
-    /**
-     * Add all objects with distances from the passed iterator to the answer of this operation.
-     *
-     * @param iterator iterator over object-distance pairs that should be added to this operation's answer
-     * @return <code>true</code> if at least one object has been added to the answer. Otherwise <code>false</code>.
-     */
-    @Override
-    public int addToAnswer(Iterator<MeasuredAbstractObject<?>> iterator) { 
-        int retVal = 0;
-        while (iterator.hasNext()) {
-            MeasuredAbstractObject<?> pair = iterator.next();
-            if (RemoteAbstractObject.class.isInstance(pair.getObject()))
-                answer.add(pair);
-            else
-                answer.add(pair.getObject().getRemoteAbstractObject(), pair.getDistance());
-            retVal++;
-            nnAddedToAnswer++;
-        }
-        return retVal;
-    }
-
-    /**
-     * Reset the current query answer.
-     */
-    @Override
-    public void resetAnswer() {
-        answer.clear();
-    }
-
-    /**
-     * Returns a string representation of this operation.
-     * @return a string representation of this operation
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer("IncrementalNN query <").append(queryObject).append(',').append(minNN).append("> returned "
-                ).append(getAnswerCount()).append(" objects (max distance is ").append(answer.getLastDistance()).append(")").toString();
     }
 
     /**
@@ -280,13 +209,13 @@ public class IncrementalNNQueryOperation extends QueryOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         queryObject.clearSurplusData();
     }
 
 
-    /****************** Equality driven by object data ******************/
+    //****************** Equality driven by object data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

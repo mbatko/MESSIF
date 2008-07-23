@@ -6,6 +6,7 @@
 package messif.operations;
 
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.RankedAbstractObject;
 
 /**
  * Parametrized approximate k-nearest neighbors query.
@@ -61,18 +62,16 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
      * @param operation the operation to update answer from
      */
     @Override
-    public void updateAnswer(AbstractOperation operation) {
-        super.updateAnswer(operation);
-        if (operation instanceof ApproxKNNQueryOperationParams) {
-            ApproxKNNQueryOperationParams casted = (ApproxKNNQueryOperationParams) operation;
-            if (casted.nodesToVisit != null) {
+    protected void updateFrom(ApproxKNNQueryOperation operation) {
+        super.updateFrom(operation);
+        if (operation instanceof ApproxKNNQueryOperationParams) { // FIXME: This is an ugly hack...
+            String otherNodesToVisit = ((ApproxKNNQueryOperationParams) operation).nodesToVisit;
+            if (otherNodesToVisit != null) {
                 if (nodesToVisit == null)
-                    nodesToVisit = "";
-                else nodesToVisit = nodesToVisit + "; ";
-                nodesToVisit = nodesToVisit + casted.nodesToVisit;
+                    nodesToVisit = otherNodesToVisit;
+                else
+                    nodesToVisit += "; " + otherNodesToVisit;
             }
-            if (casted.radiusGuaranteed < radiusGuaranteed)
-                radiusGuaranteed = casted.radiusGuaranteed;
         }
     }
         
@@ -131,7 +130,7 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

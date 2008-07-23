@@ -170,7 +170,7 @@ public class RemoteBucket extends Bucket implements Serializable {
         
         // Otherwise, send message to remote netnode
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(bucketID), remoteNetworkNode).getObjects().objects();
+            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(bucketID), remoteNetworkNode).getObjects().iterator();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while getting all objects from " + toString(), e);
         } catch (NoSuchElementException e) {
@@ -294,7 +294,7 @@ public class RemoteBucket extends Bucket implements Serializable {
         // Otherwise, send message to remote netnode
         try {
             BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(query, bucketID), remoteNetworkNode);
-            query.updateAnswer(msg.getQuery());
+            query.updateFrom(msg.getQuery());
             return msg.getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while executing query (" + query + ") from " + toString(), e);

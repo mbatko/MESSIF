@@ -92,20 +92,6 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
         this.peersInClusters = Arrays.asList(peersInClusters);
     }
 
-    /** 
-     * Merge information about the visited nodes to an info string.
-     * @param operation the operation to update answer from
-     */
-    @Override
-    public void updateAnswer(AbstractOperation operation) {
-        super.updateAnswer(operation);
-        if (operation instanceof ApproxKNNRecursiveMChordOperation) {
-            ApproxKNNRecursiveMChordOperation casted = (ApproxKNNRecursiveMChordOperation) operation;
-            if (casted.radiusGuaranteed < radiusGuaranteed)
-                radiusGuaranteed = casted.radiusGuaranteed;
-        }
-    }
-        
     /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.
@@ -169,7 +155,7 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

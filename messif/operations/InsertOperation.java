@@ -92,8 +92,8 @@ public class InsertOperation extends AbstractOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         insertedObject.clearSurplusData();
     }
 

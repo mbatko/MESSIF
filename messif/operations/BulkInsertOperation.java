@@ -82,11 +82,12 @@ public class BulkInsertOperation extends AbstractOperation {
     }
 
     /**
-     * Update only the error codes - all codes other than OBJECT_INSERTED have priority and should propagete up.
+     * Update the error code of this operation from another operation.
+     * All codes other than OBJECT_INSERTED have priority and should propagete up.
      * @param operation the source operation from which to get the update
      */
     @Override
-    public void updateAnswer(AbstractOperation operation) {
+    public void updateFrom(AbstractOperation operation) {
         if (!errValue.isSet() || errValue.equals(BucketErrorCode.OBJECT_INSERTED))
             errValue = operation.errValue;
     }
@@ -107,8 +108,8 @@ public class BulkInsertOperation extends AbstractOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         for (LocalAbstractObject object : insertedObjects)
             object.clearSurplusData();
     }

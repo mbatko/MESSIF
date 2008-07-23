@@ -13,40 +13,45 @@ import messif.objects.LocalAbstractObject;
  * Approximate k-nearest neighbors query with specific early termination parameters
  * and support for obtaining some guarantees on results.
  *
- * @author Michal Batko, <xbatko@fi.muni.cz>
+ * @author xbatko
  */
 @AbstractOperation.OperationName("Approximate k-nearest neighbors query")
 public class ApproxKNNQueryOperation extends kNNQueryOperation {
-    
     /** Class serial id for serialization */
     private static final long serialVersionUID = 3L;
-    
-    /** Type of the local approximation parameter: PERCENTAGE, ABS_OBJ_COUNT, ABS_DC_COUNT.
-     * It can be view as a type of stop condition for early termination strategy of approximation.
+
+    //****************** Attributes ******************//
+
+    /**
+     * Enumeration of types of the stop condition for approximation's early termination strategy.
      */
     public static enum LocalSearchType {
-        /** Stop after inspecting given percentage of data.
+        /**
+         * Stop after inspecting given percentage of data.
          * {@link #localSearchParam} holds the value between 0-100.
          */
         PERCENTAGE,
-        /** Stop after inspecting the specific number of objects.
+        /**
+         * Stop after inspecting the specific number of objects.
          * {@link #localSearchParam} is the number of objects.
          */
         ABS_OBJ_COUNT,
-        /** Stop after the specific number of evaluations of distance functions.
+        /**
+         * Stop after the specific number of evaluations of distance functions.
          * {@link #localSearchParam} is the threshold on the number of distance computations.
          */
         ABS_DC_COUNT
     }
-    
+
     /** Type of the local approximation parameter used. */
     protected final LocalSearchType localSearchType;
-    
-    /** Value of the local approximation parameter. 
+
+    /**
+     * Value of the local approximation parameter. 
      * Its interpretation depends on the value of {@link #localSearchType}.
      */
     protected final int localSearchParam;
-    
+
     /** Radius for which the answer is guaranteed as correct.
      * It is specified in the constructor and can influence the level of approximation.
      * An algorithm evaluating this query can also change this value, so it can
@@ -54,8 +59,11 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
      */
     protected float radiusGuaranteed;
 
-    
-    /** Creates a new instance of ApproxKNNQueryOperation
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperation
      * @param queryObject query object
      * @param k number of objects to be returned
      * @param localSearchParam local search parameter - typically approximation parameter
@@ -69,22 +77,22 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
         this.localSearchType = localSearchType;
         this.radiusGuaranteed = radiusGuaranteed;
     }
- 
-    
+
+
+    //****************** Attribute access ******************//
+
     /**
-     * Returns currently set type of approximation, see {@link #localSearchType}.
-     * 
-     * @return current type of approximation
+     * Returns the {@link LocalSearchType type of the local approximation} parameter used.
+     * @return the {@link LocalSearchType type of the local approximation} parameter used
      */
     public LocalSearchType getLocalSearchType() {
         return localSearchType;
     }
 
     /**
-     * Returns the currently set value of approximation threshold. The interpretation
-     * of this value depends on the currently set type {@link #localSearchType}.
-     * 
-     * @return threshold value set
+     * Returns the value of the local approximation parameter.
+     * Its interpretation depends on the value of {@link #getLocalSearchType() local search type}.
+     * @return the value of the local approximation parameter
      */
     public int getLocalSearchParam() {
         return localSearchParam;
@@ -93,8 +101,7 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
     /**
      * Set a different value of radius within which the results are guaranteed as correct.
      * An evaluation algorithm is completely responsible for setting the correct value.
-     * 
-     * @param radiusGuaranteed new value of radius
+     * @param radiusGuaranteed new guaranteed radius value
      */
     public void setRadiusGuaranteed(float radiusGuaranteed) {
         this.radiusGuaranteed = radiusGuaranteed;
@@ -103,12 +110,38 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
     /**
      * Returns a currently set value of radius within which the results are guaranteed as correct.
      * An evaluation algorithm is completely responsible for setting the correct value.
-     * 
-     * @return value of radius
+     * @return the value of the currently guaranteed radius
      */
     public float getRadiusGuaranteed() {
         return radiusGuaranteed;
     }
-    
-    
+
+
+    //****************** Answer updating overrides ******************//
+
+    /**
+     * Update query answer data of this operation from another query operation.
+     * The error code of this operation is updated using {@link #updateErrorCode}.
+     * Additionally, if the <code>operation</code> is approximate kNN query, the
+     * radius guaranteed is also updated.
+     * @param operation the operation to update answer from
+     */
+    @Override
+    protected void updateFrom(RankingQueryOperation operation) {
+        super.updateFrom(operation);
+        if (operation instanceof ApproxKNNQueryOperation)
+            updateFrom((ApproxKNNQueryOperation)operation);
+    }
+
+    /**
+     * Updates the guaranteed radius from another approximate kNN query.
+     * That is, if the guaranteed radius of the other query is smaller,
+     * this query's one is reduced.
+     * @param operation the operation to update answer from
+     */
+    protected void updateFrom(ApproxKNNQueryOperation operation) {
+        if (radiusGuaranteed > operation.radiusGuaranteed)
+            radiusGuaranteed = operation.radiusGuaranteed;
+    }
+
 }

@@ -140,14 +140,14 @@ public class DeleteOperation extends AbstractOperation {
      * @param operation foreign operation from which to update this one
      */
     @Override
-    public void updateAnswer(AbstractOperation operation) {
+    public void updateFrom(AbstractOperation operation) {
         DeleteOperation castOperation = (DeleteOperation)operation;
         this.objectsDeleted += castOperation.objectsDeleted;
         this.totalSizeDeleted += castOperation.totalSizeDeleted;
 
         if (errValue.equals(BucketErrorCode.OBJECT_NOT_FOUND) && operation.errValue.isSet())
             errValue = operation.errValue;
-        else super.updateAnswer(operation);
+        else super.updateFrom(operation);
     }    
 
     /**
@@ -157,8 +157,8 @@ public class DeleteOperation extends AbstractOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         deletedObject.clearSurplusData();
     }
 

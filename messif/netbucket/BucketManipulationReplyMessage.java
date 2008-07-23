@@ -10,7 +10,7 @@ import messif.buckets.BucketErrorCode;
 import messif.network.ReplyMessage;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.MeasuredAbstractObjectList;
+import messif.objects.util.AbstractObjectList;
 import messif.operations.QueryOperation;
 
 /**
@@ -25,7 +25,7 @@ public class BucketManipulationReplyMessage extends ReplyMessage {
     
     protected final BucketErrorCode errorCode;
     protected final LocalAbstractObject object;
-    protected final MeasuredAbstractObjectList<LocalAbstractObject> objects;
+    protected final AbstractObjectList<LocalAbstractObject> objects;
     protected final QueryOperation query;
     protected final int changesCount;
     
@@ -35,7 +35,7 @@ public class BucketManipulationReplyMessage extends ReplyMessage {
         return object;
     }
     
-    public MeasuredAbstractObjectList<LocalAbstractObject> getObjects() {
+    public AbstractObjectList<LocalAbstractObject> getObjects() {
         return objects;
     }
 
@@ -92,9 +92,7 @@ public class BucketManipulationReplyMessage extends ReplyMessage {
         super(message);
         errorCode = null;
         object = null;
-        this.objects = new MeasuredAbstractObjectList<LocalAbstractObject>();
-        while (objects.hasNext())
-            this.objects.add(objects.next(), LocalAbstractObject.UNKNOWN_DISTANCE);
+        this.objects = new AbstractObjectList<LocalAbstractObject>(objects);
         this.changesCount = 0;
         this.query = null;
     }

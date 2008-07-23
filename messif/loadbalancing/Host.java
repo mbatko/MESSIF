@@ -842,7 +842,7 @@ public class Host extends DistributedAlgorithm implements Serializable {
                 if (existingHost != null) {
                     log.info("Forwarding operation "+operation+" to a non-empty peer "+existingHost);
                     AbstractOperation oper = ((DistAlgReplyMessage) messageDisp.sendMessageWaitReply(new OperationRequestMessage(operation), existingHost).getFirstReply()).getOperation();
-                    operation.updateAnswer(oper);
+                    operation.updateFrom(oper);
                     log.info("Forwarded operation: "+oper);
                     return;
                 } else {

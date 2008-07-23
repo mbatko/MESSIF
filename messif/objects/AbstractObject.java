@@ -12,6 +12,7 @@ import messif.netbucket.RemoteAbstractObject;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializator;
+import messif.utility.Clearable;
 
 
 /**
@@ -23,7 +24,7 @@ import messif.objects.nio.BinarySerializator;
  *
  * @author  xbatko
  */
-public abstract class AbstractObject extends UniqueID implements Serializable {
+public abstract class AbstractObject extends UniqueID implements Serializable, Clearable, Cloneable {
 
     /** Class version id for serialization. */
     private static final long serialVersionUID = 4L;
@@ -128,11 +129,14 @@ public abstract class AbstractObject extends UniqueID implements Serializable {
 
     /**
      * Clear non-messif data stored in this object.
-     * This method is intended to be called whenever the object is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
+     * That is, the object key is changed to {@link AbstractObjectKey} if
+     * not <tt>null</tt>. The transformation only preserves the locator URI, all
+     * additional information is lost.
      */
     public void clearSurplusData() {
+        // If object key is some extended class, remap it to the basic AbstractObjectKey
+        if (objectKey != null && !objectKey.getClass().equals(AbstractObjectKey.class))
+            objectKey = new AbstractObjectKey(objectKey.getLocatorURI());
     }
 
 
@@ -155,6 +159,35 @@ public abstract class AbstractObject extends UniqueID implements Serializable {
      * @return RemoteAbstractObject that contains only the URI locator of this object.
      */
     public abstract RemoteAbstractObject getRemoteAbstractObject();
+
+
+    //****************** Clonning ******************//
+
+    /**
+     * Creates and returns a shallow copy of this object. The precise meaning 
+     * of "copy" may depend on the class of the object.
+     *
+     * @return a clone of this instance
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    @Override
+    public AbstractObject clone() throws CloneNotSupportedException {
+        return (AbstractObject)super.clone();
+    }
+
+    /**
+     * Creates and returns a copy of this object with changed locatorURI.
+     * The precise meaning of "copy" may depend on the class of the object.
+     *
+     * @param objectKey new object key
+     * @return a clone of this instance
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    public AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
+        AbstractObject rtv = clone();
+        rtv.objectKey = objectKey;
+        return rtv;
+    }
 
 
     //****************** String representation ******************//

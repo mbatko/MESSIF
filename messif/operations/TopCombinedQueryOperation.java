@@ -7,13 +7,9 @@
 
 package messif.operations;
 
-import java.util.Iterator;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.MeasuredAbstractObjectList;
 import messif.objects.util.ThresholdFunction;
 
 
@@ -32,13 +28,12 @@ import messif.objects.util.ThresholdFunction;
  * @author xbatko
  */
 @AbstractOperation.OperationName("Combined top-k query")
-public class TopCombinedQueryOperation extends QueryOperation {
-
+public class TopCombinedQueryOperation extends RankingQueryOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 2L;
 
-    /****************** Query request attributes ******************/
-    
+    //****************** Attributes ******************//
+
     /** Query object (accessible directly) */
     public final MetaObject queryObject;
     /** Number of nearest (top) objects to retrieve (accessible directly) */
@@ -56,15 +51,9 @@ public class TopCombinedQueryOperation extends QueryOperation {
     public final Class<? extends QueryOperation> sortedQuery;
     /** Threshold function to measure the overall similarity with (accessible directly) */
     public final ThresholdFunction thresholdFunction;
-    
-    
-    /****************** Query answer attributes ******************/
 
-    /** The list of answer objects */
-    protected final MeasuredAbstractObjectList<AbstractObject> answer;
-     
-    
-    /****************** Constructors ******************/
+
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of TopCombinedQueryOperation.
@@ -88,7 +77,6 @@ public class TopCombinedQueryOperation extends QueryOperation {
         this.numberOfRandomAccess = numberOfRandomAccess;
         this.sortedQuery = sortedQuery;
         this.thresholdFunction = thresholdFunction;
-        this.answer = new MeasuredAbstractObjectList<AbstractObject>(k);
     }
 
     /**
@@ -130,7 +118,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
     }
 
 
-    /****************** Default implementation of query evaluation ******************/
+    //****************** Implementation of query evaluation ******************//
 
     /**
      * Evaluate this query on a given set of objects.
@@ -139,7 +127,8 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
      */
-    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
+    @Override
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
         float[] descriptorDistances = new float[thresholdFunction.getParameterNames().length];
 
@@ -157,79 +146,7 @@ public class TopCombinedQueryOperation extends QueryOperation {
         return getAnswerCount() - beforeCount;
     }
 
-    /**
-     * Returns the number of objects currently in the query answer that are under the specified distance.
-     * @param distance the maximal distance of objects to count
-     * @return the number of objects with smaller-or-equal distance
-     */
-    public int getAnswerCountUnderDistance(float distance) {
-        return answer.headSet(new MeasuredAbstractObject<AbstractObject>(null, distance + Float.MIN_VALUE)).size();
-    }
-
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
-    public int getAnswerCount() {
-        return answer.size();
-    }
-
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
-    public Iterator<AbstractObject> getAnswer() {
-        return answer.objects();
-    }
-
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The object of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getObject}.
-     * The associated distance of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getDistance}.
-     * 
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        return answer.iterator();
-    }
-
-    /**
-     * Add an object with a measured distance to the answer.
-     * 
-     * @param object the object to add
-     * @param distance the distance of the object
-     * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     */
-    public boolean addToAnswer(AbstractObject object, float distance) {
-        return answer.add(object, distance);
-    }
-
-    /**
-     * Reset the current query answer.
-     */
-    @Override
-    public void resetAnswer() {
-        answer.clear();
-    }
-
-    /**
-     * Returns the maximal distance in the current query answer.
-     * @return the maximal distance in the current query answer
-     */
-    public float getLastCombinedDistance() {
-        if (answer.size() == 0)
-            return LocalAbstractObject.UNKNOWN_DISTANCE;
-        return answer.getLastDistance();
-    }
-
-    /**
-     * Returns a string representation of this operation.
-     * @return a string representation of this operation.
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer("Top combined query <").append(k).append(',').append(thresholdFunction).append("> returned ").append(getAnswerCount()).append(" objects").toString();
-    }
+    //****************** Overrides ******************//
 
     /**
      * Clear non-messif data stored in operation.
@@ -238,13 +155,13 @@ public class TopCombinedQueryOperation extends QueryOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
+    public void clearSurplusData() {
+        super.clearSurplusData();
         queryObject.clearSurplusData();
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

@@ -11,13 +11,12 @@ import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import messif.utility.Convert;
 
 /**
  * This is the simple serializator implementation for {@link BinarySerializable} objects.
  * It can store and restore only one specified class or the standard Java-serialized objects.
  * 
- * @param E the class of objects created by this serializator during deserialization
+ * @param <E> the class of objects created by this serializator during deserialization
  * @see MultiClassSerializator
  * @see CachingSerializator
  * @author xbatko
@@ -117,20 +116,22 @@ public class SingleClassSerializator<E> extends BinarySerializator implements Se
     /**
      * Read an instance using the default constructor/factory method of this serializator.
      *
+     * @param <E> the class that is expected to be in the stream
      * @param stream the stream to read the instance from
      * @param objectSize the size of the instance in the stream
+     * @param expectedClass the class that is expected to be in the stream
      * @return an instance of the deserialized object
      * @throws IOException if there was an error reading from the stream
      * @throws IllegalArgumentException if the constructor or the factory method has a wrong prototype
      */
     protected <E> E readObject(BinaryInputStream stream, int objectSize, Class<E> expectedClass) throws IOException, IllegalArgumentException {
-        return Convert.safeGenericCast(readObject(
+        return expectedClass.cast(readObject(
                 stream,
                 this,
                 objectSize,
                 constructor,
                 factoryMethod
-            ), expectedClass);        
+            ));        
     }
 
     /**

@@ -803,6 +803,7 @@ public abstract class BinarySerializator {
     /**
      * Reads an instance from the <code>stream</code> using this serializator.
      *
+     * @param <E> the class that is expected to be in the stream
      * @param stream the stream to read the instance from
      * @param expectedClass the class that is expected to be in the stream
      * @return an instance of the deserialized object
@@ -828,6 +829,7 @@ public abstract class BinarySerializator {
      *   <li>the bytes are provided by the stream exactly as {@link #serialize(ExtendedNativeDataOutput, BinarySerializable)} has written them</li>
      * </ul>
      *
+     * @param <E> the class that is expected to be in the stream
      * @param stream the stream to read the instance from
      * @param objectSize the size of the instance in the stream
      * @param expectedClass the class that is expected to be in the stream
@@ -1090,6 +1092,7 @@ public abstract class BinarySerializator {
      *      <i>ClassConstructor</i>({@link ExtendedNativeDataInput} input, {@link BinarySerializator} serializator) throws {@link IOException}
      * </pre>
      * 
+     * @param <T> the object class to construct
      * @param objectClass the object class to construct
      * @return a constructor for <code>objectClass</code> or <tt>null</tt> if there is no native-serializable constructor
      */

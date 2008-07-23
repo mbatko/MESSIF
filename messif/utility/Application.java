@@ -44,9 +44,7 @@ import messif.executor.MethodExecutor;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
 import messif.network.NetworkNode;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
@@ -146,8 +144,11 @@ public class Application {
     /** Logger */
     protected static Logger log = Logger.getLoggerEx("application");
 
-    /** \Currently running algorithm */
+    /** Currently running algorithm */
     protected Algorithm algorithm = null;
+
+    /** List of running algorithms */
+    protected List<Algorithm> algorithms = new ArrayList<Algorithm>();
 
     /** Last executed operation */
     protected AbstractOperation lastOperation = null;
@@ -213,6 +214,7 @@ public class Application {
         try {
             // Create a new instance of the algorithm
             algorithm = Convert.createInstanceWithStringArgs(constructors, args, 2, objectStreams);
+            algorithms.add(algorithm);
             return true;
         } catch (InvocationTargetException e) {
             Throwable ex = e.getCause();
@@ -252,7 +254,8 @@ public class Application {
                     try {
                         int messageDispatcherPort = (args.length > 3)?Integer.parseInt(args[3]):0;
                         int messageDispatcherBroadcastPort = (args.length > 4)?Integer.parseInt(args[4]):0;
-                        NetworkNode.loadHostMappingTable(args[2], messageDispatcherPort, messageDispatcherBroadcastPort);
+                        if (args[2] != null)
+                            NetworkNode.loadHostMappingTable(args[2], messageDispatcherPort, messageDispatcherBroadcastPort);
                     } catch (UnknownHostException e) {
                         out.println("Error parsing host remap file: unknown host " + e.getMessage());
                         return false;
@@ -261,6 +264,7 @@ public class Application {
 
                 // Load algorithm from file
                 algorithm = Algorithm.restoreFromFile(args[1]);
+                algorithms.add(algorithm);
 
                 // Reset host mapping table
                 NetworkNode.resetHostMappingTable();
@@ -302,6 +306,56 @@ public class Application {
     }
 
     /**
+     * Stops current algorithm and clear the memory used.
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmStop
+     * </pre>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "stop current algorithm", arguments = {})
+    public boolean algorithmStop(PrintStream out, String... args) {
+        try {
+            if (algorithm != null)
+                algorithm.finalize();
+        } catch (Throwable e) {
+            out.println(e.toString());
+        } finally {
+            algorithms.remove(algorithm);
+            algorithm = null;
+        }
+        return true;
+    }
+
+    /**
+     * Stops all algorithms and clear the memory used.
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmStopAll
+     * </pre>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "stop all algorithms", arguments = {})
+    public boolean algorithmStopAll(PrintStream out, String... args) {
+        for (Algorithm alg : algorithms)
+            try {
+                if (alg != null)
+                    alg.finalize();
+            } catch (Throwable e) {
+                out.println(e.toString());
+            }
+        algorithm = null;
+        algorithms.clear();
+        return true;
+    }
+
+    /**
      * Show some information about the current algorithm.
      * The text returned by algorithm's {@link Object#toString} method is used.
      * Example of usage:
@@ -323,30 +377,62 @@ public class Application {
     }
 
     /**
-     * Stops current algorithm and clear the memory used.
+     * Show some information about all algorithms.
+     * The text returned by algorithms' {@link Object#toString} method is used.
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; algorithmStop
+     * MESSIF &gt;&gt;&gt; algorithmInfoAll
      * </pre>
      * 
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "stop current algorithm", arguments = {})
-    public boolean algorithmStop(PrintStream out, String... args) {
-        try {
-            if (algorithm != null)
-                algorithm.finalize();
-        } catch (Throwable e) {
-            out.println(e.toString());
-        } finally {
-            algorithm = null;
+    @ExecutableMethod(description = "show info about all algorithms", arguments = {})
+    public boolean algorithmInfoAll(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No algorithm is running");
+            return false;
+        } else {
+            for (int i = 0; i < algorithms.size(); i++) {
+                out.print("Algorithm #");
+                out.print(i);
+                out.println(":");
+                out.println(algorithm.toString());
+            }
+            return true;
         }
-        return true;
     }
-    
-    
+
+    /**
+     * Select algorithm to manage.
+     * A parameter with algorithm sequence number is required for specifying, which algorithm to select.
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmSelect 0
+     * </pre>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args file name where the serialized algorithm is stored
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @see #algorithmInfoAll
+     */
+    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select"})
+    public boolean algorithmSelect(PrintStream out, String... args) {
+        try {
+            algorithm = algorithms.get(Integer.parseInt(args[1]));
+            return true;
+        } catch (IndexOutOfBoundsException ignore) {
+        } catch (NumberFormatException ignore) {
+        }
+
+        out.print("Algorithm # must be specified - use a number between 0 and ");
+        out.println(algorithms.size() - 1);
+
+        return false;
+    }
+
+
     /****************** Operation command functions ******************/
 
     /**
@@ -635,32 +721,13 @@ public class Application {
 
         // Separator is second argument (get newline if not specified)
         String separator = (args.length > 2)?args[2]:System.getProperty("line.separator");
-        Iterator<MeasuredAbstractObject<?>> iter = ((QueryOperation)lastOperation).getAnswerDistances();
-        
-        // Check first argument for print type
-        switch ((args.length > 1)?Character.toUpperCase(args[1].charAt(0)):'D') {
-        case 'D': // DistanceObject
-            while (iter.hasNext()) {
-                out.print(iter.next());
-                out.print(separator);
-            }
-            return true;
-        case 'O': // Object
-            while (iter.hasNext()) {
-                out.print(iter.next().getObject());
-                out.print(separator);
-            }
-            return true;
-        case 'U': // URI
-            while (iter.hasNext()) {
-                out.print(iter.next().getObject().getLocatorURI());
-                out.print(separator);
-            }
-            return true;            
+        Iterator<?> iter = ((QueryOperation<?>)lastOperation).getAnswer();
+        while (iter.hasNext()) {
+            out.print(iter.next());
+            out.print(separator);
         }
 
-        out.println("Wrong argument, should be 'Object', 'DistanceObject' or 'URI'");
-        return false;
+        return true;
     }
 
 
@@ -1377,7 +1444,7 @@ public class Application {
                                         } else if (methodName.equals("executeOperation") && methodArguments.length > 0 && AbstractOperation.class.isInstance(methodArguments[0])) {
                                             AbstractOperation operation = (AbstractOperation)methodArguments[0];
                                             application.algorithm.executeOperation(operation);
-                                            operation.clearSuplusData();
+                                            operation.clearSurplusData();
                                             out.writeObject(operation);
                                         } else {
                                             out.writeObject(application.algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(application.algorithm, methodArguments));

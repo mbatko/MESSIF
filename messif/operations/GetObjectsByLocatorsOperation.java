@@ -1,5 +1,5 @@
 /*
- * GetObjectByLocator.java
+ * GetObjectsByLocatorsOperation.java
  *
  * Created on 18.7.2007, 17:13:03
  */
@@ -7,15 +7,12 @@
 package messif.operations;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.Set;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
+import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.MeasuredAbstractObjectList;
 
 /**
  * This operation returns objects with given locators.
@@ -23,46 +20,34 @@ import messif.objects.util.MeasuredAbstractObjectList;
   * @author <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a> David Novak, Faculty of Informatics, Masaryk University, Brno, Czech Republic
 */
 @AbstractOperation.OperationName("Get objects by locators")
-public class GetObjectsByLocatorsOperation extends QueryOperation {
-    
+public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 2L;    
+    private static final long serialVersionUID = 3L;
 
-    
-    /****************** Query request attributes ******************/
+    //****************** Attributes ******************//
 
     /** The locators of the desired objects */
-    public final Set<String> locators;
+    protected final Set<String> locators;
 
     /** The object to compute distances to; if <tt>null</tt>, UNKNOWN_DISTANCE will be used in answer */
-    public final LocalAbstractObject queryObjectForDistances;
-
-    /** Flag whether to have full objects in the answer or only the RemoteAbstractObjects */
-    public final boolean requireFullObjects;
+    protected final LocalAbstractObject queryObjectForDistances;
 
 
-    /****************** Query answer attributes ******************/
-
-    /** The list of objects forming the answer of this query */
-    protected final MeasuredAbstractObjectList<AbstractObject> answer;
-
-
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Create a new instance of GetObjectsByLocatorsOperation with the specified locators.
      * 
      * @param locators the collection of locators to be found
      * @param queryObjectForDistances the query object to use for computing distances
-     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
-     * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize the limit for the number of objects kept in this operation's answer
      */
-    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required", "Limit for number of objects in answer"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects, int maxAnswerCount) {
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Type of objects returned", "Limit for number of objects in answer"})
+    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerSize) {
+        super(answerType, maxAnswerSize);
         this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
         this.queryObjectForDistances = queryObjectForDistances;
-        this.requireFullObjects = requireFullObjects;
-        this.answer = new MeasuredAbstractObjectList<AbstractObject>(maxAnswerCount);
     }
 
     /**
@@ -70,11 +55,22 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * 
      * @param locators the collection of locators to be found
      * @param queryObjectForDistances the query object to use for computing distances
-     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     * @param answerType the type of objects this operation stores in its answer
      */
-    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Are full objects required"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
-        this(locators, queryObjectForDistances, requireFullObjects, Integer.MAX_VALUE);
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Type of objects returned"})
+    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType) {
+        this(locators, queryObjectForDistances, answerType, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with the specified locators.
+     * 
+     * @param locators the collection of locators to be found
+     * @param queryObjectForDistances the query object to use for computing distances
+     */
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to"})
+    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances) {
+        this(locators, queryObjectForDistances, AnswerType.REMOTE_OBJECTS, Integer.MAX_VALUE);
     }
 
     /**
@@ -83,10 +79,12 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      */
     @AbstractOperation.OperationConstructor({"The collection of locators"})
     public GetObjectsByLocatorsOperation(Collection<String> locators) {
-        this(locators, null, true);
+        this(locators, null);
     }
 
-    /** Create a new instance of GetObjectsByLocatorsOperation with empty locators set. */
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with an empty locators set.
+     */
     public GetObjectsByLocatorsOperation() {
         this(null);
     }
@@ -95,26 +93,70 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * Create a new instance of GetObjectsByLocatorsOperation with empty locators set.
      * 
      * @param queryObjectForDistances the query object to use for computing distances
-     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     * @param answerType the type of objects this operation stores in its answer
      * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
      */
-    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects, int maxAnswerCount) {
-        this(null, queryObjectForDistances, requireFullObjects, maxAnswerCount);
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerCount) {
+        this(null, queryObjectForDistances, answerType, maxAnswerCount);
     }
 
     /**
      * Create a new instance of GetObjectsByLocatorsOperation with empty locators set.
      * 
      * @param queryObjectForDistances the query object to use for computing distances
-     * @param requireFullObjects flag whether to have full objects in the answer or only the RemoteAbstractObjects
+     * @param answerType the type of objects this operation stores in its answer
      */
-    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, boolean requireFullObjects) {
-        this(queryObjectForDistances, requireFullObjects, Integer.MAX_VALUE);
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, AnswerType answerType) {
+        this(queryObjectForDistances, answerType, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Create a new instance of GetObjectsByLocatorsOperation with empty locators set.
+     * 
+     * @param queryObjectForDistances the query object to use for computing distances
+     * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
+     */
+    public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, int maxAnswerCount) {
+        this(null, queryObjectForDistances, AnswerType.REMOTE_OBJECTS, maxAnswerCount);
     }
 
 
-    /****************** Management of the set of locators ********************/
-    
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns argument that was passed while constructing instance.
+     * If the argument is not stored within operation, <tt>null</tt> is returned.
+     * @param index index of an argument passed to constructor
+     * @return argument that was passed while constructing instance
+     * @throws IndexOutOfBoundsException if index parameter is out of range
+     */
+    @Override
+    public Object getArgument(int index) throws IndexOutOfBoundsException {
+        switch (index) {
+        case 0:
+            return locators;
+        default:
+            throw new IndexOutOfBoundsException("GetObjectsByLocatorsOperation has only one argument");
+        }
+    }
+
+    /**
+     * Returns number of arguments that were passed while constructing this instance.
+     * @return number of arguments that were passed while constructing this instance
+     */
+    @Override
+    public int getArgumentCount() {
+        return 1;
+    }
+
+    /**
+     * Returns the object locators this query searches for.
+     * @return the object locators this query searches for
+     */
+    public Set<String> getLocators() {
+        return Collections.unmodifiableSet(locators);
+    }
+
     /**
      * Add a locator to this query.
      * @param locator the locator to be added
@@ -132,7 +174,7 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
         if (locators != null)
             this.locators.addAll(locators);
     }
-    
+
     /**
      * Check whether the set of locators contains given locator.
      * 
@@ -142,8 +184,9 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
     public boolean hasLocator(String locator) {
         return locators.contains(locator);
     }
-    
-    /****************** Implementation of query evaluation ******************/
+
+
+    //****************** Implementation of query evaluation ******************//
     
     /**
      * Evaluate this query on a given set of objects.
@@ -151,98 +194,35 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      *
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
+     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be clonned
      */
-    public int evaluate(AbstractObjectIterator<LocalAbstractObject> objects) {
+    @Override
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int count = 0;
-        try {
-            while (!locators.isEmpty()) {
-                LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-                addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE);
-                count++;
-            }
-        } catch (NoSuchElementException e) { }
+        while (!locators.isEmpty()) {
+            LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
+            float distance;
+            if (queryObjectForDistances != null)
+                distance = queryObjectForDistances.getDistance(object);
+            else
+                distance = LocalAbstractObject.UNKNOWN_DISTANCE;
+            addToAnswer(object, distance);
+            count++;
+        }
         
         return count;
     }
 
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
-    public int getAnswerCount() {
-        return answer.size();
-    }
+
+    //****************** Overrides for answer set ******************//
 
     /**
-     * Returns an iterator over all objects in the answer to this query. 
-     * @return an iterator over all objects in the answer to this query
-     */
-    public Iterator<AbstractObject> getAnswer() {
-        return answer.objects();
-    }
-    
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The distances are computed if the constructor parameter <code>queryObjectForDistances</code>
-     * was not <tt>null</tt>. Otherwise, the distances returned are always zero.
-     * The object of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getObject}.
-     * The associated distance of a pair is accessible through {@link messif.objects.MeasuredAbstractObjectList.Pair#getDistance}.
-     * 
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        return answer.iterator();
-    }
-
-    /**
-     * Add an object with a measured distance to the answer.
-     * 
-     * @param object the object to add
-     * @param distance the distance of the object
-     * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     */
-    public boolean addToAnswer(AbstractObject object, float distance) {
-        if ((queryObjectForDistances != null) && (distance == LocalAbstractObject.UNKNOWN_DISTANCE))
-            distance = queryObjectForDistances.getDistance(object.getLocalAbstractObject());
-
-        return answer.add( ((requireFullObjects) ? object : object.getRemoteAbstractObject()), distance);
-    }
-
-    /**
-     * Reset the current query answer.
+     * Returns the class of objects this operation stores in its answer.
+     * @return the class of objects this operation stores in its answer
      */
     @Override
-    public void resetAnswer() {
-        answer.clear();
-    }
-
-
-    /*********************  The operation error code management   ***************/
-    
-    /**
-     * Returns <tt>true</tt> if this operation has finished successfuly.
-     * Otherwise, <tt>false</tt> is returned - the operation was either unsuccessful or is has not finished yet.
-     *
-     * @return <tt>true</tt> if this operation has finished successfuly
-     */
-    @Override
-    public boolean wasSuccessful() {
-        return this.errValue.equals(OperationErrorCode.RESPONSE_RETURNED);
-    }
-
-    /** End operation successfully */
-    @Override
-    public void endOperation() {
-        this.errValue.equals(OperationErrorCode.RESPONSE_RETURNED);
-    }
-    
-    /**
-     * Returns a string representation of this operation.
-     * @return a string representation of this operation.
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer("Get object by locator query ").append(locators.toString()).append(" returned ").append(getAnswerCount()).append(" objects").toString();
+    public Class<? extends RankedAbstractObject> getAnswerClass() {
+        return RankedAbstractObject.class;
     }
 
     /**
@@ -252,21 +232,16 @@ public class GetObjectsByLocatorsOperation extends QueryOperation {
      * classes after deserialization.
      */
     @Override
-    public void clearSuplusData() {
-        super.clearSuplusData();
-        
+    public void clearSurplusData() {
+        super.clearSurplusData();
+
         // Clear query object if there is one
         if (queryObjectForDistances != null)
             queryObjectForDistances.clearSurplusData();
-
-        // Clear the answered objects if they are not just RemoteAbstractObjects
-        if (requireFullObjects)
-            for (MeasuredAbstractObject<?> pair : answer)
-                pair.getObject().clearSurplusData();
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

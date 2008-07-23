@@ -6,14 +6,16 @@
 
 package messif.operations;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MeasuredAbstractObject;
-import messif.objects.util.MeasuredAbstractObjectList;
+import messif.objects.util.RankedAbstractObject;
+import messif.utility.SortedCollection;
 
 /**
  * This class represents a range query that distinguish the partition
@@ -35,22 +37,22 @@ import messif.objects.util.MeasuredAbstractObjectList;
  */
 @AbstractOperation.OperationName("Partitioned range query")
 public class PartitionedRangeQueryOperation extends RangeQueryOperation {
-
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
-
-    /****************** Query answer attributes ******************/
+    //****************** Attributes ******************//
 
     /** The answer holder */
-    protected final Map<Object, MeasuredAbstractObjectList<AbstractObject>> partitionedAnswer = 
-            new HashMap<Object, MeasuredAbstractObjectList<AbstractObject>>();
+    protected final Map<Object, SortedCollection<RankedAbstractObject>> partitionedAnswer; 
+
+    /** Current partition list */
+    protected SortedCollection<RankedAbstractObject> currentPartition;
 
     /** The locking flag for {@link #setCurrentPartition setCurrentPartition} */
     protected boolean isPartitionLocked = false;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of RangeQueryOperation given the query object and radius.
@@ -60,23 +62,27 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public PartitionedRangeQueryOperation(LocalAbstractObject queryObject, float radius) {
         super(queryObject, radius);
-        partitionedAnswer.put(null, answer);
+        partitionedAnswer = new HashMap<Object, SortedCollection<RankedAbstractObject>>();
     }
-    
 
-    /****************** Attribute access methods ******************/
+
+    //****************** Attribute access methods ******************//
 
     /**
      * Sets the current partition differentiation object.
-     * @param currentPartition the object to differentiate the answer partition
+     * @param partitionObject the object to differentiate the answer partition
      */
-    public void setCurrentPartition(Object currentPartition) {
+    public void setCurrentPartition(Object partitionObject) {
         if (isPartitionLocked)
             return;
-        answer = partitionedAnswer.get(currentPartition);
-        if (answer == null) {
-            answer = new MeasuredAbstractObjectList<AbstractObject>();
-            partitionedAnswer.put(currentPartition, answer);
+        if (partitionObject == null) {
+            currentPartition = null;
+        } else {
+            currentPartition = partitionedAnswer.get(partitionObject);
+            if (currentPartition == null) {
+                currentPartition = new SortedCollection<RankedAbstractObject>();
+                partitionedAnswer.put(partitionObject, currentPartition);
+            }
         }
     }
 
@@ -92,45 +98,19 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     }
 
 
-    /****************** Answer methods ******************/
-    
+    //****************** Answer methods ******************//
 
-    /**
-     * Returns the number of answered objects.
-     * @return the number of answered objects
-     */
     @Override
-    public int getAnswerCount() { 
-        int retVal = 0;
-        for (MeasuredAbstractObjectList part : partitionedAnswer.values())
-            retVal += part.size();
-        return retVal;
-    }
-    
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
-    @Override
-    public Iterator<AbstractObject> getAnswer() { 
-        MeasuredAbstractObjectList<AbstractObject> totalAnswer = new MeasuredAbstractObjectList<AbstractObject>();
-        for (MeasuredAbstractObjectList<AbstractObject> part : partitionedAnswer.values())
-            totalAnswer.add(part);
-        return totalAnswer.objects();
-    }
-    
-    /**
-     * Returns an iterator over pairs of objects and their distances from the query object of this query. 
-     * The object of a pair is accessible through getObject().
-     * The associated distance of a pair is accessible through getDistance().
-     * @return an iterator over pairs of objects and their distances from the query object of this query
-     */
-    @Override
-    public Iterator<MeasuredAbstractObject<?>> getAnswerDistances() {
-        MeasuredAbstractObjectList<AbstractObject> totalAnswer = new MeasuredAbstractObjectList<AbstractObject>();
-        for (MeasuredAbstractObjectList<AbstractObject> part : partitionedAnswer.values())
-            totalAnswer.add(part);
-        return totalAnswer.iterator();
+    public boolean addToAnswer(AbstractObject object, float distance) {
+        if (!super.addToAnswer(object, distance))
+            return false;
+        try { // FIXME: the RankedAbstractObject is created twice (encap is needed)
+            if (currentPartition != null)
+                currentPartition.add(new RankedAbstractObject(answerType.update(object), distance));
+        } catch (CloneNotSupportedException e) {
+            throw new IllegalArgumentException(e);
+        }
+        return true;
     }
 
     /**
@@ -138,15 +118,15 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
      * @param partitionIdentifier the idetifier to select a particular partition
      * @return the partial answer for the specified partition
      */
-    public MeasuredAbstractObjectList getPartitionAnswer(Object partitionIdentifier) {
-        return partitionedAnswer.get(partitionIdentifier);
+    public Iterator<RankedAbstractObject> getPartitionAnswer(Object partitionIdentifier) {
+        return partitionedAnswer.get(partitionIdentifier).iterator();
     }
 
     /**
      * Returns the whole answer divided by partitions.
      * @return the whole answer divided by partitions
      */
-    public Map<Object, MeasuredAbstractObjectList<AbstractObject>> getAllPartitionsAnswer() {
+    public Map<Object, SortedCollection<RankedAbstractObject>> getAllPartitionsAnswer() {
         return Collections.unmodifiableMap(partitionedAnswer);
     }
 
@@ -156,18 +136,19 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
      * @param operation the operation to update answer from
      */
     @Override
-    protected void updateAnswer(QueryOperation operation) {
+    protected void updateFrom(RankingQueryOperation operation) {
+        super.updateFrom(operation);
         if (operation instanceof PartitionedRangeQueryOperation) {
-            Map<Object, MeasuredAbstractObjectList<AbstractObject>> sourceAnswer = ((PartitionedRangeQueryOperation)operation).partitionedAnswer;
-            for (Map.Entry<Object, MeasuredAbstractObjectList<AbstractObject>> entry : sourceAnswer.entrySet()) {
-                MeasuredAbstractObjectList<AbstractObject> actualList = partitionedAnswer.get(entry.getKey());
+            Map<Object, SortedCollection<RankedAbstractObject>> sourceAnswer = ((PartitionedRangeQueryOperation)operation).partitionedAnswer;
+            for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : sourceAnswer.entrySet()) {
+                SortedCollection<RankedAbstractObject> actualList = partitionedAnswer.get(entry.getKey());
                 if (actualList == null) {
-                    actualList = new MeasuredAbstractObjectList<AbstractObject>();
+                    actualList = new SortedCollection<RankedAbstractObject>();
                     partitionedAnswer.put(entry.getKey(), actualList);
                 }
-                actualList.add(entry.getValue());
+                actualList.addAll(entry.getValue());
             }
-        } else super.updateAnswer(operation);
+        }
     }
 
     /**
@@ -177,7 +158,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     @Override
     public String toString() {
         StringBuffer buffer = new StringBuffer("Partitioned range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects:");
-        for (Map.Entry<Object, MeasuredAbstractObjectList<AbstractObject>> entry : partitionedAnswer.entrySet()) {
+        for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
             buffer.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().size());
         }
         return buffer.toString();

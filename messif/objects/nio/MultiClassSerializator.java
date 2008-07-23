@@ -121,6 +121,7 @@ public class MultiClassSerializator extends BinarySerializator implements Serial
      * Finally, the object is deserialized using the constructor, the factory method
      * or standard Java {@link java.io.Serializable serialization}.
      * 
+     * @param <E> the class that is expected to be in the stream
      * @param stream the stream to read the instance from
      * @param objectSize the size of the instance in the stream
      * @param expectedClass the class that is expected to be in the stream
@@ -169,7 +170,7 @@ public class MultiClassSerializator extends BinarySerializator implements Serial
         Object object = readObject(stream, this, objectSize, selectedConstructor, selectedFactoryMethod);
 
         // Convert to the specified type E
-        return Convert.safeGenericCast(object, expectedClass);
+        return expectedClass.cast(object);
     }
 
     /**

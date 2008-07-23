@@ -274,7 +274,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @param query query operation that is to be processed on this bucket
      * @return the number of objects that were added to answer
      */
-    public int processQuery(QueryOperation query) {
+    public int processQuery(QueryOperation<?> query) {
         return query.evaluate(getAllObjects());
     }
 

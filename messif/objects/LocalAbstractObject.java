@@ -40,7 +40,7 @@ import messif.objects.nio.BinarySerializator;
  *
  * @author  xbatko
  */
-public abstract class LocalAbstractObject extends AbstractObject implements Cloneable {
+public abstract class LocalAbstractObject extends AbstractObject {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 4L;
@@ -320,6 +320,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * If there are more filters with the same class, the sameClassPosition parameter
      * is considered to pick the correct one.
      *
+     * @param <T> the class of the filter to retrieve from the chain
      * @param filterClass the class of the filter to retrieve from the chain
      * @return a filter of specified class from this object's filter chain
      * @throws NullPointerException if the filterClass is <tt>null</tt>
@@ -431,17 +432,15 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
 
     /**
      * Clear non-messif data stored in this object.
-     * This method is intended to be called whenever the object is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
+     * In addition to changing object key, this method removes
+     * the {@link #suppData supplemental data} and
+     * all {@link #distanceFilter distance filters}.
      */
     @Override
     public void clearSurplusData() {
+        super.clearSurplusData();
         suppData = null;
         distanceFilter = null;
-        // If object key is some extended class, remap it to the basic AbstractObjectKey
-        if (objectKey != null && !objectKey.getClass().equals(AbstractObjectKey.class))
-            objectKey = new AbstractObjectKey(objectKey.getLocatorURI());
     }
 
 
@@ -568,6 +567,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * Creates a new LocalAbstractObject of the specified type from string.
      * The object data is feeded through string buffer stream to the stream constructor of the object.
      *
+     * @param <E> the class of the object to create
      * @param objectClass the class of the object to create
      * @param objectData the string that contains object's data
      * @return a new instance of the specified class
@@ -601,7 +601,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
     @Override
-    public final Object clone() throws CloneNotSupportedException {
+    public final LocalAbstractObject clone() throws CloneNotSupportedException {
         return clone(true);
     }
 
@@ -631,20 +631,6 @@ public abstract class LocalAbstractObject extends AbstractObject implements Clon
             } catch (InvocationTargetException e) {
                 throw new CloneNotSupportedException(e.getCause().toString());
             }
-        return rtv;
-    }
-
-    /**
-     * Creates and returns a copy of this object with changed locatorURI.
-     * The precise meaning of "copy" may depend on the class of the object.
-     *
-     * @param objectKey new object key
-     * @return a clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
-    public LocalAbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
-        LocalAbstractObject rtv = (LocalAbstractObject)clone();
-        rtv.objectKey = objectKey;
         return rtv;
     }
 

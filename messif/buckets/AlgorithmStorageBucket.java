@@ -47,7 +47,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     /** Class serial id for serialization */
     private static final long serialVersionUID = -792888618241233159L;    
 
-    /****************** Local data ******************/
+    //****************** Local data ******************//
 
     /** Encapsulated algorithm */
     protected final Algorithm algorithm;
@@ -56,8 +56,8 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     protected int objectCount = 0;
 
 
-    /****************** Constructors ******************/
-    
+    //****************** Constructors ******************//
+
     /**
      * Creates a new instance of AlgorithmStorageBucket and setups all bucket limits.
      * Note that the algorithm should not contain objects.
@@ -89,8 +89,8 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     }
 
 
-    /***************** Factory method  *****************************************/
-    
+    //***************** Factory method *****************//
+
     /**
      * Creates a new algorithm bucket. The parameters for the algorithm constructor are specified in the parameters map.
      * 
@@ -198,7 +198,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     }
 
 
-    /***************** Implementations using algorithm instance *****************/
+    //***************** Implementations using algorithm instance *****************//
 
     /**
      * Stores the specified object in the encapsulated algorithm, i.e.
@@ -236,7 +236,9 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      *
      * @param query query operation that is to be processed on this bucket
      * @return the number of objects that were added to answer
+     * @throws UnsupportedOperationException if the specified query is not supported by the encapsulated algorithm
      */
+    @Override
     public int processQuery(QueryOperation query) throws UnsupportedOperationException {
         int beforeCount = query.getAnswerCount();
         try {
@@ -287,12 +289,13 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      * Returns current number of objects stored in bucket.
      * @return current number of objects stored in bucket
      */
+    @Override
     public int getObjectCount() {
         return objectCount;
     }
 
 
-    /****************** Splitting ******************/
+    //****************** Splitting ******************//
 
     /**
      * Splits this bucket according to the specified policy.
@@ -309,10 +312,11 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      * @throws CapacityFullException if a target bucket overflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
      * @throws OccupationLowException if a this bucket underflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
      */
+    @Override
     public synchronized int split(SplitPolicy policy, final List<Bucket> targetBuckets, final BucketDispatcher bucketCreator, int whoStays) throws OccupationLowException, IllegalArgumentException, CapacityFullException {
         if (!(algorithm instanceof SplittableAlgorithm) || bucketCreator == null)
             return super.split(policy, targetBuckets, bucketCreator, whoStays);
-        
+
         // Prepare the split result object
         final AtomicInteger count = new AtomicInteger(0);
         final AlgorithmStorageBucket thisBucket = this;
@@ -334,11 +338,11 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
                     if (targetBuckets != null)
                         targetBuckets.add(bucket);
                 }
-                
+
                 // Update filters of the destination algorithm bucket
                 thisBucket.filterDeleteObjectBefore(object);
                 bucket.filterAddObjectBefore(object);
-                
+
                 // Check the destination bucket for overflow
                 long bytesMoved = object.getSize();
                 if (bucket.occupation + (bucket.occupationAsBytes?bytesMoved:1) > bucket.capacity)
@@ -353,13 +357,13 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
                 bucket.objectCount++;
                 objectCount--;
                 count.incrementAndGet();
-                
+
                 // Update filters of this algorithm bucket
                thisBucket.filterDeleteObjectAfter(object);
                bucket.filterAddObjectAfter(object);
             }
         };
-        
+
         // Execute the split
         ((SplittableAlgorithm)algorithm).split(policy, result, whoStays);
 
@@ -367,7 +371,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     }
 
 
-    /****************** Iterator object ******************/
+    //****************** Iterator object ******************//
 
     /**
      * Returns iterator through all the objects in this bucket.
@@ -377,7 +381,10 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
         return new AlgorithmStorageBucketIterator<AlgorithmStorageBucket>(this);
     }
 
-    /** Internal class for algorithm-backed iterator implementation */
+    /**
+     * Internal class for algorithm-backed iterator implementation.
+     * @param <T> the type of the bucket this iterator operates on
+     */
     protected static class AlgorithmStorageBucketIterator<T extends AlgorithmStorageBucket> extends LocalBucket.LocalBucketIterator<T> {
         /** Currently executed iterator */
         protected Iterator<AbstractObject> iterator = null;
@@ -402,6 +409,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
          * @return object with specified ID from this bucket
          * @throws NoSuchElementException if there is no object with the specified ID in this bucket
          */
+        @Override
         public LocalAbstractObject getObjectByID(UniqueID objectID) throws NoSuchElementException {
             GetObjectQueryOperation operation = new GetObjectQueryOperation(objectID);
             try {
@@ -427,8 +435,9 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
          * @return object with specified ID from this bucket
          * @throws NoSuchElementException if there is no object with the specified ID in this bucket
          */
+        @Override
         public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
-            QueryOperation operation = new GetObjectsByLocatorsOperation(locatorURIs);
+            GetObjectsByLocatorsOperation operation = new GetObjectsByLocatorsOperation(locatorURIs);
             try {
                 bucket.algorithm.executeOperation(operation);
             } catch (NoSuchMethodException e) {
@@ -437,16 +446,15 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
             } catch (AlgorithmMethodException e) {
                 throw new NoSuchElementException("Object not found because of error: " + e.getCause());
             }
-            if (operation.getAnswerCount() == 0)
-                throw new NoSuchElementException("Object not found");
 
             // Return first object found
-            currentObject = operation.getAnswer().next().getLocalAbstractObject();
-            locatorURIs.remove(currentObject.getLocatorURI());
+            currentObject = operation.getAnswer().next().getObject().getLocalAbstractObject();
+            if (removeFound)
+                locatorURIs.remove(currentObject.getLocatorURI());
             return currentObject;
         }
 
-        /** 
+        /**
          * Physically removes the last object returned by this iterator.
          * This method will execute DeleteOperation on the encapsulated algorithm.
          * 
@@ -526,6 +534,5 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
             
             return currentObject;
         }
-        
-    }    
+    }
 }

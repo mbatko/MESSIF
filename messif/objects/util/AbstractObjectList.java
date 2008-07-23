@@ -144,11 +144,15 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
      * iterator to the end of this list.
      *
      * @param iterator iterator over elements to be added to this list
+     * @return the number of objects added
      */
-    public void addAll(Iterator<E> iterator) {
+    public int addAll(Iterator<? extends E> iterator) {
+        int ret = 0;
         if (iterator != null)
             while (iterator.hasNext())
-                add(iterator.next());
+                if (add(iterator.next()))
+                    ret++;
+        return ret;
     }
 
 

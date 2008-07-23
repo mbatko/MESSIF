@@ -288,7 +288,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Serializ
      */
     public static void mergeOperationsFromReplies(AbstractOperation targetOperation, Collection<? extends DistAlgReplyMessage> replyMessages) {
         for (DistAlgReplyMessage msg : replyMessages)
-            targetOperation.updateAnswer(msg.getOperation());
+            targetOperation.updateFrom(msg.getOperation());
     }
 
     /** Update supplied statistics with partial statistics from reply messages

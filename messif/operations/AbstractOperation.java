@@ -16,6 +16,7 @@ import java.util.UUID;
 import messif.utility.ErrorCode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import messif.utility.Clearable;
 
 
 /**
@@ -35,16 +36,16 @@ import java.lang.reflect.InvocationTargetException;
  * @see messif.algorithms.Algorithm
  * @author  xbatko
  */
-public abstract class AbstractOperation implements Serializable, Cloneable {
+public abstract class AbstractOperation implements Serializable, Cloneable, Clearable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
-    //****************** Supplemental data object associated with this instance ******************/
+    //****************** Supplemental data object associated with this instance ******************//
 
     /** Supplemental data object */
     public Object suppData = null;
 
-    //****************** Operation ID ******************/
+    //****************** Operation ID ******************//
 
     /** An universaly unique identification of the operation */
     protected final UUID operID = UUID.randomUUID();
@@ -84,11 +85,10 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.
-     * Override this method if the operation has its own data.
      *
      * @param   operation   the reference object with which to compare.
      * @return  <code>true</code> if this object has the same data as the obj
@@ -172,7 +172,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     }
 
 
-    //****************** Success flag ******************/
+    //****************** Success flag ******************//
 
     /** Operation result code */
     protected ErrorCode errValue = ErrorCode.NOT_SET;
@@ -193,7 +193,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
         return errValue;
     }
 
-    //****************** Operation finalizer ******************/
+    //****************** Operation finalizer ******************//
 
     /**
      * End operation with a specific error code.
@@ -212,7 +212,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     public abstract void endOperation();
 
 
-    //****************** Clonning ******************/
+    //****************** Clonning ******************//
     
     /**
      * Create a duplicate of this operation.
@@ -228,17 +228,14 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     }
 
 
-    //****************** Data manipulation ******************/
+    //****************** Data manipulation ******************//
 
     /**
-     * Update all answer data of this operation from another operation.
-     * This method is used to merge answers from multiple operations into one.
-     * Every subclass that is adding some answer attributes should override this
-     * method and define the behavior for that attributes.
-     *
+     * Update the error code of this operation from another operation.
      * @param operation the source operation from which to get the update
+     * @throws ClassCastException if the specified operation is incompatible with this operation
      */
-    public void updateAnswer(AbstractOperation operation) {
+    public void updateFrom(AbstractOperation operation) throws ClassCastException {
         if (!errValue.isSet() || !operation.wasSuccessful())
             errValue = operation.errValue;
     }
@@ -250,12 +247,45 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
      * sent back to client in order to minimize problems with unknown
      * classes after deserialization.
      */
-    public void clearSuplusData() {
+    public void clearSurplusData() {
         suppData = null;
     }
 
 
-    //****************** String conversion ******************/
+    //****************** String conversion ******************//
+
+    /**
+     * Appends the constructor arguments of this query to the specified string.
+     * Arguments are enclosed in &lt; and &gt; and separated by commas.
+     * They are added in the same order as in the constructor.
+     * Leading space is added.
+     * @param str the string to add the arguments to
+     */
+    protected void appendArguments(StringBuilder str) {
+        if (getArgumentCount() <= 0)
+            return;
+        str.append(" <");
+        str.append(getArgument(0));
+        for (int i = 1; i < getArgumentCount(); i++)
+            str.append(", ").append(getArgument(i));
+        str.append('>');
+    }
+
+    /**
+     * Appends the error code of this query to the specified string.
+     * If the error code is not set yet, the "has not finished yet" string is added.
+     * If the operation {@link #wasSuccessful() was successful}, the "was successful" string is added.
+     * Otherwise, a string "failed: " with the error code name is added.
+     * Leading space is added.
+     * @param str the string to add the error code to
+     */
+    protected void appendErrorCode(StringBuilder str) {
+        if (!errValue.isSet())
+            str.append(" has not finished yet");
+        else if (wasSuccessful())
+            str.append(" was successful");
+        else str.append(" failed: ").append(errValue.toString());
+    }
 
     /**
      * Returns a string representation of this operation.
@@ -263,17 +293,14 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(getClass().getSimpleName());
-        if (!errValue.isSet())
-            rtv.append(" has not finished yet");
-        else if (wasSuccessful())
-            rtv.append(" was successful");
-        else rtv.append(" failed: ").append(errValue.toString());
-        return rtv.toString();
+        StringBuilder str = new StringBuilder(getClass().getSimpleName());
+        appendArguments(str);
+        appendErrorCode(str);
+        return str.toString();
     }
 
 
-    //****************** Operation markers ******************/
+    //****************** Operation markers ******************//
 
     /**
      * Annotation that specifies operation user-friendly name.
@@ -469,7 +496,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable {
     /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.
-     * @param index index of an argument passed to constructor
+     * @param index zero-based index of an argument passed to constructor
      * @return argument that was passed while constructing instance
      * @throws IndexOutOfBoundsException if index parameter is out of range
      * @throws UnsupportedOperationException if this operation doesn't support construction argument retrieval

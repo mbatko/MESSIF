@@ -6,60 +6,87 @@
 
 package messif.transactions;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
- *
+ * Provides a transaction encapsulation on any object.
+ * 
+ * @param <E> the type of encapsulated object
  * @author xbatko
  */
-public class TransactionObject<E> {
-    
-    /****************** Internal data ******************/
+public class TransactionObject<E> implements Serializable {
+    /** Class serial id for serialization. */
+    private static final long serialVersionUID = 1L;
+
+    //****************** Attributes ******************//
 
     /** Stored object for encapsulation */
     protected final E encapsulatedObject;
-    
 
-    /****************** Constructors ******************/
-
-    /** Creates a new instance of TransactionObject */
-    public TransactionObject(E encapsulatedObject) {
-        this.encapsulatedObject = encapsulatedObject;
-        this.isArrayClass = encapsulatedObject.getClass().isArray();
-    }
-    
-
-    /****************** Data access ******************/
-
-    public E orig() { return encapsulatedObject; }
-    
-
-    /****************** Transactions ******************/
-    
     /** Active transaction flag */
-    protected boolean transactionActive = false;
+    protected transient boolean transactionActive;
     
     /** Flag storing the switch between array and normal class */
     protected final boolean isArrayClass;
     
-    /** Stored state of encapsulated objects as a collection of fields */
-    protected Map<String, Object> objectPrimitiveFieldsState = new HashMap<String, Object>();
-    protected Map<String, TransactionObject<Object>> objectEncapsulatedFieldsState = new HashMap<String, TransactionObject<Object>>();
+    /** Stored state of primitive fields of this encapsulated object */
+    protected final Map<String, Object> objectPrimitiveFieldsState;
+
+    /** Stored state of object fields wrapped in TransactionObject of this encapsulated object */
+    protected final Map<String, TransactionObject<Object>> objectEncapsulatedFieldsState;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of TransactionObject.
+     * @param encapsulatedObject the object to encapsulate
+     */
+    public TransactionObject(E encapsulatedObject) {
+        this.encapsulatedObject = encapsulatedObject;
+        this.isArrayClass = encapsulatedObject.getClass().isArray();
+        this.objectPrimitiveFieldsState = new HashMap<String, Object>();
+        this.objectEncapsulatedFieldsState = new HashMap<String, TransactionObject<Object>>();
+    }
     
-    /** Returns current transaction state
+
+    //****************** Data access ******************//
+
+    /**
+     * Returns the encapsulated object.
+     * @return the encapsulated object
+     */
+    public E get() {
+        synchronized (encapsulatedObject) {
+            return encapsulatedObject;
+        }
+    }
+    
+
+    /****************** Transactions ******************/
+    
+    
+    /**
+     * Returns <tt>true</tt> if there is a transaction running currently.
+     * @return <tt>true</tt> if there is a transaction running currently
      */
     public boolean isTransactionRunning() {
         return transactionActive;
     }
     
-    /** Start a new transaction.
+    /**
+     * Start a new transaction.
+     * @param blocking flag whether the start of a new transaction is blocking. We cannot run more transactions at a time.
      *
-     * @param blocking Flag whether the start of a new transaction is blocking. We cannot run more transactions at a time.
-     *
-     * @return Returns true if the transaction has been started.
-     *         Returns false if there is an active transaction and we would block.
-     *         Returns false if there is an active transaction but the waiting for its end was terminated.
+     * @return <tt>true</tt> if the transaction has been started or
+     *         <tt>false</tt> if there is an active transaction and we would block or
+     *         there is an active transaction but the waiting for its end was terminated
+     * @throws IllegalAccessException 
      */
     public synchronized boolean beginTransaction(boolean blocking) throws IllegalAccessException {
         // If another transaction is running

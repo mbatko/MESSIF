@@ -208,7 +208,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
      */
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         // Get a clone of this object
-        LocalAbstractObject rtv = (LocalAbstractObject)clone();
+        LocalAbstractObject rtv = clone();
         
         // Clone all data fields
         try {

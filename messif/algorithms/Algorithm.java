@@ -134,7 +134,7 @@ public abstract class Algorithm implements Serializable {
     public static <T extends Algorithm> T restoreFromFile(String filepath, Class<T> algorithmClass) throws IOException, NullPointerException, ClassNotFoundException, ClassCastException {
         ObjectInputStream in = new ObjectInputStream(new FileInputStream(filepath));
         try {
-            T rtv = Convert.safeGenericCast(in.readObject(), algorithmClass);
+            T rtv = algorithmClass.cast(in.readObject());
             log.info("Algorithm restored from: " + filepath);
             return rtv;
         } finally {

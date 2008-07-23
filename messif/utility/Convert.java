@@ -49,6 +49,7 @@ public abstract class Convert {
      * </ul>
      * </p>
      * 
+     * @param <E> the type of the value to return
      * @param string the string value to be converted
      * @param type the class of the value
      * @param objectStreams map of openned streams for getting {@link messif.objects.LocalAbstractObject objects}
@@ -134,14 +135,8 @@ public abstract class Convert {
 
         // Converting string maps
         if (type.equals(Map.class)) {
-            Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*(,|$)").matcher(string);
             Map<String, Object> rtv = new HashMap<String, Object>();
-            while (m.find()) {
-                String value = (m.group(4) == null)?m.group(3):m.group(4);
-                if (value.equals("null"))
-                    value = null;
-                rtv.put((m.group(2) == null)?m.group(1):m.group(2), value);
-            }
+            putStringIntoMap(string, rtv);
             // Add streams parameter to a Map that contain a 'objectStreams' key but it is null
             if (rtv.containsKey("objectStreams") && rtv.get("objectStreams") == null)
                 rtv.put("objectStreams", objectStreams);
@@ -191,6 +186,7 @@ public abstract class Convert {
 
     /**
      * Converts a string into object of the specified type.
+     * @param <E> the type of the value to return
      * @param string the string value to be converted
      * @param type the class of the value
      * @return the converted value
@@ -198,6 +194,38 @@ public abstract class Convert {
      */
     public static <E> E stringToType(String string, Class<E> type) throws InstantiationException {
         return stringToType(string, type, null);
+    }
+
+    /**
+     * Parses string key-value pairs from the specified string and adds them to the map.
+     * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
+     * For example:
+     * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * @param string the string value to be converted
+     * @param map a table to which the string key-value pairs are added
+     */
+    public static void putStringIntoMap(String string, Map<? super String, ? super String> map) {
+        Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*(,|$)").matcher(string);
+        while (m.find()) {
+            String value = (m.group(4) == null)?m.group(3):m.group(4);
+            if (value.equals("null"))
+                value = null;
+            map.put((m.group(2) == null)?m.group(1):m.group(2), value);
+        }
+    }
+
+    /**
+     * Returns a map of string key-value pairs parsed from the specified string.
+     * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
+     * For example:
+     * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * @param string the string value to be converted
+     * @return a map of string key-value pairs
+     */
+    public static Map<String, String> stringToMap(String string) {
+        Map<String, String> rtv = new HashMap<String, String>();
+        putStringIntoMap(string, rtv);
+        return rtv;
     }
 
     /**
@@ -334,6 +362,7 @@ public abstract class Convert {
 
     /**
      * Class loader with type check.
+     * @param <E> the type of the returned class
      * @param name the fully qualified name of the class
      * @param checkClass the superclass of the returned class for the generics check
      * @return the <code>Class</code> object associated with the class or
@@ -353,6 +382,7 @@ public abstract class Convert {
      * If the generics type check fails, the <code>ClassCastException</code> is thrown
      * even if the provided <code>classObject</code> is a valid <code>Class</code>.
      * 
+     * @param <E> the type of the returned object
      * @param classObject the class object to be cast
      * @param checkClass the generics typed class that is returned
      * @return the generics-typed <code>Class</code> object
@@ -520,6 +550,7 @@ public abstract class Convert {
      * Note also that only types convertible by {@link #stringToType} method can be used in constructors.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
@@ -580,6 +611,7 @@ public abstract class Convert {
      * use the full {@link #createInstanceWithStringArgs createInstanceWithStringArgs} method instead.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
@@ -612,6 +644,7 @@ public abstract class Convert {
      * use the full {@link #createInstanceWithStringArgs createInstanceWithStringArgs} method instead.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
@@ -639,6 +672,7 @@ public abstract class Convert {
      * Note also that only types convertible by {@link #stringToType} method can be used in constructors.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
@@ -671,6 +705,7 @@ public abstract class Convert {
      * use the full {@link #createInstanceWithStringArgs createInstanceWithStringArgs} method instead.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @return a new instance of the class the constructors were specified for
@@ -697,6 +732,7 @@ public abstract class Convert {
      * Note also that only types convertible by {@link #stringToType} method can be used in constructors.
      * </p>
      *
+     * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param objectStreams map of openned streams for getting LocalAbstractObjects
@@ -715,6 +751,7 @@ public abstract class Convert {
      * First, a constructor for the specified arguments is searched in the provided class.
      * Then, an instance is created and returned.
      *
+     * @param <E> the type of the instantiated object
      * @param instanceClass the class for which to create an instance
      * @param arguments the arguments for the constructor
      * @return a new instance of the class
@@ -781,20 +818,27 @@ public abstract class Convert {
     }
 
     /**
-     * Return generic type casted object with correct type cast check.
-     *
-     * @param object the object that sould be cast to other type
-     * @param castToClass the class to cast the object to
-     * @throws ClassCastException if the specified object is not an instance of the specified class
-     * @return the object with different type
+     * Returns a new instance of a static array.
+     * @param <T> the type of components of the new array
+     * @param componentType the class of components of the new array
+     * @param size the number of elements of the new array
+     * @return a new instance of a static array
      */
     @SuppressWarnings("unchecked")
-    public static <T> T safeGenericCast(Object object, Class<T> castToClass) throws ClassCastException {
-        if (object == null)
-            return null;
-        if (castToClass.isInstance(object))
-            return (T)object; // This cast IS checked
-        else throw new ClassCastException("Can't cast object of class '" + object.getClass() + "' to '" + castToClass.getName() + "'");
+    public static <T> T[] createGenericArray(Class<T> componentType, int size) {
+        return (T[])Array.newInstance(componentType, size);
+    }
+
+    /**
+     * Returns a new instance of a static array.
+     * @param <T> the type of components of the new array
+     * @param array a generic array according to which to get the component type
+     * @param size the number of elements of the new array
+     * @return a new instance of a static array
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T[] createGenericArray(T[] array, int size) {
+        return (T[])Array.newInstance(array.getClass().getComponentType(), size);
     }
 
     /**
@@ -802,6 +846,8 @@ public abstract class Convert {
      * Note that only non-typed arguments can be passed as key/value class to be
      * generic-safe.
      *
+     * @param <K> the type of keys in the returned map
+     * @param <V> the type of values in the returned map
      * @param object the object that sould be cast to other type
      * @param keysClass the class to cast the map keys to
      * @param valuesClass the class to cast the map values to
@@ -831,6 +877,7 @@ public abstract class Convert {
      * requested class (but it is a {@link String}), the {@link #stringToType}
      * conversion is tried.
      *
+     * @param <T> the type of the returned parameter value
      * @param parameters the parameter table
      * @param paramName the name of parameter to get from the table; if there is no parameter of that 
      * @param paramClass the class to cast the value to
@@ -936,4 +983,19 @@ public abstract class Convert {
             throw new NumberFormatException(str.toString()); 
         }
     }
+
+    /**
+     * Returns a table of all values from the specified enum keyed by the enum value's name.
+     * @param <E> the enum type
+     * @param values the class of the enum for which to get the map
+     * @return a table of all values from the specified enum
+     */
+    public static <E extends Enum<E>> Map<String, E> enumToMap(Class<E> values) {
+        E[] constants = values.getEnumConstants();
+        Map<String, E> ret = new HashMap<String, E>(constants.length);
+        for (E constant : constants)
+            ret.put(constant.name(), constant);
+        return ret;
+    }
+
 }
