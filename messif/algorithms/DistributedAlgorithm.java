@@ -349,7 +349,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Serializ
         // statistics
         StatisticRefCounter peersParDC = targetStatistics.getStatisticRefCounter("PeersParallel.DistanceComputations");
         StatisticCounter hopCount = targetStatistics.getStatisticCounter("HopCount");
-        hopCount.reset();
+        //hopCount.reset();
         
         // iterate over the replies again and calculate parallel DC for all hosts
         for (DistAlgReplyMessage reply : replyMessages) {

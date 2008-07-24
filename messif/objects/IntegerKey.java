@@ -17,12 +17,9 @@ public class IntegerKey extends AbstractObjectKey {
     /** Creates a new instance of IntegerKey 
      * @param locatorURI the URI locator
      * @param key the integer key of the object - it musn't be null
-     * @throws java.lang.IllegalArgumentException if the key is null
      */
-    public IntegerKey(String locatorURI, Integer key) throws IllegalArgumentException {
+    public IntegerKey(String locatorURI, int key) {
         super(locatorURI);
-        if (key == null)
-            throw new IllegalArgumentException("The integer key of the object must not be null");
         this.key = key;
     }
     

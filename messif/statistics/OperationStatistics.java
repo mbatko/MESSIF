@@ -83,6 +83,16 @@ public class OperationStatistics implements Serializable {
     public String printStatistics() {
         return statistics.print();
     }
+
+    /** Resets statistics within this operation statistic object names of which match the regular expression */
+    public void resetStatistics(String regex) {
+        statistics.reset(regex);
+    }
+
+    /** Resets all statistics within this operation statistic object. */
+    public void resetStatistics() {
+        statistics.reset();
+    }
     
     /** Return a statistics of defined class from this operation statistics namespace */
     public <TStatistics extends Statistics> TStatistics getStatistics(String statisticName, Class<TStatistics> statisticClass) throws ClassCastException {

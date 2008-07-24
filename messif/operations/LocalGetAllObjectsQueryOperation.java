@@ -37,6 +37,18 @@ public class LocalGetAllObjectsQueryOperation extends GetAllObjectsQueryOperatio
     }
 
     /**
+     * Creates a new instance of GetPeersAllObjectsQuery for the specified node id and answer type.
+     * 
+     * @param peer the peer's network identification
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Network-node ID", "Answer type"})
+    public LocalGetAllObjectsQueryOperation(NetworkNode peer, AnswerType answerType) {
+        super(answerType);
+        this.peer = peer;
+    }
+    
+    /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.
      * @param index index of an argument passed to constructor

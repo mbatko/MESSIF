@@ -22,12 +22,9 @@ public class LongKey extends AbstractObjectKey {
     /** Creates a new instance of LongKey 
      * @param locatorURI the URI locator
      * @param key the long key of the object - it musn't be null
-     * @throws java.lang.IllegalArgumentException if the key is null
      */
-    public LongKey(String locatorURI, Long key) throws IllegalArgumentException {
+    public LongKey(String locatorURI, long key) {
         super(locatorURI);
-        if (key == null)
-            throw new IllegalArgumentException("The Long key of the object must not be null");
         this.key = key;
     }
     
