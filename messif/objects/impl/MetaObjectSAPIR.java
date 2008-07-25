@@ -16,11 +16,12 @@ import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
@@ -101,7 +102,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     }
 
     /** Creates a new instance of MetaObjectSAPIR */
-    public MetaObjectSAPIR(BufferedReader stream) throws IOException {
+    public MetaObjectSAPIR(BufferedReader stream, Set<String> restrictNames) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
         do {
@@ -123,7 +124,10 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         }
 
         for (; i < uriNamesClasses.length; i += 2) {
-            if ("ColorLayoutType".equals(uriNamesClasses[i]))
+            // Check restricted names
+            if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i]))
+                readObject(stream, uriNamesClasses[i+1]); // Read the object, but skip it
+            else if ("ColorLayoutType".equals(uriNamesClasses[i]))
                 colorLayout = readObject(stream, ObjectColorLayout.class);
             else if ("ColorStructureType".equals(uriNamesClasses[i]))
                 colorStructure = readObject(stream, ObjectShortVectorL1.class);
@@ -136,6 +140,16 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             else if ("Location".equals(uriNamesClasses[i]))
                 location = readObject(stream, ObjectGPSCoordinate.class);
         }
+    }
+
+    /** Creates a new instance of MetaObjectSAPIR */
+    public MetaObjectSAPIR(BufferedReader stream, String[] restrictNames) throws IOException {
+        this(stream, new HashSet<String>(Arrays.asList(restrictNames)));
+    }
+
+    /** Creates a new instance of MetaObjectSAPIR */
+    public MetaObjectSAPIR(BufferedReader stream) throws IOException {
+        this(stream, (Set<String>)null);
     }
 
     /**
@@ -180,15 +194,6 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             return location;
         else
             return null;
-    }
-
-    /**
-     * Returns the set of symbolic names of the encapsulated objects.
-     * @return the set of symbolic names of the encapsulated objects
-     */
-    @Override
-    public Collection<String> getObjectNames() {
-        return Arrays.asList(descriptorNames);
     }
 
     /**

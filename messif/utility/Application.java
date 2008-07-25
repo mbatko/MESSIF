@@ -29,7 +29,6 @@ import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -150,6 +149,9 @@ public class Application {
     /** List of running algorithms */
     protected List<Algorithm> algorithms = new ArrayList<Algorithm>();
 
+    /** List of RMI services for algorithms */
+    protected List<RMIServer> rmiServers = new ArrayList<RMIServer>();
+
     /** Last executed operation */
     protected AbstractOperation lastOperation = null;
 
@@ -246,31 +248,30 @@ public class Application {
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @see #algorithmStore
      */
-    @ExecutableMethod(description = "loads the algorithm from a given file", arguments = {"file name", "host remap file (not required)", "messageDisp's remap port (not required)", "messageDisp's remap broadcast port (not required)" })
+    @ExecutableMethod(description = "loads the algorithm from a given file", arguments = {"file name", "host remap file (not required)" })
     public boolean algorithmRestore(PrintStream out, String... args) {
         try {
-            if (algorithm == null) {
-                if (args.length > 2) {
-                    try {
-                        int messageDispatcherPort = (args.length > 3)?Integer.parseInt(args[3]):0;
-                        int messageDispatcherBroadcastPort = (args.length > 4)?Integer.parseInt(args[4]):0;
-                        if (args[2] != null)
-                            NetworkNode.loadHostMappingTable(args[2], messageDispatcherPort, messageDispatcherBroadcastPort);
-                    } catch (UnknownHostException e) {
-                        out.println("Error parsing host remap file: unknown host " + e.getMessage());
-                        return false;
-                    }
+            // Set host mapping table
+            if (args.length > 2) {
+                try {
+                    int messageDispatcherPort = (args.length > 3)?Integer.parseInt(args[3]):0;
+                    int messageDispatcherBroadcastPort = (args.length > 4)?Integer.parseInt(args[4]):0;
+                    if (args[2] != null)
+                        NetworkNode.loadHostMappingTable(args[2], messageDispatcherPort, messageDispatcherBroadcastPort);
+                } catch (UnknownHostException e) {
+                    out.println("Error parsing host remap file: unknown host " + e.getMessage());
+                    return false;
                 }
+            }
 
-                // Load algorithm from file
-                algorithm = Algorithm.restoreFromFile(args[1]);
-                algorithms.add(algorithm);
+            // Load algorithm from file
+            algorithm = Algorithm.restoreFromFile(args[1]);
+            algorithms.add(algorithm);
 
-                // Reset host mapping table
-                NetworkNode.resetHostMappingTable();
+            // Reset host mapping table
+            NetworkNode.resetHostMappingTable();
 
-                return true;
-            } else out.println("Cannot restore algorithm from file if there is already one running");
+            return true;
         } catch (IOException e) {
             out.println(e.toString());
         } catch (ClassNotFoundException e) {
@@ -298,7 +299,7 @@ public class Application {
                 // Store algorithm to file
                 algorithm.storeToFile(args[1]);
                 return true;
-            } else out.println("No algorithm is running");
+            } else out.println("No running algorithm is selected");
         } catch (IOException e) {
             out.println(e.toString());
         }
@@ -319,8 +320,10 @@ public class Application {
     @ExecutableMethod(description = "stop current algorithm", arguments = {})
     public boolean algorithmStop(PrintStream out, String... args) {
         try {
-            if (algorithm != null)
+            if (algorithm != null) {
+                rmiStop(out);
                 algorithm.finalize();
+            }
         } catch (Throwable e) {
             out.println(e.toString());
         } finally {
@@ -343,6 +346,7 @@ public class Application {
      */
     @ExecutableMethod(description = "stop all algorithms", arguments = {})
     public boolean algorithmStopAll(PrintStream out, String... args) {
+        rmiStopAll(out);
         for (Algorithm alg : algorithms)
             try {
                 if (alg != null)
@@ -372,7 +376,7 @@ public class Application {
         if (algorithm != null) {
             out.println(algorithm.toString());
             return true;
-        } else out.println("No algorithm is running");
+        } else out.println("No running algorithm is selected");
         return false;
     }
 
@@ -390,7 +394,7 @@ public class Application {
      */
     @ExecutableMethod(description = "show info about all algorithms", arguments = {})
     public boolean algorithmInfoAll(PrintStream out, String... args) {
-        if (algorithm == null) {
+        if (algorithms.isEmpty()) {
             out.println("No algorithm is running");
             return false;
         } else {
@@ -398,7 +402,7 @@ public class Application {
                 out.print("Algorithm #");
                 out.print(i);
                 out.println(":");
-                out.println(algorithm.toString());
+                out.println(algorithms.get(i).toString());
             }
             return true;
         }
@@ -455,7 +459,12 @@ public class Application {
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */    
     @ExecutableMethod(description = "execute specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
-    public boolean operationExecute(PrintStream out, String... args) {       
+    public boolean operationExecute(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
         try {
             if (args.length < 2)
                 throw new NoSuchMethodException("The class of the operation must be specified");
@@ -533,6 +542,11 @@ public class Application {
      */    
     @ExecutableMethod(description = "execute on background specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationBgExecute(PrintStream out, String... args) {       
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
         // Get class from the first argument
         Class<AbstractOperation> operationClass;
         try {
@@ -592,6 +606,11 @@ public class Application {
      */
     @ExecutableMethod(description = "wait for all background operations", arguments = {})
     public boolean operationWaitBg(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
         try {
             algorithm.waitBackgroundExecuteOperation();
             if (bindOperationStatsRegexp != null)
@@ -625,7 +644,7 @@ public class Application {
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
     public boolean operationExecuteAgain(PrintStream out, String... args) {
         try {
-            if (lastOperation != null) {
+            if (algorithm != null && lastOperation != null) {
                 // Execute operation
                 OperationStatistics.resetLocalThreadStatistics();
                 if (bindOperationStatsRegexp != null)
@@ -753,6 +772,11 @@ public class Application {
      */ 
     @ExecutableMethod(description = "directly execute a method of the running algorithm", arguments = {"method name", "arguments for the method ..."})
     public boolean methodExecute(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
         try {
             // Get executed method
             for (Method method : algorithm.getClass().getMethods()) {
@@ -941,10 +965,15 @@ public class Application {
      * Open a named stream which allows to read {@link LocalAbstractObject objects} from a file.
      * Two required arguments specify the file name from which to open the stream and
      * the fully-qualified name of the stored object class.
-     * A third optional argument is the name under which the stream is opened
-     * (defaults to the file name if not specified). If this name is specified
-     * in place where {@link LocalAbstractObject} is argument required, the
-     * next object is read from the stream and used as the argument value.
+     * A third argument is the name under which the stream is opened.
+     * Additional arguments are passed as additional parameter of the object constructor
+     * (they are converted to proper constructor's type using {@link Convert#stringToType})
+     * as shown in the second example below.
+     * 
+     * <p>
+     * If the name (third argument) is then specified in place where {@link LocalAbstractObject}
+     * is argument required, the next object is read from the stream and used as the argument's value.
+     * </p>
      * 
      * <p>
      * Example of usage:
@@ -953,16 +982,26 @@ public class Application {
      * MESSIF &gt;&gt;&gt; operationExecute messif.operations.RangeQueryOperation my_data 1.3
      * MESSIF &gt;&gt;&gt; operationExecute messif.operations.kNNQueryOperation my_data 10
      * </pre>
-     * </p>
      * 
      * Note that the first two objects are read from the stream file /my/data/file.xx, first is used
      * as a query object for the range query, the second is used in the k-NN query.
+     * 
+     * A second example with a special class that requires some additional constructor parameters:
+     * <pre>
+     * public class MyClass {
+     *     public MyClass(BufferedReader stream, int value, String text) {
+     *         ... construct object from the stream ...
+     *     }
+     * }
+     * MESSIF &gt;&gt;&gt; objectStreamOpen /my/data/file.xx MyClass other_data 10 string_value
+     * </pre>
+     * </p>
      * 
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream (not required)" })
+    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional constructor arguments (not required)" })
     public boolean objectStreamOpen(PrintStream out, String... args) {
         try {
             // Store new stream into stream registry
@@ -984,28 +1023,27 @@ public class Application {
         }
     }
 
-    @ExecutableMethod(description = "add parameter to the specified LocalAbstractObject constructor", arguments = { "name of the stream", "parameter class", "parameter value" })
-    public boolean objectStreamAddParameter(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator<?> objectStream = objectStreams.get(args[1]);
-        if (objectStream != null) 
-            try {
-                Class<?> paramClass = Class.forName(args[2]);
-                // Add parameter
-                objectStream.addContructorParameter(paramClass, Convert.stringToType(args[3], paramClass, objectStreams));
-                return true;
-            } catch (ClassNotFoundException e) {
-                out.println(e.toString());
-            } catch (IllegalArgumentException e) {
-                out.println(e.toString());
-            } catch (InstantiationException e) {
-                out.println(e.toString());
-            }
-        else out.print("Stream '" + args[1] + "' is not opened");
-        return false;
-
-    }   
-
-    @ExecutableMethod(description = "set parameter of LocalAbstractObject constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required)" })
+    /**
+     * Sets a value of additional constructor parameter of an opened object stream.
+     * See {@link #objectStreamOpen} method for explanation of the concept of 
+     * additional constructor parameters.
+     * This method requires three arguments:
+     *   the name of the stream the name of which to change,
+     *   the constructor parameter index to change (zero-based) and
+     *   the the new value for the parameter.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data 1 new_string_value
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required)" })
     public boolean objectStreamSetParameter(PrintStream out, String... args) {
         StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
@@ -1025,7 +1063,22 @@ public class Application {
 
     }
 
-    @ExecutableMethod(description = "close an AbstractObjectStream stream", arguments = { "name of the stream" })
+    /**
+     * Closes a named object stream.
+     * An argument specifying the name of the stream to close is required.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamClose my_data
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
     public boolean objectStreamClose(PrintStream out, String... args) {
         StreamGenericAbstractObjectIterator objectStream = objectStreams.remove(args[1]);
         if (objectStream != null)
@@ -1039,6 +1092,22 @@ public class Application {
         return true;
     }
 
+    /**
+     * Resets a named object stream. It means that the objects are read from
+     * the beginning of the stream's file again.
+     * An argument specifying the name of the stream to reset is required.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamReset my_data
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "reset an AbstractObjectStream stream to read objects from the beginning", arguments = { "name of the stream" })
     public boolean objectStreamReset(PrintStream out, String... args) {
         StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
@@ -1054,10 +1123,23 @@ public class Application {
         return false;
     }
 
+    /**
+     * Prints the list of all opened object streams.
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamList
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "list all names of current streams", arguments = {})
     public boolean objectStreamList(PrintStream out, String... args) {
-        for(String name : objectStreams.keySet())
-            out.println(name);
+        for(Map.Entry<String, StreamGenericAbstractObjectIterator> entry : objectStreams.entrySet())
+            out.println(entry);
         return true;
     }
 
@@ -1185,8 +1267,8 @@ public class Application {
 
     @ExecutableMethod(description = "close the whole application (all connections will be closed)", arguments = { })
     public boolean quit(PrintStream out, String... args) {
-        if (algorithm != null) {
-            out.println("Cannot quit application interface if there is an algorithm running");
+        if (!algorithms.isEmpty()) {
+            out.println("Cannot quit application interface if there are some algorithms running");
             return false;
         }
         Thread.currentThread().getThreadGroup().interrupt();
@@ -1412,21 +1494,118 @@ public class Application {
 
     /****************** Own RMI processor ******************/
 
+    @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port" })
+    public boolean rmiStart(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
+        // Read port
+        int port;
+        try {
+            port = Integer.parseInt(args[1]);
+        } catch (RuntimeException ignore) {
+            out.println("Invalid port specified");
+            return false;
+        }
+
+        // Create RMI service
+        try {
+            RMIServer rmiServer = new RMIServer(algorithm, port);
+            rmiServers.add(rmiServer);
+            rmiServer.start();
+            return true;
+        } catch (Exception e) {
+            log.severe(e);
+            out.println("Cannot open RMI service: " + e);
+            return false;
+        }
+    }
+
+    @ExecutableMethod(description = "destroy RMI service for the current algorithm", arguments = {})
+    public boolean rmiStop(PrintStream out, String... args) {
+        Iterator<RMIServer> iterator = rmiServers.iterator();
+        while (iterator.hasNext()) {
+            RMIServer rmiServer = iterator.next();
+            if (algorithm == rmiServer.getAlgorithm()) {
+                rmiServer.interrupt();
+                iterator.remove();
+            }
+        }
+        return true;
+    }
+
+    @ExecutableMethod(description = "destroy RMI service for the current algorithm", arguments = {})
+    public boolean rmiStopAll(PrintStream out, String... args) {
+        Iterator<RMIServer> iterator = rmiServers.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().interrupt();
+            iterator.remove();
+        }
+        return true;
+    }
+
+    @ExecutableMethod(description = "shows information about RMI services for the current algorithm", arguments = {})
+    public boolean rmiInfo(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
+        int count = 0;
+        for (RMIServer rmiServer : rmiServers) {
+            if (algorithm == rmiServer.getAlgorithm()) {
+                out.println("RMI service is started at port " + rmiServer.getPort());
+                count++;
+            }
+        }
+
+        if (count == 0)
+            out.println("There is no RMI service for current algorithm");
+
+        return true;
+    }
+
+    @ExecutableMethod(description = "shows information about all RMI services", arguments = {})
+    public boolean rmiInfoAll(PrintStream out, String... args) {
+        if (rmiServers.isEmpty()) {
+            out.println("There are no started RMI services");
+        } else {
+            for (RMIServer rmiServer : rmiServers) {
+                out.print("RMI service (port ");
+                out.print(rmiServer.getPort());
+                out.print(") started for ");
+                out.println(rmiServer.getAlgorithm().getName());
+            }
+        }
+
+        return true;
+    }
+
     protected static class RMIServer extends Thread {
         protected final ServerSocketChannel socket;
-        protected final Application application;
+        protected final Algorithm algorithm;
         
-        public RMIServer(Application application, int port) throws IOException {
+        public RMIServer(Algorithm algorithm, int port) throws IOException {
             super("RMIServerThread");
-            this.application = application;
+            this.algorithm = algorithm;
             socket = ServerSocketChannel.open();
             socket.socket().bind(new InetSocketAddress(port));
             socket.configureBlocking(true);
         }
 
+        public Algorithm getAlgorithm() {
+            return algorithm;
+        }
+
+        public int getPort() {
+            return socket.socket().getLocalPort();
+        }
+
         public void run() {
             try {
-                for (;;) {
+                while (!isInterrupted()) {
                     // Get a connection (blocking mode)
                     final Socket connection = socket.accept().socket();
                     new Thread("RMIServerConnectionThread") {
@@ -1439,15 +1618,15 @@ public class Application {
                                     String methodName = in.readUTF();
                                     Object[] methodArguments = (Object[])in.readObject();
                                     try {
-                                        if (application.algorithm == null) {
+                                        if (algorithm == null) {
                                             out.writeObject(null);
                                         } else if (methodName.equals("executeOperation") && methodArguments.length > 0 && AbstractOperation.class.isInstance(methodArguments[0])) {
                                             AbstractOperation operation = (AbstractOperation)methodArguments[0];
-                                            application.algorithm.executeOperation(operation);
+                                            algorithm.executeOperation(operation);
                                             operation.clearSurplusData();
                                             out.writeObject(operation);
                                         } else {
-                                            out.writeObject(application.algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(application.algorithm, methodArguments));
+                                            out.writeObject(algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(algorithm, methodArguments));
                                         }
                                     } catch (AlgorithmMethodException e) {
                                         out.writeObject(e);
@@ -1648,7 +1827,7 @@ public class Application {
      */
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.err.println("Usage: Application [<cmdport>] [-rmi [<rmi port>]] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]");
+            System.err.println("Usage: Application [<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]");
             return;
         }
 
@@ -1669,24 +1848,6 @@ public class Application {
             System.err.println("Can't open telnet interface: " + e.toString());
             log.warning("Can't open telnet interface: " + e.toString());
             cmdSocket = null;
-        }
-
-        // Create RMI registry
-        if (args.length > argIndex && args[argIndex].equalsIgnoreCase("-rmi")) {
-            argIndex++;
-            int port = Registry.REGISTRY_PORT;
-            try {
-                port = Integer.parseInt(args[argIndex]);
-                argIndex++;
-            } catch (NumberFormatException ignore) {
-            } catch (IndexOutOfBoundsException ignore) {
-            }
-
-            try {
-                new RMIServer(application, port).start();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
 
         // Register to central controller

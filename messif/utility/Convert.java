@@ -758,19 +758,52 @@ public abstract class Convert {
      * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
      * @throws InvocationTargetException if there was an exception during instantiation
      */
-    @SuppressWarnings("unchecked")
     public static <E> E createInstanceWithInheritableArgs(Class<E> instanceClass, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
-        Class<?>[] argTypes = getObjectTypes(arguments);
-        for (Constructor<E> constructor : (Constructor<E>[])instanceClass.getConstructors()) // This cast IS A STUPID BUG!!!!
-            if (isPrototypeMatching(constructor.getParameterTypes(), argTypes))
-                try {
-                    return constructor.newInstance(arguments);
-                } catch (IllegalAccessException e) {
-                    // Cant access constructor, try another one
-                } catch (InstantiationException e) {
-                    throw new NoSuchMethodException(e.getMessage());
-                }
-        throw new NoSuchMethodException("There is no constructor for '" + instanceClass.toString() + "' matching the supplied arguments");
+        try {
+            return getConstructor(instanceClass, false, arguments).newInstance(arguments);
+        } catch (IllegalAccessException e) {
+            throw new NoSuchMethodException(e.getMessage());
+        } catch (InstantiationException e) {
+            throw new NoSuchMethodException(e.getMessage());
+        }
+    }
+
+    /**
+     * Returns a constructor for the specified class that accepts the specified arguments.
+     * The <code>clazz</code>'s declared constructors are searched for the one that
+     * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the 
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper constructor is found. Their types then will be
+     * compatible with the constructor.
+     * 
+     * @param <E> the class the constructor will create
+     * @param clazz the class for which to get the constructor
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link #stringToType}
+     * @param arguments the arguments for the constructor
+     * @return a constructor for the specified class
+     * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> Constructor<E> getConstructor(Class<E> clazz, boolean convertStringArguments, Object[] arguments) throws NoSuchMethodException {
+        for (Constructor<E> constructor : (Constructor<E>[])clazz.getDeclaredConstructors()) { // This cast IS A STUPID BUG!!!!
+            if (isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments))
+                return constructor;
+        }
+
+        // Constructor not found, prepare error
+        StringBuilder str = new StringBuilder("There is no constructor ");
+        str.append(clazz.getName()).append('(');
+        for (int i = 0; i < arguments.length; i++) {
+            if (i > 0)
+                str.append(", ");
+            if (arguments[i] == null)
+                str.append("null");
+            else
+                str.append(arguments[i].getClass().getName());
+        }
+        str.append(')');
+        throw new NoSuchMethodException(str.toString());
     }
 
     /**
@@ -817,6 +850,55 @@ public abstract class Convert {
         return isPrototypeMatching(methodTypes, methodPrototype, -1);
     }
 
+    /**
+     * Test argument array, if it is compatible with the provided prototype.
+     * That is, the number of arguments must be equal and each argument
+     * must be assignable to the respective <code>prototype</code> item.
+     * If the <code>convertStringArguments</code> is specified, the 
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if the method returns <tt>true</tt>.
+     * 
+     * @param prototype the tested prototype
+     * @param arguments the tested arguments
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link #stringToType}
+     * @return <tt>true</tt> if the arguments are compatible with the prototype
+     */
+    public static boolean isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments) {
+        // Not enough arguments
+        if (prototype.length != arguments.length)
+            return false;
+
+        // Array for the converted values (since they must not be modified if the method return false)
+        Object[] convertedArguments = null;
+
+        // Test arguments
+        for (int i = 0; i < prototype.length; i++) {
+            // Null value is accepted by any class
+            if (arguments[i] == null)
+                continue;
+            // The argument of the method must be the same as or a superclass of the provided prototype class
+            if (!prototype[i].isInstance(arguments[i])) {
+                if (!convertStringArguments || !(arguments[i] instanceof String))
+                    return false;
+                // Try to convert string argument
+                try {
+                    // Clone argument array if not clonned yet
+                    if (convertedArguments == null)
+                        convertedArguments = arguments.clone();
+                    convertedArguments[i] = stringToType((String)arguments[i], prototype[i]);
+                } catch (InstantiationException ignore) {
+                    return false;
+                }
+            }
+        }
+
+        // Move converted arguments
+        if (convertedArguments != null)
+            System.arraycopy(convertedArguments, 0, arguments, 0, arguments.length);
+
+        return true;
+    }
+    
     /**
      * Returns a new instance of a static array.
      * @param <T> the type of components of the new array

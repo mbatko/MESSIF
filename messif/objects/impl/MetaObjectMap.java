@@ -9,9 +9,13 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import messif.objects.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
@@ -75,13 +79,37 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
 
     /**
      * Creates a new instance of MetaObjectMap from a text stream.
+     * Only objects for names specified in <code>restrictNames</code> are added.
+     * @param stream the text stream to read an object from
+     * @param restrictNames if not <tt>null</tt> only the names specified in this collection are added to the objects table
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectMap(BufferedReader stream, Set<String> restrictNames) throws IOException {
+        this.objects = new TreeMap<String, LocalAbstractObject>();
+        readObjects(stream, restrictNames);
+    }    
+
+    /**
+     * Creates a new instance of MetaObjectMap from a text stream.
+     * Only objects for names specified in <code>restrictNames</code> are added.
+     * @param stream the text stream to read an object from
+     * @param restrictNames if not <tt>null</tt> only the names specified in this collection are added to the objects table
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectMap(BufferedReader stream, String[] restrictNames) throws IOException {
+        this(stream, (restrictNames == null)?null:new HashSet<String>(Arrays.asList(restrictNames)));
+    }
+
+    /**
+     * Creates a new instance of MetaObjectMap from a text stream.
      * @param stream the text stream to read an object from
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
     public MetaObjectMap(BufferedReader stream) throws IOException {
-        this.objects = new TreeMap<String, LocalAbstractObject>();
-        readObjects(stream);
+        this(stream, (Set<String>)null);
     }    
 
 
@@ -130,10 +158,11 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     /**
      * Fills this instance of MetaObject from a text stream.
      * @param stream the text stream to read the objects from
+     * @param restrictNames if not <tt>null</tt> only the names specified in this collection are added to the objects table
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    protected void readObjects(BufferedReader stream) throws IOException {
+    protected void readObjects(BufferedReader stream, Collection<String> restrictNames) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
         do {
@@ -157,7 +186,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         // Read objects and add them to the collection
         for (i++; i < uriNamesClasses.length; i += 2) {
             LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
-            if (object != null) {
+            if (object != null && (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1]))) {
                 object.setObjectKey(this.objectKey);
                 objects.put(uriNamesClasses[i - 1], object);
             }

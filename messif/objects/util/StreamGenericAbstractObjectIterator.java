@@ -8,12 +8,14 @@
 package messif.objects.util;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.zip.GZIPInputStream;
 import messif.objects.LocalAbstractObject;
@@ -27,8 +29,10 @@ import messif.utility.Convert;
  * @param <E> the class of objects provided by this stream iterator (must be descendant of {@link LocalAbstractObject})
  * @author xbatko
  */
-public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends AbstractObjectIterator<E> {
+public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends AbstractObjectIterator<E> implements Closeable {
     
+    //****************** Attributes ******************//
+
     /** An input stream for reading objects of this iterator from */
     protected BufferedReader stream;
     /** Remembered name of opened file to provide reset capability */
@@ -38,45 +42,67 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     /** Instance of the current object */
     protected E currentObject;
     /** Class instance of objects of type E needed for instantiating objects read from a stream */
-    protected Constructor<? extends E> constructor;
+    protected final Constructor<? extends E> constructor;
     /** Arguments for the constructor (first will always be the stream) */
-    protected Object[] constructorArgs;
+    protected final Object[] constructorArgs;
     /** Error encountered when accessing next object */
-    protected String lastError = null;
+    protected String lastError;
 
+
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of StreamGenericAbstractObjectIterator.
-     * The objects are loaded from a given file on the fly as the contents are iterated.
+     * The objects are loaded from the given stream on the fly as this iterator is iterated.
+     * The constructor of <code>objClass</code> that acceps {@link BufferedReader}
+     * as the first argument and all the arguments from the <code>constructorArgs</code>
+     * is used to read objects from the stream.
      *
      * @param objClass the class used to create the instances of objects in this stream
      * @param stream stream from which objects are read and instantiated
+     * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Collection<?> constructorArgs) throws IllegalArgumentException {
         this.stream = stream;
-        this.fileName = null;
-        this.constructorArgs = new Object[] { stream };
 
+        // Read constructor arguments
+        this.constructorArgs = new Object[(constructorArgs == null)?1:(1+constructorArgs.size())];
+
+        // First argument of the prototype is always BufferedReader
+        this.constructorArgs[0] = stream;
+
+        // Next arguments
+        if (constructorArgs != null) {
+            int i = 1;
+            for (Object arg : constructorArgs)
+                this.constructorArgs[i++] = arg;
+        }
+
+        // Get constructor for arguments
         try {
-            this.constructor = objClass.getDeclaredConstructor(BufferedReader.class);
+            this.constructor = Convert.getConstructor(objClass, true, this.constructorArgs);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Object " + objClass + " lacks proper constructor: " + e.getMessage());
         }
-        this.nextObject = nextStreamObject();   // hasNext is set automatically
+
+        // Read first object from the stream (hasNext is set automatically)
+        this.nextObject = nextStreamObject();
     }
 
     /**
      * Creates a new instance of StreamGenericAbstractObjectIterator.
-     * The objects are loaded from a given file on the fly as the contents are iterated.
+     * The objects are loaded from the given file on the fly as this iterator is iterated.
+     * If the <code>fileName</code> is empty, <tt>null</tt> or dash, standard input is used.
      *
      * @param objClass the class used to create the instances of objects in this stream
      * @param fileName the path to a file from which objects are read
+     * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IOException if there was an error opening the file
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName) throws IllegalArgumentException, IOException {
-        this(objClass, new BufferedReader(new InputStreamReader(openFileInputStream(fileName))));
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Collection<?> constructorArgs) throws IllegalArgumentException, IOException {
+        this(objClass, new BufferedReader(new InputStreamReader(openFileInputStream(fileName))), constructorArgs);
 
         // Set file name to provided value - it is used in reset functionality
         if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
@@ -86,15 +112,29 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     }
 
     /**
-     * Creates a new instance of StreamGenericAbstractObjectIterator from standard input.
-     * The objects are loaded from the standard input on the fly as the contents are iterated.
+     * Creates a new instance of StreamGenericAbstractObjectIterator.
+     * The objects are loaded from the given file on the fly as this iterator is iterated.
+     * If the <code>fileName</code> is empty, <tt>null</tt> or dash, standard input is used.
      *
      * @param objClass the class used to create the instances of objects in this stream
+     * @param fileName the path to a file from which objects are read
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IOException if there was an error opening the file
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass) throws IllegalArgumentException, IOException {
-        this(objClass, (String)null);
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName) throws IllegalArgumentException, IOException {
+        this(objClass, fileName, null);
+    }
+
+    /**
+     * Creates a new instance of StreamGenericAbstractObjectIterator.
+     * The objects are loaded from the given stream on the fly as this iterator is iterated.
+     *
+     * @param objClass the class used to create the instances of objects in this stream
+     * @param stream stream from which objects are read and instantiated
+     * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
+     */
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
+        this(objClass, stream, null);
     }
 
     /**
@@ -112,58 +152,55 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     }
 
 
-    /****************** Adding parameters ******************/
+    //****************** Attribute access methods ******************//
 
     /**
-     * Adds one parameter to this stream's object constructor.
-     * After a successful call to this method, the constructor of the encapsulated
-     * object class will be called with additional argument (same for all instances).
-     * @param paramClass the class of added parameter that must correspond with constructor
-     * @param paramValue the value to pass to the constructor
-     * @throws IllegalArgumentException if there is no appropriate constructor in the object's class (the previous constructor remains untouched)
-     */
-    public void addContructorParameter(Class<?> paramClass, Object paramValue) throws IllegalArgumentException {
-        if (!paramClass.isInstance(paramValue))
-            throw new IllegalArgumentException("Supplied object is not compatible with supplied class");
-
-        Class<?>[] argTypes = constructor.getParameterTypes();
-        Class<?>[] newArgTypes = new Class<?>[argTypes.length + 1];
-        System.arraycopy(argTypes, 0, newArgTypes, 0, argTypes.length);
-        newArgTypes[argTypes.length] = paramClass;
-        try {
-            this.constructor = constructor.getDeclaringClass().getDeclaredConstructor(newArgTypes);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " lacks proper constructor: " + e.getMessage());
-        }
-        Object[] args = constructorArgs;
-        constructorArgs = new Object[args.length + 1];
-        System.arraycopy(args, 0, constructorArgs, 0, args.length);
-        constructorArgs[args.length] = paramValue;
-    }
-
-    /**
-     * Sets additional parameter of this stream's object constructor.
-     * This method can be used to change object passed to {@link #addContructorParameter addContructorParameter}.
-     * @param index the parameter index to change
+     * Sets the value of this stream's object constructor argument.
+     * This method can be used to change object passed to <code>constructorArgs</code>.
+     * 
+     * @param index the parameter index to change (zero-based)
      * @param paramValue the changed value to pass to the constructor
      * @throws IllegalArgumentException when the passed object is incompatible with the constructor's parameter
      * @throws IndexOutOfBoundsException if the index parameter is out of bounds (zero parameter cannot be changed)
      * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
      */
     public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
+        if (index++ < 0 || index >= constructorArgs.length) // index is incremented because the first argument is always the stream
+            throw new IndexOutOfBoundsException("Invalid index (" + index + ") for " + constructor.toString());
         Class<?>[] argTypes = constructor.getParameterTypes();
-        if (index <= 0 || index >= argTypes.length)
-            throw new IndexOutOfBoundsException("Invalid argument passed for " + constructor.toString());
         if (!argTypes[index].isInstance(paramValue)) {
             if (paramValue instanceof String)
                 paramValue = Convert.stringToType((String)paramValue, argTypes[index]);
-            else throw new IllegalArgumentException("Supplied object must be instance of " + argTypes[index].getName());
+            else
+                throw new IllegalArgumentException("Supplied object must be instance of " + argTypes[index].getName());
         }
         constructorArgs[index] = paramValue;
     }
 
+    /**
+     * Returns the name of the file opened by this stream.
+     * <tt>Null</tt> is returned if this stream was created from the standard input
+     * or from a stream.
+     * @return the name of the file opened by this stream
+     */
+    public String getFileName() {
+        return fileName;
+    }
 
-    /****************** Iterator methods ******************/
+    @Override
+    public String toString() {
+        StringBuilder str = new StringBuilder("Stream of '");
+        str.append(constructor.getDeclaringClass().getName());
+        str.append("' from ");
+        if (fileName == null)
+            str.append(stream);
+        else
+            str.append(fileName);
+        return str.toString();
+    }
+
+
+    //****************** Iterator methods ******************//
 
     /**
      * Returns the next object instance from the stream.
@@ -185,7 +222,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
         nextObject = nextStreamObject();
         return currentObject;
     }
-    
+
     /**
      * Returns an instance of object returned by the last call to next().
      * @return an instance of object returned by the last call to next()
@@ -218,7 +255,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     }
 
 
-    /****************** Support for reading from a stream *************/
+    //****************** Support for reading from a stream *************//
 
     /**
      * Returns an instance of object which would be returned by next call to next().
@@ -242,7 +279,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
                 throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor invocation ended up with an exception: " + e.getMessage());
         }
     }
-    
+
     /**
      * Close the associated stream.
      * The iteration is finished, hasNext() will return <tt>false</tt>.
@@ -253,7 +290,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
         stream.close();
         nextObject = null;
     }
-    
+
     /**
      * Reset the associated stream and restarts the iteration from beginning.
      * @throws IOException if there was an I/O error re-opening the file
