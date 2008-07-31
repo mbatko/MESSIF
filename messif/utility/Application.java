@@ -7,28 +7,26 @@
 package messif.utility;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +37,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
+import messif.algorithms.AlgorithmRMIServer;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
@@ -63,7 +62,6 @@ import messif.statistics.Statistics;
  * The parameters can be any combination of
  * <ul>
  *   <li><code>&lt;cmdport&gt;</code> a TCP port with telnet interface</li>
- *   <li><code>-rmi &lt;port&gt;</code> will listen for RMI connections on port <code>&lt;port&gt;</code></li>
  *   <li><code>-register &lt;host&gt;:&lt;port&gt;</code> send UDP "alive" announcements to the specified &lt;host&gt;:&lt;port&gt;</li>
  *   <li><code>&lt;controlFile&gt; [action] [var=value ...]]</code> executes <code>action</code> in the specified <code>controlFile</code> (optionally with setting variables)</li>
  * </ul>
@@ -96,6 +94,7 @@ import messif.statistics.Statistics;
  *  &lt;actionName&gt;.repeat = &lt;repeats&gt;
  *  &lt;actionName&gt;.foreach = &lt;value&gt; &lt;value&gt; ...
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
+ *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
  * <ul>
  * <li>&lt;actionName&gt; is a user specified name for the action which can be reffered from other
@@ -111,13 +110,16 @@ import messif.statistics.Statistics;
  *                executed multiple times - the number of repeats is equal to the number of values provided.
  *                Moreover, in each iteration the variable &lt;actionName&gt; is assigned &lt;value&gt; taken
  *                one by one from the <i>foreach</i> parameter</li>
- * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to file
+ * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all succesive writes are appended to this file
- *  until this batch run finishes.
+ *  until this batch run finishes.</li>
+ * <li><i>assign</i> parameter is optional and allows to redirect output of this block to a variable
+ *  &lt;variable name&gt;. The previous contents of the variable are replaced by the new value and the
+ *  variable is available after the action with "assign" is finished</li>
  * <li><i>postponeUntil</i> parameter is optional and allows to postpone the action until the specified
  *  time. The whole execution of the control file is paused. If the specified time is in the past,
- *  this parameter is ignored. Note that the postponeUntil is working within one day.
+ *  this parameter is ignored. Note that the postponeUntil is working within one day.</li>
  * </ul>
  * <p>
  * All parameters, method name and output file are subject to variable expansion.
@@ -150,7 +152,7 @@ public class Application {
     protected List<Algorithm> algorithms = new ArrayList<Algorithm>();
 
     /** List of RMI services for algorithms */
-    protected List<RMIServer> rmiServers = new ArrayList<RMIServer>();
+    protected List<AlgorithmRMIServer> rmiServers = new ArrayList<AlgorithmRMIServer>();
 
     /** Last executed operation */
     protected AbstractOperation lastOperation = null;
@@ -173,7 +175,7 @@ public class Application {
     }
 
 
-    /****************** Algorithm command functions ******************/
+    //****************** Algorithm command functions ******************//
 
     /**
      * Creates a new instance of algorithm.
@@ -437,7 +439,7 @@ public class Application {
     }
 
 
-    /****************** Operation command functions ******************/
+    //****************** Operation command functions ******************//
 
     /**
      * Executes a specified operation on current algorithm.
@@ -750,7 +752,7 @@ public class Application {
     }
 
 
-    /****************** Direct algoritm methods execution ******************/
+    //****************** Direct algoritm methods execution ******************//
 
     /**
      * Directly execute a method of the running algorithm.
@@ -805,7 +807,7 @@ public class Application {
             return false;
         } catch (InvocationTargetException e) {
             Throwable ex = e.getCause();
-            if (ex instanceof AlgorithmMethodException)
+            if (ex instanceof AlgorithmMethodException || ex instanceof InvocationTargetException)
                 ex = ex.getCause();
             log.severe(ex);
             out.println(ex.toString());
@@ -818,7 +820,7 @@ public class Application {
     }
 
 
-    /****************** Statistics command functions ******************/
+    //****************** Statistics command functions ******************//
 
     /**
      * Disable (or enable) gathering of statistics.
@@ -958,8 +960,8 @@ public class Application {
         return true;
     }
 
-    
-    /****************** Object stream command functions ******************/
+
+    //****************** Object stream command functions ******************//
 
     /**
      * Open a named stream which allows to read {@link LocalAbstractObject objects} from a file.
@@ -1144,7 +1146,7 @@ public class Application {
     }
 
 
-    /****************** Logging command functions ******************/
+    //****************** Logging command functions ******************//
 
     /**
      * Get or set global level of logging.
@@ -1177,6 +1179,24 @@ public class Application {
         return true;
     }
 
+    /**
+     * Set the logging level of console.
+     * One argument specifying the logging level is required.
+     * Allowed argument values are names of {@link Level logging level} constants.
+     * Note that the messages with lower logging level than the current global
+     * logging level will not be printed regardless of the console logging level setting.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; loggingConsoleChangeLevel info
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "set logging level for console", arguments = { "new logging level" })
     public boolean loggingConsoleChangeLevel(PrintStream out, String... args) {
         try {
@@ -1188,6 +1208,33 @@ public class Application {
         return true;
     }
 
+    /**
+     * Adds a file for writing loging messages.
+     * The first required argument specifies the name of the file to open.
+     * The second argument (defaults to global logging level) specifies the
+     * logging level of messages that will be stored in the file.
+     * The third argument is a flag if the file is overwritten or appended to if it exists
+     * and defaults to appending.
+     * The fourth argument specifies whether to use XML or text (the default) format.
+     * Allowed argument values are names of {@link Level logging level} constants.
+     * The fifth optional argument specifies a regular expression that the message must satisfy
+     * in order to be written in this file. 
+     * The sixth argument specifies the message part that the regular expression
+     * is applied to - see {@link Logger.RegexpFilterAgainst} values for explanation.
+     * Note that the messages with lower logging level than the current global
+     * logging level will not be printed regardless of the file's logging level.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; loggingFileAdd myFile.log info true false messif.* CLASS_NAME
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME" })
     public boolean loggingFileAdd(PrintStream out, String... args) {
         try {
@@ -1212,6 +1259,22 @@ public class Application {
         }
     }
 
+    /**
+     * Removes loging file.
+     * The file must be previously opened by {@link #loggingFileAdd}.
+     * A required argument specifies the name of the opened logging file to close.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; loggingFileRemove myFile.log
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "close log file", arguments = { "file name" })
     public boolean loggingFileRemove(PrintStream out, String... args) {
         try {
@@ -1223,6 +1286,26 @@ public class Application {
         }
     }
 
+
+    /**
+     * Changes the loging level of an opened logging file.
+     * The file must be previously opened by {@link #loggingFileAdd}.
+     * The first required argument specifies the name of the opened logging file to close
+     * and the second one the new logging level to set.
+     * Note that the messages with lower logging level than the current global
+     * logging level will not be printed regardless of the file's logging level.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; loggingFileChangeLevel myFile.log fine
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "change file log level", arguments = { "file name", "new logging level" })
     public boolean loggingFileChangeLevel(PrintStream out, String... args) {
         try {
@@ -1238,8 +1321,25 @@ public class Application {
     }
 
 
-    /****************** Miscellaneous command functions ******************/
+    //****************** Miscellaneous command functions ******************//
 
+
+    /**
+     * Schedules {@link System#gc() full garbage collection}.
+     * If an optional argument is passed, the application will sleep for the number
+     * of miliseconds specified.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; collectGarbage 30000
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "shedule full garbage collection", arguments = { "time to sleep (optional)" })
     public boolean collectGarbage(PrintStream out, String... args) {
         System.gc();
@@ -1255,6 +1355,21 @@ public class Application {
         return true;
     }
 
+
+    /**
+     * Displays the memory usage of this virtual machine.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; memoryUsage
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "display memory usage", arguments = { })
     public boolean memoryUsage(PrintStream out, String... args) {
         Runtime runtime = Runtime.getRuntime();
@@ -1265,6 +1380,23 @@ public class Application {
         return true;
     }
 
+
+    /**
+     * Exits this application.
+     * Note that there cannot be any algorithms running.
+     * All command connections to the application will be closed.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; quit
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "close the whole application (all connections will be closed)", arguments = { })
     public boolean quit(PrintStream out, String... args) {
         if (!algorithms.isEmpty()) {
@@ -1275,50 +1407,167 @@ public class Application {
         return true;
     }
 
+    /**
+     * Prints the parameters to the output.
+     * If the first argument contains "+", it is treated as "<em>inner</em>+<em>final</em>"
+     * separators. In the separators, special texts "SPACE" and "NEWLINE" can be specified.
+     * All additional parameters are then added to the output separated by the inner separators
+     * and followed by the final separator.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; echo NEWLINE+NEWLINE x y z
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "prints a specified message", arguments = { "output type separator (defaults to SPACE+NEWLINE)", "values..." })
+    public boolean echo(PrintStream out, String... args) {
+        // Set default separator
+        String separator = "SPACE";
+        String lastSeparator = "NEWLINE";
+        int argIndex = 1;
+
+        // Parse separators
+        if (args.length > 2) {
+            int pos = args[argIndex].indexOf('+');
+            if (pos != -1) {
+                separator = args[argIndex].substring(0, pos);
+                lastSeparator = (pos >= args[argIndex].length() - 1)?"":args[argIndex].substring(pos + 1);
+                argIndex++;
+            }
+        }
+
+        // Replace "magic" words from separators
+        if (separator.equals("NEWLINE"))
+            separator = null;
+        else
+            separator = separator.replace("SPACE", " ");
+        if (lastSeparator.equals("NEWLINE"))
+            lastSeparator = null;
+        else
+            lastSeparator = separator.replace("SPACE", " ");
+
+        // Print first value
+        if (argIndex < args.length)
+            out.print(args[argIndex++]);
+        // Print additional values
+        while (argIndex < args.length) {
+            if (separator != null)
+                out.print(separator);
+            else
+                out.println();
+            out.print(args[argIndex++]);
+        }
+        if (lastSeparator != null)
+            out.print(lastSeparator);
+        else
+            out.println();
+        return true;
+    }
+
+    /**
+     * Computes a sum of the parameters and prints the result to the output.
+     * The first argument is the {@link DecimalFormat output format} used
+     * for printing the value. All computations are done in doubles.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; sum #,##0.## 10 20 30
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "computes a sum of values", arguments = { "format", "numeric values..." })
+    public boolean sum(PrintStream out, String... args) {
+        int i = 2;
+        try {
+            NumberFormat format = new DecimalFormat(args[1]);
+            double sum = Double.parseDouble(args[i]);
+            for (i++; i < args.length; i++)
+                sum += Double.parseDouble(args[i]);
+            out.println(format.format(sum));
+            return true;
+        } catch (IndexOutOfBoundsException e) {
+            out.println("Number format and at least one value must be specified");
+            return false;
+        } catch (NumberFormatException e) {
+            out.println("Cannot parse number #" + i + ": " + e.getMessage());
+            return false;
+        } catch (IllegalArgumentException e) {
+            out.println("Number format '" + args[1] + "' is invalid: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Decodes a value to some other value according to a regular expression.
+     * The first argument is the value to be decoded.
+     * Second parameter is a regular expression to match the value against.
+     * If a match is found, the third parameter is added to output followed by a new line.
+     * Otherwise, fourth parameter's regular expression is tried, and so on until a match
+     * is found or parameters end.
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; decode mySpecVal ^your Y ^my M .* unknown
+     * </pre>
+     * </p>
+     * 
+     * <p>
+     * Additionally, a map-based syntax can be used with only two parameters:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; decode mySpecVal "^your"="Y","^my"=M,.*="unknown"
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "decodes a value", arguments = { "checked value", "match1", "result1 ..." })
+    public boolean decode(PrintStream out, String... args) {
+        try {
+            if (args.length == 3) {
+                for (Map.Entry<String, String> entry : Convert.stringToMap(args[2]).entrySet()) {
+                    if (args[1].matches(entry.getKey())) {
+                        out.println(entry.getValue());
+                        return true;
+                    }
+                }
+            } else {
+                for (int i = 3; i < args.length; i += 2) {
+                    if (args[1].matches(args[i - 1])) {
+                        out.println(args[i]);
+                        return true;
+                    }
+                }
+            }
+        } catch (IndexOutOfBoundsException e) {
+            out.println("Decode requires at least two parameters");
+            return false;
+        }
+
+        return true;
+    }
+
 
     /****************** Control file command functions ******************/
 
     /** Pattern that match variables in control files */
     private static final Pattern variablePattern = Pattern.compile("<([^>]+)>", Pattern.MULTILINE);
 
-    /** This method reads and executes one action (with name actionName) from the control file (props).
-     *
-     *  Action should have the following format:
-     *  <actionName> = <methodName>
-     *  <actionName>.param.1 = <first parameter of method>
-     *  <actionName>.param.2 = <first parameter of method>
-     *  <actionName>.param.3 = <first parameter of method>
-     *  <actionName>.param.4 = <first parameter of method>
-     *  ...
-     *  <actionName>.repeat = 1 (this line is optional, default is repeat = 1)
-     *  <actionName>.foreach = <value> <value> ... (this line is optional)
-     *  <actionName>.outputFile = <filename> (this line is optional)
-     *
-     *
-     *  <methodName> can be any method from this Application interface, i.e. any name
-     *  of a public method that has String return type and "String..." arguments.
-     *  All parameters and the method name are subject to variable expansion. Variables
-     *  can be specified as additional arguments to controlFile command.
-     *
-     *  A special (block) action can be specified as:
-     *  <actionName> = <otherActionName1> <otherActionName2> ...
-     *  The otherActionNames are executed one after another in their order and they are
-     *  also subject to variable expansion.
-     *  
-     *  The repeat parameter is optional and allows to specify multiple execution of
-     *  the same action. It can be used together with "block" method name to implement
-     *  a loop of commands with specified number of repeats.
-     *
-     *  The foreach parameter is optional and allows to specify multiple execution of
-     *  the same action. The action is executed so many times, how many values are specified.
-     *  Each iteration runs with given <value> that is accessible in the <actionName> variable, 
-     *  which is propagated to all actions specified by this actionName:
-     *  (actionName = <action1> <action2> ...)
-     *
-     *  The outputFile parameter is optional and allows to redirect output of this block to file
-     *  <filename>. When this filename is reached for the first time, it is opened for writing
-     *  (previous contents are destroyed) and all succesive writes are appended to this file
-     *  until end.
+    /**
+     * This method reads and executes one action (with name actionName) from the control file (props).
+     * For a full explanation of the command sytax see {@link Application}.
      * 
      * @param out the stream to write the output to
      * @param props the properties with actions
@@ -1357,7 +1606,7 @@ public class Application {
         } while (arg != null);
 
         // Store the method name in a separate variable to speed things up
-        String methodName = arguments.get(0);
+        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, variables);
 
         // SPECIAL! For objectStreamOpen method a third parameter is automatically added from action name
         if (methodName.equals("objectStreamOpen") && arguments.size() == 3)
@@ -1381,6 +1630,16 @@ public class Application {
         } catch (FileNotFoundException e) {
             out.println("Wrong outputFile for action '" + actionName + "': " + e.getMessage());
             return false;
+        }
+
+        // Read assign parameter
+        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, variables);
+        ByteArrayOutputStream assignOutput;
+        if (assignVariable != null) {
+            assignOutput = new ByteArrayOutputStream();
+            outputStream = new PrintStream(assignOutput);
+        } else {
+            assignOutput = null;
         }
 
         // Read number of repeats of this method
@@ -1420,6 +1679,8 @@ public class Application {
                     Object rtv = methodExecutor.execute(outputStream, arguments.toArray(new String[arguments.size()]));
                     outputStream.flush();
                     if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue()) {
+                        if (assignOutput != null)
+                            out.print(assignOutput.toString());
                         out.println("Action '" + actionName + "' failed - control file execution was terminated");
                         return false;
                     }
@@ -1438,6 +1699,10 @@ public class Application {
             if (foreachValues != null)
                 variables.remove(actionName);
 
+            // Assign variable is requested
+            if (assignVariable != null && assignOutput != null)
+                variables.put(assignVariable, assignOutput.toString().trim());
+
             return true; // Execution successful
         } catch (InvocationTargetException e) {
             out.println(e.getCause());
@@ -1448,8 +1713,27 @@ public class Application {
 
         return false; // Execution unsuccessful - exception was printed
     }
-       
-    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "actions block name (optional)", "<var>=<value> ... (optional)" })
+
+    /**
+     * Executes actions from a control file.
+     * All commands that can be started from the prompt can be used in control files.
+     * The first argument is required to specify the file with commands.
+     * Additional arguments are either variable specifications in the form of "varname=value"
+     * or the action name that is started (which defaults to "actions").
+     * For a full explanation of the command sytax see {@link Application}.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "<var>=<value> ... (optional)", "actions block name (optional)" })
     public boolean controlFile(PrintStream out, String... args) {
         // Open control file and create properties
         Properties props = new Properties();
@@ -1492,8 +1776,24 @@ public class Application {
         return rtv;
     }
 
-    /****************** Own RMI processor ******************/
 
+    //****************** Own RMI processor ******************//
+
+    /**
+     * Creates an RMI service for the current algorithm.
+     * An arugment specifying the RMI TCP port is required.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; rmiStart 12345
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port" })
     public boolean rmiStart(PrintStream out, String... args) {
         if (algorithm == null) {
@@ -1512,7 +1812,7 @@ public class Application {
 
         // Create RMI service
         try {
-            RMIServer rmiServer = new RMIServer(algorithm, port);
+            AlgorithmRMIServer rmiServer = new AlgorithmRMIServer(algorithm, port);
             rmiServers.add(rmiServer);
             rmiServer.start();
             return true;
@@ -1523,11 +1823,25 @@ public class Application {
         }
     }
 
+    /**
+     * Destroys all RMI services for the current algorithm.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; rmiStop
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "destroy RMI service for the current algorithm", arguments = {})
     public boolean rmiStop(PrintStream out, String... args) {
-        Iterator<RMIServer> iterator = rmiServers.iterator();
+        Iterator<AlgorithmRMIServer> iterator = rmiServers.iterator();
         while (iterator.hasNext()) {
-            RMIServer rmiServer = iterator.next();
+            AlgorithmRMIServer rmiServer = iterator.next();
             if (algorithm == rmiServer.getAlgorithm()) {
                 rmiServer.interrupt();
                 iterator.remove();
@@ -1536,9 +1850,23 @@ public class Application {
         return true;
     }
 
-    @ExecutableMethod(description = "destroy RMI service for the current algorithm", arguments = {})
+    /**
+     * Destroys all RMI services for all running algorithms.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; rmiStop
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "destroy RMI services for all running algorithms", arguments = {})
     public boolean rmiStopAll(PrintStream out, String... args) {
-        Iterator<RMIServer> iterator = rmiServers.iterator();
+        Iterator<AlgorithmRMIServer> iterator = rmiServers.iterator();
         while (iterator.hasNext()) {
             iterator.next().interrupt();
             iterator.remove();
@@ -1546,6 +1874,20 @@ public class Application {
         return true;
     }
 
+    /**
+     * Shows information about ports of the RMI services of the current algorithm.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; rmiInfo
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "shows information about RMI services for the current algorithm", arguments = {})
     public boolean rmiInfo(PrintStream out, String... args) {
         if (algorithm == null) {
@@ -1554,7 +1896,7 @@ public class Application {
         }
 
         int count = 0;
-        for (RMIServer rmiServer : rmiServers) {
+        for (AlgorithmRMIServer rmiServer : rmiServers) {
             if (algorithm == rmiServer.getAlgorithm()) {
                 out.println("RMI service is started at port " + rmiServer.getPort());
                 count++;
@@ -1567,12 +1909,26 @@ public class Application {
         return true;
     }
 
+    /**
+     * Shows information about all RMI services for all running algorithms.
+     * The information about RMI port and the algorithm name is printed.
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; rmiInfoAll
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
     @ExecutableMethod(description = "shows information about all RMI services", arguments = {})
     public boolean rmiInfoAll(PrintStream out, String... args) {
         if (rmiServers.isEmpty()) {
             out.println("There are no started RMI services");
         } else {
-            for (RMIServer rmiServer : rmiServers) {
+            for (AlgorithmRMIServer rmiServer : rmiServers) {
                 out.print("RMI service (port ");
                 out.print(rmiServer.getPort());
                 out.print(") started for ");
@@ -1583,177 +1939,15 @@ public class Application {
         return true;
     }
 
-    protected static class RMIServer extends Thread {
-        protected final ServerSocketChannel socket;
-        protected final Algorithm algorithm;
-        
-        public RMIServer(Algorithm algorithm, int port) throws IOException {
-            super("RMIServerThread");
-            this.algorithm = algorithm;
-            socket = ServerSocketChannel.open();
-            socket.socket().bind(new InetSocketAddress(port));
-            socket.configureBlocking(true);
-        }
 
-        public Algorithm getAlgorithm() {
-            return algorithm;
-        }
+    //****************** Socket interface processor ******************//
 
-        public int getPort() {
-            return socket.socket().getLocalPort();
-        }
-
-        public void run() {
-            try {
-                while (!isInterrupted()) {
-                    // Get a connection (blocking mode)
-                    final Socket connection = socket.accept().socket();
-                    new Thread("RMIServerConnectionThread") {
-                        public void run() {
-                            try {
-                                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-
-                                for (;;) {
-                                    String methodName = in.readUTF();
-                                    Object[] methodArguments = (Object[])in.readObject();
-                                    try {
-                                        if (algorithm == null) {
-                                            out.writeObject(null);
-                                        } else if (methodName.equals("executeOperation") && methodArguments.length > 0 && AbstractOperation.class.isInstance(methodArguments[0])) {
-                                            AbstractOperation operation = (AbstractOperation)methodArguments[0];
-                                            algorithm.executeOperation(operation);
-                                            operation.clearSurplusData();
-                                            out.writeObject(operation);
-                                        } else {
-                                            out.writeObject(algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(algorithm, methodArguments));
-                                        }
-                                    } catch (AlgorithmMethodException e) {
-                                        out.writeObject(e);
-                                    } catch (InvocationTargetException e) {
-                                        out.writeObject(e.getCause());
-                                    } catch (NoSuchMethodException e) {
-                                        out.writeObject(e);
-                                    } catch (IllegalAccessException e) {
-                                        out.writeObject(e);
-                                    } catch (RuntimeException e) {
-                                        out.writeObject(e);
-                                    }
-                                }
-                            } catch (ClosedByInterruptException e) {
-                                // Exit this thread by interruption
-                                try { connection.close(); } catch (IOException ignore) {} // ignore exceptions when closing
-                            } catch (EOFException e) {
-                                // Connection closed, exiting
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                                try { connection.close(); } catch (IOException ignore) {} // ignore exceptions when closing
-                            } catch (ClassNotFoundException e) {
-                                e.printStackTrace();
-                                try { connection.close(); } catch (IOException ignore) {} // ignore exceptions when closing
-                            }        
-                        }
-                    }.start();
-                }
-            } catch (ClosedByInterruptException e) {
-                // Exit this thread by interruption
-            } catch (IOException e) {
-                System.err.println(e.toString());
-                log.severe(e);
-            }
-        }
-    }
-
-    public static class RMIClient {
-        protected Socket socket = null;
-
-        protected ObjectInputStream in = null;
-        protected ObjectOutputStream out = null;
-
-        public RMIClient() {
-        }
-
-        protected void finalize() throws Throwable {
-            // Clean up connection
-            if (isConnected())
-                disconnectFromApplication();
-        }
-
-        public String getHost() {
-            if (!isConnected())
-                return null;
-            return socket.getInetAddress().getHostName();
-        }
-
-        public int getPort() {
-            if (!isConnected())
-                return 0;
-            return socket.getPort();
-        }
-
-        public boolean isConnected() {
-            return (socket != null) && socket.isConnected();
-        }
-
-        public synchronized void connectToApplication(String host, int port) throws UnknownHostException, IOException {
-            connectToApplication(InetAddress.getByName(host), port);
-        }
-
-        public synchronized void connectToApplication(InetAddress host, int port) throws IOException {
-            if (isConnected())
-                throw new IllegalArgumentException("Already connected to application");
-            socket = new Socket(host, port);
-            out = new ObjectOutputStream(socket.getOutputStream());
-            in = new ObjectInputStream(socket.getInputStream());
-        }
-
-        public synchronized void disconnectFromApplication() throws IOException {
-            if (socket != null) {
-                socket.close();
-                socket = null;
-                in = null;
-                out = null;
-            }
-        }
-
-        public synchronized void reconnectToApplication() throws IOException {
-            if (socket == null)
-                throw new IOException("Can't reconnect because application was not connected and thus host/port is unknown");
-            InetAddress host = socket.getInetAddress();
-            int port = socket.getPort();
-            try {
-                disconnectFromApplication();
-            } catch (IOException e) { /* ignore */ }
-            connectToApplication(host, port);
-        }
-
-        public synchronized Object methodExecute(String methodName, Object... methodArguments) throws Exception {
-            if (!isConnected())
-                throw new IllegalStateException("Application is disconnected, can't execute methods");
-
-            Object rtv;
-            try {
-                out.writeUTF(methodName);
-                out.writeObject(methodArguments);
-                rtv = in.readObject();
-            } catch (IOException e) {
-                // I/O exception during communication, try rectonnecting (if there is another IOException, it will be thrown!)
-                reconnectToApplication();
-                out.writeUTF(methodName);
-                out.writeObject(methodArguments);
-                rtv = in.readObject();
-            }
-            
-            if (rtv instanceof Exception)
-                throw (Exception)rtv;
-            return rtv;
-        }
-    }
-
-
-    /****************** Socket interface processor ******************/
-
-    public void processInteractiveSocket(SocketChannel connection) throws IOException {
+    /**
+     * Process an incoming command-prompt connection.
+     * @param connection the connection to process
+     * @throws IOException if there was a communication error
+     */
+    protected void processInteractiveSocket(SocketChannel connection) throws IOException {
         // Get next connection stream from socket
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.socket().getInputStream()));
         PrintStream out = new PrintStream(connection.socket().getOutputStream());
@@ -1793,34 +1987,51 @@ public class Application {
         }
     }
 
-    protected static class ControllerKeepaliveThread extends Thread {
+    /** Thread for sending i-am-alive packets to the peer control center. */
+    private static class ControllerKeepaliveThread extends Thread {
+        /** Socket used for sending data */
         protected final DatagramSocket socket;
+        /** Address of the peer control center to which the packets are sent */
         protected final NetworkNode remoteHost;
+        /** Time between sending packets in miliseconds */
         protected long timeout;
+
+        /**
+         * Creates a new instance of ControllerKeepaliveThread.
+         * @param localPort the local port used for sending data
+         * @param remoteHost the address of the peer control center to which the packets are sent
+         * @param timeout the time between sending packets in miliseconds
+         * @throws SocketException if the sending socket cannot be opened on the specified port
+         */
         public ControllerKeepaliveThread(int localPort, NetworkNode remoteHost, long timeout) throws SocketException {
             super("thApplicationControllerKeepalive");
             this.socket = new DatagramSocket(localPort);
             this.remoteHost = remoteHost;
             this.timeout = timeout;            
         }
+
+        @Override
         public void run() {
             try {
                 DatagramPacket packet = new DatagramPacket(new byte[] { 1 }, 1, remoteHost.getHost(), remoteHost.getPort());
-                while (true) try {
-                    synchronized (this) {
-                        socket.send(packet);
-                        wait(timeout);
+                try {
+                    for (;;) {
+                        synchronized (this) {
+                            socket.send(packet);
+                            wait(timeout);
+                        }
                     }
                 } catch (InterruptedException e) {
+                    // Interrupted means exiting - send exit notification
                     socket.send(new DatagramPacket(new byte[] { 0 }, 1, remoteHost.getHost(), remoteHost.getPort()));
-                    break;
                 }
             } catch (IOException e) {
             }
         }
     }
 
-    /****************** Main for application ******************/
+
+    //****************** Standalone application's main method ******************//
     
     /**
      * @param args the command line arguments
@@ -1860,7 +2071,7 @@ public class Application {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            else System.out.println("Can't register if there is no communication interface!");
+            else System.err.println("Can't register if there is no communication interface!");
         }
 
         // Put the rest of arguments to "controlFile" method
@@ -1879,6 +2090,7 @@ public class Application {
                     // Get a connection (blocking mode)
                     final SocketChannel connection = cmdSocket.accept();
                     new Thread("thApplicationCmdSocket") {
+                        @Override
                         public void run() {
                             try {
                                 application.processInteractiveSocket(connection);
@@ -1886,7 +2098,7 @@ public class Application {
                             } catch (ClosedByInterruptException e) {
                                 // Ignore this exception because it is a correct exit
                             } catch (IOException e) {
-                                System.out.println(e.toString());
+                                log.warning(e.toString());
                             }
                         }
                     }.start();
@@ -1894,7 +2106,6 @@ public class Application {
             } catch (ClosedByInterruptException e) {
                 // Ignore this exception because it is a correct exit
             } catch (IOException e) {
-                System.err.println(e.toString());
                 log.warning(e.toString());
             }
         }

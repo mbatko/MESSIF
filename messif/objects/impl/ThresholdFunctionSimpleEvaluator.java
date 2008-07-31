@@ -13,7 +13,10 @@ import java.util.regex.Pattern;
 import messif.objects.util.ThresholdFunction;
 
 /**
- *
+ * Evaluator for basic arithmetic functions.
+ * Basic arithmetic operations (+, -, *, /) are supported
+ * as well as numeric constants (treated as floats).
+ * 
  * @author xbatko
  */
 public class ThresholdFunctionSimpleEvaluator extends ThresholdFunction {
@@ -21,33 +24,51 @@ public class ThresholdFunctionSimpleEvaluator extends ThresholdFunction {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
+    //****************** Constants ******************//
 
-    protected final String[] descriptorNames;
-    protected final float[] descriptorCoeffs;
+    /** Pattern used to retrieve tokens from the function string */
+    private static final Pattern tokenizerPattern = Pattern.compile("\\s*(([\\w.,]+)|([-+*/]))\\s*");
+
+
+    //****************** Attributes ******************//
+
+    /** Parsed variable names that are used in evaluation */
+    private final String[] variableNames;
+
+    /** Parsed variable coefficients (weights) that are used in evaluation */
+    private final float[] variableCoeffs;
+
+
+    //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ThresholdFunctionSimpleEvaluator
+     * Creates a new instance of ThresholdFunctionSimpleEvaluator.
+     * The specified function is parsed and compiled. Basic arithmetic operations
+     * (+, -, *, /) are supported as well as numeric constants (float).
+     * Blank space is ignored and everything else is considered to be a variable.
+     * @param function the function string
+     * @throws IllegalArgumentException if the specified function cannot be parsed
      */
-    public ThresholdFunctionSimpleEvaluator(String function) {
+    public ThresholdFunctionSimpleEvaluator(String function) throws IllegalArgumentException {
         Map<String, Float> descriptorMap = parse(function);
+        if (descriptorMap.isEmpty())
+            throw new IllegalArgumentException("Specified function contains no variables");
 
         // Create internal arrays
-        descriptorNames = new String[descriptorMap.size()];
-        descriptorCoeffs = new float[descriptorMap.size()];
+        variableNames = new String[descriptorMap.size()];
+        variableCoeffs = new float[descriptorMap.size()];
         
         // Fill internal arrays
         int i = 0;
         for (Map.Entry<String, Float> entry : descriptorMap.entrySet()) {
-            descriptorNames[i] = entry.getKey();
-            descriptorCoeffs[i] = entry.getValue();
+            variableNames[i] = entry.getKey();
+            variableCoeffs[i] = entry.getValue();
             i++;
         }
     }
 
 
-    /****************** Expression parsing ******************/
-
-    private static final Pattern tokenizerPattern = Pattern.compile("\\s*(([\\w.,]+)|([-+*/]))\\s*");
+    //****************** Expression parsing ******************//
 
     /**
      * This is simple parser of arithmetic expressions with variables.
@@ -111,36 +132,37 @@ public class ThresholdFunctionSimpleEvaluator extends ThresholdFunction {
     }
 
 
-    /****************** Evaluating methods ******************/
+    //****************** Evaluating methods ******************//
 
     public float compute(float... distances) {
-        if (distances.length < descriptorCoeffs.length)
+        if (distances.length < variableCoeffs.length)
             throw new IndexOutOfBoundsException("Distance must be provided for each parameter");
         
         float rtv = 0;
-        for (int i = 0; i < descriptorCoeffs.length; i++)
-            rtv += descriptorCoeffs[i] * distances[i];
+        for (int i = 0; i < variableCoeffs.length; i++)
+            rtv += variableCoeffs[i] * distances[i];
         
         return rtv;
     }
 
     public String[] getParameterNames() {
-        return descriptorNames;
+        return variableNames;
     }
 
 
-    /****************** Evaluating methods ******************/
+    //****************** String conversion ******************//
 
     /**
      * Returns a string representation of the encapsulated function.
      * @return a string representation of the encapsulated function
      */
+    @Override
     public String toString() {
         StringBuffer buf = new StringBuffer("f = ");
         NumberFormat nf = NumberFormat.getNumberInstance();
         nf.setMaximumFractionDigits(5);
-        for (int i = Math.min(descriptorCoeffs.length, descriptorNames.length) - 1; i >= 0; i--) {
-            buf.append(nf.format(descriptorCoeffs[i])).append('*').append(descriptorNames[i]);
+        for (int i = Math.min(variableCoeffs.length, variableNames.length) - 1; i >= 0; i--) {
+            buf.append(nf.format(variableCoeffs[i])).append('*').append(variableNames[i]);
             if (i != 0)
                 buf.append(" + ");
         }
