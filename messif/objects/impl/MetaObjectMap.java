@@ -7,7 +7,10 @@ package messif.objects.impl;
 
 import java.io.BufferedReader;
 import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
@@ -111,6 +114,20 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     public MetaObjectMap(BufferedReader stream) throws IOException {
         this(stream, (Set<String>)null);
     }    
+
+
+    //****************** Factory method ******************//
+
+    /**
+     * Creates a meta object from the specified file.
+     * The constructor from {@link BufferedReader} is used.
+     * @param file the file to create the object from
+     * @return a new instance of MetaObjectMap
+     * @throws IOException if there was an error reading from the specified file
+     */
+    public static MetaObjectMap create(File file) throws IOException {
+        return new MetaObjectMap(new BufferedReader(new InputStreamReader(new FileInputStream(file))));
+    }
 
 
     //****************** Clonning ******************//

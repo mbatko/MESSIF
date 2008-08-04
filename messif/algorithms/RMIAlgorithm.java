@@ -131,6 +131,7 @@ public class RMIAlgorithm extends Algorithm {
         if (!isConnected()) {
             socket = new Socket(host, port);
             out = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            out.flush();
             in = new ObjectInputStream(socket.getInputStream());
         }
     }

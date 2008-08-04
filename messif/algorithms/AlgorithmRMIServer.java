@@ -79,6 +79,7 @@ public class AlgorithmRMIServer extends Thread {
                     public void run() {
                         try {
                             ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(connection.getOutputStream()));
+                            out.flush();
                             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
 
                             for (;;) {
