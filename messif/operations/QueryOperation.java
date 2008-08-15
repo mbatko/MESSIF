@@ -33,7 +33,7 @@ import messif.objects.util.AbstractObjectIterator;
  */
 public abstract class QueryOperation<TAnswer> extends AbstractOperation {
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** Attributes ******************//
 

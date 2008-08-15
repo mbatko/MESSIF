@@ -13,7 +13,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
-import messif.operations.AbstractOperation;
 import messif.utility.Convert;
 import messif.utility.Logger;
 
@@ -39,10 +38,13 @@ public class AlgorithmRMIServer extends Thread {
      * Creates a new instance of AlgorithmRMIServer listening on the specified port.
      * @param algorithm the algorithm to encapsulate
      * @param port the TCP port of the RMI service
+     * @throws NullPointerException if the specified algorithm is <tt>null</tt>
      * @throws IOException if the RMI service cannot be opened on the specified port
      */
-    public AlgorithmRMIServer(Algorithm algorithm, int port) throws IOException {
+    public AlgorithmRMIServer(Algorithm algorithm, int port) throws NullPointerException, IOException {
         super("RMIServerThread");
+        if (algorithm == null)
+            throw new NullPointerException("Algorithm cannot be null");
         this.algorithm = algorithm;
         socket = ServerSocketChannel.open();
         socket.socket().bind(new InetSocketAddress(port));
@@ -86,18 +88,7 @@ public class AlgorithmRMIServer extends Thread {
                                 String methodName = in.readUTF();
                                 Object[] methodArguments = (Object[]) in.readObject();
                                 try {
-                                    if (algorithm == null) {
-                                        out.writeObject(null);
-                                    } else if (methodName.equals("executeOperation") && methodArguments.length > 0 && AbstractOperation.class.isInstance(methodArguments[0])) {
-                                        AbstractOperation operation = (AbstractOperation) methodArguments[0];
-                                        algorithm.executeOperation(operation);
-                                        operation.clearSurplusData();
-                                        out.writeObject(operation);
-                                    } else {
-                                        out.writeObject(algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(algorithm, methodArguments));
-                                    }
-                                } catch (AlgorithmMethodException e) {
-                                    out.writeObject(e);
+                                    out.writeObject(algorithm.getClass().getMethod(methodName, Convert.getObjectTypes(methodArguments)).invoke(algorithm, methodArguments));
                                 } catch (InvocationTargetException e) {
                                     out.writeObject(e.getCause());
                                 } catch (NoSuchMethodException e) {

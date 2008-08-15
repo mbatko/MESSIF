@@ -253,13 +253,10 @@ public class Application {
     @ExecutableMethod(description = "loads the algorithm from a given file", arguments = {"file name", "host remap file (not required)" })
     public boolean algorithmRestore(PrintStream out, String... args) {
         try {
-            // Set host mapping table
             if (args.length > 2) {
                 try {
-                    int messageDispatcherPort = (args.length > 3)?Integer.parseInt(args[3]):0;
-                    int messageDispatcherBroadcastPort = (args.length > 4)?Integer.parseInt(args[4]):0;
-                    if (args[2] != null)
-                        NetworkNode.loadHostMappingTable(args[2], messageDispatcherPort, messageDispatcherBroadcastPort);
+                    if (args[2] != null && args[2].length() > 0)
+                        NetworkNode.loadHostMappingTable(args[2]);
                 } catch (UnknownHostException e) {
                     out.println("Error parsing host remap file: unknown host " + e.getMessage());
                     return false;

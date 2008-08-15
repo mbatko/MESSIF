@@ -13,7 +13,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
 import messif.operations.AbstractOperation;
-import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
 
 /**
@@ -190,9 +189,10 @@ public class RMIAlgorithm extends Algorithm {
      * @param methodName the name of the method to execute on the remote algorithm
      * @param methodArguments the arguments for the method
      * @return the method result or exception
-     * @throws IllegalArgumentException if there was a problem communicating with the remote algorithm
+     * @throws IllegalStateException if there was a problem communicating with the remote algorithm
+     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
      */
-    private Object methodExecute(String methodName, Object... methodArguments) throws IllegalArgumentException {
+    private Object methodExecute(String methodName, Object... methodArguments) throws IllegalArgumentException, IllegalStateException {
         Object rtv = methodExecute(methodName, connectionRetries, methodArguments);
         if (rtv instanceof Exception)
             throw handleException(rtv);
@@ -204,6 +204,7 @@ public class RMIAlgorithm extends Algorithm {
      * Otherwise the original cause is searched, then wrapped into IllegalArgumentException
      * and returned.
      * @param exception the exception object to handle
+     * @return returns the wrapped runtime exception
      * @returns the handled exception
      */
     private RuntimeException handleException(Object exception) {
@@ -250,29 +251,13 @@ public class RMIAlgorithm extends Algorithm {
     }
     @Override
     @SuppressWarnings("unchecked")
-    public <E extends AbstractOperation> List<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
-        return (List<Class<E>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
+    public <T extends AbstractOperation> List<Class<T>> getSupportedOperations(Class<T> subclassToSearch) {
+        return (List<Class<T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
     }
 
     @Override
-    public void executeOperation(AbstractOperation operation) throws AlgorithmMethodException, NoSuchMethodException {
-        if (operation instanceof QueryOperation) {
-            QueryOperation retOperation = executeOperationQuick((QueryOperation)operation);
-            operation.updateFrom(retOperation);
-        } else {
-            throw new NoSuchMethodException("RMI interface only supports execution of query operations");
-        }
-    }
-
-    /**
-     * Execute algorithm operation.
-     * Note that the remote algorithm returns the modified operation instead of modifying it.
-     * @param operation the operation to execute on the remote algorithm
-     * @return the operation updated by the execution
-     * @throws AlgorithmMethodException if the execution has thrown an exception
-     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
-     */
-    public QueryOperation executeOperationQuick(QueryOperation operation) throws AlgorithmMethodException, NoSuchMethodException {
+    @SuppressWarnings("unchecked")
+    public <T extends AbstractOperation> T executeOperation(T operation) throws AlgorithmMethodException, NoSuchMethodException {
         Object rtv = methodExecute("executeOperation", connectionRetries, operation);
         if (rtv instanceof Exception) {
             if (rtv instanceof AlgorithmMethodException)
@@ -281,7 +266,7 @@ public class RMIAlgorithm extends Algorithm {
                 throw (NoSuchMethodException)rtv;
             throw handleException(rtv);
         } else {
-            return (QueryOperation)rtv;
+            return (T)rtv;
         }
     }
 

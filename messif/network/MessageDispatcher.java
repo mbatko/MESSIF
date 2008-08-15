@@ -8,8 +8,11 @@ package messif.network;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -22,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -74,58 +78,60 @@ import messif.utility.Logger;
  * @see ReplyMessage
  * @see ReplyReceiver
  */
-public class MessageDispatcher implements Receiver {
-    
-    /****************** Constants ******************/
-    
+public class MessageDispatcher implements Receiver, Serializable {
+    /** class id for serialization */
+    private static final long serialVersionUID = 1L;
+
+    //****************** Constants ******************//
+
     /** Multicast group IP address constant */
     protected static final InetAddress BROADCAST_GROUP = InitBroadcastGroup();
     private final static InetAddress InitBroadcastGroup() { // initializer
         try { return InetAddress.getByName("230.0.0.1"); } catch (UnknownHostException e) { return null; }
     }
-    
+
     /** Logger */
     protected static final Logger log = Logger.getLoggerEx("messif.network");
-    
+
     /**
      * The size of the TCP connection pool.
      * Represents the number of simultaneous TCP connections that are kept open for sending messages.
      */
     private static final int tcpConnectionPoolSize = 50;
-    
-    
-    /****************** Receivers ******************/
-    
+
+
+    //****************** Receivers ******************//
+
     /** List of currently registered receivers */
     private final List<Receiver> receivers;
-    
+
     /** List of currently registered reply receivers */
     private final ReplyReceiverList replyReceivers;
-    
-    
-    /****************** Communication sockets ******************/
-    
+
+
+    //****************** Communication sockets ******************//
+
     /** UDP socket for communication */
     protected final DatagramSocket udpSocket;
-    
+
     /** TCP socket for communication */
     protected final ServerSocket tcpSocket;
-    
+
     /** The pool of opened TCP connections */
     private final transient Map<NetworkNode, ObjectOutputStream> tcpConnectionPool;
-    
+
     /**
      * UDP multicast socket for broadcast communication
      * It is <tt>null</tt> if broadcast is not initialized.
      */
     protected final MulticastSocket broadcastSocket;
-    
+
     /** Identification of this network node */
     protected final NetworkNode ourNetworkNode;
-    
+
     /** Top most message dispatcher in the hierarchy */
     protected final MessageDispatcher topMessageDispatcher;
-    
+
     /**
      * Returns the broadcast port number if created or zero if broadcast is not initialized by this dispatcher.
      * @return the broadcast port number if created or zero if broadcast is not initialized by this dispatcher
@@ -133,7 +139,7 @@ public class MessageDispatcher implements Receiver {
     public final int getBroadcastPort() {
         return (broadcastSocket == null)?0:broadcastSocket.getLocalPort();
     }
-    
+
     /**
      * Returns the network node identification of this message dispatcher.
      * @return the network node identification of this message dispatcher
@@ -143,19 +149,8 @@ public class MessageDispatcher implements Receiver {
     }
 
 
-    /****************** Deserialization port mapping ******************/
-    // These two parameters overrides the port and broadcast port of newly created message dispatchers
-    // They should be ONLY set from NetworkNode re-mapping support
+    //****************** Constructors ******************//
 
-    /** Mapping for translating message dispatcher's port */
-    protected static int mapToPort = 0;
-
-    /** Mapping for translating message dispatcher's broadcast port */
-    protected static int mapToBroadcastPort = 0;
-
-
-    /****************** Constructors ******************/
-    
     /**
      * Creates a new instance of MessageDispatcher with automatically assigned port (decided by OS).
      * Broadcast is disabled.
@@ -164,7 +159,7 @@ public class MessageDispatcher implements Receiver {
     public MessageDispatcher() throws IOException {
         this(0); // Open first available port
     }
-    
+
     /**
      * Creates a new instance of MessageDispatcher with specified TCP/UDP port.
      * Broadcast is disabled.
@@ -174,7 +169,7 @@ public class MessageDispatcher implements Receiver {
     public MessageDispatcher(int port) throws IOException {
         this(port, 0); // Do not start broadcast socket by default
     }
-    
+
     /**
      * Creates a new instance of MessageDispatcher with specified TCP/UDP and broadcast ports.
      * @param port the TCP/UDP port used for communication
@@ -182,12 +177,6 @@ public class MessageDispatcher implements Receiver {
      * @throws IOException if there was error when opening communication sockets
      */
     public MessageDispatcher(int port, int broadcastPort) throws IOException {
-        // Mapping overrides
-        if (mapToPort > 0)
-            port = mapToPort;
-        if (mapToBroadcastPort > 0)
-            broadcastPort = mapToBroadcastPort;
-
         // Create server TCP socket endpoint
         tcpSocket = new ServerSocket(port);
         
@@ -221,7 +210,7 @@ public class MessageDispatcher implements Receiver {
         // This constructor is for topmost message dispatcher
         topMessageDispatcher = this;
     }
-    
+
     /**
      * Creates a new server instance of MessageDispatcher connected to a higher level dispatcher.
      * @param parentDispatcher the higher level dispatcher this instance is connected to
@@ -248,7 +237,7 @@ public class MessageDispatcher implements Receiver {
         // Register this dispatcher to the parent's receiver list
         parentDispatcher.registerReceiver(this);
     }
-    
+
     /**
      * Close all opened communication sockets and disable this dispatcher.
      * This dispatcher stops listening for incoming messages.
@@ -264,9 +253,60 @@ public class MessageDispatcher implements Receiver {
         } else
             topMessageDispatcher.deregisterReceiver(this);
     }
-    
-    /****************** Send methods ******************/
-    
+
+
+    //****************** Serialization ******************//
+
+    /**
+     * Returns an alternative object to be used when serializing MessageDispatcher.
+     * During its deserialization the correct full MessageDispatcher is recreated.
+     * @return an alternative object to MessageDispatcher
+     */
+    private Object writeReplace() {
+        return new Serialized(ourNetworkNode, getBroadcastPort());
+    }
+
+    /** Wrapper class used when serializing MessageDispatcher */
+    private static class Serialized extends NetworkNode {
+        /** class serial id for serialization */     
+        private static final long serialVersionUID = 1L;
+
+        private final int broadcastPort;
+
+        private Serialized(NetworkNode dispatcherNetworkNode, int broadcastPort) {
+            super(dispatcherNetworkNode);
+            this.broadcastPort = broadcastPort;
+        }
+
+        private Object readResolve() throws ObjectStreamException {
+            try {
+                // Sanity check for the localhost (correctness of the remap file)
+                if (!InetAddress.getLocalHost().equals(host))
+                    throw new InvalidObjectException("Host loaded for message dispatcher " + host + " differs from the localhost " + InetAddress.getLocalHost() + " (wrong remap file?)");
+                if (hasNodeID()) {
+                    // Get or create parent message dispatcher
+                    MessageDispatcher parent = messageDispMappingTable.get(port);
+                    if (parent == null) {
+                        parent = new MessageDispatcher(port, broadcastPort);
+                        messageDispMappingTable.put(port, parent);
+                    }
+                    return new MessageDispatcher(parent, nodeID);
+                } else {
+                    return new MessageDispatcher(port, broadcastPort);
+                }
+            } catch (InvalidObjectException e) {
+                throw e;
+            } catch (IOException e) {
+                throw new InvalidObjectException(e.toString());
+            } catch (NullPointerException e) {
+                throw new InvalidObjectException("Cannot deserialize message dispatcher with nodeIDs without mapper");
+            }
+        }
+    }
+
+
+    //****************** Send methods ******************//
+
     /**
      * Send the message to the specified network node.
      * Note that a particular message can be sent several times (to different nodes).
@@ -278,7 +318,7 @@ public class MessageDispatcher implements Receiver {
     public void sendMessage(Message msg, NetworkNode node) throws IOException {
         sendMessage(msg, node, false);
     }
-    
+
     /**
      * Send the message to multiple network nodes.
      *
@@ -289,8 +329,7 @@ public class MessageDispatcher implements Receiver {
     public void sendMessage(Message msg, Collection<NetworkNode> nodes) throws IOException {
         sendMessage(msg, nodes, false);
     }
-    
-    
+
     /**
      * Send the message to the specified network node.
      * The flag <tt>willNotReply</tt> allows to inform that this node will not send any replies
@@ -310,7 +349,7 @@ public class MessageDispatcher implements Receiver {
         msg.addNotWaitingDestination(getNetworkNode(), node, willNotReply);
         send(msg, node);
     }
-    
+
     /**
      * Send the message to multiple network nodes.
      * The flag <tt>willNotReply</tt> allows to inform that this node will not send any replies
@@ -326,10 +365,11 @@ public class MessageDispatcher implements Receiver {
      * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
      */
     public void sendMessage(Message msg, Collection<NetworkNode> nodes, boolean willNotReply) throws IOException {
-        for (NetworkNode node : nodes)
-            sendMessage(msg, node, willNotReply);
+        Iterator<NetworkNode> iterator = nodes.iterator();
+        while (iterator.hasNext())
+            sendMessage(msg, iterator.next(), willNotReply && !iterator.hasNext()); // If "willNotReply" is requested, it is sent only for the last node
     }
-    
+
     /**
      * Send the message to all network nodes (that are listening for broadcast on the same port).
      * Warning: there is no guarantee that the message reached all the nodes.
@@ -342,7 +382,7 @@ public class MessageDispatcher implements Receiver {
         msg.actualNavigationElement.setSender(getNetworkNode());
         send(msg);
     }
-    
+
     /**
      * Send the reply message, i.e. send the message to its original sender node.
      *
@@ -357,7 +397,7 @@ public class MessageDispatcher implements Receiver {
             send(msg, replyNode);
         return replyNode;
     }
-    
+
     /**
      * Send the message to the specified network node and wait for the replies.
      * Note that a particular message can be sent several times (to different nodes) using this method -
@@ -367,6 +407,7 @@ public class MessageDispatcher implements Receiver {
      * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
      * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
      *
+     * @param <E> the type of reply message to wait for
      * @param msg the message to send
      * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
      * @param removeOnAccept flag that controls whether the returned receiver is removed
@@ -395,6 +436,33 @@ public class MessageDispatcher implements Receiver {
     }
 
     /**
+     * Send the message to multiple network nodes and wait for the replies.
+     * A reply is expected from each of these nodes.
+     *
+     * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
+     * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param removeOnAccept flag that controls whether the returned receiver is removed
+     *                       from the waiting list when the last message arrives (<tt>true</tt>)
+     *                       or when the getReplies is called (<tt>false</tt>)
+     * @param nodes the list of destination network nodes
+     * @return the receiver used to gather all the replies
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     */
+    public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, boolean removeOnAccept, Collection<NetworkNode> nodes) throws IOException {
+        // Create reply receiver for the message
+        ReplyReceiver<E> receiver = null;
+        
+        for (NetworkNode node : nodes)
+            receiver = sendMessageWaitReply(msg, replyMessageClass, removeOnAccept, node);
+        
+        return receiver;
+    }
+
+    /**
      * Send the message to the specified network node and wait for the replies.
      * Note that a particular message can be sent several times (to different nodes) using this method -
      * a reply is then expected from each of these nodes. The same instance of <tt>ReplyReceiver</tt> is returned
@@ -408,7 +476,7 @@ public class MessageDispatcher implements Receiver {
      * @return the receiver used to gather all the replies
      * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
      */
-    public ReplyReceiver sendMessageWaitReply(Message msg, NetworkNode node) throws IOException {
+    public ReplyReceiver<? extends ReplyMessage> sendMessageWaitReply(Message msg, NetworkNode node) throws IOException {
         return sendMessageWaitReply(msg, ReplyMessage.class, true, node);
     }
 
@@ -424,18 +492,13 @@ public class MessageDispatcher implements Receiver {
      * @return the receiver used to gather all the replies
      * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
      */
-    public ReplyReceiver sendMessageWaitReply(Message msg, Collection<NetworkNode> nodes) throws IOException {
-        // Create reply receiver for the message
-        ReplyReceiver receiver = null;
-        
-        for (NetworkNode node : nodes)
-            receiver = sendMessageWaitReply(msg, node);
-        
-        return receiver;
+    public ReplyReceiver<? extends ReplyMessage> sendMessageWaitReply(Message msg, Collection<NetworkNode> nodes) throws IOException {
+        return sendMessageWaitReply(msg, ReplyMessage.class, true, nodes);
     }
-    
-    /****************** Recieve methods ******************/
-    
+
+
+    //****************** Recieve methods ******************//
+
     /**
      * Register a message receiver.
      * The method {@link Receiver#acceptMessage acceptMessage} of the receiver is called whenever
@@ -461,7 +524,7 @@ public class MessageDispatcher implements Receiver {
             receivers.add(0, receiver);
         }
     }
-    
+
     /**
      * Remove a previously registered receiver.
      *
@@ -473,7 +536,7 @@ public class MessageDispatcher implements Receiver {
             return receivers.remove(receiver);
         }
     }
-    
+
     /**
      * Process a message received through sockets.
      * Since the dispatcher implements the receiver interface, the message is passed to the receiving.
@@ -490,7 +553,7 @@ public class MessageDispatcher implements Receiver {
         // Report unknown message
         log.warning("Received " + msg.getClass().getSimpleName() + " (id="+msg.messageID+"@"+msg.getOriginalSender()+") '" + msg.navigationPath + "' was not accepted by any receiver");
     }
-    
+
     /**
      * Offers a message to this message dispatcher, i.e. run through the dispatcher's list
      * of registered receivers and offer the message to them.
@@ -517,10 +580,10 @@ public class MessageDispatcher implements Receiver {
         
         return false;
     }
-    
-    
-    /****************** Message sending internals ******************/
-    
+
+
+    //****************** Message sending internals ******************//
+
     /**
      * Do the actual message sending.
      * This method works in the following steps:
@@ -588,7 +651,7 @@ public class MessageDispatcher implements Receiver {
             }
         } else stream.close();
     }
-    
+
     /**
      * Do the actual message broadcasting (i.e. sending to all network nodes).
      * The message is packed into a byte stream and sent though the broadcast socket.
@@ -606,7 +669,7 @@ public class MessageDispatcher implements Receiver {
         
         broadcastSocket.send(new DatagramPacket(data, data.length, BROADCAST_GROUP, broadcastSocket.getLocalPort()));
     }
-    
+
     /**
      * Packs the provided message into byte stream.
      * Java serialization is used to do the job.
@@ -619,7 +682,7 @@ public class MessageDispatcher implements Receiver {
     protected void putMessageIntoStream(Message msg, ObjectOutputStream stream, NetworkNode destinationNode) throws IOException {
         stream.writeObject(msg);
     }
-    
+
     /**
      * Unpacks a message from the byte stream.
      * Java serialization is used to do the job.
@@ -635,5 +698,5 @@ public class MessageDispatcher implements Receiver {
             throw new IOException(e.getMessage());
         }
     }
-    
+
 }

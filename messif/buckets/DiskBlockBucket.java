@@ -433,12 +433,12 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             in.defaultReadObject();
 
             // Reopen file channel (set it through reflection to overcome the "final" flag)
-            Field field = getClass().getDeclaredField("fileChannel");
+            Field field = DiskBlockBucket.class.getDeclaredField("fileChannel");
             field.setAccessible(true);
             field.set(this, openFileChannel(file));
 
             // Reopen the output stream
-            field = getClass().getDeclaredField("outputStream");
+            field = DiskBlockBucket.class.getDeclaredField("outputStream");
             field.setAccessible(true);
             field.set(this, openOutputStream());
         } catch (NoSuchFieldException e) {

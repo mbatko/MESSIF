@@ -6,8 +6,6 @@
 
 package messif.algorithms;
 
-import java.lang.reflect.InvocationTargetException;
-import messif.executor.SingleMethodExecutor;
 import messif.netcreator.Startable;
 import messif.network.MessageDispatcher;
 import messif.network.NavigationElement;
@@ -16,20 +14,19 @@ import messif.operations.AbstractOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticRefCounter;
-import messif.utility.Logger;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import messif.statistics.StatisticTimer;
+import messif.network.ReplyReceiver;
 import messif.statistics.Statistics;
 
 /**
@@ -46,242 +43,359 @@ import messif.statistics.Statistics;
  *
  * @author  xbatko
  */
-public abstract class DistributedAlgorithm extends Algorithm implements Serializable, Startable {
+public abstract class DistributedAlgorithm extends Algorithm implements Startable {
     /** class id for serialization */
-    private static final long serialVersionUID = 4L;
+    private static final long serialVersionUID = 5L;
 
-    /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.algorithm");
+    //****************** Attributes ******************//
 
     /** Message dispatcher for this distributed algorithm */
-    protected transient MessageDispatcher messageDisp;
+    protected final MessageDispatcher messageDisp;
 
 
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of DistributedAlgorithm */
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of DistributedAlgorithm.
+     * @param algorithmName the name of this algorithm
+     * @param port the TCP/UDP port on which this distributed algorithm communicates
+     * @param broadcastPort the UDP multicast port that this distributed algorithm uses for broadcast
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses}
+     *      has no items or there was a problem starting message dispatcher
+     */
     public DistributedAlgorithm(String algorithmName, int port, int broadcastPort) throws IllegalArgumentException {
         super(algorithmName);
         
         try {
             // Start Message dispatcher
-            createMessageDispatcher(port, broadcastPort);
+            this.messageDisp = new MessageDispatcher(port, broadcastPort);
         } catch (IOException e) {
             log.severe(e);
             throw new IllegalArgumentException("Can't start message dispatcher: " + e.getMessage());
         }
     }
-    
-    /** Creates a new instance of DistributedAlgorithm */
+
+    /**
+     * Creates a new instance of DistributedAlgorithm without broadcast capabilities.
+     * @param algorithmName the name of this algorithm
+     * @param port the TCP/UDP port on which this distributed algorithm communicates
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses}
+     *      has no items or there was a problem starting message dispatcher
+     */
     public DistributedAlgorithm(String algorithmName, int port) throws IllegalArgumentException {
-        this(algorithmName, port, 0); // Do not start broadcast capabilities by default
+        this(algorithmName, port, 0);
     }
-    
-    /** Creates a new instance of DistributedAlgorithm */
+
+    /**
+     * Creates a new instance of DistributedAlgorithm without broadcast capabilities.
+     * The TCP/UDP port on which this distributed algorithm communicates is selected by the
+     * operating system and can be queried through {@link #getThisNode()}.
+     * @param algorithmName the name of this algorithm
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses}
+     *      has no items or there was a problem starting message dispatcher
+     */
     public DistributedAlgorithm(String algorithmName) throws IllegalArgumentException {
         this(algorithmName, 0);
     }
-    
-    /** Creates a new instance of DistributedAlgorithm */
-    public DistributedAlgorithm(String algorithmName, DistributedAlgorithm parent, int newId) throws IllegalArgumentException {
+
+    /**
+     * Creates a new instance of DistributedAlgorithm with a higher-level message dispatcher queue.
+     * The TCP/UDP port on which this distributed algorithm communicates as well as
+     * the broadcast capabilities are linked to the specified message dispatcher.
+     * @param algorithmName the name of this algorithm
+     * @param parentDispatcher the higher level dispatcher this algorithm's dispacher is connected to
+     * @param nodeID the sub-identification of this algorithm's dispatcher for the higher level
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses}
+     *      has no items or there was a problem starting message dispatcher
+     */
+    public DistributedAlgorithm(String algorithmName, MessageDispatcher parentDispatcher, int nodeID) throws IllegalArgumentException {
         super(algorithmName);
 
         // Start Message dispatcher
-        createMessageDispatcher(parent, newId);
+        this.messageDisp = new MessageDispatcher(parentDispatcher, nodeID);
     }
 
-    /** Creates a new instance of DistributedAlgorithm with a message dispatcher already created */
-    public DistributedAlgorithm(String algorithmName, MessageDispatcher messageDisp) throws IllegalArgumentException {
-        super(algorithmName);
-
-        // Only set the message dispatcher
-        this.messageDisp = messageDisp;
-    }    
-
-    /****************** Destructor ******************/
-    
-    /** Public destructor to stop the algorithm.
-     *  This should be overriden in order to clean up.
+    /**
+     * Compatibility deserialization method that reads this object having version 4.
+     * This works with the special <code>ObjectInputStreamConverter</code> class from utils.
+     * @param in the stream from which to read the serialized algorithm
+     * @throws IOException if there was an I/O error reading the stream
+     * @throws ClassNotFoundException if some of the classes stored in the stream cannot be resolved
      */
+    private void readObjectVer4(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        int port = in.readInt();
+        int broadcastPort = in.readInt();
+
+        try {
+            // Reopen file channel (set it through reflection to overcome the "final" flag)
+            Field field = DistributedAlgorithm.class.getDeclaredField("messageDisp");
+            field.setAccessible(true);
+            field.set(this, new MessageDispatcher(port, broadcastPort));
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
+    }
+
+
+    //****************** Destructor ******************//
+
+    /**
+     * Public destructor to stop the algorithm.
+     * This should be overriden in order to clean up.
+     * @throws Throwable if there was an error finalizing
+     */
+    @Override
     public void finalize() throws Throwable {
         super.finalize();
         messageDisp.closeSockets();
     }
 
 
-    /****************** Name enrichment ******************/
+    //****************** Name enrichment ******************//
 
     /**
      * Returns the name of this algorithm with host:port of its message dispatcher
      * @return the name of this algorithm with host:port of its message dispatcher
      */
+    @Override
     public String getName() {
         return super.getName() + " at " + getThisNode().getHost().getHostName() + ":" + getThisNode().getPort();
     }
 
 
-    /****************** Message dispatcher ******************/
+    //****************** Message dispatcher ******************//
 
     /**
-     * Returns the network node of this distributed algorithm
+     * Returns the network node of this distributed algorithm.
      * @return the network node of this distributed algorithm
      */
     public NetworkNode getThisNode() {
         return messageDisp.getNetworkNode();
     }
 
-    /** 
-     * This method creates the message dispatcher and sets the <code>meesageDisp</code> field. 
-     * @return the created message dispatcher
-      */
-    protected MessageDispatcher createMessageDispatcher(int port, int broadcastPort) throws IOException {
-        return messageDisp = new MessageDispatcher(port, broadcastPort);
-    }
-
-    /** 
-     * This method creates the message dispatcher given a parent dispatcher
-     * and a new id of the new NetworkNode and sets the <code>meesageDisp</code> field. 
-     * @return the created message dispatcher
-      */
-    protected MessageDispatcher createMessageDispatcher(DistributedAlgorithm parent, int newId) {
-        return messageDisp = new MessageDispatcher(parent.messageDisp, newId);
-    }
-
-    /** Store the message dispatcher to given output stream - store the port & broadcast port. Is overriden by BalancedDA */
-    protected void writeMessageDisp(ObjectOutputStream out) throws IOException {
-        out.writeInt(messageDisp.getNetworkNode().getPort());
-        out.writeInt(messageDisp.getBroadcastPort());
-    }
-    
-    /** read the message dispatcher from given input stream - read the port & broadcast port. Is overriden by BalancedDA */
-    protected void readMessageDisp(ObjectInputStream in) throws IOException {
-        createMessageDispatcher(in.readInt(), in.readInt());
-    }
-
     /**
-     * Returns the message dispather of this distributed algorithm.
-     * @return the message dispather of this distributed algorithm
+     * Returns the message dispatcher of this distributed algorithm.
+     * @return the message dispatcher of this distributed algorithm
      */
     public MessageDispatcher getMessageDispatcher() {
         return messageDisp;
     }
 
 
-    /****************** Serialization ******************/
-
-    /** Serialization method - store the "port" and "broadcastPort" of the node on top to restore the message dispatcher */
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        out.defaultWriteObject();
-        
-        writeMessageDisp(out);
-    }
-
-    /** Deserialization method - create the message dispatcher from the restored values "port", "broadcastport"
-     * (for the top-most node).
-     */
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
-        
-        readMessageDisp(in);
-    }
-
-
-    /****************** Operation execution ******************/
+    //****************** Operation execution ******************//
     
-    /** Execute algorithm operation from received message */
+    /**
+     * Execute algorithm operation from received message.
+     * @param msg the received message that holds the operation
+     * @throws AlgorithmMethodException if there was an error executing operation
+     */
     protected void receiveRequest(DistAlgRequestMessage msg) throws AlgorithmMethodException {
-        if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly();
         Statistics navigElDistComp = null;
         try {
             // Setup statistics
             navigElDistComp = msg.registerBoundStat("DistanceComputations");
-            
-            operationExecutor.execute(msg.getOperation(), msg);
+            execute(false, msg.getOperation(), msg);
         } catch (Exception e) {
             throw new AlgorithmMethodException(e);
         } finally {
             if (navigElDistComp != null)
                 navigElDistComp.unbind();
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
         }
     }
     
-    /** Execute algorithm operation on demand */
-    public void executeOperation(AbstractOperation operation) throws AlgorithmMethodException, NoSuchMethodException {
-        if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly();
-        Statistics navigElDistComp = null;
-        try {
-            // Create new request message
-            DistAlgRequestMessage msg = createRequestMessage(operation);
-            
-            // Setup statistics
-            navigElDistComp = msg.registerBoundStat("DistanceComputations");
-            
-            if (Statistics.isEnabledGlobally()) {
-                // Measure time of execution (as an operation statistic)
-                StatisticTimer operationTime = OperationStatistics.getOpStatistics("OperationTime", StatisticTimer.class);
-                operationTime.start();
-                operationExecutor.execute(operation, msg);
-                operationTime.stop();
-            } else operationExecutor.execute(operation, msg);
-        } catch (InvocationTargetException e) {
-            throw new AlgorithmMethodException(e.getCause());
-        } catch (InstantiationException e) {
-            throw new AlgorithmMethodException("There is no DistanceComputations statistics global counter yet!?!");
-        } finally {
-            if (navigElDistComp != null)
-                navigElDistComp.unbind();
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
-        }
+    /**
+     * Execute operation on this algorithm.
+     * @param <T> the type of executed operation
+     * @param operation the operation to execute on this algorithm
+     * @return the executed operation (same as the argument)
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    @Override
+    public <T extends AbstractOperation> T executeOperation(T operation) throws AlgorithmMethodException, NoSuchMethodException {
+        execute(Statistics.isEnabledGlobally(), operation, null);
+        return operation;
     }
-    
-    /** Execute algorithm operation on background */
+
+    /**
+     * Execute algorithm operation on background.
+     * <i>Note:</i> Method {@link #waitBackgroundExecuteOperation} MUST be called in the future to release resources.
+     * @param operation the operation to execute on this algorithm
+     * @param updateStatistics set to <tt>true</tt> if the operations statistic should be updated after the operation finishes its background execution
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    @Override
     public void backgroundExecuteOperation(AbstractOperation operation, boolean updateStatistics) throws NoSuchMethodException {
-        if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly(); // Release for this acquire is in the waitBackgroundExecuteOperation
-        try {
-            // Create new request message
-            DistAlgRequestMessage msg = createRequestMessage(operation);
-            bgExecutionList.get().backgroundExecute(
-                    updateStatistics,
-                    new Object[]{operation, msg},
-                    new SingleMethodExecutor(msg, "registerBoundStat", "DistanceComputations"), 
-                    new SingleMethodExecutor(msg, "deregisterOperStats")
-            );
-        } catch (NoSuchMethodException e) {
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
-            throw e;
-        } catch (RuntimeException e) {
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
-            throw e;
-        }
+        backgroundExecute(updateStatistics, operation, null);
     }
-    
-    /** Create the request message - can be overriden by descendants */
-    protected DistAlgRequestMessage createRequestMessage(AbstractOperation operation) {
-        return new DistAlgRequestMessage(operation);
-    }
-    
-    
-    /****************** Operation selection ******************/
-    
-    /** This method should return an array of additional parameters, that are needed for operation execution.
-     *  The list must be consistent (speaking in terms of types) with the executeOperation method.
+
+
+    //****************** Operation method specifier ******************//
+
+    /**
+     * This method should return an array of additional parameters that are needed for operation execution.
+     * The list must be consistent with the {@link #getSingleOperationExecutorParams}.
+     * 
+     * @return array of additional parameters that are needed for operation execution
      */
     @Override
     protected Class[] getExecutorParamClasses() {
-        Class[] rtv = { AbstractOperation.class, DistAlgRequestMessage.class };
-        return rtv;
+        return new Class[] { AbstractOperation.class, DistAlgRequestMessage.class };
     }
-    
-    /****************** Reply merging functions ******************/
-    
+
+
+    //****************** Navigation processing support ******************//
+
+    /**
+     * Creates a request message used by this algorithm.
+     * @param operation the operation for which to create the request message
+     * @return a new request message with the specified operation
+     */
+    protected DistAlgRequestMessage createRequestMessage(AbstractOperation operation) {
+        return new DistAlgRequestMessage(operation);
+    }
+
+    /**
+     * Creates a reply message used by this algorithm.
+     * @param msg the request message for which to create a response
+     * @return a new reply message for the specified request message
+     */
+   protected DistAlgReplyMessage createReplyMessage(DistAlgRequestMessage msg) {
+        return new DistAlgReplyMessage(msg);
+    }
+
+    /**
+     * Processes navigation when there will be no local processing.
+     * If the request message is specified, it is simply forwarded to the specified node.
+     * Otherwise, a new {@link DistAlgRequestMessage} is created, sent to the specified node
+     * and the method waits for all the responses. This method blocks until all the
+     * responses are gathered.
+     * @param operation the operation that is processed
+     * @param request the request from which the the operation arrived (the first node has <tt>null</tt> request)
+     * @param node the destination node where to forward the request
+     * @throws IOException if there was an I/O error during sending or receiving messages
+     */
+    protected void navigationNoProcessing(AbstractOperation operation, DistAlgRequestMessage request, NetworkNode node) throws IOException {
+        // If there is no processing, the forward node cannot be null
+        if (node == null)
+            throw new IOException("Navigation processing error while evaluating " + operation + ": forwarding to null node requested");
+
+        // If the request is null, this is a first node and thus we will wait for replies
+        if (request == null) {
+            navigationAfterProcessing(operation, null, messageDisp.sendMessageWaitReply(createRequestMessage(operation), DistAlgReplyMessage.class, true, node));
+        } else {
+            // Otherwise, just forward the messages
+            messageDisp.sendMessage(request, node, true);
+        }
+    }
+
+    /**
+     * Processes navigation when there will be no local processing.
+     * If the request message is specified, it is simply forwarded to all the nodes.
+     * Otherwise, a new {@link DistAlgRequestMessage} is created, sent to the specified nodes
+     * and the method waits for all the responses. This method blocks until all the
+     * responses are gathered.
+     * @param operation the operation that is processed
+     * @param request the request from which the the operation arrived (the first node has <tt>null</tt> request)
+     * @param nodes the destination nodes where to forward the request
+     * @throws IOException if there was an I/O error during sending or receiving messages
+     */
+    protected void navigationNoProcessing(AbstractOperation operation, DistAlgRequestMessage request, Collection<NetworkNode> nodes) throws IOException {
+        // If there is no processing, the forward node cannot be null
+        if (nodes == null || nodes.isEmpty())
+            throw new IOException("Navigation processing error while evaluating " + operation + ": forwarding to null nodes requested");
+
+        // If the request is null, this is a first node and thus we will wait for replies
+        if (request == null) {
+            navigationAfterProcessing(operation, null, messageDisp.sendMessageWaitReply(createRequestMessage(operation), DistAlgReplyMessage.class, true, nodes));
+        } else {
+            // Otherwise, just forward the messages
+            messageDisp.sendMessage(request, nodes, true);
+        }
+    }
+
+    /**
+     * Processes navigation before the local processing.
+     * If the request message is specified, it is simply forwarded to all the nodes.
+     * Otherwise, a new {@link DistAlgRequestMessage} is created, sent to the specified nodes
+     * and the reply receiver for waiting for their responses is returned (i.e. the processing is not blocked).
+     * @param operation the operation that is processed
+     * @param request the request from which the the operation arrived (the first node has <tt>null</tt> request)
+     * @param nodes the destination nodes where to forward the request
+     * @return receiver that allows waiting for the responses
+     * @throws IOException if there was an I/O error during sending messages
+     */
+    protected ReplyReceiver<? extends DistAlgReplyMessage> navigationBeforeProcessing(AbstractOperation operation, DistAlgRequestMessage request, Collection<NetworkNode> nodes) throws IOException {
+        if (nodes == null) {
+            // If the request is null, this is a first node and thus we will wait for replies
+            if (request == null) {
+                return messageDisp.sendMessageWaitReply(createRequestMessage(operation), DistAlgReplyMessage.class, true, nodes);
+            } else {
+                // Otherwise, just forward the messages
+                messageDisp.sendMessage(request, nodes, false);
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Processes navigation before the local processing.
+     * If the request message is specified, it is simply forwarded to the specified node.
+     * Otherwise, a new {@link DistAlgRequestMessage} is created, sent to the specified node
+     * and the reply receiver for waiting for their responses is returned (i.e. the processing is not blocked).
+     * @param operation the operation that is processed
+     * @param request the request from which the the operation arrived (the first node has <tt>null</tt> request)
+     * @param node the destination node where to forward the request
+     * @return receiver that allows waiting for the responses
+     * @throws IOException if there was an I/O error during sending messages
+     */
+    protected ReplyReceiver<? extends DistAlgReplyMessage> navigationBeforeProcessing(AbstractOperation operation, DistAlgRequestMessage request, NetworkNode node) throws IOException {
+        if (node != null) {
+            // If the request is null, this is a first node and thus we will wait for replies
+            if (request == null) {
+                return messageDisp.sendMessageWaitReply(createRequestMessage(operation), DistAlgReplyMessage.class, true, node);
+            } else {
+                // Otherwise, just forward the messages
+                messageDisp.sendMessage(request, node, false);
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Processes navigation after the local processing.
+     * If the receiver is <tt>null</tt> and the request is not <tt>null</tt>, a reply is created and sent back.
+     * Otherwise, the receiver is used to wait for all the responses and this method blocks until they are gathered.
+     * @param operation the operation that is processed
+     * @param request the request from which the the operation arrived (the first node has <tt>null</tt> request)
+     * @param receiver the receiver that is used for waiting for messages (can be <tt>null</tt>)
+     * @return the number of messages received and processed
+     * @throws IOException if there was an I/O error during sending messages
+     */
+    protected int navigationAfterProcessing(AbstractOperation operation, DistAlgRequestMessage request, ReplyReceiver<? extends DistAlgReplyMessage> receiver) throws IOException {
+        if (receiver != null) {
+            try {
+                List<? extends DistAlgReplyMessage> replies = receiver.getReplies();
+                mergeOperationsFromReplies(operation, replies);
+                mergeStatisticsFromReplies(OperationStatistics.getLocalThreadStatistics(), replies);
+                return replies.size();
+            } catch (InterruptedException e) {
+                throw new IOException("Interrupted while waiting for replies (" + receiver + ")");
+            }
+        } else {
+            if (request != null)
+                messageDisp.replyMessage(createReplyMessage(request));
+            return 0;
+        }
+    }
+
+
+    //****************** Reply merging functions ******************//
+
     /** Update supplied operation answer with partial answers from reply messages
      *  @param targetOperation the operation that should be updated
      *  @param replyMessages the list of reply messages received with partial answers

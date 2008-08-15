@@ -14,7 +14,6 @@ import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.Semaphore;
-import messif.buckets.BucketErrorCode;
 import messif.executor.Executable;
 import messif.executor.MethodClassExecutor;
 import messif.executor.MethodThreadList;
@@ -34,7 +33,6 @@ import java.util.Set;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
 import messif.statistics.OperationStatistics;
-import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
@@ -56,32 +54,33 @@ import messif.utility.Logger;
 public abstract class Algorithm implements Serializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
+    //****************** Constants ******************//
+
     /** Logger */
     protected static Logger log = Logger.getLoggerEx("messif.algorithm");
 
-    /** Global counter for distance computations (any purpose) */
-    protected static final StatisticCounter counterDistanceComputations = StatisticCounter.getStatistics("DistanceComputations");
-    
     /** Maximal number of currently executed operations */
     protected static final int maximalConcurrentOperations = 1024;
 
-    /****************** Naming ******************/
+
+    //****************** Attributes ******************//
 
     /** The name of this algorithm */
     protected final String algorithmName;
-    
-    /**
-     * Returns the name of this algorithm
-     * @return the name of this algorithm
-     */
-    public String getName() {
-        return algorithmName;
-    }
-    
-    
-    /****************** Constructors******************/
-    
+
+    /** Number of actually running operations */
+    private transient Semaphore runningOperations;
+
+    /** Executor for operations */
+    private transient MethodClassExecutor operationExecutor;
+
+    /** List of background-executed operations (per thread) */
+    private transient ThreadLocal<StatisticsEnabledMethodThreadList> bgExecutionList;
+
+
+    //****************** Constructors ******************//
+
     /**
      * Create new instance of Algorithm and initialize the operation executor.
      * @param algorithmName the name of this algorithm
@@ -93,9 +92,9 @@ public abstract class Algorithm implements Serializable {
         initializeExecutor();
     }
 
-    
-    /****************** Destructor ******************/
-    
+
+    //****************** Destructor ******************//
+
     /**
      * Public destructor to stop the algorithm.
      * This should be overriden in order to clean up.
@@ -107,21 +106,35 @@ public abstract class Algorithm implements Serializable {
     }
 
 
-    /****************** Serialization ******************/
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns the name of this algorithm
+     * @return the name of this algorithm
+     */
+    public String getName() {
+        return algorithmName;
+    }
+
+
+    //****************** Serialization ******************//
 
     /**
      * Deserialization method.
      * Initialize the method class executor, because it is not serialized
+     * @param in the input stream to deserialize from
+     * @throws IOException if there was an error reading from the input stream
+     * @throws ClassNotFoundException if there was an error resolving classes from the input stream
      */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         initializeExecutor();
     }
 
-
     /**
      * Load the algorithm from the specified file and return it.
      *
+     * @param <T> class of the stored algorithm
      * @param algorithmClass class of the stored algorithm
      * @param filepath the path to a file from which the algorithm should be restored
      * @return the loaded algorithm
@@ -192,14 +205,7 @@ public abstract class Algorithm implements Serializable {
     }
 
 
-    /****************** Operation execution ******************/
-
-    /** Number of actually running operations */
-    protected transient Semaphore runningOperations;
-    /** Executor for operations */
-    protected transient MethodClassExecutor operationExecutor;
-    /** List of background-executed operations (per thread) */
-    protected transient ThreadLocal<StatisticsEnabledMethodThreadList> bgExecutionList;
+    //****************** Operation execution ******************//
 
     /**
      * Returns the number of currently evaluated operations.
@@ -235,7 +241,7 @@ public abstract class Algorithm implements Serializable {
      * This method is called from constructor and serialization.
      * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
      */
-    protected void initializeExecutor() throws IllegalArgumentException {
+    private void initializeExecutor() throws IllegalArgumentException {
         runningOperations = new Semaphore(maximalConcurrentOperations, true);
         operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
         bgExecutionList = new ThreadLocal<StatisticsEnabledMethodThreadList>() {
@@ -259,6 +265,7 @@ public abstract class Algorithm implements Serializable {
      * Returns the list of operations this particular algorithm supports.
      * The operations returned can be restricted to a specified subclass, such as QueryOperation, etc.
      * The operations returned can be further queried on arguments by static methods in AbstractOperation.
+     * @param <E> type of the returned operations
      * @param subclassToSearch ancestor class of the returned operations.
      * @return the list of operations this particular algorithm supports
      */
@@ -267,31 +274,68 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Execute algorithm operation.
-     * @param operation the operation to execute on this algorithm
+     * Execute operation with additional parameters.
+     * This is a synchronized wrapper around {@link MethodExecutor#execute}. 
+     * @param addTimeStatistic add the execution time statistic to {@link OperationStatistics}
+     * @param params the parameters compatible with {@link #getExecutorParamClasses()}
      * @throws AlgorithmMethodException if the execution has thrown an exception
      * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
      */
-    public void executeOperation(AbstractOperation operation) throws AlgorithmMethodException, NoSuchMethodException {
+    protected final void execute(boolean addTimeStatistic, Object... params) throws AlgorithmMethodException, NoSuchMethodException {
         if (maximalConcurrentOperations > 0)
             runningOperations.acquireUninterruptibly();
         try {
-            if (Statistics.isEnabledGlobally()) {
-                // Measure time of execution (as an operation statistic)
+            // Measure time of execution (as an operation statistic)
+            if (addTimeStatistic) {
                 StatisticTimer operationTime = OperationStatistics.getOpStatistics("OperationTime", StatisticTimer.class);
                 operationTime.start();
-                operationExecutor.execute(operation);
+                operationExecutor.execute(params);
                 operationTime.stop();
-            } else operationExecutor.execute(operation);
-            // If the operation's result code has not changed, pretend that everything went fine.
-            if (operation.getErrorCode().equals(BucketErrorCode.NOT_SET))
-                operation.endOperation();
+            } else {
+                operationExecutor.execute(params);
+            }
         } catch (InvocationTargetException e) {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
             if (maximalConcurrentOperations > 0)
                 runningOperations.release();
         }
+    }
+
+    /**
+     * Execute operation with additional parameters on background.
+     * This is a synchronized wrapper around {@link MethodExecutor#backgroundExecute}.
+     * @param updateStatistics set to <tt>true</tt> if the operations statistic should be updated after the operation finishes its background execution
+     * @param params the parameters compatible with {@link #getExecutorParamClasses()}
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    protected final void backgroundExecute(boolean updateStatistics, Object... params) throws NoSuchMethodException {
+        if (maximalConcurrentOperations > 0)
+            runningOperations.acquireUninterruptibly();
+        try {
+            bgExecutionList.get().backgroundExecute(updateStatistics, params);
+        } catch (NoSuchMethodException e) {
+            if (maximalConcurrentOperations > 0)
+                runningOperations.release();
+            throw e;
+        } catch (RuntimeException e) {
+            if (maximalConcurrentOperations > 0)
+                runningOperations.release();
+            throw e;
+        }
+    }
+
+    /**
+     * Execute operation on this algorithm.
+     * @param <T> the type of executed operation
+     * @param operation the operation to execute on this algorithm
+     * @return the executed operation (same as the argument)
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    public <T extends AbstractOperation> T executeOperation(T operation) throws AlgorithmMethodException, NoSuchMethodException {
+        execute(Statistics.isEnabledGlobally(), operation);
+        return operation;
     }
 
     /**
@@ -312,19 +356,7 @@ public abstract class Algorithm implements Serializable {
      * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
      */
     public void backgroundExecuteOperation(AbstractOperation operation, boolean updateStatistics) throws NoSuchMethodException {
-        if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly(); // Release for this acquire is in the waitBackgroundExecuteOperation
-        try {
-            bgExecutionList.get().backgroundExecute(updateStatistics, operation);
-        } catch (NoSuchMethodException e) {
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
-            throw e;
-        } catch (RuntimeException e) {
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release();
-            throw e;
-        }
+        backgroundExecute(updateStatistics, operation);
     }
 
     /**
@@ -340,7 +372,8 @@ public abstract class Algorithm implements Serializable {
      * Wait for all operations executed on background to finish.
      * Only objects (executed methods' arguments) with the specified class are returned.
      * 
-     * @param argClass filter on the returned object classes
+     * @param <E> type of the returned operations
+     * @param argClass filter on the returned operation classes
      * @return the list of operations that were executed
      * @throws AlgorithmMethodException 
      */
@@ -366,7 +399,7 @@ public abstract class Algorithm implements Serializable {
     }
 
     /** This is a helper class that allows merging of operation statistics from the background-executed operations */
-    protected static class StatisticsEnabledMethodThreadList extends MethodThreadList implements Executable {
+    private static class StatisticsEnabledMethodThreadList extends MethodThreadList implements Executable {
         /** The marked statistics to merge */
         protected Set<OperationStatistics> statisticsToMerge = null;
 
@@ -447,12 +480,11 @@ public abstract class Algorithm implements Serializable {
     }
 
 
-    /****************** Operation selection ******************/
+    //****************** Operation method specifier ******************//
 
     /**
      * This method should return an array of additional parameters that are needed for operation execution.
-     * The list must be consistent (speaking in terms of types) with the executeOperation method.
-     * 
+     * The list must be consistent with the parameters array passed to {@link #execute} and {@link #backgroundExecute}.
      * @return array of additional parameters that are needed for operation execution
      */
     protected Class[] getExecutorParamClasses() {
@@ -461,7 +493,7 @@ public abstract class Algorithm implements Serializable {
     }
 
 
-    /****************** Algorithm markers ******************/
+    //****************** Algorithm markers ******************//
 
     /**
      * Annotation for algorithm constructors.
@@ -490,6 +522,7 @@ public abstract class Algorithm implements Serializable {
 
     /**
      * Returns all annotated constructors of the provided algorithm class.
+     * @param <E> class of algorithm for which to get constructors
      * @param algorithmClass the class of an algorithm for which to get constructors
      * @return all annotated constructors of the provided algorithm class
      */

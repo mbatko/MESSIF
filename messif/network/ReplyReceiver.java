@@ -23,7 +23,7 @@ import java.util.logging.Level;
  * and getter methods can be used to receive the responses (or wait for them).
  * 
  *
- * @param TReplyMessage type of the reply message that this receiver accepts
+ * @param <TReplyMessage> type of the reply message that this receiver accepts
  * @author  xbatko
  */
 public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiver {

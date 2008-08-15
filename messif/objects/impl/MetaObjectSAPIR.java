@@ -33,6 +33,7 @@ import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -344,6 +345,13 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
     public static MetaObjectSAPIR create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
+        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
+        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
+        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+    }
+
+    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputSource */
+    public static MetaObjectSAPIR create(InputSource is) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
         return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());

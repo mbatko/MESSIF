@@ -208,6 +208,7 @@ public class NetworkNode implements Serializable {
      * @return <tt>true</tt> if this object is the same as the obj
      *         argument; <code>false</code> otherwise.
      */
+    @Override
     public boolean equals(Object obj) {
 	if (!(obj instanceof NetworkNode))
             return false;
@@ -235,6 +236,7 @@ public class NetworkNode implements Serializable {
      * Returns a hash code value for this network node.
      * @return a hash code value for this network node
      */
+    @Override
     public int hashCode() {
 	return (host.hashCode() << 16) + port;
     }
@@ -245,21 +247,21 @@ public class NetworkNode implements Serializable {
     /** Mapping table for translating original host names (optionally plus ports) to new ones */
     protected static Map<InetAddress, Map<Integer, NetworkNode>> netnodeMappingTable = null;
 
+    /** Mapping table for translating parent message dispatchers - key is port and value is a top-level dispatcher for that port */
+    protected static Map<Integer, MessageDispatcher> messageDispMappingTable = null;
+
     /**
      *  Setter method for the mapping table.
-     *  Use this method before deserialization of algorithm to change host names (and optionally ports) of
+     *  Use this method before deserialization of algorithm to change host names (and optionally ports and node IDs) of
      *  loaded NetworkNodes.
      *  After the deserialization, method {@link #resetHostMappingTable} should be used to disable remapping.
      * 
-     * 
      * @param netnodeMappingTable the new host names mapping table or <tt>null</tt> to disable it.
-     * @param messageDispatcherPort the new port for message dispatcher
-     * @param messageDispatcherBroadcastPort the new broadcast port for message dispatcher
+     * @param messageDispMappingTable mapping table for translating parent message dispatchers - key is port and value is a top-level dispatcher for that port
      */
-    public static void setHostMappingTable(Map<InetAddress, Map<Integer, NetworkNode>> netnodeMappingTable, int messageDispatcherPort, int messageDispatcherBroadcastPort) {
+    public static void setHostMappingTable(Map<InetAddress, Map<Integer, NetworkNode>> netnodeMappingTable, Map<Integer, MessageDispatcher> messageDispMappingTable) {
         NetworkNode.netnodeMappingTable = netnodeMappingTable;
-        MessageDispatcher.mapToPort = messageDispatcherPort;
-        MessageDispatcher.mapToBroadcastPort = messageDispatcherBroadcastPort;
+        NetworkNode.messageDispMappingTable = messageDispMappingTable;
     }
 
     /**
@@ -272,12 +274,10 @@ public class NetworkNode implements Serializable {
      *  After the deserialization, method {@link #resetHostMappingTable} should be used to disable remapping.
      *
      * @param fileName the file to load mapping table from
-     * @param messageDispatcherPort the new port for message dispatcher
-     * @param messageDispatcherBroadcastPort the new broadcast port for message dispatcher
      * @throws UnknownHostException if a host specified in mapping cannot be resolved (mappings loaded before the exception occurred are kept loaded)
      * @throws IOException if there was a problem loading the file (mappings loaded before the exception occurred are kept loaded)
      */
-    public static void loadHostMappingTable(String fileName, int messageDispatcherPort, int messageDispatcherBroadcastPort) throws UnknownHostException, IOException {
+    public static void loadHostMappingTable(String fileName) throws UnknownHostException, IOException {
         // Open the mapping table file
         BufferedReader mappingFile = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
 
@@ -316,8 +316,7 @@ public class NetworkNode implements Serializable {
             portMap.put(port, NetworkNode.valueOf(hosts[1]));
         }
 
-        MessageDispatcher.mapToPort = messageDispatcherPort;
-        MessageDispatcher.mapToBroadcastPort = messageDispatcherBroadcastPort;
+        messageDispMappingTable = new HashMap<Integer, MessageDispatcher>();
     }
 
     /**
@@ -326,8 +325,7 @@ public class NetworkNode implements Serializable {
      */
     public static void resetHostMappingTable() {
         netnodeMappingTable = null;
-        MessageDispatcher.mapToPort = 0;
-        MessageDispatcher.mapToBroadcastPort = 0;
+        messageDispMappingTable = null;
     }
 
     /**
@@ -360,6 +358,7 @@ public class NetworkNode implements Serializable {
      * Returns the string representation of this network node.
      * @return the string representation of this network node
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(host.getHostName());
         rtv.append(":").append(port);

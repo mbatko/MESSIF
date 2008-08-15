@@ -18,6 +18,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectSAPIR.XMLHandlerSAPIR;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinarySerializator;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
@@ -63,6 +64,13 @@ public class MetaObjectSAPIRWeightedDist extends MetaObjectSAPIR {
 
     /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
     public static MetaObjectSAPIRWeightedDist create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
+        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
+        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
+        return new MetaObjectSAPIRWeightedDist(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
+    }
+
+    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputSource */
+    public static MetaObjectSAPIRWeightedDist create(InputSource is) throws ParserConfigurationException, SAXException, IOException {
         XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
         SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
         return new MetaObjectSAPIRWeightedDist(xmlHandler.getLocatorURI(), xmlHandler.getObjects());

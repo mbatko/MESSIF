@@ -193,6 +193,18 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         return errValue;
     }
 
+    /**
+     * Returns <tt>true</tt> if this operation has finished its processing - either successfully or unsuccessfully.
+     * In other words, <tt>true</tt> is returned if the error code of this operation is set.
+     * If the operation has not finished yet (i.e. the error code is {@link ErrorCode#NOT_SET not set},
+     * <tt>false</tt> is returned.
+     * @return <tt>true</tt> if this operation has finished its processing
+     */
+    public boolean isFinished() {
+        return errValue.isSet();
+    }
+
+
     //****************** Operation finalizer ******************//
 
     /**
