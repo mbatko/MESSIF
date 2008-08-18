@@ -1,0 +1,207 @@
+/*
+ * AbstractObject.java
+ *
+ * Created on 3. kveten 2003, 20:09
+ */
+
+package messif.objects;
+
+import java.io.Serializable;
+import messif.netbucket.RemoteAbstractObject;
+import messif.utility.Clearable;
+
+
+/**
+ * The abstract piece of data that the MESSI Framework works with.
+ * This is the top-most class of the object hierarchy.
+ *
+ * @see LocalAbstractObject
+ * @see messif.netbucket.RemoteAbstractObject
+ *
+ * @author  xbatko
+ */
+public abstract class AbstractObject extends UniqueID implements Serializable, Clearable, Cloneable {
+
+    /** Class version id for serialization. */
+    private static final long serialVersionUID = 4L;
+
+    //****************** Attributes ******************//
+
+    /** The key of this object - it must contain the URI. */
+    protected AbstractObjectKey objectKey;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of AbstractObject.
+     * A new unique object ID is generated and the
+     * object's key is set to <tt>null</tt>.
+     */
+    protected AbstractObject() {
+        objectKey = null;
+    }
+
+    /**
+     * Creates a new instance of AbstractObject.
+     * A new unique object ID is generated and the 
+     * object's key is set to the specified key.
+     * @param objectKey the key to be associated with this object
+     */
+    protected AbstractObject(AbstractObjectKey objectKey) {
+        this.objectKey = objectKey;
+    }
+
+    /**
+     * Creates a new instance of AbstractObject.
+     * A new unique object ID is generated and a
+     * new {@link AbstractObjectKey} is generated for
+     * the specified <code>locatorURI</code>.
+     * @param locatorURI the locator URI for the new object
+     */
+    protected AbstractObject(String locatorURI) {
+        this.objectKey = new AbstractObjectKey(locatorURI);
+    }
+
+    /**
+     * Creates a new instance of AbstractObject.
+     * The object ID and key are copied from the source object.
+     * If the key is not {@link AbstractObjectKey}, the key is
+     * replaced with an instance of {@link AbstractObjectKey} that
+     * copies the locator URI.
+     * @param source the object from which to copy the ID
+     */
+    protected AbstractObject(AbstractObject source) {
+        super(source);
+        if ((source.objectKey == null) || (AbstractObjectKey.class.equals(source.objectKey.getClass())))
+            this.objectKey = source.objectKey;
+        else
+            this.objectKey = new AbstractObjectKey(source.objectKey.getLocatorURI());
+    }
+
+
+    //****************** Object ID ******************//
+
+    /**
+     * Returns the ID of this object
+     * @return the ID of this object
+     */
+    public UniqueID getObjectID() {
+        // It is necessary to create a new instance (this object should not be used directly)
+        return new UniqueID(this);
+    }
+
+
+    //****************** Object key and locator URI ******************//
+
+    /**
+     * Returns the object key.
+     * @return the object key
+     */
+    public AbstractObjectKey getObjectKey() {
+        return objectKey;
+    }
+
+    /**
+     * Set the object key
+     * @param objectKey the new object key
+     */
+    public void setObjectKey(AbstractObjectKey objectKey) {
+        this.objectKey = objectKey;
+    }        
+
+    /**
+     * Returns the locator URI of this object.
+     * @return the locator URI of this object
+     */
+    public String getLocatorURI() {
+        if (objectKey == null)
+            return null;
+        return objectKey.getLocatorURI();
+    }
+
+
+    //****************** Supplemental data cleaning ******************//
+
+    /**
+     * Clear non-messif data stored in this object.
+     * That is, the object key is changed to {@link AbstractObjectKey} if
+     * not <tt>null</tt>. The transformation only preserves the locator URI, all
+     * additional information is lost.
+     */
+    public void clearSurplusData() {
+        // If object key is some extended class, remap it to the basic AbstractObjectKey
+        if (objectKey != null && !objectKey.getClass().equals(AbstractObjectKey.class))
+            objectKey = new AbstractObjectKey(objectKey.getLocatorURI());
+    }
+
+
+    //****************** Local object converter ******************//
+
+    /**
+     * Returns this abstract object as local object.
+     * For a LocalAbstractObject it returns itself, for a RemoteAbstractObject
+     * it first downloads the object and then returns it as local object.
+     * @return this abstract object as local object
+     */
+    public abstract LocalAbstractObject getLocalAbstractObject();
+
+
+    //****************** Remote object converter ******************//
+
+    /**
+     * Returns the RemoteAbstractObject that contains only the URI locator of this object.
+     * For LocalAbstractObject creates a new object, for RemoteAbstractObject returns itself.
+     * @return RemoteAbstractObject that contains only the URI locator of this object.
+     */
+    public abstract RemoteAbstractObject getRemoteAbstractObject();
+
+
+    //****************** Clonning ******************//
+
+    /**
+     * Creates and returns a shallow copy of this object. The precise meaning 
+     * of "copy" may depend on the class of the object.
+     *
+     * @return a clone of this instance
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    @Override
+    public AbstractObject clone() throws CloneNotSupportedException {
+        return (AbstractObject)super.clone();
+    }
+
+    /**
+     * Creates and returns a copy of this object with changed locatorURI.
+     * The precise meaning of "copy" may depend on the class of the object.
+     *
+     * @param objectKey new object key
+     * @return a clone of this instance
+     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     */
+    public AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
+        AbstractObject rtv = clone();
+        rtv.objectKey = objectKey;
+        return rtv;
+    }
+
+
+    //****************** String representation ******************//
+
+    /**
+     * Returns a string representation of this abstract object.
+     * Basically, this method returns the object type plus object locator
+     * (or ID if locator is <tt>null</tt>) in brackets.
+     * @return a string representation of this abstract object
+     */
+    @Override
+    public String toString() {
+        StringBuffer rtv = new StringBuffer(getClass().getSimpleName()).append(" (");
+        if (objectKey != null)
+            rtv.append(objectKey.toString());
+        else rtv.append(super.toString());
+        rtv.append(")");
+        return rtv.toString();
+    }
+
+}
