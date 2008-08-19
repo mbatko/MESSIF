@@ -132,7 +132,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
             field.setAccessible(true);
             field.set(this, new MessageDispatcher(port, broadcastPort));
         } catch (Exception e) {
-            throw new IOException(e);
+            throw new IOException(e.toString());
         }
     }
 

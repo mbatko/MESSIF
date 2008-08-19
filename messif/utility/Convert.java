@@ -17,6 +17,7 @@ import messif.objects.util.StreamGenericAbstractObjectIterator;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -804,6 +805,42 @@ public abstract class Convert {
         }
         str.append(')');
         throw new NoSuchMethodException(str.toString());
+    }
+
+    /**
+     * Returns a constructor for the specified class that accepts the specified arguments.
+     * The <code>clazz</code>'s declared constructors are searched for the one that
+     * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the 
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper constructor is found. Their types then will be
+     * compatible with the constructor.
+     * 
+     * @param clazz the class for which to get the method
+     * @param methodName the name of the method to get
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link #stringToType}
+     * @param arguments the arguments for the method
+     * @return a method of the specified class
+     * @throws NoSuchMethodException if there was no method with the specified name and arguments
+     */
+    @SuppressWarnings("unchecked")
+    public static Method getMethod(Class<?> clazz, String methodName, boolean convertStringArguments, Object[] arguments) throws NoSuchMethodException {
+        if (clazz == null || methodName == null)
+            throw new NoSuchMethodException("There is not method '" + methodName + "' that accepts " + Arrays.toString(arguments));
+
+        // Search all methods of the execution object and register the matching ones
+        for (Method method : clazz.getDeclaredMethods()) {
+            // Skip methods with different name if methodNames parameter was specified
+            if (!methodName.equals(method.getName()))
+                continue;
+
+            // Check prototype
+            if (isPrototypeMatching(method.getParameterTypes(), arguments, convertStringArguments))
+                return method;
+        }
+
+        // Recurse to superclass
+        return getMethod(clazz.getSuperclass(), methodName, convertStringArguments, arguments);
     }
 
     /**
