@@ -63,6 +63,17 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
     //****************** Constructors ******************//
 
     /**
+     * Creates a new instance of ApproxKNNQueryOperation.
+     * The parameters are set to reasonable default values.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects"})
+    public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k) {
+        this(queryObject, k, 25, ApproxKNNQueryOperation.LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
+    }
+
+    /**
      * Creates a new instance of ApproxKNNQueryOperation
      * @param queryObject query object
      * @param k number of objects to be returned
