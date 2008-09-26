@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
-import messif.objects.AbstractObjectKey;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInputStream;

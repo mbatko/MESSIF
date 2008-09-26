@@ -6,6 +6,7 @@
 
 package messif.objects;
 
+import messif.objects.keys.AbstractObjectKey;
 import messif.netbucket.RemoteAbstractObject;
 import messif.statistics.StatisticCounter;
 import messif.statistics.Statistics;

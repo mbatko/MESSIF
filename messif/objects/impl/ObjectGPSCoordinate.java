@@ -13,7 +13,7 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import messif.objects.AbstractObjectKey;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 
 /**

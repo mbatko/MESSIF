@@ -3,7 +3,7 @@
  * 
  */
 
-package messif.objects;
+package messif.objects.keys;
 
 import java.io.IOException;
 import messif.objects.nio.BinaryInputStream;

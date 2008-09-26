@@ -15,7 +15,7 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.StringTokenizer;
-import messif.objects.AbstractObjectKey;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 
 

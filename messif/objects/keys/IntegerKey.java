@@ -1,5 +1,7 @@
 
-package messif.objects;
+package messif.objects.keys;
+
+import messif.objects.keys.AbstractObjectKey;
 
 /**
  * The object key that contains an Integer and an locator URI.

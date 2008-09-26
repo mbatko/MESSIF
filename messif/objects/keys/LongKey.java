@@ -1,60 +1,75 @@
 
-package messif.objects;
+package messif.objects.keys;
 
+import messif.objects.keys.AbstractObjectKey;
 import java.io.IOException;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinaryOutputStream;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * The object key that contains an Double and an locator URI.
+ * The object key that contains an Long and an locator URI.
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
  */
-public class DoubleKey extends AbstractObjectKey {
+public class LongKey extends AbstractObjectKey {
 
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
     
-    /** The double key */
-    public final double key;
+    /** The long key */
+    public final long key;
     
-    /** Creates a new instance of DoubleKey 
+    /** Creates a new instance of LongKey 
      * @param locatorURI the URI locator
-     * @param key the double key of the object - it musn't be null
+     * @param key the long key of the object - it musn't be null
      */
-    public DoubleKey(String locatorURI, double key) {
+    public LongKey(String locatorURI, long key) {
         super(locatorURI);
         this.key = key;
     }
     
+    /** Creates a new instance of LongKey given only the locatorURI - 
+     *    implicitly create the key as the <code>(locatorURI.hashCode() + Integer.MAX_VALUE) modulo maxKey</code>.
+     * @param locatorURI the URI locator
+     * @param hashURI if true then the key is created as hashCode of the locator; it set to 0, otherwise
+     * @param maxValue the maximal value the key can have (incremented by 1)
+     * @throws java.lang.IllegalArgumentException if the locatorURI is null
+     */
+    public LongKey(String locatorURI, boolean hashURI, long maxValue) throws IllegalArgumentException {
+        super(locatorURI);
+        if (hashURI && locatorURI != null)
+            this.key = ((long) locatorURI.hashCode() + (long) Integer.MAX_VALUE) % maxValue;
+        else key = 0;
+    }
+    
     /**
      * Creates a new instance of AbstractObjectKey given a buffered reader with the first line of the
-     * following format: "doubleKey locatorUri"
+     * following format: "longKey locatorUri"
      * 
      * @param keyString the text stream to read an object from
-     * @throws IllegalArgumentException if the string is not of format "doubleKey locatorUri"
+     * @throws IllegalArgumentException if the string is not of format "longKey locatorUri"
      */
-    public DoubleKey(String keyString) throws IllegalArgumentException {
+    public LongKey(String keyString) throws IllegalArgumentException {
         super(getLocatorURI(keyString));
         try {
-            this.key = Double.valueOf(keyString.substring(0, keyString.indexOf(" ")));
+            this.key = Long.valueOf(keyString.substring(0, keyString.indexOf(" ")));
         } catch (IndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("string must be of format 'doubleKey locatorUri': "+keyString);
+            throw new IllegalArgumentException("string must be of format 'longKey locatorUri': "+keyString);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("string must be of format 'doubleKey locatorUri': "+keyString);
+            throw new IllegalArgumentException("string must be of format 'longKey locatorUri': "+keyString);
         }
     }
     
     /**
-     * Auxiliary method for parsing the string 'doubleKey locatorURI'
+     * Auxiliary method for parsing the string 'longKey locatorURI'
      * @return the locatorURI string
      */
     private static String getLocatorURI(String keyString) throws IllegalArgumentException {
         try {
             return keyString.substring(keyString.indexOf(" ") + 1);
         } catch (IndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("string must be of format 'doubleKey locatorUri': "+keyString);
+            throw new IllegalArgumentException("string must be of format 'longKey locatorUri': "+keyString);
         }
     }
     
@@ -64,39 +79,39 @@ public class DoubleKey extends AbstractObjectKey {
      */
     @Override
     public String getText() {
-        StringBuffer buf = new StringBuffer(Double.toString(key));
+        StringBuffer buf = new StringBuffer(Long.toString(key));
         buf.append(' ').append(locatorURI);
         return buf.toString();
     }
         
     /**
-     * Compare the keys according to the double key
+     * Compare the keys according to the long key
      * @param o the key to compare this key with
      */
     @Override
     public int compareTo(AbstractObjectKey o) {
         if (o == null)
             return 3;
-        if (! (o instanceof DoubleKey))
+        if (! (o.getClass().equals(LongKey.class)))
             return 3;
-        if (key < ((DoubleKey) o).key)
+        if (key < ((LongKey) o).key)
             return -1;
-        if (key > ((DoubleKey) o).key)
+        if (key > ((LongKey) o).key)
             return 1;
         return 0;
     }
 
     /**
-     * Return the double key converted to int.
-     * @return the double key converted to int
+     * Return the long key converted to int.
+     * @return the long key converted to int
      */
     @Override
     public int hashCode() {
-        return ((Double) key).hashCode();
+        return (int) key;
     }
 
     /**
-     * Equals according to the double key. If the parameter is not of the DoubleKey class then 
+     * Equals according to the long key. If the parameter is not of the LongKey class then 
      * return false.
      * @param obj object to compare this object to
      */
@@ -104,9 +119,9 @@ public class DoubleKey extends AbstractObjectKey {
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (! (obj.getClass().equals(DoubleKey.class)))
+        if (! (obj.getClass().equals(LongKey.class)))
             return false;
-        return (key == ((DoubleKey) obj).key);
+        return (key == ((LongKey) obj).key);
     }
     
     /** Return the URI string. */
@@ -119,15 +134,15 @@ public class DoubleKey extends AbstractObjectKey {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of DoubleKey loaded from binary input stream.
+     * Creates a new instance of LongKey loaded from binary input stream.
      * 
-     * @param input the stream to read the DoubleKey from
+     * @param input the stream to read the LongKey from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the stream
      */
-    protected DoubleKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected LongKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-        key = serializator.readDouble(input);
+        key = serializator.readLong(input);
     }
 
     /**
