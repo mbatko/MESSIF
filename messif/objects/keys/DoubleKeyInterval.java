@@ -7,6 +7,8 @@ import java.io.Serializable;
  * @author xnovak8
  */
 public class DoubleKeyInterval extends KeyInterval<DoubleKey> implements Serializable {
+    /** class serial id for serialization */
+    private static final long serialVersionUID = 1L;    
     
     /**
      * Lower bound (inclusive).
