@@ -50,6 +50,7 @@ public class kNNQueryOperation extends RankingQueryOperation {
      * @param k the number of nearest neighbors to retrieve
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Answer type"})
     public kNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
         super(answerType, k);
         this.queryObject = queryObject;

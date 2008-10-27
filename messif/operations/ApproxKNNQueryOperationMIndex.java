@@ -52,16 +52,31 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.
+     * The approximation parameters are set to reasonable default values.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 6000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
     }
     
     /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.
+     * The approximation parameters are set to reasonable default values.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Answer type"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, AnswerType answerType) {
+        this(queryObject, k, answerType, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 6000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, LocalAbstractObject.UNKNOWN_DISTANCE);
+    }
+
+    /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with full parameters.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      * @param clustersToVisit if greater than 0 then taken as the fixed number of clusters to be visited by the operation
@@ -87,6 +102,34 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         this.nodesInClusters = Arrays.asList(nodesInClusters);
     }
         
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex with full parameters.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param answerType the type of objects this operation stores in its answer
+     * @param clustersToVisit if greater than 0 then taken as the fixed number of clusters to be visited by the operation
+     * @param basicDifferenceConst {@link ApproxKNNQueryOperationMIndex#basicDifferenceConst}
+     * @param differenceDivisionConst {@link ApproxKNNQueryOperationMIndex#differenceDivisionConst}
+     * @param maximalClusterScore the maximal score of a cluster to be included in the search
+     * @param maximumClustersToVisit maximal number of clusters to be visited by this operation
+     * @param nodesInClusters n array of maximal numbers of peers to be visited within each cluster; the clusters are taken in the order of the cluster score.
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius for which the answer is guaranteed
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of objects", "Answer type", "Fixed # clusters<br/>to visit", "Gap seeking<br/>diff. const", "diff. division<br/>const", 
+            "max cluster<br/>score", "max # clusters<br/>to visit", "list of # of nodes/peers<br/>to visit per cluster", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, AnswerType answerType, int clustersToVisit, float basicDifferenceConst, float differenceDivisionConst, 
+            float maximalClusterScore, int maximumClustersToVisit, Integer[] nodesInClusters, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, k, answerType, localSearchParam, localSearchType, radiusGuaranteed);
+        this.clustersToVisit = clustersToVisit;
+        this.basicDifferenceConst = basicDifferenceConst;
+        this.differenceDivisionConst = differenceDivisionConst;
+        this.maxClusterScore = maximalClusterScore;
+        this.maxClustersToVisit = maximumClustersToVisit;
+        this.nodesInClusters = Arrays.asList(nodesInClusters);
+    }
+
     /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.

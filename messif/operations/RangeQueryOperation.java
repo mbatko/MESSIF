@@ -51,6 +51,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param radius the query radius
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType) {
         this(queryObject, radius, answerType, Integer.MAX_VALUE);
     }
@@ -62,6 +63,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param radius the query radius
      * @param maxAnswerSize sets the maximal answer size
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Maximal answer size"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, int maxAnswerSize) {
         this(queryObject, radius, AnswerType.REMOTE_OBJECTS, maxAnswerSize);
     }
@@ -73,6 +75,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      * @param maxAnswerSize sets the maximal answer size
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize) {
         super(answerType, maxAnswerSize);
         this.queryObject = queryObject;

@@ -15,10 +15,10 @@ import messif.objects.LocalAbstractObject;
  */
 @AbstractOperation.OperationName("Approximate range query")
 public class ApproxRangeQueryOperation extends RangeQueryOperation {    
-    
+
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
     /** Type of the local approximation parameter: PERCENTAGE, ABS_OBJ_COUNT, ABS_DC_COUNT.
      * It can be view as a type of stop condition for early termination strategy of approximation.
      */
@@ -36,24 +36,52 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
          */
         ABS_DC_COUNT
     }
-    
+
     /** Type of the local approximation parameter used. */
     protected final LocalSearchType localSearchType;
-    
-    /** Value of the local approximation parameter. 
+
+    /**
+     * Value of the local approximation parameter. 
      * Its interpretation depends on the value of {@link #localSearchType}.
      */
     protected final int localSearchParam;
-    
-    /** Radius for which the answer is guaranteed as correct.
+
+    /**
+     * Radius for which the answer is guaranteed as correct.
      * It is specified in the constructor and can influence the level of approximation.
      * An algorithm evaluating this query can also change this value, so it can
      * notify about the guarantees of evaluation.
      */
     protected float radiusGuaranteed;
 
-    
-    /** Creates a new instance of ApproxRangeQueryOperation
+    /**
+     * Creates a new instance of ApproxRangeQueryOperation for a given query object and maximal number of objects to return.
+     * The approximation parameters are set to reasonable default values.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * @param queryObject query object
+     * @param r query radius
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
+    public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r) {
+        this(queryObject, r, AnswerType.REMOTE_OBJECTS);
+    }
+
+    /**
+     * Creates a new instance of ApproxRangeQueryOperation for a given query object and radius.
+     * The approximation parameters are set to reasonable default values.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param r query radius
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
+    public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r, AnswerType answerType) {
+        this(queryObject, r, answerType, 25, LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
+    }
+
+    /**
+     * Creates a new instance of ApproxRangeQueryOperation for a given query object,
+     * radius and parameters that control the approximation.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param r query radius
      * @param localSearchParam local search parameter - typically approximation parameter
@@ -68,7 +96,24 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
         this.radiusGuaranteed = radiusGuaranteed;
     }
  
-    
+    /**
+     * Creates a new instance of ApproxRangeQueryOperation for a given query object,
+     * radius and parameters that control the approximation.
+     * @param queryObject query object
+     * @param r query radius
+     * @param answerType the type of objects this operation stores in its answer
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
+    public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r, AnswerType answerType, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, r, answerType);
+        this.localSearchParam = localSearchParam;
+        this.localSearchType = localSearchType;
+        this.radiusGuaranteed = radiusGuaranteed;
+    }
+
     /**
      * Returns currently set type of approximation, see {@link #localSearchType}.
      * 
@@ -107,8 +152,7 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
     public float getRadiusGuaranteed() {
         return radiusGuaranteed;
     }
-    
-    
+
     /**
      * Returns a string representation of this operation.
      * @return a string representation of this operation.
