@@ -62,29 +62,9 @@ public abstract class Convert {
         if (string.equals("null"))
             return null;
         
-        // Converting the primitive types
-        if (type.isPrimitive()) 
-            try {
-                if (type == Integer.TYPE)
-                    return (E)Integer.valueOf(string); // This cast IS checked
-                if (type == Long.TYPE)
-                    return (E)Long.valueOf(string); // This cast IS checked
-                if (type == Boolean.TYPE)
-                    return (E)Boolean.valueOf(string); // This cast IS checked
-                if (type == Double.TYPE)
-                    return (E)Double.valueOf(string); // This cast IS checked
-                if (type == Byte.TYPE)
-                    return (E)Byte.valueOf(string); // This cast IS checked
-                if (type == Float.TYPE)
-                    return (E)Float.valueOf(string); // This cast IS checked
-                if (type == Short.TYPE)
-                    return (E)Short.valueOf(string); // This cast IS checked
-                if (type == Character.TYPE)
-                    return (E)Character.valueOf(string.charAt(0)); // This cast IS checked
-                throw new InstantiationException("Can't create '" + type.getName() + "' from '" + string + "' because " + type + " is an unknown primitive type");
-            } catch (NumberFormatException e) {
-                throw new InstantiationException(e.toString());
-            }
+        // Use "valueOf" static method of primitive wrappers
+        if (type.isPrimitive())
+            type = wrapPrimitiveType(type);
 
         if (type.equals(String.class))
             return (E)string; // This cast IS checked
@@ -195,6 +175,34 @@ public abstract class Convert {
      */
     public static <E> E stringToType(String string, Class<E> type) throws InstantiationException {
         return stringToType(string, type, null);
+    }
+
+    /**
+     * Returns a wrapper class for primitive type.
+     * If the type is not primitive, it is returned as is.
+     * @param type a primitive type class
+     * @return a wrapper class for primitive type
+     */
+    public static <T> Class<T> wrapPrimitiveType(Class<T> type) {
+        if (!type.isPrimitive())
+            return type;
+        if (type == Integer.TYPE)
+            return (Class<T>)Integer.class; // This cast IS checked
+        if (type == Long.TYPE)
+            return (Class<T>)Long.class; // This cast IS checked
+        if (type == Boolean.TYPE)
+            return (Class<T>)Boolean.class; // This cast IS checked
+        if (type == Double.TYPE)
+            return (Class<T>)Double.class; // This cast IS checked
+        if (type == Byte.TYPE)
+            return (Class<T>)Byte.class; // This cast IS checked
+        if (type == Float.TYPE)
+            return (Class<T>)Float.class; // This cast IS checked
+        if (type == Short.TYPE)
+            return (Class<T>)Short.class; // This cast IS checked
+        if (type == Character.TYPE)
+            return (Class<T>)Character.class; // This cast IS checked
+        throw new InternalError("Unknown primitive type");
     }
 
     /**
@@ -914,7 +922,7 @@ public abstract class Convert {
             if (arguments[i] == null)
                 continue;
             // The argument of the method must be the same as or a superclass of the provided prototype class
-            if (!prototype[i].isInstance(arguments[i])) {
+            if (!wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {
                 if (!convertStringArguments || !(arguments[i] instanceof String))
                     return false;
                 // Try to convert string argument
@@ -935,7 +943,7 @@ public abstract class Convert {
 
         return true;
     }
-    
+
     /**
      * Returns a new instance of a static array.
      * @param <T> the type of components of the new array

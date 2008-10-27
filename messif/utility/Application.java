@@ -1702,6 +1702,7 @@ public class Application {
 
             return true; // Execution successful
         } catch (InvocationTargetException e) {
+			log.severe(e.getCause());
             out.println(e.getCause());
             out.println(e.getMessage());
         } catch (NumberFormatException e) {
