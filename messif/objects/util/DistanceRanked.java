@@ -12,7 +12,6 @@ import java.util.Comparator;
  * Interface for marking objects that can be ranked according to distance.
  * 
  * @see messif.operations.RankingQueryOperation
- * @see 
  * @author xbatko
  */
 public interface DistanceRanked {

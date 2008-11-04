@@ -22,7 +22,7 @@ import messif.objects.util.ObjectMatcher;
  *
  * <p>
  * All objects that have distances to the pivot smaller or equal to the radius form one partition,
- * the rest falls to the other one. The {@link messif.objects.ObjectMatcher matcher}
+ * the rest falls to the other one. The {@link messif.objects.util.ObjectMatcher matcher}
  * returns 1 for objects outside the ball and 0 for objects inside.
  * </p>
  *

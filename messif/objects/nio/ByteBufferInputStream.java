@@ -12,12 +12,10 @@ import java.nio.channels.ReadableByteChannel;
 
 /**
  * Buffered input stream for operating over channels.
- * The stream offers {@link NativeDataInput read methods} for Java primitives as well as
- * read support for {@link BinarySerializable} and {@link java.io.Serializable} objects.
  * 
  * <p>
- * Note that it is <em>not safe</em> to use several BinarySerializingInputStreams over the
- * same channel (even if synchronized). For file channels, the {@link BinarySerializingFileInputStream}
+ * Note that it is <em>not safe</em> to use several {@link ByteBufferInputStream ByteBufferInputStreams} over the
+ * same channel (even if synchronized). For file channels, the {@link ByteBufferFileInputStream}
  * can be used if you need this functionality. Use copy-pipes if you need it
  * on other channel types.
  * </p>
@@ -27,7 +25,7 @@ import java.nio.channels.ReadableByteChannel;
  * instance must be synchronized.
  * </p>
  * 
- * @see BinarySerializingOutputStream
+ * @see ByteBufferOutputStream
  * @author xbatko
  */
 public class ByteBufferInputStream extends BinaryInputStream {

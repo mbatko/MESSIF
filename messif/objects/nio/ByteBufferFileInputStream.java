@@ -28,7 +28,7 @@ public class ByteBufferFileInputStream extends ByteBufferInputStream {
     /**
      * Creates a new instance of ByteBufferFileInputStream.
      * @param bufferSize the size of the internal buffer used for flushing
-     * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
+     * @param bufferDirect allocate the internal buffer as {@link java.nio.ByteBuffer#allocateDirect direct}
      * @param readChannel the channel from which to read data
      * @param position the starting position of the file
      * @param maxLength the maximal length of data

@@ -464,7 +464,7 @@ public abstract class BinarySerializator {
     /**
      * Writes <code>object</code> to the provided output stream.
      * If the object implements {@link BinarySerializable} interface, it
-     * is binary-serialized. Otherwise, a standard Java {@link Serializable serialization} is used.
+     * is binary-serialized. Otherwise, a standard Java {@link java.io.Serializable serialization} is used.
      *
      * @param stream the stream to write the object to
      * @param object the object to write
@@ -505,8 +505,8 @@ public abstract class BinarySerializator {
      * The following rules must hold:
      * <ul>
      *   <li>this method must write to the stream exactly the number of bytes returned by {@link #getBinarySize(BinarySerializable)}</li>
-     *   <li>the {@link #deserialize(NativeDataInput, int)} method must read the serialized data exactly as written by this method</li>
-     * </ul>
+     *   <li>the {@link #readObject(BinaryInputStream) readObject} method must read the serialized data exactly as written by this method</li>
+     * </ul> 
      * 
      * @param stream the stream to write the object to
      * @param object the object to write
@@ -826,7 +826,7 @@ public abstract class BinarySerializator {
      * The following rules must hold:
      * <ul>
      *   <li>this method must read exactly <code>objectSize</code> bytes from the <code>stream</code> or throw an exception</li>
-     *   <li>the bytes are provided by the stream exactly as {@link #serialize(ExtendedNativeDataOutput, BinarySerializable)} has written them</li>
+     *   <li>the bytes are provided by the stream exactly as the {@link #write(BinaryOutputStream, BinarySerializable) write method} has written them</li>
      * </ul>
      *
      * @param <E> the class that is expected to be in the stream
@@ -843,7 +843,7 @@ public abstract class BinarySerializator {
      * Reads an instance created by <code>constructor</code> or <code>factoryMethod</code>
      * from this input stream.
      * If both the constructor and the factory method are <tt>null</tt>,
-     * standard Java {@link Serializable deserialization} is used.
+     * standard Java {@link java.io.Serializable deserialization} is used.
      *
      * @param stream the stream to read the instance from
      * @param serializator the serializator used to write objects
@@ -1089,7 +1089,7 @@ public abstract class BinarySerializator {
      * Returns a native-serializable constructor for <code>objectClass</code>.
      * The constructor should have the following prototype:
      * <pre>
-     *      <i>ClassConstructor</i>({@link ExtendedNativeDataInput} input, {@link BinarySerializator} serializator) throws {@link IOException}
+     *      <i>ClassConstructor</i>({@link BinaryInputStream} input, {@link BinarySerializator} serializator) throws {@link IOException}
      * </pre>
      * 
      * @param <T> the object class to construct
@@ -1110,7 +1110,7 @@ public abstract class BinarySerializator {
      * Returns a native-serializable factory method for <code>objectClass</code>.
      * The factory method should have the following prototype:
      * <pre>
-     *      <i>ObjectClass</i> binaryDeserialize({@link ExtendedNativeDataInput} input, {@link BinarySerializator} serializator) throws {@link IOException}
+     *      <i>ObjectClass</i> binaryDeserialize({@link BinaryInputStream} input, {@link BinarySerializator} serializator) throws {@link IOException}
      * </pre>
      * 
      * @param objectClass the object class to construct

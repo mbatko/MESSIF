@@ -51,6 +51,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param radius the query radius
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType) {
         this(queryObject, radius, answerType, Integer.MAX_VALUE);
     }
@@ -62,6 +63,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param radius the query radius
      * @param maxAnswerSize sets the maximal answer size
      */
+    // This cannot have annotation, since it has also three parameters
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, int maxAnswerSize) {
         this(queryObject, radius, AnswerType.REMOTE_OBJECTS, maxAnswerSize);
     }
@@ -73,6 +75,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      * @param maxAnswerSize sets the maximal answer size
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize) {
         super(answerType, maxAnswerSize);
         this.queryObject = queryObject;
@@ -145,16 +148,10 @@ public class RangeQueryOperation extends RankingQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (object.excludeUsingPrecompDist(queryObject, getRadius())) 
+            if (queryObject.excludeUsingPrecompDist(object, getRadius())) 
                 continue;
 
-            // Get distance to query object (the second parameter defines a stop condition in getDistance() 
-            // which stops further computations if the distance will be greater than this value).
-            float distance = queryObject.getDistance(object, getRadius());
-
-            // Object satisfies the query (i.e. distance is smaller than radius)
-            if (distance <= radius)
-                addToAnswer(object, distance);
+            addToAnswer(queryObject, object, getRadius());
         }
 
         return getAnswerCount() - beforeCount;

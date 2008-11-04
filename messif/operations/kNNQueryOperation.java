@@ -50,6 +50,7 @@ public class kNNQueryOperation extends RankingQueryOperation {
      * @param k the number of nearest neighbors to retrieve
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Answer type"})
     public kNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
         super(answerType, k);
         this.queryObject = queryObject;
@@ -122,14 +123,10 @@ public class kNNQueryOperation extends RankingQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold())) {
+            if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
-            }
-            // Get distance to query object (the second parameter defines a stop condition in getDistance()
-            // which stops further computations if the distance will be greater than this value).
-            float distance = queryObject.getDistance(object, getAnswerThreshold());
 
-            addToAnswer(object, distance);
+            addToAnswer(queryObject, object, getAnswerThreshold());
         }
 
         return getAnswerCount() - beforeCount;

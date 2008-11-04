@@ -426,7 +426,12 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
 
     //****************** Serialization ******************//
 
-    /** Read this bucket from the object stream */
+    /**
+     * Read the serialized bucket from an object stream.
+     * @param in the object stream from which to read the bucket
+     * @throws IOException if there was an I/O error during deserialization
+     * @throws ClassNotFoundException if there was an unknown object in the stream
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
         try {
             // Proceed with standard deserialization first
@@ -482,9 +487,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * Stores the specified object in a the hash table.
      *
      * @param object the new object to be inserted
-     * @return OBJECT_INSERTED if the object was successfuly inserted,
-     *         OBJECT_REFUSED if the object is incompatible with the {@link #storedObjectsClass},
-     *         otherwise an exception is thrown (usually OutOfMemoryError)
+     * @return {@link BucketErrorCode#OBJECT_INSERTED} if the object was successfuly inserted
      * @throws IllegalStateException if there was an I/O error that prevented to the object to be stored
      */
     protected synchronized BucketErrorCode storeObject(LocalAbstractObject object) throws IllegalStateException {

@@ -9,6 +9,9 @@ import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
 
 /**
+ * Operation for retrieving objects locally stored at a given peer by a range operation.
+ * All objects on the peer that have their distances to the specified query object
+ * less than or equal to the specified radius are returned.
  *
  * @author  David Novak, david.novak@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
@@ -27,17 +30,59 @@ public class LocalRangeQueryOperation extends RangeQueryOperation {
     /****************** Constructors ******************/
 
     /**
-     * Creates a new instance of RangeQueryOperation given the query object and radius.
+     * Creates a new instance of LocalRangeQueryOperation for a given query object, radius and peer.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject the query object
      * @param radius the query radius
-     * @param peer the NNID of the peer to run range query on
+     * @param peer the peer's network identification
      */
-    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Network-node ID"})
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Network node"})
     public LocalRangeQueryOperation(LocalAbstractObject queryObject, float radius, NetworkNode peer) {
         super(queryObject, radius);
         this.peer = peer;
     }
-    
+
+    /**
+     * Creates a new instance of LocalRangeQueryOperation for a given query object, radius and peer.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param peer the peer's network identification
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Network node", "Answer type"})
+    public LocalRangeQueryOperation(LocalAbstractObject queryObject, float radius, NetworkNode peer, AnswerType answerType) {
+        super(queryObject, radius, answerType);
+        this.peer = peer;
+    }
+
+    /**
+     * Creates a new instance of LocalRangeQueryOperation for a given query object, radius, maximal number of objects to return and peer.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param peer the peer's network identification
+     * @param maxAnswerSize sets the maximal answer size
+     */
+    // This cannot have annotation, since it has also four parameters
+    public LocalRangeQueryOperation(LocalAbstractObject queryObject, float radius, NetworkNode peer, int maxAnswerSize) {
+        super(queryObject, radius, maxAnswerSize);
+        this.peer = peer;
+    }
+
+    /**
+     * Creates a new instance of LocalRangeQueryOperation for a given query object, radius, maximal number of objects to return and peer.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param peer the peer's network identification
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize sets the maximal answer size
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Network node", "Answer type", "Maximal answer size"})
+    public LocalRangeQueryOperation(LocalAbstractObject queryObject, float radius, NetworkNode peer, AnswerType answerType, int maxAnswerSize) {
+        super(queryObject, radius, answerType, maxAnswerSize);
+        this.peer = peer;
+    }
+
     /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.

@@ -43,7 +43,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      * @param maxAnswerSize the limit for the number of objects kept in this operation's answer
      */
-    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Type of objects returned", "Limit for number of objects in answer"})
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Answer type", "Limit for number of objects in answer"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerSize) {
         super(answerType, maxAnswerSize);
         this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
@@ -57,7 +57,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      * @param queryObjectForDistances the query object to use for computing distances
      * @param answerType the type of objects this operation stores in its answer
      */
-    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Type of objects returned"})
+    @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Answer type"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType) {
         this(locators, queryObjectForDistances, answerType, Integer.MAX_VALUE);
     }
@@ -201,12 +201,10 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         int count = 0;
         while (!locators.isEmpty()) {
             LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-            float distance;
             if (queryObjectForDistances != null)
-                distance = queryObjectForDistances.getDistance(object);
+                addToAnswer(queryObjectForDistances, object, LocalAbstractObject.MAX_DISTANCE);
             else
-                distance = LocalAbstractObject.UNKNOWN_DISTANCE;
-            addToAnswer(object, distance);
+                addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
             count++;
         }
         

@@ -29,7 +29,7 @@ public class ByteBufferFileOutputStream extends ByteBufferOutputStream {
     /**
      * Creates a new instance of ByteBufferFileOutputStream.
      * @param bufferSize the size of the internal buffer used for flushing
-     * @param bufferDirect allocate the internal buffer as {@link ByteBuffer#allocateDirect direct}
+     * @param bufferDirect allocate the internal buffer as {@link java.nio.ByteBuffer#allocateDirect direct}
      * @param flushChannel the channel into which to write data
      * @param position the starting position of the file
      * @param maxLength the maximal length of data

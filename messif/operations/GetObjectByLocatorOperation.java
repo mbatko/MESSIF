@@ -31,6 +31,7 @@ public class GetObjectByLocatorOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectByLocatorOperation for a specified locator.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param locator the locator to be searched by this operation
      */
     @AbstractOperation.OperationConstructor({"The object locator"})
@@ -41,10 +42,11 @@ public class GetObjectByLocatorOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectByLocatorOperation for a specified locator.
-     * @param answerType the type of objects this operation stores in its answer
      * @param locator the locator to be searched by this operation
+     * @param answerType the type of objects this operation stores in its answer
      */
-    protected GetObjectByLocatorOperation(AnswerType answerType, String locator) {
+    @AbstractOperation.OperationConstructor({"The object locator", "Answer type"})
+    public GetObjectByLocatorOperation(String locator, AnswerType answerType) {
         super(answerType);
         this.locator = locator;
     }

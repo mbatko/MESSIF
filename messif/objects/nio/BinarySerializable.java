@@ -10,7 +10,7 @@ import java.io.IOException;
 /**
  * The <code>BinarySerializable</code> interface marks the implementing
  * class to be able to serialize itself into a stream of bytes provided
- * by the {@link NativeDataOutput}.
+ * by the {@link BinarySerializator}.
  * 
  * <p>
  * The class should be able to reconstruct itself from these data by
@@ -28,8 +28,7 @@ import java.io.IOException;
  * </p>
  * 
  * @see JavaToBinarySerializable
- * @see NativeDataOutput
- * @see NativeDataInput
+ * @see BinarySerializator
  * @author xbatko
  */
 public interface BinarySerializable {

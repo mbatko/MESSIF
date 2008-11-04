@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import messif.objects.nio.BinaryInputStream;
 import messif.objects.nio.BinarySerializator;
+import messif.statistics.Statistics;
 import messif.utility.Convert;
 
 /**
@@ -247,11 +248,13 @@ public abstract class MetaObject extends LocalAbstractObject {
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     /**
      * The actual implementation of the metric function.
-     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * Method {@link #getDistance(messif.objects.LocalAbstractObject, float[], float)}
+     * is called with <tt>null</tt> meta distances array in order to compute the
+     * actual distance.
      *
      * @param obj the object to compute distance to
      * @param distThreshold the threshold value on the distance
@@ -259,12 +262,54 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see LocalAbstractObject#getDistance
      */
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+    protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        return getDistanceImpl(obj, null, distThreshold);
+    }
+
+    /**
+     * Metric distance function.
+     * Measures the distance between this object and <code>obj</code>.
+     * The array <code>metaDistances</code> is filled with the distances
+     * of the respective encapsulated objects.
+     * 
+     * <p>
+     * Note that this method does not use the fast access to the 
+     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
+     * even if there is a filter that supports it.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        // This check is to enhance performance when statistics are disabled
+        if (Statistics.isEnabledGlobally())
+            counterDistanceComputations.add();
+
+        return getDistanceImpl(obj, metaDistances, distThreshold);
+    }
+
+    /**
+     * The actual implementation of the metric function.
+     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * The array <code>metaDistances</code> is ignored.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
     }
 
 
-    /****************** Additional overrides ******************/
+    //****************** Additional overrides ******************//
 
     /**
      * Returns the size of this object in bytes.

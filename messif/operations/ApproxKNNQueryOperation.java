@@ -164,7 +164,6 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
 
     /**
      * Update query answer data of this operation from another query operation.
-     * The error code of this operation is updated using {@link #updateErrorCode}.
      * Additionally, if the <code>operation</code> is approximate kNN query, the
      * radius guaranteed is also updated.
      * @param operation the operation to update answer from

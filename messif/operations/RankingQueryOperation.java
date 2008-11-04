@@ -10,7 +10,9 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
+import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.utility.SortedCollection;
 
@@ -111,9 +113,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Returns <tt>true</tt> if the current answer has reached 
-     * the {@link #maxAnswerSize maximal size}.
-     * @return <tt>true</tt> if the current answer has reached
-     *      the {@link #maxAnswerSize maximal size}
+     * the maximal number of objects, i.e., the <code>maxAnswerSize</code>
+     * specified in constructor.
+     * @return <tt>true</tt> if the current answer has reached the maximal size
      */
     public boolean isAnswerFull() {
         return answer.isFull();
@@ -121,7 +123,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Returns the threshold distance for the current answer of this query.
-     * If the answer has not reached the {@link #maxAnswerSize maximal size} yet,
+     * If the answer has not reached the maximal size (specified in constructor) yet,
      * {@link LocalAbstractObject#MAX_DISTANCE} is returned.
      * Otherwise, the distance of the last answer's object is returned.
      * @return the distance to the k-th nearest object in the answer list or
@@ -135,17 +137,58 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
     /**
+     * Add an object to the answer. The rank of the object is computed automatically
+     * as a distance between the query object and the specified object.
+     * 
+     * @param queryObject the query object against which to compute the distance (rank)
+     * @param object the object to add
+     * @param distThreshold the threshold on distance;
+     *      if the computed distance exceeds the threshold (sharply),
+     *      the object is not added to the answer
+     * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
+     */
+    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+        if (queryObject instanceof MetaObject) {
+            MetaObject metaQueryObject = (MetaObject)queryObject;
+            float[] metaDistances = new float[metaQueryObject.getObjectCount()];
+            float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);
+            if (distance > distThreshold)
+                return null;
+            return addToAnswer(object, distance, metaDistances);
+        } else {
+            float distance = queryObject.getDistance(object, distThreshold);
+            if (distance > distThreshold)
+                return null;
+            return addToAnswer(object, distance, null);
+        }
+    }
+
+     /**
      * Add a distance-ranked object to the answer.
+     * Preserve the information about distances of the respective sub-objects.
      * @param object the object to add
      * @param distance the distance of object
-     * @return <code>true</code> if the object has been added to the answer. Otherwise <code>false</code>.
+     * @param objectDistances the array of distances to the respective sub-objects (can be <tt>null</tt>)
+     * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
+     * @throws IllegalArgumentException if the answer type of this operation requires clonning but the passed object cannot be cloned
      */
-    public boolean addToAnswer(AbstractObject object, float distance) {
+    public final RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
+        RankedAbstractObject rankedObject;
         try {
-            return answer.add(new RankedAbstractObject(answerType.update(object), distance));
+            // Create the ranked object encapsulation
+            if (objectDistances == null)
+                rankedObject = new RankedAbstractObject(answerType.update(object), distance);
+            else
+                rankedObject = new RankedAbstractMetaObject(answerType.update(object), distance, objectDistances);
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }
+
+        // Add the encapsulated object to the answer
+        if (answer.add(rankedObject))
+            return rankedObject;
+        else
+            return null;
     }
 
     /**

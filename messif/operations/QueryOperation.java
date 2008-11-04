@@ -74,7 +74,7 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
 
     /**
      * Evaluate this query on a given set of objects.
-     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
+     * The objects found by this evaluation are added to the answer of the particular query.
      *
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query

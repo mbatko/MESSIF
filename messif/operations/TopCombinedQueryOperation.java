@@ -140,9 +140,9 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
             float distance = thresholdFunction.getDistance(queryObject, object, descriptorDistances);
 
             // Object satisfies the query (i.e. distance is smaller than radius)
-            addToAnswer(object, distance);
+            addToAnswer(object, distance, descriptorDistances.clone());
         }
-        
+
         return getAnswerCount() - beforeCount;
     }
 

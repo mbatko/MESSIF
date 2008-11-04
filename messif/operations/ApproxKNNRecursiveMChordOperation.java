@@ -63,7 +63,7 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects"})
     public ApproxKNNRecursiveMChordOperation(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 6000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
     }
     
     /**

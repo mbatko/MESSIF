@@ -234,8 +234,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
 
     /**
      * This method should return an array of additional parameters that are needed for operation execution.
-     * The list must be consistent with the {@link #getSingleOperationExecutorParams}.
-     * 
+     * The list must be consistent with the parameters array passed to {@link #execute} and {@link #backgroundExecute}.
      * @return array of additional parameters that are needed for operation execution
      */
     @Override

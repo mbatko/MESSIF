@@ -24,7 +24,7 @@ import messif.objects.util.ObjectMatcher;
  * This class defines an abstract policy for bucket splitting.
  *
  * The policy is fully defined by the internal parameters, e.g. a policy for ball partitioning
- * requires a pivot and a radius. Each policy implements the {@link messif.objects.ObjectMatcher object matcher}
+ * requires a pivot and a radius. Each policy implements the {@link messif.objects.util.ObjectMatcher object matcher}
  * that decides the target partition of a given object according to this policy.
  *
  * Some (or all) parameters can be unspecified when the policy is instantiated and can be provided through

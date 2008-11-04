@@ -32,6 +32,7 @@ public class GetObjectQueryOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectQueryOperation for the specified object ID.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param objectID the object ID to search for
      */
     @AbstractOperation.OperationConstructor({"Object ID"})
@@ -42,10 +43,11 @@ public class GetObjectQueryOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectQueryOperation for the specified object ID.
-     * @param answerType the type of objects this operation stores in its answer
      * @param objectID the object ID to search for
+     * @param answerType the type of objects this operation stores in its answer
      */
-    protected GetObjectQueryOperation(AnswerType answerType, UniqueID objectID) {
+    @AbstractOperation.OperationConstructor({"Object ID", "Answer type"})
+    public GetObjectQueryOperation(UniqueID objectID, AnswerType answerType) {
         super(answerType);
         this.objectID = objectID;
     }

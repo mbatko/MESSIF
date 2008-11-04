@@ -10,9 +10,9 @@
 package messif.operations;
 
 import messif.netbucket.RemoteAbstractObject;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.RankedAbstractObject;
 import messif.utility.ErrorCode;
 
 
@@ -66,23 +66,37 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of IncrementalNNQueryOperation.
-     * @param queryObject the object to which the nearest neighbors are searched
-     * @param minNN the minimal number of nearest neighbors to retrieve
-     */
-    @AbstractOperation.OperationConstructor({"Query object", "Minimum number of nearest objects"})
-    public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN) {
-        this.queryObject = queryObject;
-        this.minNN = minNN;
-        this.nnAddedToAnswer = 0;
-    }
-
-    /**
-     * Creates a new instance of IncrementalNNQueryOperation.
+     * At least one next nearest neighbor will be returned for each execution.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject the object to which the nearest neighbors are searched
      */
     @AbstractOperation.OperationConstructor({"Query object"})
     public IncrementalNNQueryOperation(LocalAbstractObject queryObject) {
         this(queryObject, 1);
+    }
+
+    /**
+     * Creates a new instance of IncrementalNNQueryOperation.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param minNN the minimal number of nearest neighbors to retrieve
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Minimum number of nearest objects"})
+    public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN) {
+        this(queryObject, minNN, AnswerType.REMOTE_OBJECTS);
+    }
+
+    /**
+     * Creates a new instance of IncrementalNNQueryOperation.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param minNN the minimal number of nearest neighbors to retrieve
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Minimum number of nearest objects", "Answer type"})
+    public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN, AnswerType answerType) {
+        this.queryObject = queryObject;
+        this.minNN = minNN;
+        this.nnAddedToAnswer = 0;
     }
 
 
@@ -169,15 +183,8 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
         int beforeSize = getAnswerCount();
 
         // Iterate through all supplied objects
-        while (objects.hasNext()) {
-            LocalAbstractObject object = objects.next();
-
-            // Get distance to query object
-            float distance = queryObject.getDistance(object);
-
-            // Object satisfies the query (i.e. distance is smaller than radius)
-            addToAnswer(object, distance);
-        }
+        while (objects.hasNext())
+            addToAnswer(queryObject, objects.next(), getAnswerThreshold());
 
         return getAnswerCount() - beforeSize;
     }
@@ -195,11 +202,11 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
     }
 
     @Override
-    public boolean addToAnswer(AbstractObject object, float distance) {
-        if (!super.addToAnswer(object, distance))
-            return false;
-        nnAddedToAnswer++;
-        return true;
+    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+        if (addedObject != null)
+            nnAddedToAnswer++;
+        return addedObject;
     }
 
     /**

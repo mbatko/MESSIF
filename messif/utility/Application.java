@@ -712,17 +712,16 @@ public class Application {
      * this method will fail.
      * </p>
      * <p>
-     * Two optional arguments are accepted:
+     * An optional argument is accepted:
      *   <ul>
-     *     <li>answer print type, which can be either Object, DistanceObject (default) or URI</li>
-     *     <li>object separator (defaults to newline)</li>
+     *     <li>objects separator (defaults to newline)</li>
      *   </ul>
      * </p>
      * 
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; operationAnswer U ,
+     * MESSIF &gt;&gt;&gt; operationAnswer ,
      * </pre>
      * </p>
      * 
@@ -730,7 +729,7 @@ public class Application {
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */  
-    @ExecutableMethod(description = "list objects with distances retrieved by the last executed operation", arguments = {"answer print type: Object, DistanceObject, URI", "object separator (not required)"})
+    @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)"})
     public boolean operationAnswer(PrintStream out, String... args) {
         if (lastOperation == null || !(lastOperation instanceof QueryOperation)) {
             out.println("The operationAnswer method must be called after some QueryOperation was executed");

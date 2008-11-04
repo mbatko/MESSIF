@@ -11,12 +11,10 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Buffered output stream for operating over channels.
- * The stream offers {@link NativeDataOutput write methods} for Java primitives as well as
- * write support for {@link BinarySerializable} and {@link java.io.Serializable} objects.
  * 
  * <p>
- * Note that it is <em>not safe</em> to use several BinarySerializingOutputStreams over the
- * same channel (even if synchronized). For file channels, the {@link BinarySerializingFileOutputStream}
+ * Note that it is <em>not safe</em> to use several {@link ByteBufferOutputStream ByteBufferOutputStreams} over the
+ * same channel (even if synchronized). For file channels, the {@link ByteBufferFileOutputStream}
  * can be used if you need this functionality. Use copy-pipes if you need it
  * on other channel types.
  * </p>
@@ -26,7 +24,7 @@ import java.nio.channels.WritableByteChannel;
  * instance must be synchronized.
  * </p>
  * 
- * @see BinarySerializingInputStream
+ * @see ByteBufferInputStream
  * @author xbatko
  */
 public class ByteBufferOutputStream extends BinaryOutputStream {

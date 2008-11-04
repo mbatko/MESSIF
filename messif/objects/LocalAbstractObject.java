@@ -136,7 +136,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //****************** Unused/undefined, min, max distances ******************//
 
     /** Unknown distance constant */
-    public static final float UNKNOWN_DISTANCE = -1.0f;
+    public static final float UNKNOWN_DISTANCE = Float.NEGATIVE_INFINITY;
     /** Minimal possible distance constant */
     public static final float MIN_DISTANCE = 0.0f;
     /** Maximal possible distance constant */
@@ -197,35 +197,16 @@ public abstract class LocalAbstractObject extends AbstractObject {
     protected abstract float getDistanceImpl(LocalAbstractObject obj, float distThreshold);
 
     /**
-     * Normalized metric distance function.
+     * Normalized metric distance function, i.e. the result of {@link #getDistance}
+     * divided by {@link #getMaxDistance}. Note that unless an object overrides
+     * the {@link #getMaxDistance} the resulting distance will be too small.
+     * 
      * @param obj the object to compute distance to
      * @param distThreshold the threshold value on the distance (see {@link #getDistance} for explanation)
      * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
      */
     public final float getNormDistance(LocalAbstractObject obj, float distThreshold) {
-        if (distanceFilter != null && distanceFilter.isGetterSupported()) {
-            float distance = distanceFilter.getPrecomputedDistance(obj);
-            if (distance != UNKNOWN_DISTANCE)
-                return distance / getMaxDistance();
-        }
-
-        // This check is to enhance performance when statistics are disabled
-        if (Statistics.isEnabledGlobally())
-            counterDistanceComputations.add();
-
-        return getNormDistanceImpl(obj, distThreshold);
-    }
-
-    /**
-     * The actual implementation of the normalized metric function (see {@link #getDistance} for full explanation).
-     * Default implementation divides the result of {@link #getDistance} by {@link #getMaxDistance}.
-     *
-     * @param obj the object to compute distance to
-     * @param distThreshold the threshold value on the distance
-     * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
-     */
-    protected float getNormDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        return getDistanceImpl(obj, distThreshold) / getMaxDistance();
+        return getDistance(obj, distThreshold) / getMaxDistance();
     }
 
     /**

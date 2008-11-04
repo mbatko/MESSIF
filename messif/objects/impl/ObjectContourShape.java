@@ -231,11 +231,13 @@ public class ObjectContourShape extends LocalAbstractObject {
     }
     
     /**
-     * The distance algorithm is taken from the ContourShapeSearch.cpp. The "ref" object from the algorithm
-     *  is the "obj" object in this method and the "query" is "this" object.
-     * @param obj
-     * @param distThreshold
-     * @return
+     * The distance algorithm is taken from the ContourShapeSearch.cpp of the XM library.
+     * The "ref" object from the algorithm is the <code>obj</code> object in this method
+     * and the "query" is <code>this</code> object.
+     * 
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
      */
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
 

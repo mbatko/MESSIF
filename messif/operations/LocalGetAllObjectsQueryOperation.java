@@ -31,7 +31,7 @@ public class LocalGetAllObjectsQueryOperation extends GetAllObjectsQueryOperatio
      * 
      * @param peer the peer's network identification
      */
-    @AbstractOperation.OperationConstructor({"Network-node ID"})
+    @AbstractOperation.OperationConstructor({"Network node"})
     public LocalGetAllObjectsQueryOperation(NetworkNode peer) {
         this.peer = peer;
     }
@@ -42,7 +42,7 @@ public class LocalGetAllObjectsQueryOperation extends GetAllObjectsQueryOperatio
      * @param peer the peer's network identification
      * @param answerType the type of objects this operation stores in its answer
      */
-    @AbstractOperation.OperationConstructor({"Network-node ID", "Answer type"})
+    @AbstractOperation.OperationConstructor({"Network node", "Answer type"})
     public LocalGetAllObjectsQueryOperation(NetworkNode peer, AnswerType answerType) {
         super(answerType);
         this.peer = peer;
