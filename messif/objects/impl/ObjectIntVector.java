@@ -288,6 +288,6 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         return super.getBinarySize(serializator) + serializator.getBinarySize(data);
-    }    
-    
+    }
+
 }

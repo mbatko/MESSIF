@@ -15,30 +15,47 @@ import java.io.IOException;
 import java.io.OutputStream;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 /**
  * Implements GPS coordinates objects. The distance is computed using WGS84 model.
  *
  * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
-public class ObjectGPSCoordinate extends LocalAbstractObject {
+public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySerializable {
 
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /** Geographic coodinates on WGS84 ellipsiod (in degrees) */
-    protected float latitude;
-    protected float longitude;
+    /** Geographic latitude on WGS84 ellipsiod in degrees */
+    private final float latitude;
+    /** Geographic longitude on WGS84 ellipsiod in degrees */
+    private final float longitude;
     
     /****************** Constructors ******************/
 
-    /** Creates a new instance of GPS Coordinate Object. Both the parameters are expected in degrees. */
+    /**
+     * Creates a new instance of ObjectGPSCoordinate for the given
+     * latitude and longitude specified in degrees.
+     * 
+     * @param latitude the geographic latitude on WGS84 ellipsiod in degrees
+     * @param longitude the geographic longitude on WGS84 ellipsiod in degrees
+     */
     public ObjectGPSCoordinate(float latitude, float longitude) {
         this.latitude = latitude;
         this.longitude = longitude;
     }
 
-    /** Creates a new instance of GPS Coordinate Object from stream */
+    /**
+     * Creates a new instance of ObjectGPSCoordinate from stream.
+     * @param stream the text stream from which to read the ObjectGPSCoordinate
+     * @throws IOException if there was an error during reading from the given stream
+     * @throws NumberFormatException if the data in the stream cannot be converted
+     *      to latitude and longitude
+     */
     public ObjectGPSCoordinate(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
@@ -63,7 +80,11 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
             throw new NumberFormatException("Incorrect format of ObjectGPSCoordinate. The format is \"url;latitute,longitude\" (in degrees), where the url is optional");        
     }
 
-    /** Write object to text stream.
+    /**
+     * Store this object's data to a text stream.
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
      */
     @Override
     public void writeData(OutputStream stream) throws IOException {
@@ -131,6 +152,7 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
      * (or ID if locator is <tt>null</tt>) in brackets.
      * @return a string representation of this abstract object
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(super.toString());
         // Add GPS coordinates
@@ -138,6 +160,46 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
         rtv.append(latitude).append(",").append(longitude);
         rtv.append("]");
         return rtv.toString();
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectGPSCoordinate loaded from binary input stream.
+     * 
+     * @param input the stream to read the ObjectIntVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the stream
+     */
+    protected ObjectGPSCoordinate(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        this.latitude = serializator.readFloat(input);
+        this.longitude = serializator.readFloat(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the data output this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, latitude) +
+               serializator.write(output, longitude);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + 4 + 4;
     }
 
     
@@ -190,7 +252,7 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
          */
         public static final ReferenceEllipsoid WGS84
             = new ReferenceEllipsoid(6378137.0, 298.257223563);
-        /**
+//        /**
 //         * Geodetic Reference System 1980 ellipsoid.
 //         */
 //        public static final ReferenceEllipsoid GRS80
@@ -207,16 +269,22 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
 //        public static final ReferenceEllipsoid INTERNATIONAL1924
 //            = new ReferenceEllipsoid(6378388.0, 297.0);
 
+        /** WGS84 ellipsoid parameter */
         private final double a;
 
+        /** WGS84 ellipsoid parameter */
         private final double b;
 
+        /** WGS84 ellipsoid parameter */
         private final double f;
 
+        /** WGS84 ellipsoid parameter */
         private final double ea2;
 
+        /** WGS84 ellipsoid parameter */
         private final double e;
 
+        /** WGS84 ellipsoid parameter */
         private final double eb2;
 
         //private Measurable<Length> _semimajorAxis;
@@ -240,12 +308,22 @@ public class ObjectGPSCoordinate extends LocalAbstractObject {
             eb2 = ea2 / (1.0 - ea2);
         }
 
+        /**
+         * Returns square of x.
+         * @param x the number to compute the square for
+         * @return the square of the specified number
+         */
         private static double sqr(final double x) {
             return x * x;
         }
 
+        /**
+         * Returns the degree angle in radians.
+         * @param degree the angle in degrees
+         * @return the angle in radians
+         */
         private double degreeToRadian(double degree) {
-                return degree * Math.PI / 180.0D;
+            return degree * Math.PI / 180.0D;
         }        
         
         /**
