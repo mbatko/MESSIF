@@ -5,10 +5,13 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.split;
 
 import java.util.Collection;
 import messif.algorithms.Algorithm;
+import messif.buckets.CapacityFullException;
+import messif.buckets.FilterRejectException;
+import messif.buckets.OccupationLowException;
 import messif.objects.LocalAbstractObject;
 
 

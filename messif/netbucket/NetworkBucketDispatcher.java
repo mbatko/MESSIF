@@ -12,7 +12,7 @@ import messif.utility.Logger;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
-import messif.buckets.MemoryStorageBucket;
+import messif.buckets.impl.MemoryStorageBucket;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
 import messif.network.ThreadInvokingReceiver;

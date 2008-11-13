@@ -4,7 +4,7 @@
  * Created on 18. kveten 2006, 18:57
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import messif.objects.LocalAbstractObject;
 import java.io.ByteArrayInputStream;
@@ -26,8 +26,15 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import messif.buckets.BucketDispatcher;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.CapacityFullException;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
+import messif.buckets.OccupationLowException;
 import messif.objects.UniqueID;
 import messif.utility.Convert;
+import messif.utility.Logger;
 
 
 /**
@@ -44,6 +51,9 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     /** class id for serialization */
     private static final long serialVersionUID = 1001L;
     
+    /** Logger for this bucket */
+    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.SimpleDiskBucket");
+
     /** a block size (in bytes) - a step to enlarge the file by */
     private static final int RESIZE_BLOCK_SIZE = (int) Math.pow(2,14);
     
@@ -179,7 +189,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      */
     public static Set<DiskBucket> createBucketsFromDir(BucketDispatcher dispatcher) throws IOException, InstantiationException, CapacityFullException {
-        return createBucketsFromDir(dispatcher, (String) dispatcher.defaultBucketClassParams.get("path"));
+        return createBucketsFromDir(dispatcher, (String) dispatcher.getDefaultBucketClassParams().get("path"));
     }
 
     /**
@@ -195,8 +205,8 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      */
     public static Set<DiskBucket> createBucketsFromDir(BucketDispatcher dispatcher, String directory) throws IOException, InstantiationException, CapacityFullException {
-        return createBucketsFromDir(dispatcher, dispatcher.bucketCapacity, dispatcher.bucketSoftCapacity, dispatcher.bucketLowOccupation,
-                dispatcher.bucketOccupationAsBytes, directory);
+        return createBucketsFromDir(dispatcher, dispatcher.getBucketCapacity(), dispatcher.getBucketSoftCapacity(), dispatcher.getBucketLowOccupation(),
+                dispatcher.getBucketOccupationAsBytes(), directory);
     }
 
     /**
@@ -560,7 +570,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
             // Update statistics
             counterBucketDelObject.add(this, deleted);
         } catch (IOException e) {
-            BucketDispatcher.log.warning("Cannot delete all objects from disk bucket: " + e);
+            log.warning("Cannot delete all objects from disk bucket: " + e);
         }
 
         return deleted;

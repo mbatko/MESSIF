@@ -4,7 +4,7 @@
  * Created on 12. kveten 2008, 16:49
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import java.io.EOFException;
 import java.io.File;
@@ -21,7 +21,11 @@ import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
-import messif.buckets.LocalBucket.LocalBucketIterator;
+import messif.buckets.BucketDispatcher;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
+import messif.buckets.OccupationLowException;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.ByteBufferFileInputStream;
@@ -29,6 +33,7 @@ import messif.objects.nio.ByteBufferFileOutputStream;
 import messif.objects.nio.CachingSerializator;
 import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
+import messif.utility.Logger;
 
 /**
  * A disk-oriented implementation of {@link LocalBucket}.
@@ -48,6 +53,9 @@ import messif.utility.Convert;
 public class DiskBlockBucket extends LocalFilteredBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 0xffa891035bcf0001L;
+
+    /** Logger for this bucket */
+    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.SimpleDiskBucket");
 
     /** The prefix for auto-generated filenames */
     protected static final String FILENAME_PREFIX = "disk_block_bucket_";
@@ -174,7 +182,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             }
             fileChannel.close();
         } catch (IOException e) {
-            BucketDispatcher.log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
+            log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
         }
         super.finalize();
     }
@@ -349,7 +357,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected synchronized void reconstructHeader(FileChannel fileChannel, long position) throws IOException {
-        BucketDispatcher.log.info("Rebuilding header of bucket ID " + getBucketID());
+        log.info("Rebuilding header of bucket ID " + getBucketID());
 
         // Reset header values
         objectCount = 0;
@@ -537,7 +545,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
             // Unset modified flag
             writeHeader(fileChannel, startPosition, FLAG_CLOSED);
         } catch (IOException e) {
-            BucketDispatcher.log.warning("Cannot delete all objects from disk bucket: " + e);
+            log.warning("Cannot delete all objects from disk bucket: " + e);
         }
 
         return deleted;

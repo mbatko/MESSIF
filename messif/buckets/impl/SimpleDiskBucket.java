@@ -4,7 +4,7 @@
  * Created on 19. prosinec 2007, 12:17
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -24,6 +24,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import messif.buckets.BucketDispatcher;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
+import messif.buckets.OccupationLowException;
+import messif.utility.Logger;
 
 /**
  * A disk-oriented implementation of {@link LocalBucket}.
@@ -42,6 +48,9 @@ import java.util.Set;
 public class SimpleDiskBucket extends LocalFilteredBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
+
+    /** Logger for this bucket */
+    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.SimpleDiskBucket");
 
     /** The number of objects currently stored in the bucket file */
     protected transient int storedObjectCount = 0;
@@ -181,7 +190,11 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
 
     /****************** Serialization ******************/
 
-    /** Write this bucket into object stream */
+    /**
+     * Serialize this object into the output stream <code>out</code>.
+     * @param out the stream to serialize this object into
+     * @throws IOException if there was an I/O error during serialization
+     */
     private void writeObject(ObjectOutputStream out) throws IOException {
         synchronized (this) {
             out.defaultWriteObject();
@@ -195,7 +208,12 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
         }
     }
 
-    /** Read this bucket from object stream */
+    /**
+     * Deserialize this object from the input stream <code>in</code>.
+     * @param in the stream to deserialize this object from
+     * @throws IOException if there was an I/O error during serialization
+     * @throws ClassNotFoundException if there was an unknown class serialized
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
         in.defaultReadObject();
 
@@ -370,7 +388,7 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
             // Update statistics
             counterBucketDelObject.add(this, deleted);
         } catch (IOException e) {
-            BucketDispatcher.log.warning("Cannot delete all objects from simple disk bucket: " + e);
+            log.warning("Cannot delete all objects from simple disk bucket: " + e);
         }
 
         return deleted;

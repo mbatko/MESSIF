@@ -4,8 +4,10 @@
  * Created on 21. unor 2005, 14:46
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
+import messif.buckets.BucketErrorCode;
+import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;

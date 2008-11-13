@@ -17,6 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import messif.buckets.impl.MemoryStorageBucket;
 import messif.pivotselection.AbstractPivotChooser;
 import messif.utility.Convert;
 import messif.utility.Logger;
@@ -43,11 +44,11 @@ import messif.utility.Logger;
 public class BucketDispatcher implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 2L;
-    
-    /** Logger for messif's bucket package */
-    protected static Logger log = Logger.getLoggerEx("messif.buckets");
-    
-    /****************** Bucket dispatcher data ******************/
+
+    /** Logger for the bucket dispatcher */
+    private static Logger log = Logger.getLoggerEx("messif.buckets");
+
+    //****************** Bucket dispatcher data ******************//
 
     /** The buckets maintained by this dispatcher organized in hashtable with bucket IDs as keys */
     private Map<Integer,LocalBucket> buckets = new HashMap<Integer,LocalBucket>();
@@ -80,8 +81,8 @@ public class BucketDispatcher implements Serializable {
     protected final Map<String, Object> defaultBucketClassParams;
 
 
-    /****************** Constructors ******************/
-    
+    //****************** Constructors ******************//
+
     /**
      * Creates a new instance of BucketDispatcher with full specification of default values.
      *
@@ -102,7 +103,7 @@ public class BucketDispatcher implements Serializable {
         this.defaultBucketClass = defaultBucketClass;
         this.defaultBucketClassParams = defaultBucketClassParams;
     }
-    
+
     /**
      * Creates a new instance of BucketDispatcher with full specification of default values.
      * No additional parameters for the default bucket class is specified.
@@ -121,7 +122,7 @@ public class BucketDispatcher implements Serializable {
     /**
      * Creates a new instance of BucketDispatcher only with maximal capacity specification.
      * The soft capacity and low-occupation limits are not set. The occupation and capacity
-     * is counted in bytes. The {@link MemoryStorageIDBucket} is used as default bucket class.
+     * is counted in bytes. The {@link MemoryStorageBucket} is used as default bucket class.
      *
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets
@@ -142,7 +143,7 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** Automatic pivot choosers ******************/
+    //****************** Automatic pivot choosers ******************//
 
     /** The class of pivot chooser that is automatically created for newly created buckets */
     protected Class<? extends AbstractPivotChooser> autoPivotChooserClass = null;
@@ -248,7 +249,7 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** Automatic filter creation ******************/
+    //****************** Automatic filter creation ******************//
 
     /** The class of filter that is automatically created for newly created buckets */
     protected Class<? extends BucketFilterInterface> autoFilterClass = null;
@@ -274,7 +275,6 @@ public class BucketDispatcher implements Serializable {
     public Class<? extends BucketFilterInterface> getAutoFilterClass() {
         return autoFilterClass;
     }
-
 
     /**
      * Returns the parameter for the constructor of the filter that is automatically created for new buckets.
@@ -318,7 +318,7 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** Info Methods *******************/
+    //****************** Info Methods *******************//
 
     /**
      * Returns the default hard capactity limit for new buckets.
@@ -413,8 +413,8 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** Bucket access ******************/
-    
+    //****************** Bucket access ******************//
+
     /**
      * Returns the set of bucket IDs maintaned by this dispatcher.
      * @return the set of bucket IDs maintaned by this dispatcher
@@ -430,7 +430,7 @@ public class BucketDispatcher implements Serializable {
     public synchronized Collection<LocalBucket> getAllBuckets() {
         return Collections.unmodifiableCollection(buckets.values());
     }
-    
+
     /**
      * Returns the bucket with the specified ID.
      *
@@ -446,7 +446,7 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** Bucket creation/deletion ******************/
+    //****************** Bucket creation/deletion ******************//
 
     /**
      * Create new local bucket with specified storage class and storage capacity (different from default values).
@@ -669,8 +669,8 @@ public class BucketDispatcher implements Serializable {
     }
 
 
-    /****************** String info ******************/
-    
+    //****************** Textual representation info ******************//
+
     /**
      * Returns information about storage maintained by this dispatcher.
      * @return information about storage maintained by this dispatcher

@@ -5,8 +5,12 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.split;
 
+import messif.buckets.BucketFilterInterface;
+import messif.buckets.FilterRejectException;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;

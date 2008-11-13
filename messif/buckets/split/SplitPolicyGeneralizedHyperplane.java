@@ -5,7 +5,7 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.split;
 
 import java.util.NoSuchElementException;
 import messif.objects.BallRegion;

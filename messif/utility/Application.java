@@ -737,7 +737,7 @@ public class Application {
         }
 
         // Separator is second argument (get newline if not specified)
-        String separator = (args.length > 2)?args[2]:System.getProperty("line.separator");
+        String separator = (args.length > 1)?args[1]:System.getProperty("line.separator");
         Iterator<?> iter = ((QueryOperation<?>)lastOperation).getAnswer();
         while (iter.hasNext()) {
             out.print(iter.next());

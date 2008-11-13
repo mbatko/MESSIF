@@ -5,7 +5,7 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.split;
 
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;

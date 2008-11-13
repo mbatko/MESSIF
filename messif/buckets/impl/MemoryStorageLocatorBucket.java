@@ -3,7 +3,7 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.OccupationLowException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 

@@ -5,7 +5,7 @@
  *
  */
 
-package messif.buckets;
+package messif.buckets.split;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
 import messif.objects.BallRegion;
 import messif.objects.util.ObjectMatcher;
 
@@ -255,13 +257,17 @@ public abstract class SplitPolicy implements ObjectMatcher {
     /** This class defines a policy parameter */
     private static class Parameter {
         /** The field of this policy that holds the parameter */
-        protected final Field field;
+        private final Field field;
         /** Locked flag */
-        protected boolean locked = false;
+        private boolean locked = false;
         /** Filled flag */
-        protected boolean filled = false;
+        private boolean filled = false;
 
-        public Parameter(Field field) {
+        /**
+         * Creates a new instance of Parameter.
+         * @param field the field upon which this parameter operates
+         */
+        private Parameter(Field field) {
             this.field = field;
             field.setAccessible(true);
         }

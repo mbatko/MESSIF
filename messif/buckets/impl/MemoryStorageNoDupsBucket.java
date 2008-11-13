@@ -4,7 +4,7 @@
  * Created on 24. duben 2004, 12:17
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import messif.objects.LocalAbstractObject;
 import java.io.IOException;
@@ -13,6 +13,8 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.OccupationLowException;
 import messif.objects.UniqueID;
 
 

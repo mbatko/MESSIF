@@ -4,13 +4,16 @@
  * Created on 21. unor 2005, 19:39
  */
 
-package messif.buckets;
+package messif.buckets.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import messif.buckets.BucketErrorCode;
+import messif.buckets.LocalBucket;
+import messif.buckets.LocalFilteredBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.util.AbstractObjectIterator;
