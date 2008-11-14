@@ -55,7 +55,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
     private static final long serialVersionUID = 0xffa891035bcf0001L;
 
     /** Logger for this bucket */
-    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.SimpleDiskBucket");
+    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.DiskBlockBucket");
 
     /** The prefix for auto-generated filenames */
     protected static final String FILENAME_PREFIX = "disk_block_bucket_";

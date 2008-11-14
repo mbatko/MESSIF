@@ -52,7 +52,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
     private static final long serialVersionUID = 1001L;
     
     /** Logger for this bucket */
-    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.SimpleDiskBucket");
+    private static Logger log = Logger.getLoggerEx("messif.buckets.impl.DiskBucket");
 
     /** a block size (in bytes) - a step to enlarge the file by */
     private static final int RESIZE_BLOCK_SIZE = (int) Math.pow(2,14);

@@ -297,10 +297,9 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //****************** Distance filter manipulation ******************//
 
     /**
-     * Returns a filter of specified class from this object's filter chain.
-     * If there is no filter with requested class, return <tt>null</tt>.
-     * If there are more filters with the same class, the sameClassPosition parameter
-     * is considered to pick the correct one.
+     * Returns a filter of the specified class (or any of its descendants) from this object's filter chain.
+     * If there is no filter with requested class, this method returns <tt>null</tt>.
+     * If there are more filters of the same class, the first one is returned.
      *
      * @param <T> the class of the filter to retrieve from the chain
      * @param filterClass the class of the filter to retrieve from the chain
@@ -308,9 +307,27 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
     public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
-        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter())
-            if (filterClass.equals(currentFilter.getClass()))
-                return (T)currentFilter; // This cast IS checked on the previous line            
+        return getDistanceFilter(filterClass, true);
+    }
+
+    /**
+     * Returns a filter of the specified class from this object's filter chain.
+     * If there is no filter with requested class, this method returns <tt>null</tt>.
+     * If there are more filters of the same class, the first one is returned.
+     *
+     * @param <T> the class of the filter to retrieve from the chain
+     * @param filterClass the class of the filter to retrieve from the chain
+     * @param inheritable if <tt>false</tt>, the exact match of <code>filterClass</code> is required;
+     *          otherwise the first filter that is assignable to <code>filterClass</code> is returned
+     * @return a filter of specified class from this object's filter chain
+     * @throws NullPointerException if the filterClass is <tt>null</tt>
+     */
+    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
+        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
+            Class<?> currentFilterClass = currentFilter.getClass();
+            if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
+                return (T)currentFilter; // This cast IS checked on the previous line
+        }
 
         return null;
     }
