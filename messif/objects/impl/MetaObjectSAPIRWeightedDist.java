@@ -134,6 +134,10 @@ public class MetaObjectSAPIRWeightedDist extends MetaObjectSAPIR {
         return new float[] { 2.0f, 3.0f, 4.0f, 0.5f, 2.0f, 0.0f };
     }
 
+    @Override
+    public float getMaxDistance() {
+        return 16f;
+    }
 
     //************ BinarySerializable interface ************//
 

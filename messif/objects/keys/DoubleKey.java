@@ -96,7 +96,7 @@ public class DoubleKey extends AbstractObjectKey {
     }
 
     /**
-     * Equals according to the double key. If the parameter is not of the DoubleKey class then 
+     * Equals according to the double key. If the parameter is not of the DoubleKey class or subclass then 
      * return false.
      * @param obj object to compare this object to
      */
@@ -104,7 +104,7 @@ public class DoubleKey extends AbstractObjectKey {
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (! (obj.getClass().equals(DoubleKey.class)))
+        if (! (obj instanceof DoubleKey))
             return false;
         return (key == ((DoubleKey) obj).key);
     }

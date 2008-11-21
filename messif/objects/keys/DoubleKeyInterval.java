@@ -26,7 +26,7 @@ public class DoubleKeyInterval extends KeyInterval<DoubleKey> implements Seriali
      */
     @Override
     public DoubleKey getFrom() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return from;
     }
 
     /**
@@ -35,7 +35,7 @@ public class DoubleKeyInterval extends KeyInterval<DoubleKey> implements Seriali
      */
     @Override
     public DoubleKey getTo() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return to;
     }
 
     /**
@@ -46,5 +46,10 @@ public class DoubleKeyInterval extends KeyInterval<DoubleKey> implements Seriali
     public DoubleKeyInterval(DoubleKey from, DoubleKey to) {
         this.from = from;
         this.to = to;
+    }
+
+    @Override
+    public int compareTo(KeyInterval<DoubleKey> o) {
+        return from.compareTo(o.getFrom());
     }
 }

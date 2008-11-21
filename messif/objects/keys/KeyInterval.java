@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
+ * Closed interval, comparable by the lower bound.
+ * 
  * @param <T> specific type of the key
  * @author xnovak8
  */
-public abstract class KeyInterval<T> {
+public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
 
     /** Return the lower bound of the interval.
      * @return the lower bound of the interval
@@ -28,11 +30,21 @@ public abstract class KeyInterval<T> {
     /** 
      * Return <b>true</b> if the interval covers given key. 
      * @param key the key to be tested
-     * @param operator 
+     * @param operator the operator fot this key type
      * @return <b>true</b> if the interval covers given key
      */
     public boolean isCovered(T key, KeyOperator<T> operator) {
         return (operator.compare(getFrom(), key) <= 0) && (operator.compare(getTo(), key) >= 0);
+    }
+
+    /** 
+     * Return <b>true</b> if the interval intersects with this interval.
+     * @param interval the interval to be tested
+     * @param operator the operator fot this key type
+     * @return <b>true</b> if the interval covers given key
+     */
+    public boolean intersect(KeyInterval<T> interval, KeyOperator<T> operator) {
+        return (operator.compare(getTo(), interval.getFrom()) >= 0) && (operator.compare(getFrom(), interval.getTo()) <= 0);
     }
     
     /** 
@@ -83,6 +95,11 @@ public abstract class KeyInterval<T> {
         return retVal;
     }       
 
+    /**
+     * Given a set of keys, this method cuts the given interval to dijcunct set of "right-open" intervals.
+     */
+    //public List<KeyInterval<T>> cutIntervalsByKeys()
+    
     /** 
      * Return the string representation of this interval.
      */
