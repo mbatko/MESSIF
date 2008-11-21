@@ -166,7 +166,7 @@ public class SimpleDiskBucket extends LocalFilteredBucket implements Serializabl
      * @throws InstantiationException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @return a new SimpleDiskBucket instance
      */
-    protected static SimpleDiskBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException {
+    public static SimpleDiskBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException {
         String fileName;
         try {
             fileName = (String)parameters.get("file");

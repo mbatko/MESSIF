@@ -41,7 +41,7 @@ public class MemoryStorageLocatorBucket extends MemoryStorageBucket {
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      */
-    protected MemoryStorageLocatorBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
+    public MemoryStorageLocatorBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
     }
 

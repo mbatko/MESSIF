@@ -103,7 +103,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * @param file the path to the file to create the bucket from. If such file doesn't exist, create a new empty bucket with this filename
      * @throws InstantiationException if the file path is invalid
      */
-    protected DiskBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, File file) throws InstantiationException {
+    public DiskBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, File file) throws InstantiationException {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
         
         initBucket(file);
@@ -161,7 +161,7 @@ public class DiskBucket extends LocalFilteredBucket implements Closeable, Serial
      * @throws InstantiationException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @return a new DiskBucket instance
      */
-    protected static DiskBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException {
+    public static DiskBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException {
         File file = Convert.getParameterValue(parameters, "file", File.class, null);
 
         // if a file was not specified - create a new file in given directory

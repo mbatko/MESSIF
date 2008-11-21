@@ -213,7 +213,7 @@ public class DiskBlockBucket extends LocalFilteredBucket implements Serializable
      * @throws InstantiationException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
-    protected static DiskBlockBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException, ClassNotFoundException {
+    public static DiskBlockBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException, ClassNotFoundException {
         if (!occupationAsBytes)
             throw new InstantiationException("DiskBlockBucket cannot count occupation in objects");
 

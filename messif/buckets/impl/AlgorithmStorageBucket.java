@@ -118,7 +118,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      *         backing algorithm stub cannot be created
      * @return a new DiskBucket instance
      */
-    protected static AlgorithmStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
+    public static AlgorithmStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
         // Check the "algorithm" parameter
         try {
             Algorithm alg = (Algorithm)parameters.get("algorithm");

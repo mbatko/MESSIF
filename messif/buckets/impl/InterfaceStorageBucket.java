@@ -74,7 +74,7 @@ public class InterfaceStorageBucket extends LocalFilteredBucket {
      * @throws java.lang.IllegalArgumentException if the parameters from the <code>parameters</code> map are invalid and the interface stub cannot be created
      * @return a new DiskBucket instance
      */
-    protected static InterfaceStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
+    public static InterfaceStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
         // Get class parameter
         Class<? extends BucketInterface> algClass;
         try {
