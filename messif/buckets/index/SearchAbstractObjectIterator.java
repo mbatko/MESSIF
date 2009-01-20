@@ -17,16 +17,8 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
 
     /** Wrapped search instance */
     private final Search<?, T> search;
-    
     /** Flag for remembering if next() has been called on <code>search</code> and its result */
     private int hasNext;
-
-    /** Number of objects accessed during iteration by this iterator. */
-    private int accessedObjects = 0;
-
-    public int getAccessedObjects() {
-        return accessedObjects;
-    }
 
     //****************** Constructor ******************//
 
@@ -58,7 +50,6 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         if (!hasNext())
             throw new NoSuchElementException("There are no more objects");
         hasNext = -1;
-        accessedObjects++;
         
         return search.getCurrentObject();
     }

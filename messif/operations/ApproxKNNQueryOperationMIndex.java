@@ -53,7 +53,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     /**
      * Objects accessed locally.
      */
-    //public transient int objectsAccessedLocally = 0;
+    public transient int objectsAccessedLocally = 0; 
     
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.

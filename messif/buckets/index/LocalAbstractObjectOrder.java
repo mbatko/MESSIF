@@ -9,6 +9,10 @@ import java.io.Serializable;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
+import messif.operations.AnswerType;
+import messif.operations.GetObjectByLocatorOperation;
+import messif.operations.GetObjectQueryOperation;
+import messif.operations.QueryOperation;
 
 /**
  * Default orders of {@link LocalAbstractObject} based on attributes.
@@ -44,13 +48,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         return object;
     }
 
-    private static abstract class AbstractIndexComparator<B, O> implements IndexComparator<B, O>, Serializable {
-        /** Class serial id for serialization. */
-        private static final long serialVersionUID = 25101L;
-
-    }
-
-    public static IndexComparator<UniqueID, LocalAbstractObject> uniqueIDComparator = new AbstractIndexComparator<UniqueID, LocalAbstractObject>() {
+    public static OperationIndexComparator<UniqueID> uniqueIDComparator = new OperationIndexComparator<UniqueID>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25102L;
 
@@ -62,9 +60,13 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object;
         }
 
+        public GetObjectQueryOperation createIndexOperation(UniqueID key) {
+            return new GetObjectQueryOperation(key, AnswerType.ORIGINAL_OBJECTS);
+        }
+
     };
 
-    public static IndexComparator<String, LocalAbstractObject> locatorToLocalObjectComparator = new AbstractIndexComparator<String, LocalAbstractObject>() {
+    public static OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25103L;
 
@@ -76,9 +78,13 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object.getLocatorURI();
         }
 
+        public GetObjectByLocatorOperation createIndexOperation(String key) {
+            return new GetObjectByLocatorOperation(key, AnswerType.ORIGINAL_OBJECTS);
+        }
+
     };
 
-    public static IndexComparator<AbstractObjectKey, LocalAbstractObject> keyToLocalObjectComparator = new AbstractIndexComparator<AbstractObjectKey, LocalAbstractObject>() {
+    public static IndexComparator<AbstractObjectKey, LocalAbstractObject> keyToLocalObjectComparator = new IndexComparator<AbstractObjectKey, LocalAbstractObject>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25104L;
 

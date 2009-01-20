@@ -3,10 +3,11 @@ package messif.operations;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.utility.SortedCollection;
 
@@ -95,23 +96,19 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
 
     @Override
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        RankedAbstractObject addedObject;
-        if (false) {
-            MetaObject metaQueryObject = (MetaObject)queryObject;
-            float[] metaDistances = new float[metaQueryObject.getObjectCount()];
-            float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            addedObject = addToAnswer(object, distance, metaDistances);
-        } else {
-            float distance = queryObject.getDistance(object, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            // remove the last object in the current answer from the partition information
-            if ((getAnswerCount() >= k) && (getAnswerDistance() > distance)) {
-                RankedAbstractObject lastObj = getAnswerCollection().last();
+        // Remember the last object in the answer, if the answer is full
+        RankedAbstractObject lastObject = isAnswerFull()?getLastAnswer():null;
+
+        // Call the actuall add-to-answer
+        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+
+        // If there was an object inserted
+        if (addedObject != null) {
+            // If the last object was removed from the answer
+            if (lastObject != null) {
+                // Remove the last object in the current answer from the partition information
                 for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
-                    if (entry.getValue().remove(lastObj)) {
+                    if (entry.getValue().remove(lastObject)) {
                         if (entry.getValue().isEmpty()) {
                             partitionedAnswer.remove(entry.getKey());
                         }
@@ -119,12 +116,10 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
                     }
                 }
             }
-            addedObject = addToAnswer(object, distance, null);
-        }
-        
-        //RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
-        if (addedObject != null && currentPartition != null) {
-            currentPartition.add(addedObject);
+            
+            // Add object to current partition
+            if (currentPartition != null)
+                currentPartition.add(addedObject);
         }
 
         return addedObject;
@@ -173,11 +168,14 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
      *  are also stored in the answer itself.
      */
     public void consolidatePartitionsWithAnswer() {
-        SortedCollection<RankedAbstractObject> answer = getAnswerCollection();
+        Set<RankedAbstractObject> answerSet = new HashSet<RankedAbstractObject>(getAnswerCount());
+        Iterator<RankedAbstractObject> iterator = getAnswer();
+        while (iterator.hasNext())
+            answerSet.add(iterator.next());
         for (Iterator<Map.Entry<Object, SortedCollection<RankedAbstractObject>>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {            
             Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry = itt.next();            
             for (Iterator<RankedAbstractObject> it = entry.getValue().iterator(); it.hasNext();) {
-                if (! answer.contains(it.next())) {
+                if (! answerSet.contains(it.next())) {
                     it.remove();
                 }
             }

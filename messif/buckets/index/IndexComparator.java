@@ -5,20 +5,20 @@
 
 package messif.buckets.index;
 
-import java.util.Comparator;
+import java.io.Serializable;
 
 /**
  * A comparison function, which imposes a <i>total ordering</i> on some
  * collection of keys. Objects stored in the index are compared using
- * keys 
- * for ordering, but it must be extractable from the indexed objects.
+ * keys for ordering; the {@link #extractKey} extracts a key for this
+ * comparator from any indexed object.
  * 
  * @param <K> the type of the key arguments of the comparison
  * @param <O> the type of the object arguments of the comparison
  * @author xbatko
  * @see java.util.Comparator
  */
-public interface IndexComparator<K, O> {
+public interface IndexComparator<K, O> extends Serializable {
     /**
      * Compares its two arguments for order. Returns a negative integer,
      * zero, or a positive integer as the first argument is less than, equal
@@ -64,6 +64,7 @@ public interface IndexComparator<K, O> {
      * @see Object#equals(Object)
      * @see Object#hashCode()
      */
+    @Override
     boolean equals(Object obj);
 
 }

@@ -109,7 +109,13 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * @return an iterator over all objects in the answer to this query
      */
     public abstract Iterator<TAnswer> getAnswer();
-    
+
+    /**
+     * Returns an iterator over all {@link AbstractObject}s in the answer to this query.
+     * This method unwraps the objects from the results.
+     * @return an iterator over all {@link AbstractObject}s in the answer to this query
+     */
+    public abstract Iterator<AbstractObject> getAnswerObjects();
 
     /**
      * Reset the current query answer.

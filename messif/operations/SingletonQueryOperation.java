@@ -82,6 +82,11 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
         return list.iterator();
     }
 
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
+    }
+
     /**
      * Returns an object that is the answer to this query.
      * @return an object that is the answer to this query

@@ -9,6 +9,7 @@ package messif.buckets.split;
 
 import java.util.Collection;
 import messif.algorithms.Algorithm;
+import messif.buckets.BucketStorageException;
 import messif.buckets.CapacityFullException;
 import messif.buckets.FilterRejectException;
 import messif.buckets.OccupationLowException;
@@ -56,23 +57,19 @@ public interface SplittableAlgorithm {
          * Registers a move of objects into the result.
          * @param algorithm the created algorithm that is the destination for the move
          * @param objects the objects moved
-         * @throws CapacityFullException if the move can't be performed due to the capacity reasons
-         * @throws OccupationLowException if the move can't be performed due to the capacity reasons
+         * @throws BucketStorageException if the move can't be performed due to the capacity or filtering reasons
          * @throws InstantiationException if encapsulating bucket for the algorithm cannot be created
-         * @throws FilterRejectException if the operation was rejected by a filter registered to the bucket
          */
-        public void markMovedObjects(Algorithm algorithm, Collection<? extends LocalAbstractObject> objects) throws OccupationLowException, CapacityFullException, InstantiationException, FilterRejectException;
+        public void markMovedObjects(Algorithm algorithm, Collection<? extends LocalAbstractObject> objects) throws BucketStorageException, InstantiationException;
 
         /**
          * Registers a move of one object into the result.
          * @param algorithm the created algorithm that is the destination for the move
          * @param object the object moved
-         * @throws CapacityFullException if the move can't be performed due to the capacity reasons
-         * @throws OccupationLowException if the move can't be performed due to the capacity reasons
+         * @throws BucketStorageException if the move can't be performed due to the capacity or filtering reasons
          * @throws InstantiationException if encapsulating bucket for the algorithm cannot be created
-         * @throws FilterRejectException if the operation was rejected by a filter registered to the bucket
          */
-        public void markMovedObject(Algorithm algorithm, LocalAbstractObject object) throws OccupationLowException, CapacityFullException, InstantiationException, FilterRejectException;
+        public void markMovedObject(Algorithm algorithm, LocalAbstractObject object) throws BucketStorageException, InstantiationException;
     }
 
     /**
@@ -82,8 +79,7 @@ public interface SplittableAlgorithm {
      * @param result object used to return results of the split
      * @param whoStays identification of a partition whose objects stay in this bucket.
      * @throws IllegalArgumentException if there are too few target buckets
-     * @throws CapacityFullException if there was an error during algorithm split
-     * @throws OccupationLowException if there was an error during algorithm split
+     * @throws BucketStorageException if there was a storage error during split
      */
-    public void split(SplitPolicy policy, SplittableAlgorithmResult result, int whoStays) throws OccupationLowException, IllegalArgumentException, CapacityFullException;
+    public void split(SplitPolicy policy, SplittableAlgorithmResult result, int whoStays) throws BucketStorageException, IllegalArgumentException;
 }

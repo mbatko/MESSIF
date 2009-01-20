@@ -89,6 +89,11 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         return answer.iterator();
     }
 
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
+    }
+
 
     //****************** Answer manipulation methods ******************//
 

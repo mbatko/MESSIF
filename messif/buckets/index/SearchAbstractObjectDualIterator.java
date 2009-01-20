@@ -9,7 +9,7 @@ import messif.objects.util.AbstractObjectIterator;
  * Provides a bridge between {@link Search} and {@link AbstractObjectIterator}.
  * This iterator will go always one object forward then one object backward
  * from the initial object of the search.
- *
+ * 
  * @param <T> the class of the iterated objects
  * @author xbatko
  */
@@ -113,10 +113,10 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
         if (!hasNext())
             throw new NoSuchElementException("There are no more objects");
         hasNext = -1;
-
+        
         return getCurrentObject();
     }
-
+    
     public void remove() throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This iterator does not support removal");
     }
