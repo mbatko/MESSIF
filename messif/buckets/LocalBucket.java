@@ -79,24 +79,6 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     //****************** Constructors ******************//
 
     /**
-     * Constructs a new LocalBucket instance without any limits (everything is unlimited).
-     * Occupation is counted in bytes.
-     */
-    protected LocalBucket() {
-        this(true);
-    }
-
-    /**
-     * Constructs a new LocalBucket instance without any limits (everything is unlimited).
-     * Occupation count may be in bytes or number of objects.
-     *
-     * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
-     */
-    protected LocalBucket(boolean occupationAsBytes) {
-        this(Long.MAX_VALUE, Long.MAX_VALUE, 0, occupationAsBytes);
-    }
-
-    /**
      * Constructs a new LocalBucket instance and setups all bucket limits
      *
      * @param capacity maximal capacity of the bucket - cannot be exceeded
@@ -389,7 +371,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         // Search for objects with the specified ID
-        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID, true);
+        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
 
         // If object is found, delete and return it
         if (!search.next())
@@ -400,7 +382,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
         // Search for object with the same data
-        ModifiableSearch<LocalAbstractObject, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object, true);
+        ModifiableSearch<LocalAbstractObject, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object);
 
         int count = 0;
         try {
@@ -430,7 +412,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     public synchronized LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
         // Search for objects with the specified ID
-        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID, true);
+        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
 
         // If object is found, delete and return it
         if (!search.next())
@@ -455,7 +437,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      */
     public synchronized LocalAbstractObject getObject(String locator) throws NoSuchElementException {
         // Search for objects with the specified ID
-        Search<String, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator, true);
+        Search<String, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
 
         // If object is found, delete and return it
         if (!search.next())

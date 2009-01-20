@@ -249,19 +249,15 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     public ModifiableSearch<?, LocalAbstractObject> search() throws IllegalStateException {
-        return new AlgorithmStorageSearch<Object>(null, null, null, null);
+        return new AlgorithmStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, boolean restrictEqual) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, null, from, from);
+    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C key) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, key, key);
     }
 
     public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, null, from, to);
-    }
-
-    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C startKey, C from, C to) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, startKey, from, to);
+        return new AlgorithmStorageSearch<C>(comparator, from, to);
     }
 
     /**
@@ -277,12 +273,11 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * During the constructor call, a search operation is executed on
          * the encapsulated algorithm.
          * @param comparator the comparator that defines the 
-         * @param startKey the key on which to begin iteration
          * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<C, LocalAbstractObject> comparator, C startKey, C from, C to) throws IllegalStateException {
+        public AlgorithmStorageSearch(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
             super(comparator, from, to);
 
             // Execute operation to get objects from the algorithm
@@ -291,15 +286,12 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             // Read results into a list
             List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
             Iterator<AbstractObject> answer = operation.getAnswerObjects();
-            int startIndex = 0;
             while (answer.hasNext()) {
                 LocalAbstractObject object = answer.next().getLocalAbstractObject();
-                if (startKey != null && comparator.compare(startKey, object) < 0)
-                    startIndex++;
                 list.add(object);
             }
 
-            this.iterator = list.listIterator(startIndex);
+            this.iterator = list.listIterator();
         }
 
         /**

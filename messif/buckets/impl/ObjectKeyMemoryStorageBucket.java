@@ -10,8 +10,9 @@ import messif.objects.LocalAbstractObject;
 import java.io.Serializable;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
+import messif.buckets.OrderedLocalBucket;
 import messif.buckets.index.LocalAbstractObjectOrder;
-import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.impl.IntStorageIndex;
 import messif.buckets.storage.impl.MemoryStorage;
 import messif.objects.keys.AbstractObjectKey;
@@ -27,14 +28,14 @@ import messif.objects.keys.AbstractObjectKey;
  * @see BucketDispatcher
  * @see LocalBucket
  */
-public class ObjectKeyMemoryStorageBucket extends LocalBucket implements Serializable {
+public class ObjectKeyMemoryStorageBucket extends OrderedLocalBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Data storage ******************//
 
     /** Object storage with ID index */
-    protected ModifiableIndex<LocalAbstractObject> objects =
+    protected ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> objects =
             new IntStorageIndex<AbstractObjectKey, LocalAbstractObject>(
                     new MemoryStorage<LocalAbstractObject>(),
                     LocalAbstractObjectOrder.keyToLocalObjectComparator
@@ -59,7 +60,7 @@ public class ObjectKeyMemoryStorageBucket extends LocalBucket implements Seriali
     //****************** Overrides ******************//
 
     @Override
-    protected ModifiableIndex<LocalAbstractObject> getModifiableIndex() {
+    protected ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> getModifiableIndex() {
         return objects;
     }
 

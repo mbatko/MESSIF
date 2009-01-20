@@ -34,15 +34,11 @@ public class IndexedMemoryStorage<T> extends MemoryStorage<T> implements Modifia
         return new IndexedMemoryStorageSearch<Object>();
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, boolean restrictEqual) throws IllegalStateException {
-        return new IndexedMemoryStorageSearch<C>(comparator, from, restrictEqual);
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+        return new IndexedMemoryStorageSearch<C>(comparator, key, key);
     }
 
     public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
-        return new IndexedMemoryStorageSearch<C>(comparator, from, to);
-    }
-
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) throws IllegalStateException {
         return new IndexedMemoryStorageSearch<C>(comparator, from, to);
     }
 
@@ -55,10 +51,6 @@ public class IndexedMemoryStorage<T> extends MemoryStorage<T> implements Modifia
 
         public IndexedMemoryStorageSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
             super(comparator, from, to);
-        }
-
-        public IndexedMemoryStorageSearch(IndexComparator<B, T> comparator, B from, boolean restrictEqual) throws IllegalStateException {
-            super(comparator, restrictEqual?from:null, restrictEqual?from:null);
         }
 
         @Override

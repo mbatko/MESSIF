@@ -16,21 +16,59 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
     //****************** Attributes ******************//
 
     /** Wrapped search instance */
-    private final Search<?, T> search;
+    protected final Search<?, T> search;
     /** Flag for remembering if next() has been called on <code>search</code> and its result */
-    private int hasNext;
+    protected int hasNext;
+    /** Maximal number of iterations */
+    private final int limit;
+    /** Current number of iterations */
+    private int count;
 
     //****************** Constructor ******************//
 
     /**
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
      * @param search the {@link Search} instance to wrap by this iterator
+     * @param limit limit the number of iterations (zero means unlimited)
      */
-    public SearchAbstractObjectIterator(Search<?, T> search) {
+    public SearchAbstractObjectIterator(Search<?, T> search, int limit) {
         this.search = search;
         this.hasNext = -1;
+        this.limit = limit;
+        this.count = 0;
     }
 
+    /**
+     * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
+     * @param search the {@link Search} instance to wrap by this iterator
+     */
+    public SearchAbstractObjectIterator(Search<?, T> search) {
+        this(search, Integer.MAX_VALUE);
+    }
+
+
+    //****************** Attribute access methods ******************//
+
+    /**
+     * Returns the current number of iterations.
+     * @return the current number of iterations
+     */
+    public int getCount() {
+        return count;
+    }
+
+    /**
+     * Returns the maximal number of iterations.
+     * Zero means unlimited.
+     * @return the maximal number of iterations
+     */
+    public int getLimit() {
+        return (limit == Integer.MAX_VALUE)?0:limit;
+    }
+
+    public final boolean isLimitReached() {
+        return (count > limit);
+    }
 
     //****************** Overrides ******************//
 
@@ -39,6 +77,10 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
     }
 
     public boolean hasNext() {
+        // Check limit
+        if (isLimitReached())
+            return false;
+
         // If the next was called, thus hasNext is not decided yet
         if (hasNext == -1)
             hasNext = search.next()?1:0; // Perform search
@@ -50,6 +92,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         if (!hasNext())
             throw new NoSuchElementException("There are no more objects");
         hasNext = -1;
+        count++;
         
         return search.getCurrentObject();
     }

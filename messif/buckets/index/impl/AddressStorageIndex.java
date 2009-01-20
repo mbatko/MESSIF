@@ -10,7 +10,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.ModifiableSearch;
 import messif.buckets.storage.Address;
 import messif.buckets.storage.Storage;
@@ -22,15 +22,18 @@ import messif.utility.SortedCollection;
  * @param <T>
  * @author xbatko
  */
-public class AddressStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
+public class AddressStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     /** Storage associated with this index */
-    protected final Storage<T> storage;
+    private final Storage<T> storage;
 
     /** Index of addresses into the storage */
     private final SortedCollection<Address<T>> index;
+
+    /** Comparator imposing natural order of this index */
+    private final IndexComparator<K, T> comparator;
 
     /**
      * Creates a new instance of AddressStorageIndex for the specified storage.
@@ -39,6 +42,7 @@ public class AddressStorageIndex<K, T> implements ModifiableIndex<T>, Serializab
      */
     public AddressStorageIndex(Storage<T> storage, IndexComparator<K, T> comparator) {
         this.storage = storage;
+        this.comparator = comparator;
         this.index = new SortedCollection<Address<T>>(new InternalComparator(comparator));
     }
 
@@ -50,20 +54,32 @@ public class AddressStorageIndex<K, T> implements ModifiableIndex<T>, Serializab
         return index.size();
     }
 
-    public ModifiableSearch<?, T> search() throws IllegalStateException {
-        return new GenericModifiableSearch<K>(null, null, null);
+    public IndexComparator<K, T> comparator() {
+        return comparator;
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, boolean restrictEqual) {
-        return new GenericModifiableSearch<C>(comparator, from, restrictEqual);
+    public ModifiableSearch<?, T> search() throws IllegalStateException {
+        return new GenericModifiableSearch<K>((IndexComparator<K, T>)null, null, null);
+    }
+
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C key) {
+        return new GenericModifiableSearch<C>(comparator, key, key);
+    }
+
+    public ModifiableSearch<K, T> search(K key, boolean restrictEqual) {
+        return new GenericModifiableSearch<K>(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
     public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) {
         return new GenericModifiableSearch<C>(comparator, from, to);
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) {
-        return new GenericModifiableSearch<C>(comparator, from, to);
+    public ModifiableSearch<K, T> search(K from, K to) throws IllegalStateException {
+        return new GenericModifiableSearch<K>(from, from, to);
+    }
+
+    public ModifiableSearch<K, T> search(K startKey, K from, K to) {
+        return new GenericModifiableSearch<K>(startKey, from, to);
     }
 
     private class GenericModifiableSearch<C> extends ModifiableSearch<C, T> {
@@ -76,8 +92,8 @@ public class AddressStorageIndex<K, T> implements ModifiableIndex<T>, Serializab
             this.iterator = AddressStorageIndex.this.index.iterator();
         }
 
-        public GenericModifiableSearch(IndexComparator<C, T> comparator, C from, boolean restrictEqual) {
-            super(comparator, restrictEqual?from:null, restrictEqual?from:null);
+        public GenericModifiableSearch(C startKey, C from, C to) {
+            super(null, from, to);
             this.iterator = AddressStorageIndex.this.index.iterator();
         }
 

@@ -52,6 +52,7 @@ public class ReplicationBucket extends LocalBucket {
     
     /** Creates a new instance of ReplicationBucket */
     protected ReplicationBucket(ReplicationNetworkBucketDispatcher bucketDispatcher, LocalBucket encapsulatedBucket) {
+        super(Long.MAX_VALUE, Long.MAX_VALUE, 0, false);
         this.encapsulatedBucket = encapsulatedBucket;
         this.bucketDispatcher = bucketDispatcher;
     }

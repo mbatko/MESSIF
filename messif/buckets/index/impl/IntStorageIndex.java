@@ -8,7 +8,7 @@ package messif.buckets.index.impl;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.ModifiableSearch;
 import messif.buckets.storage.IntStorage;
 
@@ -18,7 +18,7 @@ import messif.buckets.storage.IntStorage;
  * @param <T>
  * @author xbatko
  */
-public class IntStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
+public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -60,20 +60,6 @@ public class IntStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
 	return low;
     }
 
-    @SuppressWarnings("unchecked")
-    private <B> int initialPosition(IndexComparator<B, T> comparator, B key) throws IllegalStateException {
-        if (key != null && comparator.equals(this.comparator)) {
-            try {
-                return insertionPoint((K)key); // This cast IS checked, because the comparators are equal
-            } catch (BucketStorageException e) {
-                throw new IllegalStateException("Error initializing search", e);
-            }
-        } else {
-            return 0;
-        }
-    }
-
-
     public synchronized boolean add(T object) throws BucketStorageException {
         int address = storage.store(object).getAddress();
 
@@ -94,47 +80,51 @@ public class IntStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
         return index.length;
     }
 
-    public ModifiableSearch<K, T> search() throws IllegalStateException {
-        return new IntIndexModifiableSearch<K>();
+    public IndexComparator<K, T> comparator() {
+        return comparator;
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, boolean restrictEqual) throws IllegalStateException {
-        return new IntIndexModifiableSearch<C>(comparator, from, restrictEqual);
+    public ModifiableSearch<K, T> search() throws IllegalStateException {
+        return new IntIndexModifiableSearch<K>((IndexComparator<K, T>)null, null, null);
+    }
+
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from) throws IllegalStateException {
+        return new IntIndexModifiableSearch<C>(comparator, from, from);
     }
 
     public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
         return new IntIndexModifiableSearch<C>(comparator, from, to);
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) throws IllegalStateException {
-        return new IntIndexModifiableSearch<C>(comparator, startKey, from, to);
+    public ModifiableSearch<K, T> search(K startKey, K from, K to) throws IllegalStateException {
+        return new IntIndexModifiableSearch<K>(startKey, from, to);
+    }
+
+    public ModifiableSearch<K, T> search(K from, K to) throws IllegalStateException {
+        return new IntIndexModifiableSearch<K>(from, from, to);
+    }
+
+    public ModifiableSearch<K, T> search(K key, boolean restrictEqual) throws IllegalStateException {
+        return new IntIndexModifiableSearch<K>(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
     private class IntIndexModifiableSearch<B> extends ModifiableSearch<B, T> {
         private int nextIndexPosition;
         private int prevIndexPosition;
 
-        public IntIndexModifiableSearch() {
-            super(null, null, null);
+        public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
+            super(comparator, from, to);
             this.nextIndexPosition = 0;
             this.prevIndexPosition = -1;
         }
 
-        public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
-            super(comparator, from, to);
-            this.nextIndexPosition = initialPosition(comparator, from);
-            this.prevIndexPosition = this.nextIndexPosition - 1;
-        }
-
-        public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B startKey, B from, B to) throws IllegalStateException {
-            super(comparator, from, to);
-            this.nextIndexPosition = initialPosition(comparator, startKey);
-            this.prevIndexPosition = this.nextIndexPosition - 1;
-        }
-
-        public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B from, boolean restrictEqual) throws IllegalStateException {
-            super(comparator, restrictEqual?from:null, restrictEqual?from:null);
-            this.nextIndexPosition = initialPosition(comparator, from);
+        public IntIndexModifiableSearch(K startKey, B from, B to) throws IllegalStateException {
+            super(null, from, to);
+            try {
+                this.nextIndexPosition = insertionPoint(startKey);
+            } catch (BucketStorageException e) {
+                throw new IllegalStateException("Error initializing search", e);
+            }
             this.prevIndexPosition = this.nextIndexPosition - 1;
         }
 

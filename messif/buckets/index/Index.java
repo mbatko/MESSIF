@@ -21,41 +21,37 @@ public interface Index<T> {
 
     /**
      * Returns a search for all objects in this index.
-     * Objects are returned in the order defined by this index.
      * @return a search for all objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
     public Search<?, T> search() throws IllegalStateException;
 
     /**
-     * Returns a search for objects in this index using a specified comparator.
-     * The parameter <code>from</code> need not necessarily be of the same
-     * class as the objects stored in this index, however, the comparator must be
-     * able to compare it with the stored objects.
+     * Returns a search for objects in this index that have the specified key.
+     * The equality is checked exclusively by using the specified comparator, thus
+     * <code>key</code> need not necessarily be of the same class as the objects stored
+     * in this index and also consistency with {@link java.lang.Object#equals equals} is not required.
      * 
      * <p>
-     * Objects are returned in the order defined by this index.
-     * If the <code>restrictEqual</code> is <tt>true</tt>, the search is restricted
-     * only to objects that are comparator-equal to <code>from</code>.
+     * Note that objects are <i>not</i> returned in the order defined by the comparator
      * </p>
      * 
      * @param <C> the type the boundaries used by the search
      * @param comparator compares the <code>from</code> with the stored objects
-     * @param from the starting point of the search
-     * @param restrictEqual if <tt>true</tt>, the search is restricted
-     *          only to objects that are equal to <code>from</code>
+     * @param key the key for search
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public <C> Search<C, T> search(IndexComparator<C, T> comparator, C from, boolean restrictEqual) throws IllegalStateException;
+    public <C> Search<C, T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException;
 
     /**
-     * Returns a search for objects in this index using a specified comparator.
-     * The boundaries <code>[from, to]</code> need not necessarily be of the same
+     * Returns a search for objects in this index that are within the specified key-range.
+     * The key boundaries <code>[from, to]</code> need not necessarily be of the same
      * class as the objects stored in this index, however, the comparator must be
      * able to compare the boundaries and the internal objects.
+     * 
      * <p>
-     * Objects are returned in the order defined by this index.
+     * Note that objects are <i>not</i> returned in the order defined by the comparator
      * </p>
      * 
      * @param <C> the type the boundaries used by the search
@@ -66,25 +62,5 @@ public interface Index<T> {
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
     public <C> Search<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException;
-
-    /**
-     * Returns a search for objects in this index using a specified comparator.
-     * The boundaries <code>[from, to]</code> need not necessarily be of the same
-     * class as the objects stored in this index, however, the comparator must be
-     * able to compare the boundaries and the internal objects. Search starts with
-     * the object nearest to the <code>startKey</code>
-     * <p>
-     * Objects are returned in the order defined by this index.
-     * </p>
-     * 
-     * @param <C> the type the boundaries used by the search
-     * @param comparator compares the boundaries <code>[from, to]</code> with the stored objects
-     * @param startKey the key from which to start the search
-     * @param from the lower bound on the searched objects, i.e. objects greater or equal are returned
-     * @param to the upper bound on the searched objects, i.e. objects smaller or equal are returned
-     * @return a search for objects in this index
-     * @throws IllegalStateException if there was an error initializing the search on this index
-     */
-    public <C> Search<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) throws IllegalStateException;
 
 }

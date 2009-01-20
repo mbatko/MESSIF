@@ -1,7 +1,6 @@
 
 package messif.buckets.index;
 
-import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 
@@ -13,22 +12,14 @@ import messif.objects.util.AbstractObjectIterator;
  * @param <T> the class of the iterated objects
  * @author xbatko
  */
-public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> extends AbstractObjectIterator<T> {
+public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> extends SearchAbstractObjectIterator<T> {
 
     //****************** Attributes ******************//
 
     /** Wrapped search instance */
-    private final Search<?, T> searchFwd;
-    /** Wrapped search instance */
     private final Search<?, T> searchBck;
-    /** Flag for remembering if next() has been called on <code>search</code> and its result */
-    private int hasNext;
     /** Flag which search result to use (forward = true, backward = false) */
     private boolean fwdIsCurrent;
-    /** Maximal number of iterations */
-    private final int limit;
-    /** Current number of iterations */
-    private int count;
 
     //****************** Constructor ******************//
 
@@ -39,12 +30,9 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
      * @throws CloneNotSupportedException if there was an error clonning the search
      */
     public SearchAbstractObjectDualIterator(Search<?, T> search, int limit) throws CloneNotSupportedException {
-        this.searchFwd = search;
+        super(search, limit);
         this.searchBck = search.clone();
-        this.hasNext = -1;
         this.fwdIsCurrent = false;
-        this.limit = (limit <= 0)?Integer.MAX_VALUE:limit;
-        this.count = 0;
     }
 
     /**
@@ -57,36 +45,22 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
         this(search, Integer.MAX_VALUE);
     }
 
-    //****************** Overrides ******************//
-
-    /**
-     * Returns the current number of iterations.
-     * @return the current number of iterations
-     */
-    public int getCount() {
-        return count;
-    }
-
-    /**
-     * Returns the maximal number of iterations.
-     * Zero means unlimited.
-     * @return the maximal number of iterations
-     */
-    public int getLimit() {
-        return (limit == Integer.MAX_VALUE)?0:limit;
-    }
-
 
     //****************** Overrides ******************//
 
+    @Override
     public T getCurrentObject() {
-        return fwdIsCurrent?searchFwd.getCurrentObject():searchBck.getCurrentObject();
+        return fwdIsCurrent?search.getCurrentObject():searchBck.getCurrentObject();
     }
 
+    @Override
     public boolean hasNext() {
+        if (isLimitReached())
+            return false;
+
         if (hasNext == -1) {
             if (!fwdIsCurrent) {
-                hasNext = searchFwd.next()?1:0; // Perform search
+                hasNext = search.next()?1:0; // Perform search
                 if (hasNext == 0) {
                     hasNext = searchBck.previous()?1:0;
                 } else {
@@ -95,30 +69,13 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
             } else {
                 hasNext = searchBck.previous()?1:0; // Perform search
                 if (hasNext == 0) {
-                    hasNext = searchFwd.next()?1:0;
+                    hasNext = search.next()?1:0;
                 } else {
                     fwdIsCurrent = false;
                 }
             }
-
-            // Increment iterations count
-            if (hasNext == 1)
-                count++;
         }
 
-        return (count <= limit)?(hasNext == 1):false;
+        return hasNext == 1;
      }
-
-    public T next() throws NoSuchElementException {
-        if (!hasNext())
-            throw new NoSuchElementException("There are no more objects");
-        hasNext = -1;
-        
-        return getCurrentObject();
-    }
-    
-    public void remove() throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This iterator does not support removal");
-    }
-
 }
