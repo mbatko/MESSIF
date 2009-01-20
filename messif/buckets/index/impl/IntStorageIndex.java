@@ -106,6 +106,10 @@ public class IntStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
         return new IntIndexModifiableSearch<C>(comparator, from, to);
     }
 
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) throws IllegalStateException {
+        return new IntIndexModifiableSearch<C>(comparator, startKey, from, to);
+    }
+
     private class IntIndexModifiableSearch<B> extends ModifiableSearch<B, T> {
         private int nextIndexPosition;
         private int prevIndexPosition;
@@ -119,6 +123,12 @@ public class IntStorageIndex<K, T> implements ModifiableIndex<T>, Serializable {
         public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
             super(comparator, from, to);
             this.nextIndexPosition = initialPosition(comparator, from);
+            this.prevIndexPosition = this.nextIndexPosition - 1;
+        }
+
+        public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B startKey, B from, B to) throws IllegalStateException {
+            super(comparator, from, to);
+            this.nextIndexPosition = initialPosition(comparator, startKey);
             this.prevIndexPosition = this.nextIndexPosition - 1;
         }
 

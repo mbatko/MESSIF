@@ -65,4 +65,24 @@ public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
      */
     public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException;
 
+    /**
+     * Returns a search for objects in this index using a specified comparator.
+     * The boundaries <code>[from, to]</code> need not necessarily be of the same
+     * class as the objects stored in this index, however, the comparator must be
+     * able to compare the boundaries and the internal objects. Search starts with
+     * the object nearest to the <code>startKey</code>
+     * <p>
+     * Objects are returned in the order defined by this index.
+     * </p>
+     * 
+     * @param <C> the type the boundaries used by the search
+     * @param comparator compares the boundaries <code>[from, to]</code> with the stored objects
+     * @param startKey the key from which to start the search
+     * @param from the lower bound on the searched objects, i.e. objects greater or equal are returned
+     * @param to the upper bound on the searched objects, i.e. objects smaller or equal are returned
+     * @return a search for objects in this index
+     * @throws IllegalStateException if there was an error initializing the search on this index
+     */
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) throws IllegalStateException;
+
 }

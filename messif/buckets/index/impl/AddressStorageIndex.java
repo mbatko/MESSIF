@@ -62,6 +62,10 @@ public class AddressStorageIndex<K, T> implements ModifiableIndex<T>, Serializab
         return new GenericModifiableSearch<C>(comparator, from, to);
     }
 
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C startKey, C from, C to) {
+        return new GenericModifiableSearch<C>(comparator, from, to);
+    }
+
     private class GenericModifiableSearch<C> extends ModifiableSearch<C, T> {
 
         private final Iterator<Address<T>> iterator;

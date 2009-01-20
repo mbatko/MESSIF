@@ -37,6 +37,7 @@ import messif.buckets.index.OperationIndexComparator;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.operations.AnswerType;
 import messif.operations.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
 
@@ -248,15 +249,19 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     public ModifiableSearch<?, LocalAbstractObject> search() throws IllegalStateException {
-        return new AlgorithmStorageSearch<Object>(null, null, null);
+        return new AlgorithmStorageSearch<Object>(null, null, null, null);
     }
 
     public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, boolean restrictEqual) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, from, from);
+        return new AlgorithmStorageSearch<C>(comparator, null, from, from);
     }
 
     public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, from, from);
+        return new AlgorithmStorageSearch<C>(comparator, null, from, to);
+    }
+
+    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C startKey, C from, C to) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, startKey, from, to);
     }
 
     /**
@@ -272,31 +277,57 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * During the constructor call, a search operation is executed on
          * the encapsulated algorithm.
          * @param comparator the comparator that defines the 
+         * @param startKey the key on which to begin iteration
          * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
+        public AlgorithmStorageSearch(IndexComparator<C, LocalAbstractObject> comparator, C startKey, C from, C to) throws IllegalStateException {
             super(comparator, from, to);
 
+            // Execute operation to get objects from the algorithm
+            QueryOperation<?> operation = executeOperation(createOperation(comparator, from, to));
+
+            // Read results into a list
+            List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
+            Iterator<AbstractObject> answer = operation.getAnswerObjects();
+            int startIndex = 0;
+            while (answer.hasNext()) {
+                LocalAbstractObject object = answer.next().getLocalAbstractObject();
+                if (startKey != null && comparator.compare(startKey, object) < 0)
+                    startIndex++;
+                list.add(object);
+            }
+
+            this.iterator = list.listIterator(startIndex);
+        }
+
+        /**
+         * Creates an operation to execute on the encapsulated algorithm for the specified comparator and boundaries.
+         * @param comparator the comparator to use for the query definition
+         * @param from the lower-bound key for which to create an operation
+         * @param to the upper-bound key for which to create an operation
+         * @return a new instance of query operation for the given key
+         */
+        protected QueryOperation<?> createOperation(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) {
             // Get the results from algorithm using operation
             if (comparator != null && from != null && comparator instanceof OperationIndexComparator)
-                iterator = getResults(((OperationIndexComparator<C>)comparator).createIndexOperation(from)).listIterator();
+                return ((OperationIndexComparator<C>)comparator).createIndexOperation(from, to);
             else
-                iterator = getResults(new GetAllObjectsQueryOperation()).listIterator();
+                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
 
         /**
          * Executes a query operation on the encapsulated algorithm and wraps
          * the query's answer into a list.
          * @param operation the operation to execute on the algorithm
-         * @return the (sorted) list of objects returned by the algorithm
+         * @return the operation executed by the algorithm
          * @throws IllegalStateException if there was a problem executing the operation on the encapsulated algorithm
          */
-        private List<LocalAbstractObject> getResults(QueryOperation<?> operation) throws IllegalStateException {
+        protected QueryOperation<?> executeOperation(QueryOperation<?> operation) throws IllegalStateException {
             // Execute operation
             try {
-                algorithm.executeOperation(operation);
+                return algorithm.executeOperation(operation);
             } catch (AlgorithmMethodException e) {
                 throw new IllegalStateException("Cannot execute " + operation.getClass().getName() + " on " + algorithm.getName(), e.getCause());
             } catch (NoSuchMethodException e) { // Specified query is not supported, fall back to get-all-objects
@@ -304,16 +335,8 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
                 if (operation instanceof GetAllObjectsQueryOperation)
                     throw new IllegalStateException("GetAllObjects operation must be supported by " + algorithm.getName() + " in order to be wrapped as algorithm-bucket");
                 // Fall-back operation
-                return getResults(new GetAllObjectsQueryOperation());
+                return executeOperation(new GetAllObjectsQueryOperation());
             }
-
-            // Read results into a list
-            List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
-            Iterator<AbstractObject> answer = operation.getAnswerObjects();
-            while (answer.hasNext())
-                list.add(answer.next().getLocalAbstractObject());            
-
-            return list;
         }
 
         @Override

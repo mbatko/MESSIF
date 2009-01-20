@@ -29,8 +29,9 @@ public interface OperationIndexComparator<K> extends IndexComparator<K, LocalAbs
     /**
      * Creates a query operation for the given key.
      * The returned operation represents the same ordering as this index comparator.
-     * @param key a key for which to create an operation
+     * @param from the lower-bound key for which to create an operation
+     * @param to the upper-bound key for which to create an operation
      * @return a new instance of query operation for the given key
      */
-    public QueryOperation<?> createIndexOperation(K key);
+    public QueryOperation<?> createIndexOperation(K from, K to);
 }

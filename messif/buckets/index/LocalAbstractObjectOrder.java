@@ -10,6 +10,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.operations.AnswerType;
+import messif.operations.GetAllObjectsQueryOperation;
 import messif.operations.GetObjectByLocatorOperation;
 import messif.operations.GetObjectQueryOperation;
 import messif.operations.QueryOperation;
@@ -60,10 +61,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object;
         }
 
-        public GetObjectQueryOperation createIndexOperation(UniqueID key) {
-            return new GetObjectQueryOperation(key, AnswerType.ORIGINAL_OBJECTS);
+        public QueryOperation<?> createIndexOperation(UniqueID from, UniqueID to) {
+            if (to == null || from.equals(to))
+                return new GetObjectQueryOperation(from, AnswerType.ORIGINAL_OBJECTS);
+            else
+                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
-
     };
 
     public static OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
@@ -78,8 +81,11 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object.getLocatorURI();
         }
 
-        public GetObjectByLocatorOperation createIndexOperation(String key) {
-            return new GetObjectByLocatorOperation(key, AnswerType.ORIGINAL_OBJECTS);
+        public QueryOperation<?> createIndexOperation(String from, String to) {
+            if (to == null || from.equals(to))
+                return new GetObjectByLocatorOperation(from, AnswerType.ORIGINAL_OBJECTS);
+            else
+                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
 
     };
