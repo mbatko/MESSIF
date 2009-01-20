@@ -180,9 +180,11 @@ public abstract class Convert {
     /**
      * Returns a wrapper class for primitive type.
      * If the type is not primitive, it is returned as is.
+     * @param <T> a primitive type class
      * @param type a primitive type class
      * @return a wrapper class for primitive type
      */
+    @SuppressWarnings("unchecked")
     public static <T> Class<T> wrapPrimitiveType(Class<T> type) {
         if (!type.isPrimitive())
             return type;

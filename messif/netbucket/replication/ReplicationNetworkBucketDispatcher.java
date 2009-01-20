@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 import messif.buckets.Bucket;
+import messif.buckets.BucketStorageException;
 import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
 import messif.netbucket.NetworkBucketDispatcher;
@@ -71,8 +72,8 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
 
     /****************** Override for replica change ******************/
 
-    /** Add new bucket with encapsulation into ReplicationBucket */
-    public synchronized LocalBucket addBucket(LocalBucket bucket) throws CapacityFullException {
+    @Override
+    public synchronized LocalBucket addBucket(LocalBucket bucket) throws CapacityFullException, IllegalStateException {
         // Create replica envelope and call super implementation
         ReplicationBucket newBucket = new ReplicationBucket(this, bucket);
         
@@ -92,7 +93,7 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
 
     /******************************    Methods to be executed on the replication buckets    ******************************/
     
-    public void createReplica(NetworkNode atNetworkNode) throws CapacityFullException {
+    public void createReplica(NetworkNode atNetworkNode) throws BucketStorageException, IllegalStateException {
         for (Bucket bucket : getAllBuckets())
             ((ReplicationBucket) bucket).createReplica(atNetworkNode);
     }

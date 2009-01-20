@@ -105,7 +105,7 @@ public class CentralCreator extends NetworkNodeDispatcher {
 
                 try {
                     // Send "Use" message
-                    MessageActivateResponse msg = (MessageActivateResponse)messageDisp.sendMessageWaitReply(new MessageActivate(null), node).getFirstReply();
+                    MessageActivateResponse msg = messageDisp.sendMessageWaitSingleReply(new MessageActivate(null), MessageActivateResponse.class, node);
 
                     // Get response type
                     if (msg.isSuccess())

@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import messif.network.ReplyMessage;
 import messif.network.ReplyReceiver;
 import messif.statistics.Statistics;
 
@@ -409,7 +408,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      *  @param targetStatistics the operation statistics object that should be updated
      *  @param replyMessages the list of reply messages received with partial statistics
      */
-    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends ReplyMessage> replyMessages) {
+    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends DistAlgReplyMessage> replyMessages) {
         mergeStatisticsFromReplies(targetStatistics, replyMessages, 0);
     }
     
@@ -418,7 +417,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      *  @param replyMessages the list of reply messages received with partial statistics
      *  @param localDC says the number of DC performed by the local search on this node, if any
      */
-    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends ReplyMessage> replyMessages, long localDC) {
+    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends DistAlgReplyMessage> replyMessages, long localDC) {
         if (replyMessages.isEmpty())
             return;
 
@@ -426,7 +425,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         
         // first, create the nodesMap - maximum over node's DCs on given positions in all replies
         SortedMap<Integer, Map<NetworkNode, Long>> nodesMap = new TreeMap<Integer, Map<NetworkNode, Long>>();
-        for (ReplyMessage reply : replyMessages) {
+        for (DistAlgReplyMessage reply : replyMessages) {
             // create a map of node->DC taken as max over all nodes in all replies
             int i = 0;
             NetworkNode previousNode = null;
@@ -466,7 +465,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         //hopCount.reset();
         
         // iterate over the replies again and calculate parallel DC for all hosts
-        for (ReplyMessage reply : replyMessages) {
+        for (DistAlgReplyMessage reply : replyMessages) {
             // create a map of node->DC because messages can create loops (in the terms of "hosts")
             Set<NetworkNode> visitedHosts = new HashSet<NetworkNode>();
             long parDCs = 0;
@@ -506,7 +505,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         
         // the peers that answered (are at the end of the paths) are put into a separate map
         StatisticRefCounter answeringPeers = targetStatistics.getStatisticRefCounter("AnsweringPeers.DistanceComputations");
-        for (ReplyMessage reply : replyMessages) {
+        for (DistAlgReplyMessage reply : replyMessages) {
             NetworkNode peer = new NetworkNode(reply.getSender(), false);
             StatisticCounter counter = peersDC.remove(peer);
             if (counter != null)

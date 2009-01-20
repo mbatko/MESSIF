@@ -105,27 +105,23 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * Insert a new object into the bucket.
      * This method goes through all registered filters and use their filter method
      * with BEFORE_ADD and AFTER_ADD situations (see {@link BucketFilterInterface.FilterSituations}).
-     * 
+     * The object is stored using the {@link #storeObject} method of the lower layer.
+     *
      * @param object the new object to be inserted
-     * @return BucketErrorCode.SOFTCAPACITY_EXCEEDED if the soft capacity has been exceeded.
-     *         BucketErrorCode.OBJECT_INSERTED       upon successful insertion
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
-     * @throws FilterRejectException if any associated filter aborts the insertion by throwing the exception
+     * @throws BucketStorageException if the object cannot be inserted into the bucket
      */
     @Override
-    public synchronized BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException, FilterRejectException {
+    public synchronized void addObject(LocalAbstractObject object) throws BucketStorageException {
         filterAddObjectBefore(object);
-        BucketErrorCode rtv = super.addObject(object);
+        super.addObject(object);
         filterAddObjectAfter(object);
-        
-        return rtv;
     }
 
     /**
      * Processes all filters with BEFORE_ADD situation.
      * @param object the object to process
      */
-    protected final void filterAddObjectBefore(LocalAbstractObject object) {
+    protected final void filterAddObjectBefore(LocalAbstractObject object) throws FilterRejectException {
         synchronized (registeredFilters) {
             for (BucketFilterInterface filter : registeredFilters)
                 filter.filterObject(object, BucketFilterInterface.FilterSituations.BEFORE_ADD, this);
@@ -137,7 +133,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * Processes all filters with AFTER_ADD situation.
      * @param object the object to process
      */
-    protected final void filterAddObjectAfter(LocalAbstractObject object) {
+    protected final void filterAddObjectAfter(LocalAbstractObject object) throws FilterRejectException {
         synchronized (registeredFilters) {
             for (BucketFilterInterface filter : registeredFilters)
                 filter.filterObject(object, BucketFilterInterface.FilterSituations.AFTER_ADD, this);
@@ -157,7 +153,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * @throws FilterRejectException if any associated filter aborts the deletion by throwing the exception
      */
     @Override
-    protected synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, OccupationLowException, FilterRejectException {
+    final synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, BucketStorageException {
         LocalAbstractObject object = iterator.getCurrentObject();
         
         filterDeleteObjectBefore(object);
@@ -171,7 +167,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * Processes all filters with BEFORE_DEL situation.
      * @param object the object to process
      */
-    protected final void filterDeleteObjectBefore(LocalAbstractObject object) {
+    protected final void filterDeleteObjectBefore(LocalAbstractObject object) throws FilterRejectException {
         synchronized (registeredFilters) {
             for (BucketFilterInterface filter : registeredFilters)
                 filter.filterObject(object, BucketFilterInterface.FilterSituations.BEFORE_DEL, this);
@@ -182,7 +178,7 @@ public abstract class LocalFilteredBucket extends LocalBucket implements Seriali
      * Processes all filters with AFTER_DEL situation.
      * @param object the object to process
      */
-    protected final void filterDeleteObjectAfter(LocalAbstractObject object) {
+    protected final void filterDeleteObjectAfter(LocalAbstractObject object) throws FilterRejectException {
         synchronized (registeredFilters) {
             for (BucketFilterInterface filter : registeredFilters)
                 filter.filterObject(object, BucketFilterInterface.FilterSituations.AFTER_DEL, this);

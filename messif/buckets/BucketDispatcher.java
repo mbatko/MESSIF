@@ -7,6 +7,7 @@
 package messif.buckets;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
@@ -106,7 +107,7 @@ public class BucketDispatcher implements Serializable {
 
     /**
      * Creates a new instance of BucketDispatcher with full specification of default values.
-     * No additional parameters for the default bucket class is specified.
+     * No additional parameters for the default bucket class are specified.
      *
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets
@@ -459,12 +460,12 @@ public class BucketDispatcher implements Serializable {
      * @param storageClassParams additional parameters for creating a new instance of the storageClass
      * @return a new instance of the specified bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if (1) the provided storageClass is not a part of LocalBucket hierarchy;
-     *                                   (2) the storageClass does not have a proper constructor (String,long,long);
-     *                                   (3) the correct constructor of storageClass is not accesible; or
-     *                                   (4) the constuctor of storageClass has failed.
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public static LocalBucket createBucket(Class<? extends LocalBucket> storageClass, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> storageClassParams) throws CapacityFullException, InstantiationException {
+    public static LocalBucket createBucket(Class<? extends LocalBucket> storageClass, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> storageClassParams) throws CapacityFullException, IllegalArgumentException {
         // Update provided parameters to correct values
         if (softCapacity < 0) softCapacity = 0;
         if (capacity < softCapacity) capacity = softCapacity;
@@ -475,9 +476,9 @@ public class BucketDispatcher implements Serializable {
                 // Try bucket class internal factory first
                 Method factoryMethod = storageClass.getDeclaredMethod("getBucket", long.class, long.class, long.class, boolean.class, Map.class);
                 if (!Modifier.isStatic(factoryMethod.getModifiers()))
-                    throw new InstantiationException("Factory method 'getBucket' in " + storageClass + " is not static");
+                    throw new IllegalArgumentException("Factory method 'getBucket' in " + storageClass + " is not static");
                 if (!storageClass.isAssignableFrom(factoryMethod.getReturnType()))
-                    throw new InstantiationException("Factory method 'getBucket' in " + storageClass + " has wrong return type");
+                    throw new IllegalArgumentException("Factory method 'getBucket' in " + storageClass + " has wrong return type");
                 return (LocalBucket)factoryMethod.invoke(null, capacity, softCapacity, lowOccupation, occupationAsBytes, storageClassParams);
             } catch (NoSuchMethodException ignore) {
                 // Factory method doesn't exist, try class constructor
@@ -488,11 +489,13 @@ public class BucketDispatcher implements Serializable {
                          );
             }
         } catch (NoSuchMethodException e) {
-            throw new InstantiationException("Storage " + storageClass + " lacks proper constructor: " + e.getMessage());
+            throw new IllegalArgumentException("Storage " + storageClass + " lacks proper constructor: " + e.getMessage());
         } catch (IllegalAccessException e) {
-            throw new InstantiationException("Storage " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            throw new InstantiationException("Storage " + storageClass + " constructor invocation failed: " + e.getCause());
+            throw new IllegalArgumentException("Storage " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Storage " + storageClass + " cannot be created because it is an abstract class");
+        } catch (InvocationTargetException e) {
+            throw new IllegalArgumentException("Storage " + storageClass + " constructor invocation failed: " + e.getCause());
         }
     }
 
@@ -507,12 +510,12 @@ public class BucketDispatcher implements Serializable {
      *
      * @return a new instance of the specified bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if (1) the provided storageClass is not a part of LocalBucket hierarchy;
-     *                                   (2) the storageClass does not have a proper constructor (String,long,long);
-     *                                   (3) the correct constructor of storageClass is not accesible; or
-     *                                   (4) the constuctor of storageClass has failed.
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, InstantiationException {
+    public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, IllegalArgumentException {
         // Create new bucket with specified capacity
         LocalBucket bucket = createBucket(storageClass, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams);        
 
@@ -528,12 +531,12 @@ public class BucketDispatcher implements Serializable {
      *
      * @return a new instance of the default bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
-     *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket() throws CapacityFullException, InstantiationException {
+    public LocalBucket createBucket() throws CapacityFullException, IllegalArgumentException {
         return createBucket(defaultBucketClass, defaultBucketClassParams, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -545,12 +548,12 @@ public class BucketDispatcher implements Serializable {
      *
      * @return a new instance of the specified bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
-     *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass) throws CapacityFullException, InstantiationException {
+    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass) throws CapacityFullException, IllegalArgumentException {
         return createBucket(storageClass, null, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -563,12 +566,12 @@ public class BucketDispatcher implements Serializable {
      *
      * @return a new instance of the specified bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
-     *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams) throws CapacityFullException, InstantiationException {
+    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams) throws CapacityFullException, IllegalArgumentException {
         return createBucket(storageClass, storageClassParams, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -581,12 +584,12 @@ public class BucketDispatcher implements Serializable {
      *
      * @return a new instance of the specified bucket class
      * @throws CapacityFullException if the maximal number of buckets is already allocated
-     * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
-     *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
+     *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
+     *                                         <li>the correct constructor of storageClass is not accesible</li>
+     *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, InstantiationException {
+    public LocalBucket createBucket(long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, IllegalArgumentException {
         return createBucket(defaultBucketClass, defaultBucketClassParams, capacity, softCapacity, lowOccupation);
     }
 

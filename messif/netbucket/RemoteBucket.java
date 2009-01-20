@@ -6,16 +6,13 @@
 
 package messif.netbucket;
 
-import java.io.IOException;
 import java.io.Serializable;
 import messif.utility.Logger;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.buckets.Bucket;
-import messif.buckets.BucketErrorCode;
-import messif.buckets.CapacityFullException;
+import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
-import messif.buckets.OccupationLowException;
 import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
@@ -151,11 +148,14 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getObject(objectID);
         
         // Otherwise, send message to remote netnode
+        /* FIXME:
         try {
             return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
         }
+         */
+        return null;
     }
 
     /**
@@ -169,6 +169,7 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getAllObjects();
         
         // Otherwise, send message to remote netnode
+        /* FIXME:
         try {
             return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(bucketID), remoteNetworkNode).getObjects().iterator();
         } catch (IOException e) {
@@ -176,48 +177,40 @@ public class RemoteBucket extends Bucket implements Serializable {
         } catch (NoSuchElementException e) {
             throw new IllegalStateException(e.getMessage());
         }
+         */
+        return null;
     }
 
-    /**
-     * Insert a new object into the remote bucket.
-     * 
-     * @return error code - for details, see documentation of {@link BucketErrorCode}
-     * @param object a new object to be inserted
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
-    public BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException, IllegalStateException {
+    @Override
+    public void addObject(LocalAbstractObject object) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
-        if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).addObject(object);
-        
-        // Otherwise, send message to remote netnode
-        try {
-            BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID), remoteNetworkNode);
-            if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
-                throw new CapacityFullException();
-            return msg.getErrorCode();
-        } catch (IOException e) {
-            throw new IllegalStateException("Network error while adding " + object + " to " + toString(), e);
-        } catch (NoSuchElementException e) {
-            throw new IllegalStateException(e.getMessage());
+        if (isLocalBucket()) {
+            netbucketDisp.getBucket(bucketID).addObject(object);
+        } else {
+            // Otherwise, send message to remote netnode
+            /* FIXME:
+            try {
+                BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID), remoteNetworkNode);
+                if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
+                    throw new CapacityFullException();
+                return msg.getErrorCode();
+            } catch (IOException e) {
+                throw new IllegalStateException("Network error while adding " + object + " to " + toString(), e);
+            } catch (NoSuchElementException e) {
+                throw new IllegalStateException(e.getMessage());
+            }
+             */
         }
     }
 
-    /**
-     * Insert several new objects into the remote bucket.
-     * 
-     * @param objects List of the new objects
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
     @Override
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException, IllegalStateException {
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).addObjects(objects);
         
         // Otherwise, send message to remote netnode
+        /* FIXME:
         try {
             BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objects, bucketID), remoteNetworkNode);
             if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
@@ -228,52 +221,45 @@ public class RemoteBucket extends Bucket implements Serializable {
         } catch (NoSuchElementException e) {
             throw new IllegalStateException(e.getMessage());
         }            
+         */
+        return 0;
     }
 
-    /**
-     * Delete object with specified ID from the remote bucket.
-     * 
-     * @param objectID the ID of the object to delete
-     * @return the object deleted from this bucket
-     * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher 
-     */
-    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException, IllegalStateException {
+    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).deleteObject(objectID);
         
         // Otherwise, send message to remote netnode
+        /* FIXME:
         try {
             return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID, true), remoteNetworkNode).getObject();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting Object (" + objectID + ") from " + toString(), e);
-        }            
+        }
+         */
+        return null;
     }
 
-    /**
-     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
-     * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
-     * data-equal objects found are deleted.
-     * 
-     * @param object the object to match against
-     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
-     * @return the number of deleted objects
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
-    public int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException, IllegalStateException {
+    public int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).deleteObject(object, deleteLimit);
         
         // Otherwise, send message to remote netnode
+        /* FIXME:
         try {
             return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting Object (" + object + ") from " + toString(), e);
-        }            
+        }
+         */
+        return 0;
+    }
+
+    @Override
+    public int deleteAllObjects() throws BucketStorageException {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**
@@ -292,13 +278,16 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).processQuery(query);
         
         // Otherwise, send message to remote netnode
+            /* FIXME:
         try {
-            BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(query, bucketID), remoteNetworkNode);
+            BucketManipulationReplyMessage msg = sendMessageWaitSingleReply(new BucketProcessQueryRequestMessage(bucketID, query), BucketCreateReplyMessage.class, remoteNetworkNode);
             query.updateFrom(msg.getQuery());
             return msg.getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while executing query (" + query + ") from " + toString(), e);
         }       
+            */
+        return 0;
     }
 
 

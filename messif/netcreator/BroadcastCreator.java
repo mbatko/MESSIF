@@ -106,10 +106,10 @@ public class BroadcastCreator extends NetworkNodeDispatcher {
 
             try {
                 // Send "Use" message
-                Message msg = messageDisp.sendMessageWaitReply(new MessageActivate(pool), node).getFirstReply();
+                MessageActivateResponse msg = messageDisp.sendMessageWaitSingleReply(new MessageActivate(pool), MessageActivateResponse.class, node);
 
                 // Get response type
-                if ((msg instanceof MessageActivateResponse) && ((MessageActivateResponse)msg).isSuccess())
+                if (msg.isSuccess())
                     return node; // Remote server responded positively
             } catch (IOException e) {} // Remote server is dead
         }

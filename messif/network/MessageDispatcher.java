@@ -86,6 +86,11 @@ public class MessageDispatcher implements Receiver, Serializable {
 
     /** Multicast group IP address constant */
     protected static final InetAddress BROADCAST_GROUP = InitBroadcastGroup();
+
+    /**
+     * Returns a broadcast group address for all message dispatchers.
+     * @return a broadcast group address
+     */
     private final static InetAddress InitBroadcastGroup() { // initializer
         try { return InetAddress.getByName("230.0.0.1"); } catch (UnknownHostException e) { return null; }
     }
@@ -271,13 +276,25 @@ public class MessageDispatcher implements Receiver, Serializable {
         /** class serial id for serialization */     
         private static final long serialVersionUID = 1L;
 
+        /** Serialized broadcast port */
         private final int broadcastPort;
 
+        /**
+         * Creates a new instance of Serialized message dispatcher.
+         * @param dispatcherNetworkNode the network node of the serialized message dispatcher
+         * @param broadcastPort the broadcast port of the serialized message dispatcher
+         */
         private Serialized(NetworkNode dispatcherNetworkNode, int broadcastPort) {
             super(dispatcherNetworkNode);
             this.broadcastPort = broadcastPort;
         }
 
+        /**
+         * Deserialization method that replaces this object with a fully functional
+         * {@link MessageDispatcher}.
+         * @return a new instance of {@link MessageDispatcher} based on the serialized data
+         * @throws ObjectStreamException if there was an error reading the serialized data or creating a new {@link MessageDispatcher}
+         */
         private Object readResolve() throws ObjectStreamException {
             try {
                 // Sanity check for the localhost (correctness of the remap file)
@@ -494,6 +511,42 @@ public class MessageDispatcher implements Receiver, Serializable {
      */
     public ReplyReceiver<? extends ReplyMessage> sendMessageWaitReply(Message msg, Collection<NetworkNode> nodes) throws IOException {
         return sendMessageWaitReply(msg, ReplyMessage.class, true, nodes);
+    }
+
+    /**
+     * Send the message to a network node and wait for a single reply.
+     * This method blocks until the reply message arrives (or forever if something bad happens).
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param node the destination network node
+     * @return the received reply message
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     */
+    public <E extends ReplyMessage> E sendMessageWaitSingleReply(Message msg, Class<E> replyMessageClass, NetworkNode node) throws IOException {
+        return sendMessageWaitReply(msg, replyMessageClass, true, node).getFirstReply();
+    }
+
+    /**
+     * Send the message to a network node and wait for a single reply.
+     * This method blocks until the reply message arrives (or forever if something bad happens).
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param node the destination network node
+     * @param timeout timeout to wait for replies
+     * @return the received reply message
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     * @throws InterruptedException if there was no message within the specified timeout or the thread was interrupted while waiting
+     */
+    public <E extends ReplyMessage> E sendMessageWaitSingleReply(Message msg, Class<E> replyMessageClass, NetworkNode node, long timeout) throws IOException, InterruptedException {
+        try {
+            return sendMessageWaitReply(msg, replyMessageClass, true, node).getReplies(timeout).get(0);
+        } catch (IndexOutOfBoundsException e) {
+            throw new InterruptedException("Thare was no reply for message " + msg + " withing the specified timeout " + timeout + "ms");
+        }
     }
 
 

@@ -6,6 +6,7 @@
 
 package messif.buckets;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -39,7 +40,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     private static final long serialVersionUID = 1L;
 
 
-    /****************** Bucket attributes access ******************/
+    //****************** Bucket attributes access ******************//
 
     /**
      * Returns the unique ID of this bucket.
@@ -47,43 +48,58 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      */
     public abstract int getBucketID();
 
-        
-    /****************** Insertion of objects ******************/
-       
+
+    //****************** Insertion of objects ******************//
+
     /**
      * Insert a new object into this bucket.
      * 
-     * @return error code - for details, see documentation of {@link BucketErrorCode}
      * @param object a new object to be inserted
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
+     * @throws BucketStorageException if the object cannot be inserted into the bucket
      */
-    public abstract BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException;
-    
+    public abstract void addObject(LocalAbstractObject object) throws BucketStorageException;
+
+    /**
+     * Insert a new object into the bucket.
+     * The object is passed through the {@link #storeObject} method to the lower layer
+     *
+     * @param object the new object to be inserted
+     * @return the success/failure error code of the object insertion
+     */
+    public final BucketErrorCode addObjectErrCode(LocalAbstractObject object) {
+        try {
+            addObject(object);
+            return BucketErrorCode.OBJECT_INSERTED;
+        } catch (BucketStorageException e) {
+            return e.getErrorCode();
+        }
+    }
+
     /**
      * Insert several new objects into this bucket.
      * 
      * This method can be overriden if there is more efficient implementation
      * available at the storage level.
      * 
-     * @param objects List of the new objects
+     * @param objects the collection of new objects
      * @return number of objects actually added to bucket
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
+     * @throws BucketStorageException if there was an object that cannot be inserted into the bucket
      */
-    public int addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
+    public int addObjects(Collection<? extends AbstractObject> objects) throws BucketStorageException {
         return addObjects(objects.iterator());
     }
-    
+
     /**
      * Insert several new objects to this bucket.
      * 
      * This method can be overriden if there is more efficient implementation
      * available at the storage level.
      * 
-     * @param objects Iterator over the new objects
+     * @param objects iterator that provides the new objects to insert
      * @return number of objects actually added to bucket
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
+     * @throws BucketStorageException if there was an object that cannot be inserted into the bucket
      */
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException {
         if (objects == null)
             return 0;
         
@@ -95,19 +111,19 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
         }
         return ret;
     }
-    
-    
-    /****************** Deletions of objects ******************/
+
+
+    //****************** Deletion of objects ******************//
 
     /**
-     * Delete object with specified ID from this bucket.
+     * Delete object with the specified ID from this bucket.
      * 
      * @param objectID the ID of the object to delete
      * @return the object deleted from this bucket
      * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     * @throws BucketStorageException if the object cannot be deleted from the bucket
      */
-    public abstract LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException;
+    public abstract LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException;
 
     /**
      * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
@@ -117,9 +133,9 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @param object the object to match against
      * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      * @return the number of deleted objects
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
      */
-    public abstract int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException;
+    public abstract int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException;
 
     /**
      * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
@@ -127,9 +143,9 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * 
      * @param object the object to match against
      * @return the number of deleted objects
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     * @throws BucketStorageException if the object cannot be deleted from the bucket
      */
-    public int deleteObject(LocalAbstractObject object) throws OccupationLowException {
+    public int deleteObject(LocalAbstractObject object) throws BucketStorageException {
         return deleteObject(object, 0);
     }
 
@@ -140,17 +156,25 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * available at the storage level.
      *
      * @param objectIDs List of object IDs to be deleted
-     * @return List of objects that were delete from this bucket
-     * @throws NoSuchElementException if there is not an object with one of the specified IDs in this bucket
-     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     * @param removeDeletedIDs 
+     * @return list of objects that were delete from this bucket
+     * @throws BucketStorageException if the object cannot be deleted from the bucket
      */
-    public AbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
+    public AbstractObjectList<LocalAbstractObject> deleteObjects(Collection<? extends UniqueID> objectIDs, boolean removeDeletedIDs) throws BucketStorageException {
         // Prepare return list
         AbstractObjectList<LocalAbstractObject> rtv = new AbstractObjectList<LocalAbstractObject>(objectIDs.size());
-        
+
         // Enumerate deleted objects and delete one by one
-        for (UniqueID id : objectIDs)
-            rtv.add(deleteObject(id));
+        Iterator<? extends UniqueID> iterator = objectIDs.iterator();
+        while (iterator.hasNext()) {
+            try {
+                rtv.add(deleteObject(iterator.next()));
+                if (removeDeletedIDs)
+                    iterator.remove();
+            } catch (NoSuchElementException ignore) {
+                // Ignore the IDs that were not found
+            }
+        }
         
         return rtv;
     }
@@ -162,9 +186,9 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * available at the storage level.
      *
      * @return the number of deleted objects
-     * @throws OccupationLowException if the low occupation limit is reached when deleting objects
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
      */
-    public int deleteAllObjects() throws OccupationLowException {
+    public int deleteAllObjects() throws BucketStorageException {
         AbstractObjectIterator<LocalAbstractObject> allObjects = getAllObjects();
         int count = 0;
         while (allObjects.hasNext()) {
@@ -173,8 +197,8 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
                 allObjects.remove();
                 count++;
             } catch (UnsupportedOperationException e) {
-                if (e.getCause() instanceof OccupationLowException)
-                    throw (OccupationLowException) e.getCause();
+                if (e.getCause() instanceof BucketStorageException)
+                    throw (BucketStorageException) e.getCause();
                 throw e;
             }
         }
@@ -182,7 +206,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     }
 
 
-    /****************** Splitting ******************/
+    //****************** Splitting ******************//
 
     /**
      * Splits this bucket according to the specified policy.
@@ -198,10 +222,11 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @param whoStays identification of a partition whose objects stay in this bucket.
      * @return the number of objects moved
      * @throws IllegalArgumentException if there are too few target buckets
-     * @throws CapacityFullException if a target bucket overflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
-     * @throws OccupationLowException if a this bucket underflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
+     * @throws BucketStorageException if there was a storage error during objects
+     *          between buckets (including capacity overflow or underflow) during object move;
+     *          <b>warning:</b> the split is interrupted and should be reinitialized
      */
-    public synchronized int split(SplitPolicy policy, List<Bucket> targetBuckets, BucketDispatcher bucketCreator, int whoStays) throws OccupationLowException, IllegalArgumentException, CapacityFullException {
+    public synchronized int split(SplitPolicy policy, List<Bucket> targetBuckets, BucketDispatcher bucketCreator, int whoStays) throws IllegalArgumentException, BucketStorageException {
         // Sanity checks
         if (targetBuckets == null)
             throw new IllegalArgumentException("Target buckets for split must be set");
@@ -227,8 +252,8 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
                     bucket.addObject(object);
                 } catch (IndexOutOfBoundsException e) {
                     throw new IllegalArgumentException("Wrong partition ID '" + partId + "' in policy " + policy);
-                } catch (InstantiationException ex) {
-                    throw new IllegalArgumentException("Can't create bucket", ex);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Can't create bucket", e);
                 }
                 // Remove object from this bucket (so the move is complete)
                 iterator.remove(); // WARNING, if this method throws OccupationLowException, the object will be in both buckets!
@@ -246,8 +271,8 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     }
 
 
-    /****************** Object access ******************/
-    
+    //****************** Object access ******************//
+
     /**
      * Retrieves an object with the specified ID from this bucket.
      *
@@ -256,7 +281,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @throws NoSuchElementException if there is no object with the specified ID in this bucket
      */
     public abstract LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException;
-    
+
     /**
      * Returns iterator over all objects from this bucket.
      * @return iterator over all objects from this bucket

@@ -9,6 +9,7 @@ package messif.netbucket.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -18,10 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import messif.buckets.Bucket;
-import messif.buckets.BucketErrorCode;
+import messif.buckets.BucketStorageException;
 import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
-import messif.buckets.OccupationLowException;
 import messif.netbucket.RemoteBucket;
 import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
@@ -71,6 +71,12 @@ public class ReplicationBucket extends LocalBucket {
             
             // Add new replica to the internal replicas list
             replicas.add(replica);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        } catch (CapacityFullException e) {
+            throw e;
+        } catch (BucketStorageException e) {
+            throw new CapacityFullException(e.toString());
         } finally {
             replicaManipulationLock.writeLock().unlock();
         }
@@ -159,7 +165,8 @@ public class ReplicationBucket extends LocalBucket {
     
     /****************** Overrides for all manipulation methods of LocalBucket ******************/
     
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws CapacityFullException {
+    @Override
+    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
             int ret = encapsulatedBucket.addObjects(objects);
@@ -174,7 +181,8 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public int addObjects(List<? extends AbstractObject> objects) throws CapacityFullException {
+    @Override
+    public int addObjects(Collection<? extends AbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
             int ret = encapsulatedBucket.addObjects(objects);
@@ -189,24 +197,22 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException {
+    @Override
+    public void addObject(LocalAbstractObject object) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
-            BucketErrorCode error = encapsulatedBucket.addObject(object);
+            encapsulatedBucket.addObject(object);
             
-            if (error.OBJECT_INSERTED.equals(error)) {
-                // Update all replicas
-                for (RemoteBucket replica : replicas)
-                    replica.addObject(object);
-            }
-            
-            return error;
+            // Update all replicas
+            for (RemoteBucket replica : replicas)
+                replica.addObject(object);
         } finally {
             replicaManipulationLock.readLock().unlock();
         }
     }
     
-    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException {
+    @Override
+    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
             LocalAbstractObject object = encapsulatedBucket.deleteObject(objectID);
@@ -223,15 +229,17 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
     
-    public AbstractObjectList<LocalAbstractObject> deleteObjects(List<UniqueID> objectIDs) throws NoSuchElementException, OccupationLowException {
+    @Override
+    public AbstractObjectList<LocalAbstractObject> deleteObjects(Collection<? extends UniqueID> objectIDs, boolean removeDeletedIDs) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
-            AbstractObjectList<LocalAbstractObject> objects = encapsulatedBucket.deleteObjects(objectIDs);
+            Collection<? extends UniqueID> copyOfObjectIDs = new ArrayList<UniqueID>(objectIDs);
+            AbstractObjectList<LocalAbstractObject> objects = encapsulatedBucket.deleteObjects(objectIDs, removeDeletedIDs);
             
             if (objects.size() > 0) {
                 // Update all replicas
                 for (RemoteBucket replica : replicas)
-                    replica.deleteObjects(objectIDs);
+                    replica.deleteObjects(copyOfObjectIDs, false);
             }
             
             return objects;
@@ -304,7 +312,7 @@ public class ReplicationBucket extends LocalBucket {
     
     /****************** LocalBucket internal method implementations ******************/
     
-    protected BucketErrorCode storeObject(LocalAbstractObject object) {
+    protected void storeObject(LocalAbstractObject object) {
         throw new UnsupportedOperationException("This method should not be called from anywhere. Please, override the method in ReplicationBucket");
     }
     

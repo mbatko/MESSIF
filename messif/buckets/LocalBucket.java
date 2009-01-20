@@ -32,7 +32,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;    
 
-    /****************** Statistics ******************/
+    //****************** Statistics ******************//
 
     /** Number of bucket reads statistic per bucket */
     protected static final StatisticRefCounter counterBucketRead = StatisticRefCounter.getStatistics("BucketRead");
@@ -42,38 +42,24 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     protected static final StatisticRefCounter counterBucketDelObject = StatisticRefCounter.getStatistics("BucketDelObject");
 
 
-    /****************** Bucket ID ******************/
+    //****************** Attributes ******************//
 
     /** Unique identifier of this bucket */
     private int bucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
 
-    /**
-     * Returns the unique ID of this bucket.
-     * @return this bucket ID
-     */
-    public int getBucketID() {
-        return bucketID;
-    }
-
-    /**
-     * Returns whether this bucket is standalone bucket or if it is maintained by a bucket dispatcher.
-     * @return <tt>true</tt>
-     */
-    public boolean isBucketStandalone() {
-        return bucketID == BucketDispatcher.UNASSIGNED_BUCKET_ID;
-    }
-
-    /**
-     * Set this bucket's ID.
-     * This method should be used only from the {@link BucketDispatcher}.
-     * @param bucketID the new bucket ID
-     */
-    void setBucketID(int bucketID) { // Only settable from BucketDispatcher
-        this.bucketID = bucketID;
-    }
+    /** The maximal (hard) capacity of this bucket */
+    private final long capacity;
+    /** The soft capacity of this bucket */
+    private final long softCapacity;
+    /** The minimal (hard) capacity of this bucket */
+    private final long lowOccupation;
+    /** Flag if the occupation is stored as bytes or object count */
+    private final boolean occupationAsBytes;
+    /** Actual bucket occupation in either bytes or object count (see occupationAsBytes flag) */
+    private long occupation = 0;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Constructs a new LocalBucket instance without any limits (everything is unlimited).
@@ -131,14 +117,35 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Bucket limits ******************/
+    //****************** Bucket ID methods ******************//
 
-    /** The maximal (hard) capacity of this bucket */
-    protected final long capacity;
-    /** The soft capacity of this bucket */
-    protected final long softCapacity;
-    /** The minimal (hard) capacity of this bucket */
-    protected final long lowOccupation;
+    /**
+     * Returns the unique ID of this bucket.
+     * @return this bucket ID
+     */
+    public int getBucketID() {
+        return bucketID;
+    }
+
+    /**
+     * Returns whether this bucket is standalone bucket or if it is maintained by a bucket dispatcher.
+     * @return <tt>true</tt>
+     */
+    public boolean isBucketStandalone() {
+        return bucketID == BucketDispatcher.UNASSIGNED_BUCKET_ID;
+    }
+
+    /**
+     * Set this bucket's ID.
+     * This method should be used only from the {@link BucketDispatcher}.
+     * @param bucketID the new bucket ID
+     */
+    void setBucketID(int bucketID) { // Only settable from BucketDispatcher
+        this.bucketID = bucketID;
+    }
+
+
+    //****************** Bucket limit methods ******************//
 
     /**
      * Returns the maximal capacity of this bucket.
@@ -172,13 +179,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Bucket occupation ******************/
-
-    /** Flag if the occupation is stored as bytes or object count */
-    protected final boolean occupationAsBytes;
-
-    /** Actual bucket occupation in either bytes or object count (see occupationAsBytes flag) */
-    protected long occupation = 0;
+    //****************** Bucket occupation ******************//
 
     /**
      * Returns the current occupation of this bucket.
@@ -205,54 +206,46 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Bucket methods overrides ******************/
+    //****************** Bucket methods overrides ******************//
 
     /**
      * Insert a new object into the bucket.
-     * The object is passed through the {@link #storeObject} method to the lower layer
+     * The object is stored using the {@link #storeObject} method of the lower layer.
      *
      * @param object the new object to be inserted
-     * @return BucketErrorCode.SOFTCAPACITY_EXCEEDED if the soft capacity has been exceeded.
-     *         BucketErrorCode.OBJECT_INSERTED       upon successful insertion
-     * @throws CapacityFullException if the hard capacity of the bucket is exceeded
+     * @throws BucketStorageException if the object cannot be inserted into the bucket
      */
-    public synchronized BucketErrorCode addObject(LocalAbstractObject object) throws CapacityFullException {
+    public synchronized void addObject(LocalAbstractObject object) throws BucketStorageException {
         // Get object size either in bytes or number of objects
         long size = occupationAsBytes?object.getSize():1;
         
         if (occupation + size > capacity)
             throw new CapacityFullException();
         
-        // Pass the object to the lower layer;
-        BucketErrorCode rtv = storeObject(object);
-        if (!rtv.equals(BucketErrorCode.OBJECT_INSERTED))
-            return rtv;
+        // Pass the object to the lower layer for inserting
+        storeObject(object);
         
         // Update occupation
         occupation += size;
-        
+
         // Increase statistics
         counterBucketAddObject.add(this);
-        
-        if (occupation > softCapacity)
-            return BucketErrorCode.SOFTCAPACITY_EXCEEDED;
-        
-        return BucketErrorCode.OBJECT_INSERTED;
     }
 
     /**
-     * Delete object with specified ID from this bucket.
-     *
-     * The <code>remove</code> method of the underlying <code>iterator</code> over all objects is used.
-     * If a more efficient implementation is available for the specific storage
-     * layer, this method should be reimplemented (however, do not forget to update statistics).
-     *
-     * @param objectID ID of the object to delete
-     * @throws NoSuchElementException This exception is thrown if there is no object with the specified ID in this bucket
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
-     * @return The object deleted from this bucket
+     * Delete object with the specified ID from this bucket.
+     * 
+     * <p>
+     * The {@link LocalBucketIterator#getObjectByID(messif.objects.UniqueID) getObjectByID}
+     * method of the underlying {@link #iterator} is used to locate the object.
+     * </p>
+     * 
+     * @param objectID the ID of the object to delete
+     * @return the object deleted from this bucket
+     * @throws NoSuchElementException if there is no object with the specified ID in this bucket
+     * @throws BucketStorageException if the object cannot be deleted from the bucket
      */
-    public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, OccupationLowException {
+    public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         LocalBucketIterator<? extends LocalBucket> iterator = iterator();
         
         // Search for the object using iterator
@@ -267,16 +260,17 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
      * data-equal objects found are deleted.
      *
-     * The <code>remove</code> method of the underlying <code>iterator</code> over all objects is used.
-     * If a more efficient implementation is available for the specific storage
-     * layer, this method should be reimplemented (however, do not forget to update statistics).
+     * <p>
+     * The {@link LocalBucketIterator#getObjectByData(messif.objects.LocalAbstractObject) getObjectByData}
+     * method of the underlying {@link #iterator} is used to locate the object.
+     * </p>
      *
      * @param object the object to match against
      * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      * @return the number of deleted objects
-     * @throws OccupationLowException if the low occupation limit is reached when deleting object
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
      */
-    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException {
+    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
         LocalBucketIterator<? extends LocalBucket> iterator = iterator();
 
         // Search for the object using iterator
@@ -287,7 +281,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
                 deleteObject(iterator);
                 count++;
             }
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException ignore) {
+            // The iterator's getObjectByData has thrown NoSuchElementException to indicate end-of-search
         }
         
         // Call the implementation method
@@ -295,14 +290,15 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     /**
-     * Delete object to which the iterator points currently.
+     * Delete an object to which the iterator points at currently.
+     * This method is used internally to implement the removal from the delete methods.
      *
      * @param iterator iterator that points to the deleted object (must iterate over objects from this bucket!)
      * @throws NoSuchElementException This exception is thrown if there is no current object in the iterator
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
+     * @throws BucketStorageException if the object cannot be deleted from the bucket
      * @return The object deleted from this bucket
      */
-    protected synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, OccupationLowException {
+    synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, BucketStorageException {
         // Use the current object from iterator
         LocalAbstractObject rtv = iterator.getCurrentObject();
         
@@ -313,7 +309,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         if (occupation - size < lowOccupation)
             throw new OccupationLowException();
         
-        // Remove the object (Do not call iterator.remove() unless you can enter an infinite loop!!!!!)
+        // Remove the object (Do not call iterator.remove() unless you want to enter an infinite loop!!!!!)
         iterator.removeInternal();
         
         // Update occupation
@@ -379,7 +375,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Bucket lower implementation overrides ******************/
+    //****************** Bucket lower implementation overrides ******************//
 
     /**
      * Returns current number of objects stored in this bucket.
@@ -392,9 +388,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * It should return OBJECT_INSERTED value if the object was successfuly inserted.
      *
      * @param object the new object to be inserted
-     * @return error code - for details, see documentation of {@link BucketErrorCode}
+     * @throws BucketStorageException if there was an error inserting objects
      */
-    protected abstract BucketErrorCode storeObject(LocalAbstractObject object);
+    protected abstract void storeObject(LocalAbstractObject object) throws BucketStorageException;
 
     /**
      * Returns iterator through all the objects in this bucket.
@@ -425,9 +421,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         public final void remove() {
             try {
                 bucket.deleteObject(this);
-            } catch (OccupationLowException e) {
-                throw new UnsupportedOperationException(e);
-            } catch (FilterRejectException e) {
+            } catch (BucketStorageException e) {
                 throw new UnsupportedOperationException(e);
             }
         }
@@ -445,7 +439,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }    
 
 
-    /****************** String representation ******************/
+    //****************** String representation ******************//
 
     /**
      * Returns a string representation of this bucket.

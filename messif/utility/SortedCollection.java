@@ -21,6 +21,7 @@ import java.util.NoSuchElementException;
  * @author xbatko
  */
 public class SortedCollection<T> implements Collection<T>, Serializable, Cloneable {
+    /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Constants ******************//
@@ -644,7 +645,12 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
 	    }
 	}
 
-	private final void checkForComodification() {
+        /**
+         * Internal method that checks for the modification of this collection
+         * during iteration and throws ConcurrentModificationException.
+         * @throws ConcurrentModificationException if the collection was modified while iterating
+         */
+	private final void checkForComodification() throws ConcurrentModificationException {
 	    if (modCount != expectedModCount)
 		throw new ConcurrentModificationException();
 	}
