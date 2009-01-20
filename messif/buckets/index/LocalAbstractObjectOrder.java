@@ -49,6 +49,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         return object;
     }
 
+    /** Index order defined by object IDs */
     public static OperationIndexComparator<UniqueID> uniqueIDComparator = new OperationIndexComparator<UniqueID>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25102L;
@@ -69,6 +70,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     };
 
+    /** Index order defined by object locators */
     public static OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25103L;
@@ -87,9 +89,9 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
-
     };
 
+    /** Index order defined by object keys */
     public static IndexComparator<AbstractObjectKey, LocalAbstractObject> keyToLocalObjectComparator = new IndexComparator<AbstractObjectKey, LocalAbstractObject>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25104L;
@@ -101,7 +103,6 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         public AbstractObjectKey extractKey(LocalAbstractObject object) {
             return object.getObjectKey();
         }
-
     };
 
 }

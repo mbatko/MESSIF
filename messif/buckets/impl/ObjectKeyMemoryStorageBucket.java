@@ -28,7 +28,7 @@ import messif.objects.keys.AbstractObjectKey;
  * @see BucketDispatcher
  * @see LocalBucket
  */
-public class ObjectKeyMemoryStorageBucket extends OrderedLocalBucket implements Serializable {
+public class ObjectKeyMemoryStorageBucket extends OrderedLocalBucket<AbstractObjectKey> implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 

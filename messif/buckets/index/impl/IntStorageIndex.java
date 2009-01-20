@@ -41,10 +41,12 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
      * Returns the index where the object <code>o</code> should be inserted.
      * The order is defined by the index's comparator.
      * @param o the object to get the insertion point for
+     * @param equalBefore if <tt>true</tt> the insertion point is before the first object that is equal to <code>o</code>;
+     *          otherwise, the insertion point is after the last object that is equal to <code>o</code>
      * @return the index where the object <code>o</code> should be inserted
      * @throws BucketStorageException if there was an error reading an object from the underlying storage
      */
-    private int insertionPoint(K o) throws BucketStorageException {
+    private int insertionPoint(K o, boolean equalBefore) throws BucketStorageException {
 	int low = 0;
 	int high = index.length - 1;
 
@@ -52,7 +54,7 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
 	    int mid = (low + high) >>> 1;
 	    int cmp = comparator.compare(o, storage.read(index[mid]));
 
-	    if (cmp <= 0) // Inserted object is smaller than or equal to the current middle
+	    if (cmp < 0 || (equalBefore && cmp == 0)) // Inserted object is smaller than or equal to the current middle
 		high = mid - 1;
             else // Inserted object is greater than the current middle
 		low = mid + 1;
@@ -64,7 +66,7 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
         int address = storage.store(object).getAddress();
 
         // Search for the position where the object is added into index
-        int pos = insertionPoint(comparator.extractKey(object));
+        int pos = insertionPoint(comparator.extractKey(object), false);
 
         // Insert the address into pos
         int[] newIndex = new int[index.length + 1];
@@ -85,7 +87,7 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
     }
 
     public ModifiableSearch<K, T> search() throws IllegalStateException {
-        return new IntIndexModifiableSearch<K>((IndexComparator<K, T>)null, null, null);
+        return new IntIndexModifiableSearch<K>(null, null, null);
     }
 
     public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from) throws IllegalStateException {
@@ -97,35 +99,25 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
     }
 
     public ModifiableSearch<K, T> search(K startKey, K from, K to) throws IllegalStateException {
-        return new IntIndexModifiableSearch<K>(startKey, from, to);
+        return new LimitedIntIndexModifiableSearch(startKey, from, to);
     }
 
     public ModifiableSearch<K, T> search(K from, K to) throws IllegalStateException {
-        return new IntIndexModifiableSearch<K>(from, from, to);
+        return new LimitedIntIndexModifiableSearch(from, from, to);
     }
 
     public ModifiableSearch<K, T> search(K key, boolean restrictEqual) throws IllegalStateException {
-        return new IntIndexModifiableSearch<K>(key, restrictEqual?key:null, restrictEqual?key:null);
+        return new LimitedIntIndexModifiableSearch(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
     private class IntIndexModifiableSearch<B> extends ModifiableSearch<B, T> {
-        private int nextIndexPosition;
-        private int prevIndexPosition;
+        protected int nextIndexPosition;
+        protected int prevIndexPosition;
 
         public IntIndexModifiableSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
             super(comparator, from, to);
             this.nextIndexPosition = 0;
             this.prevIndexPosition = -1;
-        }
-
-        public IntIndexModifiableSearch(K startKey, B from, B to) throws IllegalStateException {
-            super(null, from, to);
-            try {
-                this.nextIndexPosition = insertionPoint(startKey);
-            } catch (BucketStorageException e) {
-                throw new IllegalStateException("Error initializing search", e);
-            }
-            this.prevIndexPosition = this.nextIndexPosition - 1;
         }
 
         @Override
@@ -162,7 +154,56 @@ public class IntStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Seri
             // Set next to current position
             nextIndexPosition--;
         }
-
     }
 
+    private class LimitedIntIndexModifiableSearch extends IntIndexModifiableSearch<K> {
+        private final int limitFromPosition;
+        private int limitEndPosition;
+
+        public LimitedIntIndexModifiableSearch(K startKey, K from, K to) throws IllegalStateException {
+            super(null, from, to);
+
+            try {
+                // Initialize limits
+                this.limitFromPosition = (from != null)?insertionPoint(from, true):0;
+                this.limitEndPosition = (to != null)?insertionPoint(to, false):index.length;
+            
+                // Jump to starting position
+                if (startKey != from && startKey != null) {
+                    this.nextIndexPosition = insertionPoint(startKey, true);
+                    // Check boundaries
+                    if (this.nextIndexPosition < this.limitFromPosition)
+                        this.nextIndexPosition = this.limitFromPosition;
+                    else if (this.nextIndexPosition >= this.limitEndPosition)
+                        this.nextIndexPosition = this.limitEndPosition - 1;
+                } else {
+                    this.nextIndexPosition = this.limitFromPosition;
+                }
+                this.prevIndexPosition = this.nextIndexPosition - 1;
+            } catch (BucketStorageException e) {
+                throw new IllegalStateException("Error initializing search", e);
+            }
+        }
+
+        @Override
+        protected T readNext() throws BucketStorageException {
+            if (nextIndexPosition >= limitEndPosition)
+                return null;
+            return super.readNext();
+        }
+
+        @Override
+        protected T readPrevious() throws BucketStorageException {
+            if (prevIndexPosition < limitFromPosition)
+                return null;
+            return super.readPrevious();
+        }
+
+        @Override
+        public synchronized void remove() throws IllegalStateException, BucketStorageException {
+            super.remove();
+            limitEndPosition--;
+        }
+
+    }
 }
