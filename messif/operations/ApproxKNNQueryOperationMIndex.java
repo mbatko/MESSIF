@@ -51,6 +51,11 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     public long visitedNodes = 0l;
     
     /**
+     * Objects accessed locally.
+     */
+    //public transient int objectsAccessedLocally = 0;
+    
+    /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.
      * The approximation parameters are set to reasonable default values.
      * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
@@ -74,6 +79,19 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         this(queryObject, k, answerType, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, 6000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
 
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters for distributed processing
+     *  and specify parameters for centralized approximation.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType) {
+        this(queryObject, k, AnswerType.REMOTE_OBJECTS, 0, 0.045f, 1.125f, 1.06f, 10, new Integer[] {7, 5, 3, 1}, localSearchParam, localSearchType, LocalAbstractObject.UNKNOWN_DISTANCE);
+    }
+    
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with full parameters.
      * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.

@@ -1,17 +1,22 @@
 /*
- * Bucket.java
+ * LocalBucket
  *
- * Created on 4. kveten 2003, 13:53
  */
 
 package messif.buckets;
 
 import java.io.Serializable;
 import java.util.NoSuchElementException;
+import messif.buckets.index.Index;
+import messif.buckets.index.LocalAbstractObjectOrder;
+import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableSearch;
+import messif.buckets.index.Search;
 import messif.objects.UniqueID;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.statistics.StatisticRefCounter;
+import messif.utility.Convert;
 
 /**
  * This class represents the <tt>Bucket</tt> that is maintained locally (i.e. on the current computer).
@@ -30,7 +35,7 @@ import messif.statistics.StatisticRefCounter;
  */
 public abstract class LocalBucket extends Bucket implements Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 1L;    
+    private static final long serialVersionUID = 2L;    
 
     //****************** Statistics ******************//
 
@@ -57,6 +62,18 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     private final boolean occupationAsBytes;
     /** Actual bucket occupation in either bytes or object count (see occupationAsBytes flag) */
     private long occupation = 0;
+
+
+    //****************** Filter attributes ******************//
+
+    /** List of registered "before add" filters */
+    private BucketFilterBeforeAdd[] beforeAddFilters = null;
+    /** List of registered "after add" filters */
+    private BucketFilterAfterAdd[] afterAddFilters = null;
+    /** List of registered "before remove" filters */
+    private BucketFilterBeforeRemove[] beforeRemoveFilters = null;
+    /** List of registered "after remove" filters */
+    private BucketFilterAfterRemove[] afterRemoveFilters = null;
 
 
     //****************** Constructors ******************//
@@ -185,7 +202,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * Returns the current occupation of this bucket.
      * @return the current occupation of this bucket
      */
-    public long getOccupation() { return occupation; }
+    public long getOccupation() {
+        return occupation;
+    }
 
     /**
      * Returns an occupation ratio with respect to the bucket's soft capacity, i.e. the current occupation
@@ -205,80 +224,190 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return occupation > softCapacity;
     }
 
+    /**
+     * Returns current number of objects stored in this bucket.
+     * @return current number of objects stored in this bucket
+     */
+    public int getObjectCount() {
+        return getModifiableIndex().size();
+    }
 
-    //****************** Bucket methods overrides ******************//
+
+    //****************** Index access ******************//
 
     /**
-     * Insert a new object into the bucket.
-     * The object is stored using the {@link #storeObject} method of the lower layer.
-     *
-     * @param object the new object to be inserted
-     * @throws BucketStorageException if the object cannot be inserted into the bucket
+     * Returns the index (including storage) for this bucket.
+     * The index provides the access to the underlying storage of objects in this bucket.
+     * @return the index for this bucket
      */
-    public synchronized void addObject(LocalAbstractObject object) throws BucketStorageException {
+    protected abstract ModifiableIndex<LocalAbstractObject> getModifiableIndex();
+
+    /**
+     * Returns the index defined on this bucket that can be used for searching.
+     * @return the index for this bucket
+     */
+    public Index<LocalAbstractObject> getIndex() {
+        // Update statistics
+        counterBucketRead.add(this);
+        
+        return getModifiableIndex();
+    }
+
+
+    //****************** Filters ******************//
+
+    /**
+     * Append a new filter to the filter chain.
+     * @param filter the new filter to append
+     */
+    public synchronized void registerFilter(BucketFilter filter) {
+        if (filter instanceof BucketFilterBeforeAdd)
+            beforeAddFilters = Convert.addToArray(beforeAddFilters, BucketFilterBeforeAdd.class, (BucketFilterBeforeAdd)filter);
+        if (filter instanceof BucketFilterAfterAdd)
+            afterAddFilters = Convert.addToArray(afterAddFilters, BucketFilterAfterAdd.class, (BucketFilterAfterAdd)filter);
+        if (filter instanceof BucketFilterBeforeRemove)
+            beforeRemoveFilters = Convert.addToArray(beforeRemoveFilters, BucketFilterBeforeRemove.class, (BucketFilterBeforeRemove)filter);
+        if (filter instanceof BucketFilterAfterRemove)
+            afterRemoveFilters = Convert.addToArray(afterRemoveFilters, BucketFilterAfterRemove.class, (BucketFilterAfterRemove)filter);
+    }
+    
+    /**
+     * Remove a filter from the filter chain
+     * @param filter the filter to remove
+     */
+    public synchronized void deregisterFilter(BucketFilter filter) {
+        if (filter instanceof BucketFilterBeforeAdd)
+            beforeAddFilters = Convert.removeFromArray(beforeAddFilters, (BucketFilterBeforeAdd)filter);
+        if (filter instanceof BucketFilterAfterAdd)
+            afterAddFilters = Convert.removeFromArray(afterAddFilters, (BucketFilterAfterAdd)filter);
+        if (filter instanceof BucketFilterBeforeRemove)
+            beforeRemoveFilters = Convert.removeFromArray(beforeRemoveFilters, (BucketFilterBeforeRemove)filter);
+        if (filter instanceof BucketFilterAfterRemove)
+            afterRemoveFilters = Convert.removeFromArray(afterRemoveFilters, (BucketFilterAfterRemove)filter);
+    }
+
+    /**
+     * Returns the first registered filter that has the specified class
+     * @param <T> the class of the filter
+     * @param filterClass filter class to search for
+     * @throws NoSuchElementException if there was no filter with the specified class
+     * @return the first registered filter that has the specified class
+     */
+    public synchronized <T extends BucketFilter> T getFilter(Class<T> filterClass) throws NoSuchElementException {
+        for (BucketFilter filter : beforeAddFilters)
+            if (filterClass.isInstance(filter))
+                return filterClass.cast(filter);
+        for (BucketFilter filter : afterAddFilters)
+            if (filterClass.isInstance(filter))
+                return filterClass.cast(filter);
+        for (BucketFilter filter : beforeRemoveFilters)
+            if (filterClass.isInstance(filter))
+                return filterClass.cast(filter);
+        for (BucketFilter filter : afterRemoveFilters)
+            if (filterClass.isInstance(filter))
+                return filterClass.cast(filter);
+        
+        throw new NoSuchElementException("Filter with specified class not found");
+    }
+
+
+    //****************** Internal state updating methods ******************//
+
+    /**
+     * Check if the object <code>object</code> can added to this bucket.
+     * @param object the object to add
+     * @param addible the {@link Addible} that actually stores the object
+     * @throws BucketStorageException if there was an error adding the object
+     */
+    protected synchronized void addObject(LocalAbstractObject object, Addible<LocalAbstractObject> addible) throws BucketStorageException {
+        // Execute before add filters
+        if (beforeAddFilters != null)
+            for (BucketFilterBeforeAdd filter : beforeAddFilters)
+                filter.filterBeforeAdd(object, this);
+
         // Get object size either in bytes or number of objects
         long size = occupationAsBytes?object.getSize():1;
         
         if (occupation + size > capacity)
             throw new CapacityFullException();
-        
+
         // Pass the object to the lower layer for inserting
-        storeObject(object);
+        addible.add(object);
         
         // Update occupation
         occupation += size;
 
         // Increase statistics
         counterBucketAddObject.add(this);
+
+        // Execute after add filters
+        if (afterAddFilters != null)
+            for (BucketFilterAfterAdd filter : afterAddFilters)
+                filter.filterAfterAdd(object, this);
     }
 
     /**
-     * Delete object with the specified ID from this bucket.
+     * Check if the <code>object</code> can be deleted from this bucket.
+     * This includes the pre-checks of the filters and also the low-occupation check.
      * 
-     * <p>
-     * The {@link LocalBucketIterator#getObjectByID(messif.objects.UniqueID) getObjectByID}
-     * method of the underlying {@link #iterator} is used to locate the object.
-     * </p>
-     * 
-     * @param objectID the ID of the object to delete
-     * @return the object deleted from this bucket
-     * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-     * @throws BucketStorageException if the object cannot be deleted from the bucket
+     * @param removable the object that is going to be removed
+     * @throws BucketStorageException if the object cannot be removed (reason is stored in the exception)
      */
+    protected synchronized void deleteObject(Removable<LocalAbstractObject> removable) throws BucketStorageException {
+        // Execute before remove filters
+        if (beforeRemoveFilters != null)
+            for (BucketFilterBeforeRemove filter : beforeRemoveFilters)
+                filter.filterBeforeRemove(removable.getCurrentObject(), this);
+
+        // Get object size either in bytes or number of objects
+        long size = occupationAsBytes?removable.getCurrentObject().getSize():1;
+
+        // Test occupation
+        if (occupation - size < lowOccupation)
+            throw new OccupationLowException();
+
+        // Call the lower layer removal
+        removable.remove();
+
+        // Update occupation
+        occupation -= size;
+
+        // Update statistics
+        counterBucketDelObject.add(this);
+
+        // Execute after add filters
+        if (afterRemoveFilters != null)
+            for (BucketFilterAfterRemove filter : afterRemoveFilters)
+                filter.filterAfterRemove(removable.getCurrentObject(), this);
+    }
+
+    //****************** Bucket methods overrides ******************//
+
+    public void addObject(LocalAbstractObject object) throws BucketStorageException {
+        addObject(object, getModifiableIndex());
+    }
+
     public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
-        LocalBucketIterator<? extends LocalBucket> iterator = iterator();
-        
-        // Search for the object using iterator
-        iterator.getObjectByID(objectID);
-        
-        // Call the implementation method
-        return deleteObject(iterator);
+        // Search for objects with the specified ID
+        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID, true);
+
+        // If object is found, delete and return it
+        if (!search.next())
+            throw new NoSuchElementException("There is no object with ID: " + objectID);
+        deleteObject(search);
+        return search.getCurrentObject();
     }
 
-    /**
-     * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
-     * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
-     * data-equal objects found are deleted.
-     *
-     * <p>
-     * The {@link LocalBucketIterator#getObjectByData(messif.objects.LocalAbstractObject) getObjectByData}
-     * method of the underlying {@link #iterator} is used to locate the object.
-     * </p>
-     *
-     * @param object the object to match against
-     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
-     * @return the number of deleted objects
-     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
-     */
-    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
-        LocalBucketIterator<? extends LocalBucket> iterator = iterator();
+   public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
+        // Search for object with the same data
+        ModifiableSearch<LocalAbstractObject, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object, true);
 
-        // Search for the object using iterator
         int count = 0;
         try {
-            while (iterator.hasNext() && (deleteLimit <= 0 || count < deleteLimit)) {
-                iterator.getObjectByData(object);
-                deleteObject(iterator);
+            // If there is another object found by the search
+            while ((deleteLimit <= 0 || count < deleteLimit) && search.next()) {
+                // Delete it
+                deleteObject(search);
                 count++;
             }
         } catch (NoSuchElementException ignore) {
@@ -289,57 +418,28 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return count;
     }
 
-    /**
-     * Delete an object to which the iterator points at currently.
-     * This method is used internally to implement the removal from the delete methods.
-     *
-     * @param iterator iterator that points to the deleted object (must iterate over objects from this bucket!)
-     * @throws NoSuchElementException This exception is thrown if there is no current object in the iterator
-     * @throws BucketStorageException if the object cannot be deleted from the bucket
-     * @return The object deleted from this bucket
-     */
-    synchronized LocalAbstractObject deleteObject(LocalBucketIterator<? extends LocalBucket> iterator) throws NoSuchElementException, BucketStorageException {
-        // Use the current object from iterator
-        LocalAbstractObject rtv = iterator.getCurrentObject();
-        
-        // Get object size either in bytes or number of objects
-        long size = occupationAsBytes?rtv.getSize():1;
-
-        // Test occupation
-        if (occupation - size < lowOccupation)
-            throw new OccupationLowException();
-        
-        // Remove the object (Do not call iterator.remove() unless you want to enter an infinite loop!!!!!)
-        iterator.removeInternal();
-        
-        // Update occupation
-        occupation -= size;
-
-        // Update statistics
-        counterBucketDelObject.add(this);
-
-        return rtv;
+    public int deleteAllObjects() throws BucketStorageException {
+        ModifiableSearch<?, LocalAbstractObject> search = getModifiableIndex().search();
+        int count = 0;
+        while (search.next()) {
+            deleteObject(search);
+            count++;
+        }
+        return count;
     }
 
-    /**
-     * Get an object with specified ID from this bucket.
-     *
-     * The underlying <code>iterator</code> method is used and the object with the specified ID is returned.
-     * If a more efficient implementation is available for the specific storage
-     * layer, this method should be reimplemented (however, do not forget to update statistics).
-     *
-     * @param objectID ID of the object to retrieve
-     * @return object with specified ID from this bucket
-     * @throws NoSuchElementException This exception is thrown if there is no object with the specified ID in this bucket
-     */
     public synchronized LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
-        // Get object using iterator - it will throw NoSuchElement exception if the object was not found
-        LocalAbstractObject rtv = iterator().getObjectByID(objectID);
+        // Search for objects with the specified ID
+        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID, true);
+
+        // If object is found, delete and return it
+        if (!search.next())
+            throw new NoSuchElementException("There is no object with ID: " + objectID);
 
         // Update statistics
         counterBucketRead.add(this);
 
-        return rtv;
+        return search.getCurrentObject();
     }
 
     /**
@@ -354,89 +454,56 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * @throws NoSuchElementException This exception is thrown if there is no object with the specified locator in this bucket
      */
     public synchronized LocalAbstractObject getObject(String locator) throws NoSuchElementException {
-        // Get object using iterator - it will throw NoSuchElement exception if the object was not found
-        LocalAbstractObject rtv = iterator().getObjectByLocator(locator);
+        // Search for objects with the specified ID
+        Search<String, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator, true);
+
+        // If object is found, delete and return it
+        if (!search.next())
+            throw new NoSuchElementException("There is no object with locator: " + locator);
 
         // Update statistics
         counterBucketRead.add(this);
 
-        return rtv;
+        return search.getCurrentObject();
     }
 
-    /**
-     * Returns iterator over all objects from this bucket.
-     * @return iterator over all objects from this bucket
-     */
-    public synchronized AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
+    public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         // Update statistics
         counterBucketRead.add(this);
-        
-        return iterator();
-    }
 
+        final ModifiableSearch<?, LocalAbstractObject> search = getModifiableIndex().search();
+        return new AbstractObjectIterator<LocalAbstractObject>() {
+            private int hasNext = -1;
 
-    //****************** Bucket lower implementation overrides ******************//
-
-    /**
-     * Returns current number of objects stored in this bucket.
-     * @return current number of objects stored in this bucket
-     */
-    public abstract int getObjectCount();
-
-    /**
-     * Stores an object in a physical storage.
-     * It should return OBJECT_INSERTED value if the object was successfuly inserted.
-     *
-     * @param object the new object to be inserted
-     * @throws BucketStorageException if there was an error inserting objects
-     */
-    protected abstract void storeObject(LocalAbstractObject object) throws BucketStorageException;
-
-    /**
-     * Returns iterator through all the objects in this bucket.
-     * @return iterator through all the objects in this bucket
-     */
-    protected abstract LocalBucketIterator<? extends LocalBucket> iterator();
-
-    /**
-     * Internal class for bucket iterator implementation
-     * @param <T> the type of the bucket this iterator operates on
-     */
-    protected static abstract class LocalBucketIterator<T extends LocalBucket> extends AbstractObjectIterator<LocalAbstractObject> {
-        /** Reference to the bucket this iterator is working on */
-        protected final T bucket;
-
-        /**
-         * Constructs a new LocalBucketIterator instance that iterates over objects in the specified bucket
-         * @param bucket the bucket this iterator is working on
-         */
-        protected LocalBucketIterator(T bucket) {
-           this.bucket = bucket;
-        }
-
-        /**
-         * Removes from the underlying bucket the last element returned by this
-         * iterator. This method can be called only once per call to <tt>next</tt>.
-         */
-        public final void remove() {
-            try {
-                bucket.deleteObject(this);
-            } catch (BucketStorageException e) {
-                throw new UnsupportedOperationException(e);
+            @Override
+            public LocalAbstractObject getCurrentObject() {
+                return search.getCurrentObject();
             }
-        }
- 
-        /**
-         * This method physically removes current element.
-         * It is defined because all statistics and internal attributes associated with the bucket must be maintained.
-         * It is done by calling deleteObject() in iterator's remove(). The bucket's method deleteObject() then calls 
-         * directly this method.
-         * 
-         * As a result remove() should not be overriden in iterators of specialized bucket class. Instead, removeInternal() 
-         * is the correct way.
-         */
-        protected abstract void removeInternal();
-    }    
+
+            public boolean hasNext() {
+                // If the next was called, thus hasNext is not decided yet
+                if (hasNext == -1)
+                    hasNext = search.next()?1:0; // Perform search
+
+                return hasNext == 1;
+            }
+
+            public LocalAbstractObject next() {
+                if (!hasNext())
+                    throw new NoSuchElementException("There are no more objects");
+                hasNext = -1;
+                return search.getCurrentObject();
+            }
+
+            public void remove() {
+                try {
+                    deleteObject(search);
+                } catch (BucketStorageException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        };
+    }
 
 
     //****************** String representation ******************//

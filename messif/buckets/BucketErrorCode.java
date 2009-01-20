@@ -25,7 +25,7 @@ public class BucketErrorCode extends ErrorCode {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Insertion codes ******************/
+    //****************** Insertion codes ******************//
 
     /** Object has been successfully inserted causing no capacity overflow. */
     public static BucketErrorCode OBJECT_INSERTED = new BucketErrorCode("object inserted");
@@ -39,7 +39,7 @@ public class BucketErrorCode extends ErrorCode {
     public static BucketErrorCode HARDCAPACITY_EXCEEDED = new BucketErrorCode("hard capacity exceeded");
 
 
-    /****************** Deletion codes ******************/
+    //****************** Deletion codes ******************//
 
     /** Object has been deleted successfully. */
     public static BucketErrorCode OBJECT_DELETED = new BucketErrorCode("object deleted");
@@ -48,8 +48,13 @@ public class BucketErrorCode extends ErrorCode {
     /** Object has been deleted but the current capacity is less than the minimal required one (low-occupation has been reached). */
     public static BucketErrorCode LOWOCCUPATION_EXCEEDED = new BucketErrorCode("low occupation exceeded");
 
+    //****************** Storage codes ******************//
 
-    /****************** Constructor ******************/
+    /** Object has not been stored, removed or read due to lower layer storage exception. */
+    public static BucketErrorCode STORAGE_FAILURE = new BucketErrorCode("storage failed to process object");
+
+
+    //****************** Constructor ******************//
 
     /**
      * Creates a new instance of BucketErrorCode, i.e. a new error code.

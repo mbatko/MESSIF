@@ -6,6 +6,9 @@
 
 package messif.operations;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import messif.buckets.BucketErrorCode;
 import messif.objects.LocalAbstractObject;
 
@@ -21,40 +24,24 @@ import messif.objects.LocalAbstractObject;
 public class DeleteOperation extends AbstractOperation {
     
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
     
-    /****************** Operation request attributes ******************/
+    //****************** Operation request attributes ******************//
     
-    /** Inserted object (accessible directly) */
-    public final LocalAbstractObject deletedObject;
+    /** Object to match the data against */
+    protected final LocalAbstractObject deletedObject;
 
-    /** The maximal number of deleted objects, zero means unlimited (accessible directly) */
-    public final int deleteLimit;
-
-    /** The number of objects deleted by this operation */
-    protected int objectsDeleted = 0;
-
-    /** The total size of objects deleted by this operation */
-    protected int totalSizeDeleted = 0;
-
-    /**
-     * Returns the number of objects deleted by this operation.
-     * @return the number of objects deleted by this operation
-     */
-    public int getObjectsDeleted() {
-        return objectsDeleted;
-    }
-
-    /**
-     * Returns the total size of objects deleted by this operation.
-     * @return the total size of objects deleted by this operation
-     */
-    public int getTotalSizeDeleted() {
-        return totalSizeDeleted;
-    }
+    /** Maximal number of deleted objects, zero means unlimited */
+    protected final int deleteLimit;
 
 
-    /****************** Constructors ******************/
+    //****************** Operation response attributes ******************//
+
+    /** List of all actually deleted objects */
+    protected final List<LocalAbstractObject> objects;
+
+
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of DeleteOperation.
@@ -65,6 +52,7 @@ public class DeleteOperation extends AbstractOperation {
     public DeleteOperation(LocalAbstractObject deletedObject, int deleteLimit) {
         this.deletedObject = deletedObject;
         this.deleteLimit = deleteLimit;
+        this.objects = new ArrayList<LocalAbstractObject>();
     }
 
     /**
@@ -74,6 +62,33 @@ public class DeleteOperation extends AbstractOperation {
     @AbstractOperation.OperationConstructor({"Object to delete"})
     public DeleteOperation(LocalAbstractObject deletedObject) {
         this(deletedObject, 0);
+    }
+
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns the object against which to match the deleted objects.
+     * @return the object against which to match the deleted objects
+     */
+    public LocalAbstractObject getDeletedObject() {
+        return deletedObject;
+    }
+
+    /**
+     * Returns the maximal number of deleted objects.
+     * Zero means unlimited.
+     * @return the maximal number of deleted objects.
+     */
+    public int getDeleteLimit() {
+        return deleteLimit;
+    }
+
+    /**
+     * Returns the list of all actually deleted objects.
+     * @return the list of all actually deleted objects
+     */
+    public List<LocalAbstractObject> getObjects() {
+        return Collections.unmodifiableList(objects);
     }
 
     /**
@@ -99,30 +114,22 @@ public class DeleteOperation extends AbstractOperation {
         return 1;
     }
 
+
+    //****************** Implementation of abstract methods ******************//
+
     /**
      * Returns <tt>true</tt> if this operation was successfuly completed.
      * @return <tt>true</tt> if this operation was successfuly completed
      */
     public boolean wasSuccessful() {
-        return errValue.equals(BucketErrorCode.OBJECT_DELETED) || errValue.equals(BucketErrorCode.LOWOCCUPATION_EXCEEDED);
+        return errValue.equals(BucketErrorCode.OBJECT_DELETED);
     }
 
     /**
      * End operation successfully.
      */
     public void endOperation() {
-        endOperation(1, deletedObject.getSize());
-    }
-
-    /**
-     * End operation successfully.
-     * @param deletedObjects the number of objects deleted by this operation
-     * @param totalSizeDeleted total size of objects deleted by this operation
-     */
-    public void endOperation(int deletedObjects, int totalSizeDeleted) {
         this.errValue = BucketErrorCode.OBJECT_DELETED;
-        this.objectsDeleted = deletedObjects;
-        this.totalSizeDeleted = totalSizeDeleted;
     }
 
     /**
@@ -130,9 +137,7 @@ public class DeleteOperation extends AbstractOperation {
      * @param deletedObject the object that was deleted
      */
     public void addDeletedObject(LocalAbstractObject deletedObject) {
-        this.errValue = BucketErrorCode.OBJECT_DELETED;
-        this.objectsDeleted++;
-        this.totalSizeDeleted += deletedObject.getSize();
+        objects.add(deletedObject);
     }
 
     /**
@@ -142,12 +147,10 @@ public class DeleteOperation extends AbstractOperation {
     @Override
     public void updateFrom(AbstractOperation operation) {
         DeleteOperation castOperation = (DeleteOperation)operation;
-        this.objectsDeleted += castOperation.objectsDeleted;
-        this.totalSizeDeleted += castOperation.totalSizeDeleted;
+        for (LocalAbstractObject object : castOperation.objects)
+            this.objects.add(object);
 
-        if (errValue.equals(BucketErrorCode.OBJECT_NOT_FOUND) && operation.errValue.isSet())
-            errValue = operation.errValue;
-        else super.updateFrom(operation);
+        super.updateFrom(operation);
     }    
 
     /**
@@ -160,10 +163,12 @@ public class DeleteOperation extends AbstractOperation {
     public void clearSurplusData() {
         super.clearSurplusData();
         deletedObject.clearSurplusData();
+        for (LocalAbstractObject object : objects)
+            object.clearSurplusData();
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

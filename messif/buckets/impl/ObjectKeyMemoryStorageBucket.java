@@ -10,8 +10,11 @@ import messif.objects.LocalAbstractObject;
 import java.io.Serializable;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
+import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableIndex;
-import messif.buckets.storage.impl.IndexedMemoryStorage;
+import messif.buckets.index.impl.IntStorageIndex;
+import messif.buckets.storage.impl.MemoryStorage;
+import messif.objects.keys.AbstractObjectKey;
 
 
 /**
@@ -24,14 +27,18 @@ import messif.buckets.storage.impl.IndexedMemoryStorage;
  * @see BucketDispatcher
  * @see LocalBucket
  */
-public class MemoryStorageBucket extends LocalBucket implements Serializable {
+public class ObjectKeyMemoryStorageBucket extends LocalBucket implements Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 4L;
+    private static final long serialVersionUID = 1L;
 
     //****************** Data storage ******************//
 
     /** Object storage with ID index */
-    protected ModifiableIndex<LocalAbstractObject> objects = new IndexedMemoryStorage<LocalAbstractObject>();
+    protected ModifiableIndex<LocalAbstractObject> objects =
+            new IntStorageIndex<AbstractObjectKey, LocalAbstractObject>(
+                    new MemoryStorage<LocalAbstractObject>(),
+                    LocalAbstractObjectOrder.keyToLocalObjectComparator
+            );
 
 
     /****************** Constructors ******************/
@@ -44,7 +51,7 @@ public class MemoryStorageBucket extends LocalBucket implements Serializable {
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      */
-    public MemoryStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
+    public ObjectKeyMemoryStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
     }
 

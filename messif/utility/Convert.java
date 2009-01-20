@@ -180,7 +180,6 @@ public abstract class Convert {
     /**
      * Returns a wrapper class for primitive type.
      * If the type is not primitive, it is returned as is.
-     * @param <T> a primitive type class
      * @param type a primitive type class
      * @return a wrapper class for primitive type
      */
@@ -968,6 +967,92 @@ public abstract class Convert {
     @SuppressWarnings("unchecked")
     public static <T> T[] createGenericArray(T[] array, int size) {
         return (T[])Array.newInstance(array.getClass().getComponentType(), size);
+    }
+
+    /**
+     * Copies the specified array, truncating or padding with nulls (if necessary)
+     * so the copy has the specified length.  For all indices that are
+     * valid in both the original array and the copy, the two arrays will
+     * contain identical values.  For any indices that are valid in the
+     * copy but not the original, the copy will contain <tt>null</tt>.
+     * Such indices will exist if and only if the specified length
+     * is greater than that of the original array.
+     * The resulting array is of the class <tt>newType</tt>.
+     *
+     * @param <T> the type of objects in the array
+     * @param original the array to be copied
+     * @param newLength the length of the copy to be returned
+     * @param componentType the class of array components
+     * @return a copy of the original array, truncated or padded with nulls
+     *     to obtain the specified length
+     * @throws NegativeArraySizeException if <tt>newLength</tt> is negative
+     */
+    public static <T> T[] resizeArray(T[] original, int newLength, Class<T> componentType) throws NegativeArraySizeException {
+        T[] copy = createGenericArray(componentType, newLength);
+        if (original != null)
+            System.arraycopy(original, 0, copy, 0, Math.min(original.length, newLength));
+        return copy;
+    }
+
+    /**
+     * Adds an item to the end of a specified static array (enlarging its size by one).
+     * @param <T> the type of objects in the array
+     * @param original the array where the item is added
+     * @param componentType the class of array components
+     * @param item the item to add
+     * @return a copy of the original array with added item
+     */
+    public static <T> T[] addToArray(T[] original, Class<T> componentType, T item) {
+        T[] ret = resizeArray(original, (original == null)?1:(original.length + 1), componentType);
+        ret[ret.length - 1] = item;
+        return ret;
+    }
+
+    /**
+     * Search the array for the specified item.
+     * @param <T> the type of objects in the array
+     * @param array the array to search
+     * @param item the item to search for
+     * @param backwards if set to <tt>true</tt>, the search is started from the last element
+     * @return index of the array element, where the item was found, or -1 if it was not
+     */
+    public static <T> int searchArray(T[] array, T item, boolean backwards) {
+        if (array == null)
+            return -1;
+        if (backwards) {
+            for (int i = array.length - 1; i >= 0; i--)
+                if (item.equals(array[i]))
+                    return i;
+        } else {
+            for (int i = 0; i < array.length; i++)
+                if (item.equals(array[i]))
+                    return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Removes an item from the specified static array (shrinking its size by one).
+     * The removed array element is the last one that is equal to the specified item.
+     * If the element is not found, the same array (original) is returned.
+     * If the removed element was the last one, <tt>null</tt> is returned.
+     * @param <T> the type of objects in the array
+     * @param original the array from which the item is removed
+     * @param item the item to remove
+     * @return a copy of the original array with added item
+     */
+    public static <T> T[] removeFromArray(T[] original, T item) {
+        // Search for the array element to remove
+        int i = searchArray(original, item, true);
+
+        if (i == -1)
+            return original;
+        if (original.length == 1)
+            return null;
+        T[] ret = createGenericArray(original, original.length - 1);
+        System.arraycopy(original, 0, ret, 0, i);
+        System.arraycopy(original, i + 1, ret, i, original.length - i - 1);
+        return ret;
     }
 
     /**

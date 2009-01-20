@@ -102,6 +102,10 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return answer.iterator();
     }
 
+    public SortedCollection<RankedAbstractObject> getAnswerCollection() {
+        return answer;
+    }
+    
     /**
      * Returns the distance of the last object in the answer.
      * @return the distance of the last object in the answer
@@ -148,7 +152,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        if (queryObject instanceof MetaObject) {
+        //if (queryObject instanceof MetaObject) {
+        if (false) {
             MetaObject metaQueryObject = (MetaObject)queryObject;
             float[] metaDistances = new float[metaQueryObject.getObjectCount()];
             float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);

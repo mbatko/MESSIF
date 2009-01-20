@@ -7,10 +7,9 @@
 
 package messif.buckets.split;
 
-import messif.buckets.BucketFilterInterface;
-import messif.buckets.FilterRejectException;
+import messif.buckets.BucketFilterAfterAdd;
+import messif.buckets.BucketFilterAfterRemove;
 import messif.buckets.LocalBucket;
-import messif.buckets.LocalFilteredBucket;
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
@@ -19,7 +18,7 @@ import messif.objects.util.AbstractObjectIterator;
  *
  * @author xbatko
  */
-public class BucketBallRegion extends BallRegion implements BucketFilterInterface {
+public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd, BucketFilterAfterRemove {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
@@ -73,8 +72,8 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
     public BucketBallRegion(LocalBucket bucket, boolean registerAsFilter, LocalAbstractObject pivot, float radius) {
         super(pivot, radius);
         this.bucket = bucket;
-        if (registerAsFilter && (bucket instanceof LocalFilteredBucket))
-            ((LocalFilteredBucket)bucket).registerFilter(this);
+        if (registerAsFilter)
+            bucket.registerFilter(this);
         this.needsAdjusting = true;
     }
 
@@ -169,31 +168,20 @@ public class BucketBallRegion extends BallRegion implements BucketFilterInterfac
      * Adjust this ball region whenever an object is inserted into a bucket.
      *
      * @param object the inserted object
-     * @param situation actual situation in which the method is called (see FilterSituations constants for detailed description)
-     * @param inBucket bucket, where the object will be/was stored
-     * @throws FilterRejectException if the current operation should be aborted (should be thrown only in BEFORE situations)
+     * @param bucket the bucket where the object will was inserted
      */
-    public void filterObject(LocalAbstractObject object, BucketFilterInterface.FilterSituations situation, LocalFilteredBucket inBucket) throws FilterRejectException {
-        // Only adjust while adding objects
-        switch (situation) {
-            case AFTER_ADD:
-                break;
-            case AFTER_DEL:
-                needsAdjusting = true;
-                return;
-            default:
-                return;
+    public synchronized void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
+        if (pivot == null) {
+            // First object is set as the pivot
+            pivot = object;
+        } else {
+            float distance = pivot.getDistance(object);
+            if (radius < distance)
+                radius = distance;
         }
+    }
 
-        synchronized (this) {
-            if (pivot == null) {
-                // First object is set as the pivot
-                pivot = object;
-            } else {
-                float distance = pivot.getDistance(object);
-                if (radius < distance)
-                    radius = distance;
-            }
-        }
-    }    
+    public void filterAfterRemove(LocalAbstractObject object, LocalBucket bucket) {
+        needsAdjusting = true;
+    }
 }

@@ -188,22 +188,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @return the number of deleted objects
      * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
      */
-    public int deleteAllObjects() throws BucketStorageException {
-        AbstractObjectIterator<LocalAbstractObject> allObjects = getAllObjects();
-        int count = 0;
-        while (allObjects.hasNext()) {
-            try {
-                allObjects.next();
-                allObjects.remove();
-                count++;
-            } catch (UnsupportedOperationException e) {
-                if (e.getCause() instanceof BucketStorageException)
-                    throw (BucketStorageException) e.getCause();
-                throw e;
-            }
-        }
-        return count;
-    }
+    public abstract int deleteAllObjects() throws BucketStorageException;
 
 
     //****************** Splitting ******************//

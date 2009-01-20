@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.buckets.LocalBucket;
-import messif.buckets.LocalFilteredBucket;
 import messif.objects.BallRegion;
 import messif.objects.util.ObjectMatcher;
 
@@ -78,7 +77,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
      */
     protected BucketBallRegion getBucketBallRegion(LocalBucket bucket) throws NoSuchElementException {
         try {
-            return ((LocalFilteredBucket)bucket).getFilter(BucketBallRegion.class);
+            return bucket.getFilter(BucketBallRegion.class);
         } catch (ClassCastException e) {
             throw new NoSuchElementException("Provided bucket is not an instance of LocalFilteredBucket");
         }
@@ -97,7 +96,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
      */
     public int match(LocalBucket bucket) {
         try {
-            return match(((LocalFilteredBucket)bucket).getFilter(BucketBallRegion.class));
+            return match(bucket.getFilter(BucketBallRegion.class));
         } catch (ClassCastException e) {
             return -1;
         } catch (NoSuchElementException e) {

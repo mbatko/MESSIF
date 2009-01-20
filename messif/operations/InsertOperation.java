@@ -21,13 +21,13 @@ public class InsertOperation extends AbstractOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Operation request attributes ******************/
+    //****************** Operation request attributes ******************//
     
-    /** Inserted object (accessible directly) */
-    public final LocalAbstractObject insertedObject;
+    /** Inserted object */
+    protected final LocalAbstractObject insertedObject;
          
     
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of InsertOperation.
@@ -36,6 +36,17 @@ public class InsertOperation extends AbstractOperation {
     @AbstractOperation.OperationConstructor({"Object to insert"})
     public InsertOperation(LocalAbstractObject insertedObject) {
         this.insertedObject = insertedObject;
+    }
+
+
+    //****************** Attribute access ******************//
+
+    /**
+     * Returns the object being inserted.
+     * @return the object being inserted
+     */
+    public LocalAbstractObject getInsertedObject() {
+        return insertedObject;
     }
 
     /**
@@ -60,6 +71,9 @@ public class InsertOperation extends AbstractOperation {
     public int getArgumentCount() {
         return 1;
     }
+
+
+    //****************** Implementation of abstract methods ******************//
 
     /**
      * Returns <tt>true</tt> if this operation has finished successfuly.
@@ -98,7 +112,7 @@ public class InsertOperation extends AbstractOperation {
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
     /** 
      * Indicates whether some other operation has the same data as this one.

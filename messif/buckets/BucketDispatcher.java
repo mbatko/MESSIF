@@ -239,8 +239,8 @@ public class BucketDispatcher implements Serializable {
             rtv.registerSampleProvider(bucket);
 
             // Register the pivot chooser as filter if it implements BucketFilterInterface
-            if (rtv instanceof BucketFilterInterface && bucket instanceof LocalFilteredBucket)
-                ((LocalFilteredBucket)bucket).registerFilter((BucketFilterInterface)rtv);
+            if (rtv instanceof BucketFilter)
+                bucket.registerFilter((BucketFilter)rtv);
             
             // Assiciate the pivot chooser with the bucket
             createdPivotChoosers.put(bucket, rtv);
@@ -253,7 +253,7 @@ public class BucketDispatcher implements Serializable {
     //****************** Automatic filter creation ******************//
 
     /** The class of filter that is automatically created for newly created buckets */
-    protected Class<? extends BucketFilterInterface> autoFilterClass = null;
+    protected Class<? extends BucketFilter> autoFilterClass = null;
 
     /** Parameters for the automatic filter constructors */
     protected Object[] autoFilterParams = {};
@@ -264,7 +264,7 @@ public class BucketDispatcher implements Serializable {
      * @param autoFilterClass the class of the filter to create
      * @param autoFilterParams the parameters for the filter's constructor
      */
-    public void setAutoFilterClass(Class<? extends BucketFilterInterface> autoFilterClass, Object... autoFilterParams) {
+    public void setAutoFilterClass(Class<? extends BucketFilter> autoFilterClass, Object... autoFilterParams) {
         this.autoFilterClass = autoFilterClass;
         this.autoFilterParams = (autoFilterParams == null)?new Object[0]:autoFilterParams;
     }
@@ -273,7 +273,7 @@ public class BucketDispatcher implements Serializable {
      * Returns the class of the filter that is automatically created for new buckets.
      * @return the class of the filter that is automatically created for new buckets
      */
-    public Class<? extends BucketFilterInterface> getAutoFilterClass() {
+    public Class<? extends BucketFilter> getAutoFilterClass() {
         return autoFilterClass;
     }
 
@@ -295,27 +295,15 @@ public class BucketDispatcher implements Serializable {
      * the responsibility of the bucket itself.
      *
      * @param bucket the bucket for which to create filter
-     * @return the newly created filter; <tt>null</tt> is returned
-     *         if either the class/instance of autoFilterClass is not specified in this dispatcher or there was an error creating
-     *         a new filter
      */
-    protected BucketFilterInterface createAutoFilter(LocalBucket bucket) {
-        if (!(bucket instanceof LocalFilteredBucket) || autoFilterClass == null)
-            return null;
-        
-        // Create new instance of auto filter class
-        BucketFilterInterface rtv;
-        try {
-            rtv = Convert.createInstanceWithInheritableArgs(autoFilterClass, autoFilterParams);
-        } catch (Exception e) {
-            log.warning("Can't create automatic filter " + autoFilterClass.toString() + ": " + e.toString());
-            return null;
-        }
-
-        // Register the filter with the bucket
-        ((LocalFilteredBucket)bucket).registerFilter(rtv);
-
-        return rtv;
+    protected void createAutoFilter(LocalBucket bucket) {
+        if (autoFilterClass != null)
+            try {
+                // Create new instance of auto filter class
+                bucket.registerFilter(Convert.createInstanceWithInheritableArgs(autoFilterClass, autoFilterParams));
+            } catch (Exception e) {
+                log.warning("Can't create automatic filter " + autoFilterClass.toString() + ": " + e.toString());
+            }
     }
 
 
@@ -509,13 +497,13 @@ public class BucketDispatcher implements Serializable {
      * @param lowOccupation the low-occupation limit for the new bucket
      *
      * @return a new instance of the specified bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, IllegalArgumentException {
+    public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws BucketStorageException, IllegalArgumentException {
         // Create new bucket with specified capacity
         LocalBucket bucket = createBucket(storageClass, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams);        
 
@@ -530,13 +518,13 @@ public class BucketDispatcher implements Serializable {
      * Create new local bucket with the default storage class and default storage capacity.
      *
      * @return a new instance of the default bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket() throws CapacityFullException, IllegalArgumentException {
+    public LocalBucket createBucket() throws BucketStorageException, IllegalArgumentException {
         return createBucket(defaultBucketClass, defaultBucketClassParams, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -547,13 +535,13 @@ public class BucketDispatcher implements Serializable {
      * @param storageClass the class that represents the bucket implementation to use
      *
      * @return a new instance of the specified bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass) throws CapacityFullException, IllegalArgumentException {
+    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass) throws BucketStorageException, IllegalArgumentException {
         return createBucket(storageClass, null, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -565,13 +553,13 @@ public class BucketDispatcher implements Serializable {
      * @param storageClassParams additional parameters for creating a new instance of the storageClass
      *
      * @return a new instance of the specified bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams) throws CapacityFullException, IllegalArgumentException {
+    public LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams) throws BucketStorageException, IllegalArgumentException {
         return createBucket(storageClass, storageClassParams, bucketCapacity, bucketSoftCapacity, bucketLowOccupation);
     }
 
@@ -583,13 +571,13 @@ public class BucketDispatcher implements Serializable {
      * @param lowOccupation the low-occupation limit for the new bucket
      *
      * @return a new instance of the specified bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public LocalBucket createBucket(long capacity, long softCapacity, long lowOccupation) throws CapacityFullException, IllegalArgumentException {
+    public LocalBucket createBucket(long capacity, long softCapacity, long lowOccupation) throws BucketStorageException, IllegalArgumentException {
         return createBucket(defaultBucketClass, defaultBucketClassParams, capacity, softCapacity, lowOccupation);
     }
 
@@ -600,9 +588,9 @@ public class BucketDispatcher implements Serializable {
      * @param bucket the bucket to add to this dispatcher
      * @return the added bucket
      * @throws IllegalStateException if the bucket is already maintained by another one
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      */
-    public synchronized LocalBucket addBucket(LocalBucket bucket) throws IllegalStateException, CapacityFullException {
+    public synchronized LocalBucket addBucket(LocalBucket bucket) throws IllegalStateException, BucketStorageException {
         // Check capacity
         if (buckets.size() >= maxBuckets)
             throw new CapacityFullException();
@@ -659,9 +647,9 @@ public class BucketDispatcher implements Serializable {
      * @param targetDispatcher the target dispatcher to move the bucket to
      * @return the bucket moved
      * @throws NoSuchElementException if there is no bucket with the specified ID
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
+     * @throws BucketStorageException if the maximal number of buckets is already allocated
      */
-    public LocalBucket moveBucket(int bucketID, BucketDispatcher targetDispatcher) throws NoSuchElementException, CapacityFullException {
+    public LocalBucket moveBucket(int bucketID, BucketDispatcher targetDispatcher) throws NoSuchElementException, BucketStorageException {
         synchronized (targetDispatcher) {
             if (targetDispatcher.getBucketCount() >= targetDispatcher.maxBuckets)
                 throw new CapacityFullException();
