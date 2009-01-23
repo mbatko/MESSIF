@@ -16,6 +16,7 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.objects.UniqueID;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
 
@@ -266,6 +267,24 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @throws NoSuchElementException if there is no object with the specified ID in this bucket
      */
     public abstract LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException;
+
+    /**
+     * Retrieve an object with the specified locator from this bucket.
+     *
+     * @param locator the locator URI of the object to retrieve
+     * @return object with specified locator from this bucket
+     * @throws NoSuchElementException This exception is thrown if there is no object with the specified locator in this bucket
+     */
+    public abstract LocalAbstractObject getObject(String locator) throws NoSuchElementException;
+
+    /**
+     * Retrieve an object with the specified key from this bucket.
+     *
+     * @param key the key of the object to retrieve
+     * @return object with specified key from this bucket
+     * @throws NoSuchElementException This exception is thrown if there is no object with the specified key in this bucket
+     */
+    public abstract LocalAbstractObject getObject(AbstractObjectKey key) throws NoSuchElementException;
 
     /**
      * Returns iterator over all objects from this bucket.

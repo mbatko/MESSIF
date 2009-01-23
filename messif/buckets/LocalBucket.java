@@ -14,6 +14,7 @@ import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.Search;
 import messif.objects.UniqueID;
 import messif.objects.LocalAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
 import messif.statistics.StatisticRefCounter;
 import messif.utility.Convert;
@@ -371,7 +372,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         // Search for objects with the specified ID
-        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
+        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
 
         // If object is found, delete and return it
         if (!search.next())
@@ -382,7 +383,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
         // Search for object with the same data
-        ModifiableSearch<LocalAbstractObject, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object);
+        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object);
 
         int count = 0;
         try {
@@ -401,7 +402,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     public int deleteAllObjects() throws BucketStorageException {
-        ModifiableSearch<?, LocalAbstractObject> search = getModifiableIndex().search();
+        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search();
         int count = 0;
         while (search.next()) {
             deleteObject(search);
@@ -412,7 +413,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     public synchronized LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
         // Search for objects with the specified ID
-        ModifiableSearch<UniqueID, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
+        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
 
         // If object is found, delete and return it
         if (!search.next())
@@ -424,20 +425,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
-    /**
-     * Retrieve an object with the specified locator from this bucket.
-     *
-     * The underlying <code>iterator</code> method is used and the object with the specified locator is returned.
-     * If a more efficient implementation is available for the specific storage
-     * layer, this method should be reimplemented (however, do not forget to update statistics).
-     *
-     * @param locator the locator URI of the object to retrieve
-     * @return object with specified locator from this bucket
-     * @throws NoSuchElementException This exception is thrown if there is no object with the specified locator in this bucket
-     */
     public synchronized LocalAbstractObject getObject(String locator) throws NoSuchElementException {
         // Search for objects with the specified ID
-        Search<String, LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
+        Search<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
 
         // If object is found, delete and return it
         if (!search.next())
@@ -449,11 +439,25 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
+    public synchronized LocalAbstractObject getObject(AbstractObjectKey key) throws NoSuchElementException {
+        // Search for objects with the specified ID
+        Search<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.keyToLocalObjectComparator, key);
+
+        // If object is found, delete and return it
+        if (!search.next())
+            throw new NoSuchElementException("There is no object with key: " + key);
+
+        // Update statistics
+        counterBucketRead.add(this);
+
+        return search.getCurrentObject();
+    }
+
     public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         // Update statistics
         counterBucketRead.add(this);
 
-        final ModifiableSearch<?, LocalAbstractObject> search = getModifiableIndex().search();
+        final ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search();
         return new AbstractObjectIterator<LocalAbstractObject>() {
             private int hasNext = -1;
 

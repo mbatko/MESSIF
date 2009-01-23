@@ -38,7 +38,7 @@ public interface ModifiableOrderedIndex<C, T> extends OrderedIndex<C, T>, Modifi
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public ModifiableSearch<C, T> search(C key, boolean restrictEqual) throws IllegalStateException;
+    public ModifiableSearch<T> search(C key, boolean restrictEqual) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index using a specified comparator.
@@ -54,7 +54,7 @@ public interface ModifiableOrderedIndex<C, T> extends OrderedIndex<C, T>, Modifi
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public ModifiableSearch<C, T> search(C from, C to) throws IllegalStateException;
+    public ModifiableSearch<T> search(C from, C to) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index using a specified comparator.
@@ -72,5 +72,5 @@ public interface ModifiableOrderedIndex<C, T> extends OrderedIndex<C, T>, Modifi
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public ModifiableSearch<C, T> search(C startKey, C from, C to) throws IllegalStateException;
+    public ModifiableSearch<T> search(C startKey, C from, C to) throws IllegalStateException;
 }

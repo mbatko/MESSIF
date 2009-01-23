@@ -1,5 +1,5 @@
 /*
- *  IntStorageIndex
+ *  LongStorageIndex
  * 
  */
 
@@ -8,10 +8,10 @@ package messif.buckets.index.impl;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.storage.IntStorage;
+import messif.buckets.storage.LongStorage;
 
 /**
- * Implementation of a single index over a {@link IntStorage storage with integer addresses}.
+ * Implementation of a single index over a {@link LongStorage storage with long addresses}.
  * The addresses provided by the storage are kept in internal sorted array
  * that allows fast access to data in the storage. Objects are indexed
  * according to the given {@link IndexComparator}.
@@ -20,17 +20,17 @@ import messif.buckets.storage.IntStorage;
  * @param <T> the type of objects stored in this collection
  * @author xbatko
  */
-public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements Serializable {
+public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 2L;
 
     //****************** Attributes ******************//
 
     /** Storage associated with this index */
-    private final IntStorage<T> storage;
+    private final LongStorage<T> storage;
 
     /** Index of addresses into the storage */
-    private int[] index;
+    private long[] index;
 
     /** Comparator imposing natural order of this index */
     private final IndexComparator<K, T> comparator;
@@ -43,10 +43,10 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
      * @param storage the storage to associate with this index
      * @param comparator the comparator imposing natural order of this index
      */
-    public IntStorageIndex(IntStorage<T> storage, IndexComparator<K, T> comparator) {
+    public LongStorageIndex(LongStorage<T> storage, IndexComparator<K, T> comparator) {
         this.storage = storage;
         this.comparator = comparator;
-        this.index = new int[0];
+        this.index = new long[0];
     }
 
 
@@ -83,7 +83,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         int pos = insertionPoint(object);
 
         // Make place for the address in the index at pos
-        int[] newIndex = new int[index.length + 1];
+        long[] newIndex = new long[index.length + 1];
         System.arraycopy(index, 0, newIndex, 0, pos);
         System.arraycopy(index, pos, newIndex, pos + 1, index.length - pos);
 
@@ -106,7 +106,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         }
 
         // Remove the address on pos
-        int[] newIndex = new int[index.length - 1];
+        long[] newIndex = new long[index.length - 1];
         System.arraycopy(index, 0, newIndex, 0, i);
         System.arraycopy(index, i + 1, newIndex, i, index.length - i - 1);
         index = newIndex;

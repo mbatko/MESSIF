@@ -6,34 +6,38 @@
 package messif.buckets.index.impl;
 
 import java.io.Serializable;
-import java.util.Comparator;
-import java.util.Iterator;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableOrderedIndex;
-import messif.buckets.index.ModifiableSearch;
 import messif.buckets.storage.Address;
 import messif.buckets.storage.Storage;
-import messif.utility.SortedCollection;
 
 /**
- *
- * @param <K> 
- * @param <T>
+ * Implementation of a single index over generic storage.
+ * The addresses provided by the storage are kept in internal sorted array
+ * that allows fast access to data in the storage. Objects are indexed
+ * according to the given {@link IndexComparator}.
+ * 
+ * @param <K> the type of keys this index is ordered by
+ * @param <T> the type of objects stored in this collection
  * @author xbatko
  */
-public class AddressStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, Serializable {
+public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
+
+    //****************** Attributes ******************//
 
     /** Storage associated with this index */
     private final Storage<T> storage;
 
     /** Index of addresses into the storage */
-    private final SortedCollection<Address<T>> index;
+    private Address<T>[] index;
 
     /** Comparator imposing natural order of this index */
     private final IndexComparator<K, T> comparator;
+
+
+    //****************** Constructor ******************//
 
     /**
      * Creates a new instance of AddressStorageIndex for the specified storage.
@@ -43,98 +47,90 @@ public class AddressStorageIndex<K, T> implements ModifiableOrderedIndex<K, T>, 
     public AddressStorageIndex(Storage<T> storage, IndexComparator<K, T> comparator) {
         this.storage = storage;
         this.comparator = comparator;
-        this.index = new SortedCollection<Address<T>>(new InternalComparator(comparator));
+        this.index = createArray(0);
     }
 
-    public boolean add(T object) throws BucketStorageException {
-        return index.add(storage.store(object));
-    }
 
-    public int size() {
-        return index.size();
-    }
+    //****************** Comparator methods ******************//
 
     public IndexComparator<K, T> comparator() {
         return comparator;
     }
 
-    public ModifiableSearch<?, T> search() throws IllegalStateException {
-        return new GenericModifiableSearch<K>((IndexComparator<K, T>)null, null, null);
+    @Override
+    protected int compare(K key, T object) throws ClassCastException {
+        return comparator.compare(key, object);
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C key) {
-        return new GenericModifiableSearch<C>(comparator, key, key);
+
+    //****************** Index access methods ******************//
+
+    /**
+     * Convenience method for creating generic array of addresses.
+     * @param size the size of new array
+     * @return a new array with the specified size
+     */
+    @SuppressWarnings("unchecked")
+    private final Address<T>[] createArray(int size) {
+        return new Address[size];
+    }
+    
+    public int size() {
+        return index.length;
     }
 
-    public ModifiableSearch<K, T> search(K key, boolean restrictEqual) {
-        return new GenericModifiableSearch<K>(key, restrictEqual?key:null, restrictEqual?key:null);
+    /**
+     * Searches for the point where to insert the object <code>object</code>.
+     * @param object the object to insert
+     * @return the point in the array where to put the object
+     * @throws BucketStorageException if there was a problem determining the point
+     */
+    protected int insertionPoint(T object) throws BucketStorageException {
+        return binarySearch(comparator.extractKey(object), 0, index.length - 1, false);
     }
 
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) {
-        return new GenericModifiableSearch<C>(comparator, from, to);
+    public boolean add(T object) throws BucketStorageException {
+        // Search for the position where the object is added into index
+        int pos = insertionPoint(object);
+
+        // Make place for the address in the index at pos
+        Address<T>[] newIndex = createArray(index.length + 1);
+        System.arraycopy(index, 0, newIndex, 0, pos);
+        System.arraycopy(index, pos, newIndex, pos + 1, index.length - pos);
+
+        // Store the object into storage and its address into the index and commit the changes
+        newIndex[pos] = storage.store(object);
+        index = newIndex;
+
+        return true;
     }
 
-    public ModifiableSearch<K, T> search(K from, K to) throws IllegalStateException {
-        return new GenericModifiableSearch<K>(from, from, to);
-    }
-
-    public ModifiableSearch<K, T> search(K startKey, K from, K to) {
-        return new GenericModifiableSearch<K>(startKey, from, to);
-    }
-
-    private class GenericModifiableSearch<C> extends ModifiableSearch<C, T> {
-
-        private final Iterator<Address<T>> iterator;
-        private Address<T> currentAddress = null;
-
-        public GenericModifiableSearch(IndexComparator<C, T> comparator, C from, C to) {
-            super(comparator, from, to);
-            this.iterator = AddressStorageIndex.this.index.iterator();
+    @Override
+    protected boolean remove(int i) {
+        if (i < 0 || i >= index.length)
+            return false;
+        
+        try {
+            index[i].remove();
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Cannot remove object from storage", e);
         }
 
-        public GenericModifiableSearch(C startKey, C from, C to) {
-            super(null, from, to);
-            this.iterator = AddressStorageIndex.this.index.iterator();
-        }
+        // Remove the address on pos
+        Address<T>[] newIndex = createArray(index.length - 1);
+        System.arraycopy(index, 0, newIndex, 0, i);
+        System.arraycopy(index, i + 1, newIndex, i, index.length - i - 1);
+        index = newIndex;
 
-        @Override
-        protected T readNext() throws BucketStorageException {
-            if (!iterator.hasNext())
-                return null;
-            currentAddress = iterator.next();
-            return currentAddress.read();
-        }
-
-        @Override
-        protected T readPrevious() {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-
-        public void remove() throws IllegalStateException, BucketStorageException {
-            if (currentAddress == null)
-                throw new IllegalStateException("Cannot remove object before next() or previous() is called");
-            currentAddress.remove();
-            currentAddress = null;
-            iterator.remove();
-        }
-
+        return true;
     }
 
-    private class InternalComparator implements Comparator<Address<T>>, Serializable {
-        /** class serial id for serialization */
-        private static final long serialVersionUID = 23101L;
-
-        private final IndexComparator<K, T> comparator;
-        public InternalComparator(IndexComparator<K, T> comparator) {
-            this.comparator = comparator;
-        }
-
-        public int compare(Address<T> o1, Address<T> o2) {
-            try {
-                return comparator.compare(comparator.extractKey(o1.read()), o2.read());
-            } catch (BucketStorageException e) {
-                throw new IllegalStateException(e);
-            }
+    @Override
+    protected T get(int i) throws IndexOutOfBoundsException, IllegalStateException {
+        try {
+            return index[i].read();
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Cannot read object from storage", e);
         }
     }
 

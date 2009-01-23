@@ -17,7 +17,7 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
     //****************** Attributes ******************//
 
     /** Wrapped search instance */
-    private final Search<?, T> searchBck;
+    private final Search<T> searchBck;
     /** Flag which search result to use (forward = true, backward = false) */
     private boolean fwdIsCurrent;
 
@@ -29,7 +29,7 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
      * @param limit limit the number of iterations (zero means unlimited)
      * @throws CloneNotSupportedException if there was an error clonning the search
      */
-    public SearchAbstractObjectDualIterator(Search<?, T> search, int limit) throws CloneNotSupportedException {
+    public SearchAbstractObjectDualIterator(Search<T> search, int limit) throws CloneNotSupportedException {
         super(search, limit);
         this.searchBck = search.clone();
         this.fwdIsCurrent = false;
@@ -41,7 +41,7 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
      * @param search the {@link Search} instance to wrap by this iterator
      * @throws CloneNotSupportedException if there was an error clonning the search
      */
-    public SearchAbstractObjectDualIterator(Search<?, T> search) throws CloneNotSupportedException {
+    public SearchAbstractObjectDualIterator(Search<T> search) throws CloneNotSupportedException {
         this(search, Integer.MAX_VALUE);
     }
 

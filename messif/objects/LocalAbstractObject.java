@@ -24,7 +24,7 @@ import messif.objects.nio.BinarySerializator;
 
 /**
  * This class is ancestor of all objects that hold some data the MESSI Framework can work with.
- * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject<tt> must
+ * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject</tt> must
  * implement a metric function {@link #getDistanceImpl} for its own data.
  *
  * To be able to read/write data from text streams, a constructor with one {@link java.io.BufferedReader} argument

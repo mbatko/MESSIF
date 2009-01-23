@@ -16,9 +16,8 @@ import messif.buckets.storage.impl.IndexedMemoryStorage;
 
 /**
  * A volatile implementation of {@link LocalBucket}.
- * It stores all objects in main memory as a linked list.
- *
- * The bucket should be created by {@link BucketDispatcher}.
+ * It stores all objects in a {@link messif.buckets.storage.impl.MemoryStorage memory storage}
+ * and no index is provided for the objects.
  *
  * @author  xbatko
  * @see BucketDispatcher

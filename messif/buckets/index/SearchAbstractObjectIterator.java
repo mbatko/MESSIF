@@ -16,7 +16,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
     //****************** Attributes ******************//
 
     /** Wrapped search instance */
-    protected final Search<?, T> search;
+    protected final Search<T> search;
     /** Flag for remembering if next() has been called on <code>search</code> and its result */
     protected int hasNext;
     /** Maximal number of iterations */
@@ -31,7 +31,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
      * @param search the {@link Search} instance to wrap by this iterator
      * @param limit limit the number of iterations (zero means unlimited)
      */
-    public SearchAbstractObjectIterator(Search<?, T> search, int limit) {
+    public SearchAbstractObjectIterator(Search<T> search, int limit) {
         this.search = search;
         this.hasNext = -1;
         this.limit = limit;
@@ -42,7 +42,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
      * @param search the {@link Search} instance to wrap by this iterator
      */
-    public SearchAbstractObjectIterator(Search<?, T> search) {
+    public SearchAbstractObjectIterator(Search<T> search) {
         this(search, Integer.MAX_VALUE);
     }
 
@@ -66,9 +66,14 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         return (limit == Integer.MAX_VALUE)?0:limit;
     }
 
+    /**
+     * Returns <tt>true</tt> if the current number of iterations has reached its maximum.
+     * @return <tt>true</tt> if the current number of iterations has reached its maximum
+     */
     public final boolean isLimitReached() {
         return (count > limit);
     }
+
 
     //****************** Overrides ******************//
 
@@ -94,7 +99,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         hasNext = -1;
         count++;
         
-        return search.getCurrentObject();
+        return getCurrentObject();
     }
     
     public void remove() throws UnsupportedOperationException {

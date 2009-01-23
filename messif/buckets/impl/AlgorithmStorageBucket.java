@@ -34,6 +34,7 @@ import messif.buckets.Removable;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.ModifiableIndex;
 import messif.buckets.index.OperationIndexComparator;
+import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
@@ -248,15 +249,15 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         }
     }
 
-    public ModifiableSearch<?, LocalAbstractObject> search() throws IllegalStateException {
+    public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
         return new AlgorithmStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C key) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<C, LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, from, to);
     }
 
@@ -264,7 +265,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * Internal class that provides the {@link ModifiableIndex} for the encapsulated algorithm.
      * @param <C> the type of keys of this search
      */
-    private class AlgorithmStorageSearch<C> extends ModifiableSearch<C, LocalAbstractObject> {
+    private class AlgorithmStorageSearch<C> extends AbstractSearch<C, LocalAbstractObject> implements ModifiableSearch<LocalAbstractObject> {
         /** Iterator over objects returned as this search's answer */
         private final ListIterator<LocalAbstractObject> iterator;
 
