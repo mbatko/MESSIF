@@ -40,6 +40,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     /** Set holding the answer of this query */
     private final SortedCollection<RankedAbstractObject> answer;
 
+    /** Flag whether to store sub-distances for metaobjects */
+    private final boolean storeMetaDistances;
 
     //****************** Constructor ******************//
 
@@ -49,7 +51,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * Unlimited number of objects can be added to the answer.
      */
     protected RankingQueryOperation() {
-        this(AnswerType.REMOTE_OBJECTS, Integer.MAX_VALUE);
+        this(Integer.MAX_VALUE);
     }
 
     /**
@@ -69,7 +71,20 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the maximal answer size is negative
      */
     protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize) throws IllegalArgumentException {
+        this(answerType, maxAnswerSize, false);
+    }
+
+    /**
+     * Creates a new instance of RankingQueryOperation.
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize sets the maximal answer size
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
+     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @throws IllegalArgumentException if the maximal answer size is negative
+     */
+    protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) throws IllegalArgumentException {
         super(answerType);
+        this.storeMetaDistances = storeMetaDistances;
         if (maxAnswerSize < Integer.MAX_VALUE)
             this.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
         else
@@ -157,7 +172,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        if (queryObject instanceof MetaObject) {
+        if (queryObject instanceof MetaObject && storeMetaDistances) {
             MetaObject metaQueryObject = (MetaObject)queryObject;
             float[] metaDistances = new float[metaQueryObject.getObjectCount()];
             float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);
