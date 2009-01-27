@@ -32,7 +32,11 @@ import java.util.List;
 import java.util.Set;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
+import messif.operations.QueryOperation;
+import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
+import messif.statistics.StatisticCounter;
+import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
@@ -479,6 +483,38 @@ public abstract class Algorithm implements Serializable {
 
     }
 
+    
+    /**
+     * This method can be used by all algorithms before processing any operation to set default (operation) statistics.
+     * @throws messif.algorithms.AlgorithmMethodException if new statistic cannot be created
+     */
+    public void statisticsBeforeOperation() throws AlgorithmMethodException {
+        try {
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
+        } catch (ClassNotFoundException ex) {
+            log.severe(ex);
+            throw new AlgorithmMethodException(ex);
+        }
+    }
+
+    /**
+     * This method can be used by all algorithms after processing any operation to set default (operation) statistics.
+     * The results are right only when the {@link #statisticsBeforeOperation() } method was used before.
+     * @param operation (typically query) operation that was just processed 
+     */
+    public void statisticsAfterOperation(AbstractOperation operation) {
+        OperationStatistics.getLocalThreadStatistics().unbindAllStats();
+        StatisticCounter accessedObjects = OperationStatistics.getOpStatisticCounter("AccessedObjects");
+        accessedObjects.set(OperationStatistics.getOpStatisticCounter("DistanceComputations").get()
+                + OperationStatistics.getOpStatisticCounter("DistanceComputations.Savings").get());
+        if (operation instanceof QueryOperation) {
+            OperationStatistics.getOpStatisticCounter("AnswerCount").set(((QueryOperation) operation).getAnswerCount());
+            if ((operation instanceof RankingQueryOperation) && (((QueryOperation) operation).getAnswerCount() > 0)) {
+                OperationStatistics.getLocalThreadStatistics().getStatistics("AnswerDistance", StatisticObject.class).set(((RankingQueryOperation) operation).getAnswerDistance());
+            }
+        }
+    }    
 
     //****************** Operation method specifier ******************//
 

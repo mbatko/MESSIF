@@ -51,11 +51,6 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     public long visitedNodes = 0l;
     
     /**
-     * Objects accessed locally.
-     */
-    public transient int objectsAccessedLocally = 0; 
-    
-    /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.
      * The approximation parameters are set to reasonable default values.
      * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.

@@ -17,7 +17,6 @@ import messif.network.NetworkNode;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
-import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
 
@@ -134,55 +133,19 @@ public class RemoteBucket extends Bucket implements Serializable {
 
 
     /****************** Object manipulators ******************/
-
+    
     /**
-     * {@inheritDoc}
+     * Retrieves an object with the specified ID from the remote bucket.
+     * 
+     * @param objectID the ID of the object to retrieve
+     * @return object the object with the specified ID
+     * @throws NoSuchElementException if there is no object with the specified ID in the remote bucket
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
     public LocalAbstractObject getObject(UniqueID objectID) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).getObject(objectID);
-        
-        // Otherwise, send message to remote netnode
-        /* FIXME:
-        try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
-        } catch (IOException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
-        }
-         */
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
-    public LocalAbstractObject getObject(String locator) throws IllegalStateException {
-        // If this remote bucket points is current node, use local bucket
-        if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).getObject(locator);
-        
-        // Otherwise, send message to remote netnode
-        /* FIXME:
-        try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
-        } catch (IOException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
-        }
-         */
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
-    public LocalAbstractObject getObject(AbstractObjectKey key) throws IllegalStateException {
-        // If this remote bucket points is current node, use local bucket
-        if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).getObject(key);
         
         // Otherwise, send message to remote netnode
         /* FIXME:

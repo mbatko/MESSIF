@@ -9,7 +9,6 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableIndex;
 import messif.buckets.index.ModifiableSearch;
-import messif.buckets.index.impl.AbstractSearch;
 
 /**
  *
@@ -31,26 +30,26 @@ public class IndexedMemoryStorage<T> extends MemoryStorage<T> implements Modifia
         return store(object) != null;
     }
 
-    public ModifiableSearch<T> search() throws IllegalStateException {
+    public ModifiableSearch<?, T> search() throws IllegalStateException {
         return new IndexedMemoryStorageSearch<Object>();
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
         return new IndexedMemoryStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
         return new IndexedMemoryStorageSearch<C>(comparator, from, to);
     }
 
-    private class IndexedMemoryStorageSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+    private class IndexedMemoryStorageSearch<B> extends ModifiableSearch<B, T> {
         private int currentIndexPosition = -1;
 
         public IndexedMemoryStorageSearch() {
             super(null, null, null);
         }
 
-        public IndexedMemoryStorageSearch(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+        public IndexedMemoryStorageSearch(IndexComparator<B, T> comparator, B from, B to) throws IllegalStateException {
             super(comparator, from, to);
         }
 
