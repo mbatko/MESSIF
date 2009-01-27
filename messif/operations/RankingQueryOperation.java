@@ -103,6 +103,15 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
     /**
+     * Returns the current last ranked object in the answer.
+     * @return the current last ranked object in the answer
+     * @throws NoSuchElementException if the answer is empty
+     */
+    public RankedAbstractObject getLastAnswer() throws NoSuchElementException {
+        return answer.last();
+    }
+
+    /**
      * Returns the distance of the last object in the answer.
      * @return the distance of the last object in the answer
      * @throws NoSuchElementException if the answer is empty
