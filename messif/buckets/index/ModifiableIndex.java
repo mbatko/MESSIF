@@ -23,7 +23,7 @@ public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
      * @return a search for all objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public ModifiableSearch<?, T> search() throws IllegalStateException;
+    public ModifiableSearch<T> search() throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index that have the specified key.
@@ -41,7 +41,7 @@ public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException;
+    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index that are within the specified key-range.
@@ -60,6 +60,6 @@ public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public <C> ModifiableSearch<C, T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException;
+    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException;
 
 }

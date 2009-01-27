@@ -40,7 +40,7 @@ public interface OrderedIndex<C, T> extends Index<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public Search<C, T> search(C key, boolean restrictEqual) throws IllegalStateException;
+    public Search<T> search(C key, boolean restrictEqual) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index using a specified comparator.
@@ -56,7 +56,7 @@ public interface OrderedIndex<C, T> extends Index<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public Search<C, T> search(C from, C to) throws IllegalStateException;
+    public Search<T> search(C from, C to) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index using a specified comparator.
@@ -74,6 +74,6 @@ public interface OrderedIndex<C, T> extends Index<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public Search<C, T> search(C startKey, C from, C to) throws IllegalStateException;
+    public Search<T> search(C startKey, C from, C to) throws IllegalStateException;
 
 }

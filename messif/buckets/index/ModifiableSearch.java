@@ -8,19 +8,12 @@ package messif.buckets.index;
 import messif.buckets.Removable;
 
 /**
- *
+ * Represents a modifiable search.
+ * That is, this search that can remove objects once found.
+ * 
+ * @param <T> the type of objects that this {@link ModifiableSearch} searches for
  * @author xbatko
  */
-public abstract class ModifiableSearch<C, T> extends Search<C, T> implements Removable<T> {
-
-    /**
-     * Creates a new instance of Search for the specified search comparator and [from,to] bounds.
-     * @param comparator the comparator that defines the 
-     * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-     * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
-     */
-    protected ModifiableSearch(IndexComparator<C, T> comparator, C from, C to) {
-        super(comparator, from, to);
-    }
+public interface ModifiableSearch<T> extends Search<T>, Removable<T> {
 
 }
