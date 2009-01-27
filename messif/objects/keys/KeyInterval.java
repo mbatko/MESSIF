@@ -33,7 +33,7 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
      * @param operator the operator fot this key type
      * @return <b>true</b> if the interval covers given key
      */
-    public boolean isCovered(T key, KeyOperator<T> operator) {
+    public final boolean isCovered(T key, KeyOperator<T> operator) {
         return (operator.compare(getFrom(), key) <= 0) && (operator.compare(getTo(), key) >= 0);
     }
 
@@ -43,7 +43,7 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
      * @param operator the operator fot this key type
      * @return <b>true</b> if the interval covers given key
      */
-    public boolean intersect(KeyInterval<T> interval, KeyOperator<T> operator) {
+    public final boolean intersect(KeyInterval<T> interval, KeyOperator<T> operator) {
         return (operator.compare(getTo(), interval.getFrom()) >= 0) && (operator.compare(getFrom(), interval.getTo()) <= 0);
     }
     
@@ -93,12 +93,21 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
             }
         }
         return retVal;
-    }       
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (! (obj instanceof KeyInterval)) {
+            return false;
+        }
+        return getFrom().equals(((KeyInterval) obj).getFrom()) && getTo().equals(((KeyInterval) obj).getTo());
+    }
 
     /**
      * Given a set of keys, this method cuts the given interval to dijcunct set of "right-open" intervals.
      */
     //public List<KeyInterval<T>> cutIntervalsByKeys()
+       
     
     /** 
      * Return the string representation of this interval.

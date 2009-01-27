@@ -23,7 +23,7 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
     private static final long serialVersionUID = 1L;
 
     /** Size of the sample set used to test the candidate pivot (used to estimate mu_d) */
-    public static int sampleSetSize = 1000;
+    public static int sampleSetSize = 10000;
     
     /** Size of the candidate set of pivots from which one pivot will be picked. */
     public static int samplePivotSize = 100;  //50;
@@ -68,7 +68,8 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
         // Store all passed objects temporarily
         AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);
         
-        int sampleSize = (Math.sqrt(sampleSetSize) > objectList.size()) ? objectList.size() * objectList.size() : sampleSetSize;
+        //int sampleSize = (Math.sqrt(sampleSetSize) > objectList.size()) ? objectList.size() * objectList.size() : sampleSetSize;
+        int sampleSize = Math.min(objectList.size() / 10, sampleSetSize);
 
         // Select objects randomly
         AbstractObjectList<LocalAbstractObject> leftPair  = objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>());
