@@ -26,7 +26,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
+ * Utility class that provides methods for type conversions and instantiation.
+ * 
  * @author xbatko
  */
 public abstract class Convert {
@@ -180,6 +181,7 @@ public abstract class Convert {
     /**
      * Returns a wrapper class for primitive type.
      * If the type is not primitive, it is returned as is.
+     * @param <T> a primitive type class
      * @param type a primitive type class
      * @return a wrapper class for primitive type
      */
@@ -754,6 +756,56 @@ public abstract class Convert {
      */
     public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException {
         return createInstanceWithStringArgs(constructors, arguments, 0, objectStreams);
+    }
+
+    /**
+     * Creates a new instance of a class with a string constructor signature.
+     * The string must contain a fully specified class name with all comma-separated
+     * arguments enclosed by parenthesis. For example:
+     * <pre>
+     *      messif.pivotselection.StreamSequencePivotChooser(messif.objects.impl.MetaObjectMap, file)
+     * </pre>
+     * <p>
+     * Note that only types convertible by {@link #stringToType} method can be used in constructors.
+     * </p>
+     *
+     * @param <E> the type of the instantiated object
+     * @param constructorSignature constructor call with string arguments
+     * @param checkClass the superclass of (or the same class as) the instantiated object
+     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @return a new instance of the specified object
+     * @throws InvocationTargetException
+     *              if the constructor can't be found for the specified arguments,
+     *              the argument string-to-type convertion has failed or
+     *              there was an error during instantiation
+     * @throws ClassNotFoundException if the class in the constructor signature was not found or is not a descendant of checkClass
+     */
+    public static <E> E createInstanceWithStringArgs(String constructorSignature, Class<E> checkClass, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException, ClassNotFoundException {
+        // Search for braces
+        int openParenthesisPos = constructorSignature.indexOf('(');
+
+        // If no braces found, use the no-args constructor
+        if (openParenthesisPos == -1)
+            try {
+                return getClassForName(constructorSignature, checkClass).newInstance();
+            } catch (InstantiationException e) {
+                new InvocationTargetException(e, constructorSignature);
+            } catch (IllegalAccessException e) {
+                new InvocationTargetException(e, constructorSignature);
+            }
+
+        try {
+            // Get class from the string (up to parenthesis)
+            Class<E> clazz = getClassForName(constructorSignature.substring(0, openParenthesisPos), checkClass);
+            // Get constructors from the string (up to parenthesis)
+            @SuppressWarnings("unchecked")
+            List<Constructor<E>> constructors = Arrays.asList((Constructor<E>[])clazz.getConstructors());
+            // Get all arguments - closed in parenthesis and comma separated
+            String[] args = constructorSignature.substring(openParenthesisPos + 1, constructorSignature.lastIndexOf(')')).split("\\s*,\\s*");
+            return createInstanceWithStringArgs(constructors, args);
+        } catch (IndexOutOfBoundsException ignore) {
+            throw new IllegalArgumentException("Missing closing parenthesis: " + constructorSignature);
+        }
     }
 
     /**

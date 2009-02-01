@@ -686,17 +686,17 @@ public abstract class LocalAbstractObject extends AbstractObject {
             }
             
         } catch (ClassNotFoundException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (NoSuchMethodException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (IllegalAccessException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (InstantiationException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (InvocationTargetException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (IllegalArgumentException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         }
         return true;
     }

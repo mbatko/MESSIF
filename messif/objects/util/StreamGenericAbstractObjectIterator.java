@@ -9,6 +9,7 @@ package messif.objects.util;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,8 +46,6 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     protected final Constructor<? extends E> constructor;
     /** Arguments for the constructor (first will always be the stream) */
     protected final Object[] constructorArgs;
-    /** Error encountered when accessing next object */
-    protected String lastError;
 
 
     //****************** Constructors ******************//
@@ -62,8 +61,9 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @param stream stream from which objects are read and instantiated
      * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
+     * @throws IllegalStateException if there was an error reading from the stream
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Collection<?> constructorArgs) throws IllegalArgumentException {
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
         this.stream = stream;
 
         // Read constructor arguments
@@ -206,16 +206,14 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * Returns the next object instance from the stream.
      *
      * @return the next object instance from the stream
-     * @throws NoSuchElementException if the end-of-file was reached or there was an error reading the stream's file
+     * @throws NoSuchElementException if the end-of-file was reached
+     * @throws IllegalArgumentException if there was an error creating a new instance of the object
+     * @throws IllegalStateException if there was an error reading from the stream
      */
-    public E next() throws NoSuchElementException {
+    public E next() throws NoSuchElementException, IllegalArgumentException, IllegalStateException {
         // No next object available
-        if (nextObject == null) {
-            String msg = "No more objects in the stream";
-            if (lastError != null)
-                msg += ": " + lastError;
-            throw new NoSuchElementException(msg);
-        }
+        if (nextObject == null)
+            throw new NoSuchElementException("No more objects in the stream");
 
         // Reading object on the fly from a stream
         currentObject = nextObject;
@@ -261,9 +259,10 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * Returns an instance of object which would be returned by next call to next().
      * @return Returns an instance of object of type E which would be returned by the next call to next(). 
      *         If there is no additional object, null is returned.
-     * @throws IllegalArgumentException if there was an error reading from the stream
+     * @throws IllegalArgumentException if there was an error creating a new instance of the object
+     * @throws IllegalStateException if there was an error reading from the stream
      */
-    protected E nextStreamObject() throws IllegalArgumentException {
+    protected E nextStreamObject() throws IllegalArgumentException, IllegalStateException {
         try {
             return constructor.newInstance(constructorArgs);
         } catch (IllegalAccessException e) {
@@ -272,11 +271,16 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
             throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor instantiation failed: " + e.getMessage());
         } catch (InvocationTargetException e) {
             // The constructor threw an exception
-            if (e.getCause() instanceof IOException) {
-                lastError = e.getCause().getMessage();
+            if (e.getCause() instanceof EOFException) {
+                // End of file is normal exit
                 return null;
-            } else
-                throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor invocation ended up with an exception: " + e.getMessage());
+            } else if (e.getCause() instanceof IOException) {
+                // Other I/O exception (is related to this stream and not the object)
+                throw new IllegalStateException("Cannot read object: " + e.getCause());
+            } else {
+                // Other exception
+                throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor invocation ended up with an exception: " + e.getCause());
+            }
         }
     }
 
