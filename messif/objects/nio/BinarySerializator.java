@@ -177,7 +177,7 @@ public abstract class BinarySerializator {
      * @throws IndexOutOfBoundsException if the <code>index</code> or <code>length</code> are invalid for the specified array
      */
     public int write(BinaryOutput output, byte[] array, int index, int length) throws IOException, NullPointerException, IndexOutOfBoundsException {
-        write(output, length);
+        int ret = write(output, length) + length;
         while (length > 0) {
             ByteBuffer buffer = output.prepareOutput(1);
             int lenToWrite = Math.min(length, buffer.remaining());
@@ -185,7 +185,7 @@ public abstract class BinarySerializator {
             index += lenToWrite;
             length -= lenToWrite;
         }
-        return 4 + length;
+        return ret;
     }
 
     /**

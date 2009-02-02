@@ -110,7 +110,7 @@ public class ChannelInputStream extends InputStream implements BinaryInput {
      * @throws IOException if there was an error reading from the input stream
      * @throws IndexOutOfBoundsException if the <code>buf.length - off &lt len</code>
      */
-        @Override
+    @Override
     public int read(byte buf[], int off, int len) throws IOException, IndexOutOfBoundsException {
         int totalRead = 0;
         try {

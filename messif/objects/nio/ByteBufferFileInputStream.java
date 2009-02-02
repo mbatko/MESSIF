@@ -24,13 +24,13 @@ public class ByteBufferFileInputStream extends ChannelInputStream {
     /** The file from which to read data */
     private final FileChannel fileChannel;
 
-    /** The current position in the read channel */
+    /** The current position in the file */
     private long position;
 
-    /** The maximal position that can be read from the read channel */
+    /** Starting position of the file */
     private final long startPosition;
 
-    /** Starting position of the file */
+    /** The maximal position that can be accessed in the file */
     private final long endPosition;
 
     /**

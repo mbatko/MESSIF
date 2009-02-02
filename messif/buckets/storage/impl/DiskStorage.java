@@ -345,7 +345,7 @@ public class DiskStorage<T> implements LongStorage<T>, Serializable {
      */
     protected ByteBufferFileOutputStream openOutputStream() throws IOException {
         ByteBufferFileOutputStream stream = new ByteBufferFileOutputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
-        stream.position(fileOccupation);
+        stream.setPosition(fileOccupation);
         return stream;
     }
 
@@ -435,7 +435,7 @@ public class DiskStorage<T> implements LongStorage<T>, Serializable {
                 writeHeader(fileChannel, startPosition, 0);
 
             // Remember address
-            LongAddress<T> address = new LongAddress<T>(this, outputStream.position());
+            LongAddress<T> address = new LongAddress<T>(this, outputStream.getPosition());
 
             // Write object
             fileOccupation += serializator.write(outputStream, object);
@@ -461,13 +461,13 @@ public class DiskStorage<T> implements LongStorage<T>, Serializable {
 
             if (size > 0) {
                 // Remember position to be able to restore it after the write
-                long currentPosition = outputStream.position();
+                long currentPosition = outputStream.getPosition();
                 try {
-                    outputStream.position(position);
+                    outputStream.setPosition(position);
                     // Write the negative object size to indicate deleted object
                     serializator.write(outputStream, -size);
                 } finally {
-                    outputStream.position(currentPosition);
+                    outputStream.setPosition(currentPosition);
                 }
 
                 // Update internal counters
