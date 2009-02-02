@@ -345,7 +345,7 @@ public class DiskStorage<T> implements LongStorage<T>, Serializable {
      */
     protected ByteBufferFileOutputStream openOutputStream() throws IOException {
         ByteBufferFileOutputStream stream = new ByteBufferFileOutputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
-        stream.setPosition(fileOccupation);
+        stream.setPosition(startPosition + headerSize + fileOccupation);
         return stream;
     }
 
