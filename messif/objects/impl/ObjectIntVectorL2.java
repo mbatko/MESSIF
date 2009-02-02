@@ -8,7 +8,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -61,13 +61,13 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectIntVector loaded from binary input stream.
+     * Creates a new instance of ObjectIntVector loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectIntVector from
+     * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectIntVectorL2(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectIntVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 

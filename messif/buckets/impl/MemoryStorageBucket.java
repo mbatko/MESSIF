@@ -29,15 +29,15 @@ public class MemoryStorageBucket extends LocalBucket implements Serializable {
 
     //****************** Data storage ******************//
 
-    /** Object storage with ID index */
-    protected ModifiableIndex<LocalAbstractObject> objects = new IndexedMemoryStorage<LocalAbstractObject>();
+    /** Object storage */
+    protected final ModifiableIndex<LocalAbstractObject> objects;
 
 
     /****************** Constructors ******************/
 
     /**
-     * Constructs a new MemoryStorageBucket instance
-     * 
+     * Constructs a new MemoryStorageBucket instance.
+     * It uses an {@link IndexedMemoryStorage} to actually strore the objects.
      * @param capacity maximal capacity of the bucket - cannot be exceeded
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
@@ -45,6 +45,7 @@ public class MemoryStorageBucket extends LocalBucket implements Serializable {
      */
     public MemoryStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        this.objects = new IndexedMemoryStorage<LocalAbstractObject>();
     }
 
 

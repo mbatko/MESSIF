@@ -16,20 +16,20 @@ import java.lang.reflect.Method;
  * This is the simple serializator implementation for {@link BinarySerializable} objects.
  * It can store and restore only one specified class or the standard Java-serialized objects.
  * 
- * @param <E> the class of objects created by this serializator during deserialization
+ * @param <T> the class of objects created by this serializator during deserialization
  * @see MultiClassSerializator
  * @see CachingSerializator
  * @author xbatko
  */
-public class SingleClassSerializator<E> extends BinarySerializator implements Serializable {
+public class SingleClassSerializator<T> extends BinarySerializator implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     /** The class of objects created by this serializator during deserialization */
-    protected final Class<? extends E> deserializationClass;
+    protected final Class<? extends T> deserializationClass;
 
     /** The constructor used to create instances of objects during deserialization */
-    protected final transient Constructor<? extends E> constructor;
+    protected final transient Constructor<? extends T> constructor;
 
     /** The factory method used to create instances of objects during deserialization */
     protected final transient Method factoryMethod;
@@ -45,7 +45,7 @@ public class SingleClassSerializator<E> extends BinarySerializator implements Se
      * 
      * @param baseClass the class of objects created by this serializator during deserialization
      */
-    public SingleClassSerializator(Class<? extends E> baseClass) {
+    public SingleClassSerializator(Class<? extends T> baseClass) {
         this.deserializationClass = baseClass;
 
         // Get constructor for the base class
@@ -65,8 +65,7 @@ public class SingleClassSerializator<E> extends BinarySerializator implements Se
      * Returns a default class that is used for deserialization when a class is not specified.
      * @return a default class that is used for deserialization
      */
-    @Override
-    public Class<?> getDefaultClass() {
+    public Class<? extends T> getDefaultClass() {
         return deserializationClass;
     }
 
@@ -98,37 +97,30 @@ public class SingleClassSerializator<E> extends BinarySerializator implements Se
     //************************ Serializator methods ************************//
 
     /**
-     * Writes <code>object</code> to this output stream using binary serialization.
-     * 
-     * @param stream the stream to write the object to
-     * @param object the object to write
-     * @return the number of bytes actually written
-     * @throws IOException if there was an error using flushChannel
+     * Reads an instance from the <code>input</code> using this serializator.
+     * The {@link #getDefaultClass default} class that is expected to be in the buffer.
+     *
+     * @param input the buffer to read the instance from
+     * @return an instance of the deserialized object
+     * @throws IOException if there was an I/O error
+     * @throws IllegalArgumentException if the constructor or the factory method has a wrong prototype
      */
-    protected int write(BinaryOutputStream stream, BinarySerializable object) throws IOException {
+    public T readObject(BinaryInput input) throws IOException, IllegalArgumentException {
+        return readObject(input, getDefaultClass());
+    }
+
+    protected int write(BinaryOutput output, BinarySerializable object) throws IOException {
         if (object instanceof JavaToBinarySerializable || deserializationClass.isInstance(object)) {
-            return object.binarySerialize(stream, this);
+            return object.binarySerialize(output, this);
         } else {
             throw new IOException("Serializator can't store '" + object.getClass().getName() + "' because it is restricted to '" + deserializationClass.getName() + "'");
         }
     }
 
-    /**
-     * Read an instance using the default constructor/factory method of this serializator.
-     *
-     * @param <E> the class that is expected to be in the stream
-     * @param stream the stream to read the instance from
-     * @param objectSize the size of the instance in the stream
-     * @param expectedClass the class that is expected to be in the stream
-     * @return an instance of the deserialized object
-     * @throws IOException if there was an error reading from the stream
-     * @throws IllegalArgumentException if the constructor or the factory method has a wrong prototype
-     */
-    protected <E> E readObject(BinaryInputStream stream, int objectSize, Class<E> expectedClass) throws IOException, IllegalArgumentException {
+    protected <E> E readObjectImpl(BinaryInput input, Class<E> expectedClass) throws IOException, IllegalArgumentException {
         return expectedClass.cast(readObject(
-                stream,
+                input,
                 this,
-                objectSize,
                 constructor,
                 factoryMethod
             ));        
@@ -148,7 +140,12 @@ public class SingleClassSerializator<E> extends BinarySerializator implements Se
 
     //****************** Serialization ******************//
 
-    /** Read this serializator from the object stream */
+    /**
+     * Read this serializator from an object stream.
+     * @param in the object stream to read the serializator from
+     * @throws IOException if there was an I/O error reading the serializator from the stream
+     * @throws ClassNotFoundException if there was an error resolving object class
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
         try {
             // Proceed with standard deserialization first

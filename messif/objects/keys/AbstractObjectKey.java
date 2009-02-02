@@ -6,8 +6,8 @@
 package messif.objects.keys;
 
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
@@ -113,24 +113,24 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of AbstractObjectKey loaded from binary input stream.
+     * Creates a new instance of AbstractObjectKey loaded from binary input.
      * 
-     * @param input the stream to read the AbstractObjectKey from
+     * @param input the input to read the AbstractObjectKey from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected AbstractObjectKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected AbstractObjectKey(BinaryInput input, BinarySerializator serializator) throws IOException {
         this.locatorURI = serializator.readString(input);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return serializator.write(output, locatorURI);
     }
 

@@ -13,8 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -183,13 +183,13 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of PrecomputedDistancesPivotMapFilter loaded from binary input stream.
+     * Creates a new instance of PrecomputedDistancesPivotMapFilter loaded from binary input.
      * 
-     * @param input the stream to read the PrecomputedDistancesPivotMapFilter from
+     * @param input the input to read the PrecomputedDistancesPivotMapFilter from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected PrecomputedDistancesPivotMapFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected PrecomputedDistancesPivotMapFilter(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         int items = serializator.readInt(input);
         precompDistMapping = Collections.synchronizedMap(new HashMap<LocalAbstractObject, Float>(items));
@@ -199,13 +199,13 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, precompDistMapping.size());
         for (Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {

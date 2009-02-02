@@ -16,7 +16,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
@@ -351,13 +351,13 @@ public abstract class MetaObject extends LocalAbstractObject {
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObject loaded from binary input stream.
+     * Creates a new instance of MetaObject loaded from binary input.
      * 
-     * @param input the stream to read the MetaObject from
+     * @param input the input to read the MetaObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected MetaObject(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 

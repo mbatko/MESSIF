@@ -26,9 +26,10 @@ import messif.utility.Convert;
  * 
  * This serializator checks the serialUIDs of the cached objects for changes.
  * 
+ * @param <T> default class used when reading serialized object
  * @author xbatko
  */
-public class CachingSerializator extends MultiClassSerializator {
+public class CachingSerializator<T> extends MultiClassSerializator<T> {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -56,7 +57,7 @@ public class CachingSerializator extends MultiClassSerializator {
      * @param cachedClasses the classes that are used frequently and should be cached
      * @throws IllegalArgumentException if there is an invalid value in <code>cachedClasses</code>
      */
-    public CachingSerializator(Class<?> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
+    public CachingSerializator(Class<? extends T> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
         super(defaultClass);
 
         if (cachedClasses == null || cachedClasses.length == 0)

@@ -1,14 +1,13 @@
 
 package messif.objects.keys;
 
-import messif.objects.keys.AbstractObjectKey;
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * The object key that contains an Long and an locator URI.
+ * The object key that contains a long value and a locator URI.
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
  */
@@ -62,8 +61,10 @@ public class LongKey extends AbstractObjectKey {
     }
     
     /**
-     * Auxiliary method for parsing the string 'longKey locatorURI'
+     * Auxiliary method for parsing the string 'longKey locatorURI'.
+     * @param keyString the string with the key and the locator URI
      * @return the locatorURI string
+     * @throws IllegalArgumentException if the string is not in the 'longKey locatorURI' format
      */
     private static String getLocatorURI(String keyString) throws IllegalArgumentException {
         try {
@@ -134,26 +135,26 @@ public class LongKey extends AbstractObjectKey {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of LongKey loaded from binary input stream.
+     * Creates a new instance of LongKey loaded from binary input.
      * 
-     * @param input the stream to read the LongKey from
+     * @param input the input to read the LongKey from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected LongKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected LongKey(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         key = serializator.readLong(input);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) + serializator.write(output, key);
     }
 

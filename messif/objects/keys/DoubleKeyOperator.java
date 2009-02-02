@@ -1,7 +1,6 @@
 package messif.objects.keys;
 
 import java.io.Serializable;
-import messif.objects.keys.DoubleKey;
 
 /**
  *

@@ -13,8 +13,8 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.util.AbstractObjectIterator;
@@ -256,13 +256,13 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectShortVector loaded from binary input stream.
+     * Creates a new instance of ObjectShortVector loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectShortVector from
+     * @param input the buffer to read the ObjectShortVector from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectShortVector(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectShortVector(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         data = serializator.readShortArray(input);
     }
@@ -275,7 +275,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, data);
     }

@@ -5,11 +5,13 @@
 
 package messif.objects.nio;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /**
- * Extending class for {@link ByteBufferInputStream} operating over a
+ * Extending class for a {@link ChannelInputStream} that operates on a
  * file. The position is restored before every read operation, so it is safe
  * to use multiple instances of this class over the same file channel. However,
  * if multiple threads use the same instance of this class, the access to the
@@ -17,27 +19,35 @@ import java.nio.channels.FileChannel;
  * 
  * @author xbatko
  */
-public class ByteBufferFileInputStream extends ByteBufferInputStream {
+public class ByteBufferFileInputStream extends ChannelInputStream {
 
     /** The file from which to read data */
-    protected final FileChannel readChannelFile;
+    private final FileChannel fileChannel;
+
+    /** The current position in the read channel */
+    private long position;
+
+    /** The maximal position that can be read from the read channel */
+    private final long startPosition;
 
     /** Starting position of the file */
-    protected final long readChannelStartPosition;
+    private final long endPosition;
 
     /**
      * Creates a new instance of ByteBufferFileInputStream.
      * @param bufferSize the size of the internal buffer used for flushing
      * @param bufferDirect allocate the internal buffer as {@link java.nio.ByteBuffer#allocateDirect direct}
-     * @param readChannel the channel from which to read data
+     * @param fileChannel the file channel from which to read data
      * @param position the starting position of the file
      * @param maxLength the maximal length of data
      * @throws IOException if there was an error using readChannel
      */
-    public ByteBufferFileInputStream(int bufferSize, boolean bufferDirect, FileChannel readChannel, long position, long maxLength) throws IOException {
-        super(bufferSize, bufferDirect, readChannel, maxLength);
-        this.readChannelFile = readChannel;
-        this.readChannelStartPosition = position;
+    public ByteBufferFileInputStream(int bufferSize, boolean bufferDirect, FileChannel fileChannel, long position, long maxLength) throws IOException {
+        super(fileChannel, bufferSize, bufferDirect);
+        this.fileChannel = fileChannel;
+        this.startPosition = position;
+        this.endPosition = position + maxLength;
+        this.position = position;
     }
 
     /**
@@ -55,29 +65,13 @@ public class ByteBufferFileInputStream extends ByteBufferInputStream {
      */
     @Override
     public long skip(long n) throws IOException {
-        // Skiping only in buffer
-        if (byteBuffer.remaining() >= n) {
-            byteBuffer.position(byteBuffer.position() + (int)n);
-            return n;
+        long newPosition = getPosition() + n;
+        if (newPosition > endPosition) {
+            n -= newPosition - endPosition;
+            setPosition(endPosition);
+        } else {
+            setPosition(newPosition);
         }
-
-        // Skiping bigger than buffer, must skip in file
-        long currentRelativePos = position();
-
-        // Truncate n if beyond maximal position
-        if (currentRelativePos + n > readChannelMaximalPosition)
-            n = readChannelMaximalPosition - currentRelativePos;
-
-        // No skiping necessary
-        if (n <= 0)
-            return 0;
-
-        // Update relative position of the file, the actual seek will be done before next read operation
-        readChannelPosition = currentRelativePos + n;
-
-        // Empty buffer
-        byteBuffer.position(0);
-        byteBuffer.limit(0);
 
         return n;
     }
@@ -86,25 +80,63 @@ public class ByteBufferFileInputStream extends ByteBufferInputStream {
      * Repositions this stream to the starting position.
      */
     @Override
-    public void reset() {
-        // Update relative position of the file, the actual seek will be done before next read operation
-        readChannelPosition = 0;
+    public void reset() throws IOException {
+        setPosition(startPosition);
+    }
 
-        // Empty buffer
-        byteBuffer.position(0);
-        byteBuffer.limit(0);
+    /**
+     * Returns the current position in the file.
+     * @return the current position in the file
+     */
+    public long getPosition() {
+        return position + byteBuffer.position();
+    }
+
+    /**
+     * Set the position from which the data will be read.
+     * @param position the new position
+     * @throws IOException if the specified position is outside the boundaries
+     */
+    public void setPosition(long position) throws IOException {
+        // Check relative position and current buffer position
+        if (position < this.position || position > getPosition()) {
+            // Check position validity
+            if (position < startPosition || position > endPosition)
+                throw new IOException("Position " + position + " is outside the allowed range");
+
+            // Outside buffer
+            byteBuffer.limit(0); // Discard all data
+            this.position = position;
+        } else {
+            // Inside buffer
+            byteBuffer.position((int)(position - this.position));
+        }
     }
 
     /** 
      * Reads next chunk of data into {@link #byteBuffer internal buffer}.
-     * The reading is done at the correct position regardless of the underlying file's actual position.
-     * @return the number of bytes read
-     * @throws IOException if there was an error using readChannel
+     * This method blocks until at least one byte is read or,
+     * if there are no more data, {@link EOFException} is thrown.
+     * <p>
+     * Data are accessed correctly regardless of the actual position in the fileChannel.
+     * </p>
+     * 
+     * @param buffer the buffer into which to read additional data
+     * @return the number of bytes read (always bigger than zero)
+     * @throws EOFException if there are no more data available
+     * @throws IOException if there was an error reading data
      */
     @Override
-    protected int readChannelData() throws IOException {
-        return readChannelFile.read(byteBuffer, readChannelStartPosition + readChannelPosition);
-    }
+    protected int readChannelData(ByteBuffer buffer) throws EOFException, IOException {
+        // Check for the maximal position
+        if (endPosition - position < buffer.remaining())
+            buffer.limit(buffer.position() + (int)(endPosition - position));
 
+        int bytesRead = fileChannel.read(buffer, position);
+        if (bytesRead == -1)
+            throw new EOFException("Cannot read more bytes - end of file encountered");
+        position += bytesRead;
+        return bytesRead;
+    }
 
 }

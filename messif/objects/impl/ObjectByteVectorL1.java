@@ -9,6 +9,8 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -55,6 +57,20 @@ public class ObjectByteVectorL1 extends ObjectByteVector {
             rtv += Math.abs(data[i] - objdata[i]);
         
         return rtv;
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectByteVectorL1 loaded from binary input buffer.
+     * 
+     * @param input the buffer to read the MetaObjectSAPIRWeightedDist from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectByteVectorL1(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
 }

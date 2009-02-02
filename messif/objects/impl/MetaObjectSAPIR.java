@@ -28,8 +28,8 @@ import javax.xml.parsers.SAXParserFactory;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import org.xml.sax.Attributes;
@@ -685,13 +685,13 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObjectSAPIR loaded from binary input stream.
+     * Creates a new instance of MetaObjectSAPIR loaded from binary input buffer.
      * 
-     * @param input the stream to read the MetaObjectSAPIR from
+     * @param input the buffer to read the MetaObjectSAPIR from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObjectSAPIR(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected MetaObjectSAPIR(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         colorLayout = serializator.readObject(input, ObjectColorLayout.class);
         colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
@@ -701,15 +701,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         location = serializator.readObject(input, ObjectGPSCoordinate.class);
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, colorLayout);
         size += serializator.write(output, colorStructure);
@@ -720,11 +713,6 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         return size;
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator);

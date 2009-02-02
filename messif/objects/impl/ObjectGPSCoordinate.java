@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
@@ -166,13 +166,13 @@ public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySe
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectGPSCoordinate loaded from binary input stream.
+     * Creates a new instance of ObjectGPSCoordinate loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectIntVector from
+     * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectGPSCoordinate(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectGPSCoordinate(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.latitude = serializator.readFloat(input);
         this.longitude = serializator.readFloat(input);
@@ -186,7 +186,7 @@ public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySe
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, latitude) +
                serializator.write(output, longitude);

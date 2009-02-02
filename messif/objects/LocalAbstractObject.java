@@ -17,8 +17,8 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
@@ -326,7 +326,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
         for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
             Class<?> currentFilterClass = currentFilter.getClass();
             if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
-                return (T)currentFilter; // This cast IS checked on the previous line
+                return filterClass.cast(currentFilter);
         }
 
         return null;
@@ -769,13 +769,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of LocalAbstractObject loaded from binary input stream.
+     * Creates a new instance of LocalAbstractObject loaded from binary input.
      * 
-     * @param input the stream to read the LocalAbstractObject from
+     * @param input the input to read the LocalAbstractObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected LocalAbstractObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected LocalAbstractObject(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         suppData = serializator.readObject(input, Object.class);
         distanceFilter = serializator.readObject(input, PrecomputedDistancesFilter.class);
@@ -783,13 +783,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    protected int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, suppData) +
                serializator.write(output, distanceFilter);

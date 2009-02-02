@@ -17,11 +17,11 @@ import java.io.IOException;
  * providing either a constructor or a factory method.
  * The factory method should have the following prototype:
  * <pre>
- *      <i>ObjectClass</i> binaryDeserialize({@link BinaryInputStream} input, {@link BinarySerializator} serializator) throws {@link IOException}
+ *      <i>ObjectClass</i> binaryDeserialize({@link BinaryInput} input, {@link BinarySerializator} serializator) throws {@link IOException}
  * </pre>
  * The constructor should have the following prototype:
  * <pre>
- *      <i>ClassConstructor</i>({@link BinaryInputStream} input, {@link BinarySerializator} serializator) throws {@link IOException}
+ *      <i>ClassConstructor</i>({@link BinaryInput} input, {@link BinarySerializator} serializator) throws {@link IOException}
  * </pre>
  * The access specificator of the construtor or the factory method is not
  * important and can be even <tt>private</tt>.
@@ -42,11 +42,11 @@ public interface BinarySerializable {
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the binary output stream this object is serialized into
+     * @param output the binary output that this object is serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes written
      * @throws IOException if there was an I/O error during serialization
      */
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException;
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException;
 
 }

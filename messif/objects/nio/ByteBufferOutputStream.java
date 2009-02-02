@@ -6,6 +6,7 @@
 package messif.objects.nio;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
@@ -27,7 +28,7 @@ import java.nio.channels.WritableByteChannel;
  * @see ByteBufferInputStream
  * @author xbatko
  */
-public class ByteBufferOutputStream extends BinaryOutputStream {
+public class ByteBufferOutputStream extends OutputStream implements BinaryOutput {
 
     /** Minimal buffer size in bytes */
     private final int MINIMAL_BUFFER_SIZE = 32;
@@ -73,8 +74,7 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
      * @throws IOException if there was an error using flushChannel
      */
     public void write(int b) throws IOException {
-        ensureBufferSize(1);
-	byteBuffer.put((byte)b);
+        prepareOutput(1).put((byte)b);
     }
 
     /**
@@ -89,8 +89,8 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
     @Override
     public void write(byte bytes[], int off, int len) throws IOException {
         while (len > 0) {
-            // Fill buffer with the data and adjust offset and length
-            int lenToWrite = checkBufferSize(len, 1);
+            ByteBuffer buffer = prepareOutput(1);
+            int lenToWrite = Math.min(len, buffer.remaining());
             byteBuffer.put(bytes, off, lenToWrite);
             off += lenToWrite;
             len -= lenToWrite;
@@ -106,7 +106,7 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
     @Override
     public void flush() throws IOException {
         // Must empty the whole buffer, so require the capacity of the buffer
-        ensureBufferSize(byteBuffer.capacity());
+        prepareOutput(byteBuffer.capacity());
     }
 
     /**
@@ -151,48 +151,18 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
     }
 
     /**
-     * Checks if there is enough space in the buffer. If the <code>minimalSize</code>
-     * is bigger than the actual remaining size of the buffer, the buffer is written
-     * to the flushChannel.
-     * Returns either the number of bytes actually available in the buffer or the <code>checkSize</code>
-     * whichever is smaller.
-     * 
-     * @param checkSize the checked number of bytes that should be available in the buffer
-     * @param minimalSize the minimal number of bytes that must be available in the buffer
-     * @return either the number of bytes actually available or the <code>checkSize</code> whichever is smaller
-     * @throws IOException if there was an error using flushChannel
-     */
-    @Override
-    protected int checkBufferSize(int checkSize, int minimalSize) throws IOException {
-        if (minimalSize > byteBuffer.remaining())
-            writeChunk(minimalSize);
-
-        // Return either the required size, if it is smaller than the buffer, or the buffer size
-        return Math.min(byteBuffer.remaining(), checkSize);
-    }
-
-    /**
-     * Checks if there is enough space in the buffer. If the <code>minimalSize</code>
-     * is bigger than the actual remaining size of the buffer, the buffer is written
-     * to the flushChannel.
-     * 
-     * @param minimalSize the minimal number of bytes that must be available in the buffer
-     * @throws IOException if there was an error using flushChannel
-     */
-    @Override
-    protected void ensureBufferSize(int minimalSize) throws IOException {
-        if (minimalSize > byteBuffer.remaining())
-            writeChunk(minimalSize);
-    }
-
-    /**
      * Write current chunk of data toe the writeChannel. It is guaranteed
      * that at least <code>minBytes</code> is written or an exception is thrown.
      * 
      * @param minBytes the minimal number of bytes that must be freed from the buffer
      * @throws IOException if there was an error using flushChannel
      */
-    protected void writeChunk(int minBytes) throws IOException {
+    public ByteBuffer prepareOutput(int minBytes) throws IOException {
+        // If there is enough space in the buffer, do nothing
+        if (minBytes <= byteBuffer.remaining())
+            return byteBuffer;
+
+        // There is not enough space, flush data to free some more
         try {
             byteBuffer.flip();
             flushChannelPosition += writeChannelData();
@@ -207,6 +177,8 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
         // Check the remaining minimal size 
         if (byteBuffer.remaining() < minBytes)
             throw new IOException("Cannot allocate " + minBytes + " bytes - buffer too small");
+
+        return byteBuffer;
     }
 
     /** 
@@ -216,16 +188,6 @@ public class ByteBufferOutputStream extends BinaryOutputStream {
      */
     protected int writeChannelData() throws IOException {
         return flushChannel.write(byteBuffer);
-    }
-
-    /**
-     * Returns the buffer for binary operations.
-     * @return the buffer for binary operations
-     * @throws IOException if there was an error using the buffer
-     */
-    @Override
-    protected ByteBuffer getBuffer() throws IOException {
-        return byteBuffer;
     }
 
 }
