@@ -94,6 +94,12 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     //****************** Overrides for answer set ******************//
 
+    /**
+     * Returns the object the distance to which is used for the answer rank.
+     * @return the query object of this ranking query
+     */
+    public abstract LocalAbstractObject getQueryObject();
+
     @Override
     public Class<? extends RankedAbstractObject> getAnswerClass() {
         return RankedAbstractObject.class;

@@ -149,6 +149,11 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         return 1;
     }
 
+    @Override
+    public LocalAbstractObject getQueryObject() {
+        return queryObjectForDistances;
+    }
+
     /**
      * Returns the object locators this query searches for.
      * @return the object locators this query searches for

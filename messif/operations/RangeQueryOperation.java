@@ -102,6 +102,22 @@ public class RangeQueryOperation extends RankingQueryOperation {
     }
 
     /**
+     * Returns the threshold distance for the current answer of this query.
+     * If the answer has not reached the maximal size (specified in constructor) yet,
+     * {@link #getRadius()} is returned.
+     * Otherwise, the distance of the last answer's object is returned.
+     * @return the distance to last object in the answer or
+     *         {@link #getRadius()} if there are not enough objects.
+     */
+    @Override
+    public float getAnswerThreshold() {
+        float dist = super.getAnswerThreshold();
+        if (dist > radius)
+            return radius;
+        return dist;
+    }
+
+    /**
      * Returns argument that was passed while constructing instance.
      * If the argument is not stored within operation, <tt>null</tt> is returned.
      * @param index index of an argument passed to constructor

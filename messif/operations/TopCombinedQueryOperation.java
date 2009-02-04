@@ -35,22 +35,22 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
     //****************** Attributes ******************//
 
     /** Query object (accessible directly) */
-    public final MetaObject queryObject;
-    /** Number of nearest (top) objects to retrieve (accessible directly) */
-    public final int k;
-    /** Number of sorted access objects to retrieve (accessible directly) */
-    public final int sortedAccessInitial;
+    protected final MetaObject queryObject;
+    /** Number of nearest (top) objects to retrieve */
+    protected final int k;
+    /** Number of sorted access objects to retrieve */
+    protected final int numberOfInitialSA;
     /**
      * Progressive flag for the number of initial sorted accesses.
-     * If set to <tt>true</tt>, the number of sortedAccessInitial is multiplied by {@link #k k}.
+     * If set to <tt>true</tt>, the number of numberOfInitialSA is multiplied by {@link #k k}.
      */
-    public final boolean progressiveSortedAccessInitial;
-    /** Number of random accesses to execute (accessible directly) */
-    public final int numberOfRandomAccess;
-    /** Query operation to execute for sorted accesses (accessible directly) */
-    public final Class<? extends QueryOperation> sortedQuery;
-    /** Threshold function to measure the overall similarity with (accessible directly) */
-    public final ThresholdFunction thresholdFunction;
+    protected final boolean numberOfInitialSAProgressive;
+    /** Number of random accesses to execute */
+    protected final int numberOfRandomAccesses;
+    /** Query operation to execute for sorted accesses */
+    protected final Class<? extends QueryOperation> initialSAQueryClass;
+    /** Threshold function for measuring the overall similarity */
+    protected final ThresholdFunction thresholdFunction;
 
 
     //****************** Constructors ******************//
@@ -62,20 +62,20 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
      * 
      * @param queryObject the query object
      * @param k the number of results to retrieve
-     * @param sortedAccessInitial the number of initial sorted access objects
-     * @param progressiveSortedAccessInitial flag whether the <code>sortedAccessInitial</code> is a multiplier of <code>k</code> (<tt>true</tt>) or an absolute number (<tt>false</tt>)
-     * @param numberOfRandomAccess the maximal number of random accesses
-     * @param sortedQuery the query operation used to retrieve sorted access objects
+     * @param numberOfInitialSA the number of initial sorted access objects
+     * @param numberOfInitialSAProgressive flag whether the <code>numberOfInitialSA</code> is a multiplier of <code>k</code> (<tt>true</tt>) or an absolute number (<tt>false</tt>)
+     * @param numberOfRandomAccesses the maximal number of random accesses
+     * @param initialSAQueryClass the query operation used to retrieve sorted access objects
      * @param thresholdFunction the aggregation function for combining the distances from sorted lists
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Progressive sorted access flag", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
-    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int sortedAccessInitial, boolean progressiveSortedAccessInitial, int numberOfRandomAccess, Class<? extends QueryOperation> sortedQuery, ThresholdFunction thresholdFunction) {
+    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, ThresholdFunction thresholdFunction) {
         this.queryObject = (MetaObject)queryObject;
         this.k = k;
-        this.sortedAccessInitial = sortedAccessInitial;
-        this.progressiveSortedAccessInitial = progressiveSortedAccessInitial;
-        this.numberOfRandomAccess = numberOfRandomAccess;
-        this.sortedQuery = sortedQuery;
+        this.numberOfInitialSA = numberOfInitialSA;
+        this.numberOfInitialSAProgressive = numberOfInitialSAProgressive;
+        this.numberOfRandomAccesses = numberOfRandomAccesses;
+        this.initialSAQueryClass = initialSAQueryClass;
         this.thresholdFunction = thresholdFunction;
     }
 
@@ -94,13 +94,13 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
         case 1:
             return k;
         case 2:
-            return sortedAccessInitial;
+            return numberOfInitialSA;
         case 3:
-            return progressiveSortedAccessInitial;
+            return numberOfInitialSAProgressive;
         case 4:
-            return numberOfRandomAccess;
+            return numberOfRandomAccesses;
         case 5:
-            return sortedQuery;
+            return initialSAQueryClass;
         case 6:
             return thresholdFunction;
         default:
@@ -115,6 +115,59 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
     @Override
     public int getArgumentCount() {
         return 7;
+    }
+
+    public MetaObject getQueryObject() {
+        return queryObject;
+    }
+
+    /**
+     * Returns the number of nearest (top) objects to retrieve.
+     * @return the number of nearest (top) objects to retrieve
+     */
+    public int getK() {
+        return k;
+    }
+
+    /**
+     * Returns the number of initial sorted access objects to retrieve.
+     * @return the number of initial sorted access objects to retrieve
+     */
+    public int getNumberOfInitialSA() {
+        return numberOfInitialSA;
+    }
+
+    /**
+     * Returns the progressive flag for the number of initial sorted accesses.
+     * If set to <tt>true</tt>, the number of numberOfInitialSA is multiplied by {@link #k k}.
+     * @return the progressive flag for the number of initial sorted accesses
+     */
+    public boolean isNumberOfInitialSAProgressive() {
+        return numberOfInitialSAProgressive;
+    }
+
+    /**
+     * Returns the number of random accesses to execute.
+     * @return the number of random accesses to execute
+     */
+    public int getNumberOfRandomAccesses() {
+        return numberOfRandomAccesses;
+    }
+
+    /**
+     * Returns the class of the query operation to execute for initial sorted accesses.
+     * @return the class of the query operation to execute for initial sorted accesses
+     */
+    public Class<? extends QueryOperation> getInitialSAQueryClass() {
+        return initialSAQueryClass;
+    }
+
+    /**
+     * Returns the threshold function for measuring the overall similarity.
+     * @return the threshold function for measuring the overall similarity
+     */
+    public ThresholdFunction getThresholdFunction() {
+        return thresholdFunction;
     }
 
 
@@ -178,11 +231,11 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
             return false;
         if (k != castObj.k)
             return false;
-        if (sortedAccessInitial != castObj.sortedAccessInitial)
+        if (numberOfInitialSA != castObj.numberOfInitialSA)
             return false;
-        if (numberOfRandomAccess != castObj.numberOfRandomAccess)
+        if (numberOfRandomAccesses != castObj.numberOfRandomAccesses)
             return false;
-        if (!sortedQuery.equals(castObj.sortedQuery))
+        if (!initialSAQueryClass.equals(castObj.initialSAQueryClass))
             return false;
         return thresholdFunction.equals(castObj.thresholdFunction);
     }
