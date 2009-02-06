@@ -5,6 +5,7 @@
 
 package messif.buckets.storage;
 
+import java.io.Flushable;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 
@@ -17,7 +18,7 @@ import messif.buckets.BucketStorageException;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public interface Storage<T> extends Serializable {
+public interface Storage<T> extends Serializable, Flushable {
 
     /**
      * Stores an object in this storage.

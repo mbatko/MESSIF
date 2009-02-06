@@ -50,7 +50,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
     }
 
     public void destroy() throws Throwable {
-        storage.destroy();
+        storage.flush();
     }
 
     @Override

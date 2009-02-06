@@ -51,7 +51,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
     }
 
     public void destroy() throws Throwable {
-        storage.destroy();
+        storage.flush();
     }
 
     @Override

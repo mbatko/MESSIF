@@ -5,6 +5,7 @@
 
 package messif.buckets.storage.impl;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 import messif.buckets.BucketStorageException;
@@ -83,6 +84,9 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
     }
 
     public void destroy() throws Throwable {
+    }
+
+    public void flush() throws IOException {
     }
 
     @Override

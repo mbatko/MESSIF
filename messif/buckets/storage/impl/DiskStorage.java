@@ -138,17 +138,14 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      * @throws Throwable if there was an error during releasing resources
      */
     public void destroy() throws Throwable {
-        if (modified) {
-            writeHeader(fileChannel, startPosition, FLAG_CLOSED);
-            flush(true);
-        }
+        flush();
         fileChannel.close();
-        super.finalize();
     }
 
     @Override
     protected void finalize() throws Throwable {
-        destroy();
+        flush();
+        fileChannel.close();
         super.finalize();
     }
 
@@ -469,9 +466,15 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         return objectCount;
     }
 
+    public void flush() throws IOException {
+        if (modified) {
+            flush(true);
+            writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+        }
+    }
+
     /**
-     * Flushes this output stream and forces any buffered output bytes 
-     * to be written out to the underlying file.
+     * Flushes this storage and forces any buffered data to be written out.
      * 
      * @param syncPhysical if <tt>true</tt> then also the file is flushed
      *          to be sure the data are really written to disk
@@ -557,6 +560,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
 
     public synchronized T read(long position) throws BucketStorageException {
         try {
+            flush(false);
             inputStream.setPosition(position);
             return serializator.readObject(inputStream, storedObjectsClass);
         } catch (IOException e) {

@@ -433,6 +433,10 @@ public class DiskStreamStorage<T> implements LongStorage<T>, Serializable {
         }
     }
 
+    public void flush() throws IOException {
+        flush(true);
+    }
+
     public synchronized LongAddress<T> store(T object) throws BucketStorageException {
         try {
             // Set modified flag
