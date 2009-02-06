@@ -11,7 +11,7 @@ import java.io.Serializable;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
 import messif.buckets.index.ModifiableIndex;
-import messif.buckets.storage.impl.IndexedMemoryStorage;
+import messif.buckets.storage.impl.MemoryStorage;
 
 
 /**
@@ -45,7 +45,7 @@ public class MemoryStorageBucket extends LocalBucket implements Serializable {
      */
     public MemoryStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
-        this.objects = new IndexedMemoryStorage<LocalAbstractObject>();
+        this.objects = new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class);
     }
 
 

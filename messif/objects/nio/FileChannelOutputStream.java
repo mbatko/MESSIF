@@ -5,7 +5,6 @@
 
 package messif.objects.nio;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -19,7 +18,7 @@ import java.nio.channels.FileChannel;
  * 
  * @author xbatko
  */
-public class ByteBufferFileOutputStream extends ChannelOutputStream {
+public class FileChannelOutputStream extends ChannelOutputStream {
 
     /** The file to which to write data */
     protected final FileChannel fileChannel;
@@ -34,7 +33,7 @@ public class ByteBufferFileOutputStream extends ChannelOutputStream {
     private final long endPosition;
 
     /**
-     * Creates a new instance of ByteBufferFileOutputStream.
+     * Creates a new instance of FileChannelOutputStream.
      * @param bufferSize the size of the internal buffer used for flushing
      * @param bufferDirect allocate the internal buffer as {@link java.nio.ByteBuffer#allocateDirect direct}
      * @param fileChannel the file channel into which to write data
@@ -42,7 +41,7 @@ public class ByteBufferFileOutputStream extends ChannelOutputStream {
      * @param maxLength the maximal length of data
      * @throws IOException if there was an error using the file channel
      */
-    public ByteBufferFileOutputStream(int bufferSize, boolean bufferDirect, FileChannel fileChannel, long position, long maxLength) throws IOException {
+    public FileChannelOutputStream(int bufferSize, boolean bufferDirect, FileChannel fileChannel, long position, long maxLength) throws IOException {
         super(bufferSize, bufferDirect, fileChannel);
         this.fileChannel = fileChannel;
         this.startPosition = position;
@@ -55,7 +54,7 @@ public class ByteBufferFileOutputStream extends ChannelOutputStream {
      * @return the current position in the file
      */
     public long getPosition() {
-        return position + byteBuffer.position();
+        return position + bufferedSize();
     }
 
     /**
@@ -74,15 +73,17 @@ public class ByteBufferFileOutputStream extends ChannelOutputStream {
     }
 
     /** 
-     * Write current buffered data to the file channel.
+     * Writes the buffered data to the file channel.
      * The writing is done at the correct position regardless of the underlying file's actual position.
-     * @return the number of bytes written
-     * @throws IOException if there was an error using writeChannel
+     * 
+     * @param buffer the buffer from which to write data
+     * @throws IOException if there was an error writing the data
      */
-    protected int writeChannelData(ByteBuffer buffer) throws IOException {
-        int bytesWritten = fileChannel.write(buffer, position);
-        position += bytesWritten;
-        return bytesWritten;
+    @Override
+    protected void write(ByteBuffer buffer) throws IOException {
+        if (position + buffer.remaining() > endPosition)
+            throw new IOException("Attempt to write beyond the end position");
+        position += fileChannel.write(buffer, position);
     }
 
 }

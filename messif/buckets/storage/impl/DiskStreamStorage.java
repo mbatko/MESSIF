@@ -18,18 +18,12 @@ import java.nio.channels.FileChannel;
 import java.util.Map;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
-import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableIndex;
-import messif.buckets.index.ModifiableSearch;
-import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.LongStorage;
 import messif.objects.nio.BinarySerializator;
-import messif.objects.nio.BufferInputStream;
 import messif.objects.nio.FileChannelInputStream;
 import messif.objects.nio.FileChannelOutputStream;
 import messif.objects.nio.CachingSerializator;
-import messif.objects.nio.MappedFileChannelInputStream;
 import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
 
@@ -42,7 +36,7 @@ import messif.utility.Convert;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Serializable {
+public class DiskStreamStorage<T> implements LongStorage<T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -94,7 +88,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
     protected final Class<? extends T> storedObjectsClass;
 
     /** Stream for reading data */
-    protected transient final BufferInputStream inputStream;
+    protected transient final FileChannelInputStream inputStream;
 
     /** Stream for writing data */
     protected transient final FileChannelOutputStream outputStream;
@@ -112,16 +106,15 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      * @param file the file in which to create the bucket
      * @param bufferSize the size of the buffer used for reading/writing
      * @param bufferDirect the bucket is either direct (<tt>true</tt>) or array-backed (<tt>false</tt>)
-     * @param memoryMap flag whether to use memory-mapped I/O
      * @param startPosition the position in the file where this storage starts
      * @param maximalLength the maximal length of the file
      * @param serializator the object responsible for storing (and restoring) binary objects
      * @throws IOException if there was an error opening the bucket file
      */
-    public DiskStorage(Class<? extends T> storedObjectsClass, File file, int bufferSize, boolean bufferDirect, boolean memoryMap, long startPosition, long maximalLength, BinarySerializator serializator) throws IOException {
+    public DiskStreamStorage(Class<? extends T> storedObjectsClass, File file, int bufferSize, boolean bufferDirect, long startPosition, long maximalLength, BinarySerializator serializator) throws IOException {
         this.storedObjectsClass = storedObjectsClass;
         this.file = file;
-        this.bufferSize = ((memoryMap)?-1:1)*Math.abs(bufferSize);
+        this.bufferSize = bufferSize;
         this.bufferDirect = bufferDirect;
         this.startPosition = startPosition;
         this.maximalLength = maximalLength;
@@ -167,8 +160,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      *   <li><em>directBuffer</em> - flag controlling wether to use faster direct buffers for I/O operations</li>
      *   <li><em>startPosition</em> - the position (in bytes) of the first block of the data within the <em>file</em></li>
      *   <li><em>maximalLength</em> - the maximal length (in bytes) of the data written to <em>file</em> by this storage</li>
-     *   <li><em>oneStorage</em> - if <tt>true</tt>, the storage is created only once
-     *              and this created instance is used in subsequent calls</li>
+     *   <li><em>oneFile</em> - if <tt>true</tt>, the startPosition will be automatically computed so that all the storages are within one file</li>
      * </ul>
      * 
      * @param <T> the class of objects that the new storage will work with
@@ -178,23 +170,21 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      * @throws IOException if something goes wrong when working with the filesystem
      * @throws InstantiationException if the parameters specified are invalid (non existent directory, null values, etc.)
      */
-    public static <T> DiskStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IOException, InstantiationException {
-        boolean oneStorage = Convert.getParameterValue(parameters, "oneStorage", Boolean.class, false);
-        
-        if (oneStorage) {
-            DiskStorage<T> storage = castToDiskStorage(storedObjectsClass, parameters.get("storage"));
-            if (storage != null)
-                return storage;
-        }
-
+    public static <T> DiskStreamStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IOException, InstantiationException {
         // Read the parameters
         File file = Convert.getParameterValue(parameters, "file", File.class, null);
         Class[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
         int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, 16384);
         boolean directBuffer = Convert.getParameterValue(parameters, "directBuffer", Boolean.class, true);
-        boolean memoryMap = Convert.getParameterValue(parameters, "memoryMap", Boolean.class, true);
         long startPosition = Convert.getParameterValue(parameters, "startPosition", Long.class, 0L);
         long maximalLength = Convert.getParameterValue(parameters, "maximalLength", Long.class, Long.MAX_VALUE);
+
+        // Compute next extent if "oneFile" was requested
+        if (Convert.getParameterValue(parameters, "oneFile", Boolean.class, Boolean.FALSE) && file != null) {
+            if (maximalLength == Long.MAX_VALUE)
+                throw new IOException("Maximal length must be specified if oneFile flag is used");
+            parameters.put("startPosition", startPosition + maximalLength);
+        }
 
         // If a file was not specified - create a new file in given directory
         if (file == null) {
@@ -211,35 +201,8 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         else
             serializator = new CachingSerializator<T>(storedObjectsClass, cacheClasses);
 
-        // Finally, create the storage
-        DiskStorage<T> storage = new DiskStorage<T>(storedObjectsClass, file, bufferSize, directBuffer, memoryMap, startPosition, maximalLength, serializator);
-
-        // Save the created storage for subsequent calls
-        if (oneStorage)
-            parameters.put("storage", storage);
-
-        return storage;
-    }
-
-    /**
-     * Cast the provided object to {@link DiskStorage} with generics typing.
-     * The objects stored in the storage must be of the same type as the <code>storageObjectsClass</code>.
-     * 
-     * @param <E> the class of objects stored in the storage
-     * @param storageObjectsClass the class of objects stored in the storage
-     * @param object the storage instance
-     * @return the generics-typed {@link DiskStorage} object
-     * @throws ClassCastException if passed <code>object</code> is not a {@link DiskStorage} or the storage objects are incompatible
-     */
-    public static <E> DiskStorage<E> castToDiskStorage(Class<E> storageObjectsClass, Object object) throws ClassCastException {
-        if (object == null)
-            return null;
-
-        @SuppressWarnings("unchecked")
-        DiskStorage<E> storage = (DiskStorage)object; // This IS checked on the following line
-        if (storage.getStoredObjectsClass() != storageObjectsClass)
-            throw new ClassCastException("Storage " + object + " works with incompatible objects");
-        return storage;
+        // Finally, create the bucket
+        return new DiskStreamStorage<T>(storedObjectsClass, file, bufferSize, directBuffer, startPosition, maximalLength, serializator);
     }
 
 
@@ -375,11 +338,9 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      * @return the created input stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BufferInputStream openInputStream() throws IOException {
-        if (bufferSize < 0)
-            return new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength - headerSize);
-        else
-            return new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+    protected FileChannelInputStream openInputStream() throws IOException {
+        flush(false); // This is very fast unless there are some data pending
+        return new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
     }
 
     /**
@@ -388,7 +349,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected FileChannelOutputStream openOutputStream() throws IOException {
-        FileChannelOutputStream stream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+        FileChannelOutputStream stream = new FileChannelOutputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
         stream.setPosition(startPosition + headerSize + fileOccupation);
         return stream;
     }
@@ -430,17 +391,17 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
             in.defaultReadObject();
 
             // Reopen file channel (set it through reflection to overcome the "final" flag)
-            Field field = DiskStorage.class.getDeclaredField("fileChannel");
+            Field field = DiskStreamStorage.class.getDeclaredField("fileChannel");
             field.setAccessible(true);
             field.set(this, openFileChannel(file));
 
             // Reopen the input stream
-            field = DiskStorage.class.getDeclaredField("inputStream");
+            field = DiskStreamStorage.class.getDeclaredField("inputStream");
             field.setAccessible(true);
             field.set(this, openInputStream());
 
             // Reopen the output stream
-            field = DiskStorage.class.getDeclaredField("outputStream");
+            field = DiskStreamStorage.class.getDeclaredField("outputStream");
             field.setAccessible(true);
             field.set(this, openOutputStream());
         } catch (NoSuchFieldException e) {
@@ -452,22 +413,6 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
 
 
     //****************** Overrides ******************//
-
-    /**
-     * Returns the class of objects that the this storage works with.
-     * @return the class of objects that the this storage works with
-     */
-    public Class<? extends T> getStoredObjectsClass() {
-        return storedObjectsClass;
-    }
-
-    /**
-     * Returns the number of objects stored in this storage.
-     * @return the number of objects stored in this storage
-     */
-    public int size() {
-        return objectCount;
-    }
 
     /**
      * Flushes this output stream and forces any buffered output bytes 
@@ -503,9 +448,6 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
             // Update internal counters
             objectCount++;
 
-            // Invalidate read buffer
-            inputStream.discard();
-
             return address;
         } catch (IOException e) {
             throw new StorageFailureException("Cannot store object into disk storage", e);
@@ -514,7 +456,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
 
     public synchronized void remove(long position) throws BucketStorageException {
         try {
-            // Remove the object at given position - the size of the object is retrieved by the skip
+            // Read stored object size
             inputStream.setPosition(position);
             remove(position, serializator.skipObject(inputStream, false));
         } catch (IOException e) {
@@ -522,12 +464,6 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         }
     }
 
-    /**
-     * Removes object with size <code>objectSize</code> at position <code>position</code>.
-     * @param position the absolute position in the file
-     * @param objectSize the number of bytes to remove
-     * @throws BucketStorageException if there was an error writing to the file
-     */
     protected synchronized void remove(long position, int objectSize) throws BucketStorageException {
         try {
             // Set modified flag
@@ -547,9 +483,6 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
             // Update internal counters
             objectCount--;
             deletedFragments++;
-
-            // Invalidate read buffer
-            inputStream.discard();
         } catch (IOException e) {
             throw new StorageFailureException("Disk storage cannot remove object from position " + position, e);
         }
@@ -562,79 +495,5 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         } catch (IOException e) {
             throw new StorageFailureException("Disk storage cannot read object from position " + position, e);
         }
-    }
-
-
-    //****************** Default index implementation ******************//
-
-    public boolean add(T object) throws BucketStorageException {
-        return store(object) != null;
-    }
-
-    public ModifiableSearch<T> search() throws IllegalStateException {
-        return new DiskStorageSearch<Object>(null, null, null);
-    }
-
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, key, key);
-    }
-
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, from, to);
-    }
-
-    /**
-     * Implements the basic search in the memory storage.
-     * All objects in the storage are searched from the first one to the last.
-     * 
-     * @param <C> the type the boundaries used by the search
-     */
-    private class DiskStorageSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
-        /** Internal stream that reads objects in this storage one by one */
-        private final BufferInputStream inputStream;
-        /** Position of the last returned object - used for removal */
-        private long lastObjectPosition = -1;
-
-        /**
-         * Creates a new instance of DiskStorageSearch for the specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
-         * @throws IllegalStateException if there was a problem initializing disk storage
-         */
-        public DiskStorageSearch(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
-            super(comparator, from, to);
-            try {
-                flush(false);
-                this.inputStream = openInputStream();
-            } catch (IOException e) {
-                throw new IllegalStateException("Cannot initialize disk storage search", e);
-            }
-        }
-
-        @Override
-        protected T readNext() throws BucketStorageException {
-            try {
-                lastObjectPosition = inputStream.getPosition();
-                return serializator.readObject(inputStream, storedObjectsClass);
-            } catch (EOFException e) {
-                return null;
-            } catch (IOException e) {
-                throw new StorageFailureException("Cannot read next object from disk storage", e);
-            }
-        }
-
-        @Override
-        protected T readPrevious() throws BucketStorageException {
-            throw new UnsupportedOperationException("This is not supported by the disk storage, use index");
-        }
-
-        public void remove() throws IllegalStateException, BucketStorageException {
-            if (lastObjectPosition == -1)
-                throw new IllegalStateException("There is no object to be removed");
-            DiskStorage.this.remove(lastObjectPosition, (int)(inputStream.getPosition() - lastObjectPosition - 4));
-            lastObjectPosition = -1;
-        }
-
     }
 }

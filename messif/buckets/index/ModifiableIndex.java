@@ -62,4 +62,13 @@ public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
      */
     public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException;
 
+    /**
+     * Destroys this index. This method is usually called from
+     * the {@link java.lang.Object#finalize() destructor} method.
+     * After this method is called, the search methods behavior is unpredictable.
+     * 
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable;
+
 }

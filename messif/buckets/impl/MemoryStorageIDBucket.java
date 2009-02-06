@@ -44,7 +44,7 @@ public class MemoryStorageIDBucket extends OrderedLocalBucket<UniqueID> implemen
     /** Object storage with object-id index */
     protected ModifiableOrderedIndex<UniqueID, LocalAbstractObject> objects =
             new IntStorageIndex<UniqueID, LocalAbstractObject>(
-                    new MemoryStorage<LocalAbstractObject>(),
+                    new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class),
                     LocalAbstractObjectOrder.uniqueIDComparator
             );
 

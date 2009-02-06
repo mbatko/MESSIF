@@ -831,6 +831,33 @@ public abstract class Convert {
     }
 
     /**
+     * Creates a new instance of a class.
+     * First, a factory method for the specified arguments is searched in the provided class and its ancestors.
+     * Then, an instance is created and returned.
+     *
+     * @param <E> the type of the instantiated object
+     * @param instanceClass the class for which to create an instance
+     * @param methodName the name of the factory method
+     * @param arguments the arguments for the factory method
+     * @return a new instance of the class
+     * @throws NoSuchMethodException if there was no factory method for the specified list of arguments
+     * @throws InvocationTargetException if there was an exception during instantiation
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> E createInstanceUsingFactoryMethod(Class<E> instanceClass, String methodName, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
+        try {
+            Method factoryMethod = getMethod(instanceClass, methodName, false, arguments);
+            if (!Modifier.isStatic(factoryMethod.getModifiers()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to be static");
+            if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to return " + instanceClass);
+            return (E)factoryMethod.invoke(null, arguments); // This cast IS checked on the previous line
+        } catch (IllegalAccessException e) {
+            throw new NoSuchMethodException(e.getMessage());
+        }
+    }
+
+    /**
      * Returns a constructor for the specified class that accepts the specified arguments.
      * The <code>clazz</code>'s declared constructors are searched for the one that
      * accepts the arguments.
@@ -869,13 +896,13 @@ public abstract class Convert {
     }
 
     /**
-     * Returns a constructor for the specified class that accepts the specified arguments.
-     * The <code>clazz</code>'s declared constructors are searched for the one that
+     * Returns a method for the specified class that accepts the specified arguments.
+     * The <code>clazz</code>'s declared methods are searched for the one that
      * accepts the arguments.
      * If the <code>convertStringArguments</code> is specified, the 
      * <code>arguments</code> elements are replaced with the converted types
-     * if and only if a proper constructor is found. Their types then will be
-     * compatible with the constructor.
+     * if and only if a proper method is found. Their types then will be
+     * compatible with the method.
      * 
      * @param clazz the class for which to get the method
      * @param methodName the name of the method to get

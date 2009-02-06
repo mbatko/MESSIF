@@ -17,14 +17,14 @@ import java.nio.ByteBuffer;
 public interface BinaryOutput {
 
     /**
-     * Returns a buffer has at least <code>minBytes</code> bytes remaining.
-     * If the current buffered data is not big enough, the buffer is flushed
-     * to the flushChannel and some space is freed. Note that the returned
-     * buffer can provide more than <code>minBytes</code> space.
+     * Returns a buffer that allows to write at least <code>minBytes</code>.
+     * If the buffer with the required space cannot be provided, an
+     * {@link IOException} is thrown. Note that the returned
+     * buffer can provide more than <code>minBytes</code>.
      * 
      * @param minBytes the minimal number of bytes that must be available for writing into the buffer
-     * @return the buffer with prepared writing
-     * @throws IOException if there was an error writing data or the requested <code>minBytes</code> is too big
+     * @return the buffer prepared for writing
+     * @throws IOException if there was an error while preparing a buffer for <code>minBytes</code> bytes
      */
     ByteBuffer prepareOutput(int minBytes) throws IOException;
 

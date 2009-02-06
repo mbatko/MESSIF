@@ -48,7 +48,7 @@ public class MemoryStorageNoDupsBucket extends OrderedLocalBucket<LocalAbstractO
     /** Object storage with object-id index */
     protected ModifiableOrderedIndex<LocalAbstractObject, LocalAbstractObject> objects =
             new IntStorageIndex<LocalAbstractObject, LocalAbstractObject>(
-                    new MemoryStorage<LocalAbstractObject>(),
+                    new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class),
                     LocalAbstractObjectOrder.DATA
             ) {
                 /** class serial id for serialization */

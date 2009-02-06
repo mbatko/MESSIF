@@ -40,7 +40,7 @@ public class MemoryStorageObjectKeyBucket extends OrderedLocalBucket<AbstractObj
     /** Object storage with object-id index */
     protected ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> objects =
             new IntStorageIndex<AbstractObjectKey, LocalAbstractObject>(
-                    new MemoryStorage<LocalAbstractObject>(),
+                    new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class),
                     LocalAbstractObjectOrder.keyToLocalObjectComparator
             );
 

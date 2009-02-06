@@ -96,8 +96,12 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      */
     @Override
     public void finalize() throws Throwable {
-        algorithm.finalize();
+        destroy();
         super.finalize();
+    }
+
+    public void destroy() throws Throwable {
+        algorithm.finalize();
     }
 
 

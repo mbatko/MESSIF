@@ -50,6 +50,16 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         this.index = createArray(0);
     }
 
+    public void destroy() throws Throwable {
+        storage.destroy();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        destroy();
+        super.finalize();
+    }
+
 
     //****************** Comparator methods ******************//
 

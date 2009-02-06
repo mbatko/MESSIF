@@ -29,4 +29,12 @@ public interface Storage<T> extends Serializable {
      */
     public Address<T> store(T object) throws BucketStorageException;
 
+    /**
+     * Destroys this storage. This method is usually called from
+     * the {@link java.lang.Object#finalize() destructor} method.
+     * After this method is called, the store and retrieval methods' behavior is unpredictable.
+     * 
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable;
 }

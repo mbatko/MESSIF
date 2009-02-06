@@ -508,6 +508,47 @@ public abstract class BinarySerializator {
     }
 
     /**
+     * Writes <code>object</code> to a new buffer output stream.
+     * If the object implements {@link BinarySerializable} interface, it
+     * is binary-serialized. Otherwise, a standard Java {@link java.io.Serializable serialization} is used.
+     *
+     * @param object the object to write
+     * @param bufferDirect the type of buffer to use (direct or array-backed)
+     * @return the create buffer that contains the serialized object
+     * @throws IOException if there was an error using flushChannel
+     */
+    public final BufferOutputStream write(Object object, boolean bufferDirect) throws IOException {
+        // Write null as zero-sized object
+        if (object == null) {
+            BufferOutputStream buf = new BufferOutputStream(4, bufferDirect);
+            write(buf, 0);
+            return buf;
+        }
+
+        /* Prepare BinarySerializable object:
+         *   Either a constructor or factory method exists, thus this object must implement BinarySerializable
+         *   or a standard java serialization object wrapper is used
+         */
+        BinarySerializable binarySerializableObject;
+        if (object instanceof BinarySerializable) {
+            binarySerializableObject = (BinarySerializable) object;
+        } else {
+            binarySerializableObject = new JavaToBinarySerializable(object);
+        }
+
+        // Write object size (this method is final to ensure that the object size is written first)
+        int objectSize = getBinarySize(binarySerializableObject);
+        BufferOutputStream buf = new BufferOutputStream(objectSize + 4, bufferDirect);
+        write(buf, objectSize);
+
+        // Write object data
+        if (write(buf, binarySerializableObject) != objectSize)
+            throw new IllegalStateException("Write operation expected different number of bytes while writing " + binarySerializableObject.getClass().getName());
+
+        return buf;
+    }
+
+    /**
      * Writes <code>object</code> to this output buffer using binary serialization.
      * The following rules must hold:
      * <ul>

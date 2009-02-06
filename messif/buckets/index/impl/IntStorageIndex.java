@@ -49,6 +49,16 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         this.index = new int[0];
     }
 
+    public void destroy() throws Throwable {
+        storage.destroy();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        destroy();
+        super.finalize();
+    }
+
 
     //****************** Comparator methods ******************//
 

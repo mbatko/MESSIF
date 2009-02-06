@@ -18,13 +18,13 @@ public interface BinaryInput {
 
     /**
      * Returns a buffer that contains at least <code>minBytes</code> bytes.
-     * If the current buffered data is not big enough, the buffer is compacted
-     * and aditional data is read from the readChannel. Note that the returned
-     * buffer can contain more that <code>minBytes</code> data.
+     * If the buffer with the required number of bytes cannot be provided, an
+     * {@link IOException} is thrown. Note that the returned
+     * buffer can provide more than <code>minBytes</code>.
      * 
      * @param minBytes the minimal number of bytes that must be available for reading from the buffer
-     * @return the buffer with prepared data
-     * @throws IOException if there was an error reading additional data or the requested <code>minBytes</code> is too big
+     * @return the buffer prepared for reading
+     * @throws IOException if there was an error while preparing a buffer with <code>minBytes</code> bytes
      */
     ByteBuffer readInput(int minBytes) throws IOException;
 

@@ -6,10 +6,16 @@
 package messif.buckets.storage.impl;
 
 import java.io.Serializable;
+import java.util.Map;
 import messif.buckets.BucketStorageException;
+import messif.buckets.index.IndexComparator;
+import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableSearch;
+import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.storage.IntAddress;
 import messif.buckets.storage.IntStorage;
 import messif.buckets.storage.InvalidAddressException;
+import messif.utility.Convert;
 
 /**
  * Memory based storage.
@@ -19,7 +25,7 @@ import messif.buckets.storage.InvalidAddressException;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class MemoryStorage<T> implements IntStorage<T>, Serializable {
+public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -28,7 +34,14 @@ public class MemoryStorage<T> implements IntStorage<T>, Serializable {
     /** Percentage of the capacity that is added when internal array is resized */
     private static final float SIZE_INCREASE_FACTOR = 0.3f;
 
+    /** Default initial capacity */
+    private static final int INITIAL_CAPACITY = 16;
+
+
     //****************** Attributes ******************//
+
+    /** Class of objects that the this storage works with */
+    private final Class<? extends T> storedObjectsClass;
 
     /** Array buffer into which objects are stored */
     private Object[] items;
@@ -44,26 +57,105 @@ public class MemoryStorage<T> implements IntStorage<T>, Serializable {
 
     /**
      * Constructs an empty memory storage with the specified initial capacity.
+     * 
+     * @param storedObjectsClass the class of objects that the storage will work with
      * @param initialCapacity the initial capacity of the storage
      * @throws IllegalArgumentException if the specified initial capacity is invalid
      */
-    public MemoryStorage(int initialCapacity) throws IllegalArgumentException {
+    public MemoryStorage(Class<? extends T> storedObjectsClass, int initialCapacity) throws IllegalArgumentException {
         if (initialCapacity < 1)
             throw new IllegalArgumentException("Illegal capacity: " + initialCapacity);
+        if (storedObjectsClass == null)
+            throw new IllegalArgumentException("Stored object class cannot be null");
+        this.storedObjectsClass = storedObjectsClass;
         this.items = new Object[initialCapacity];
     }
 
     /**
      * Constructs an empty memory storage.
      * The initial capacity of the internal storage is set to 16 objects.
+     * 
+     * @param storedObjectsClass the class of objects that the storage will work with
      * @throws IllegalArgumentException if the specified initial capacity is invalid
      */
-    public MemoryStorage() {
-        this(16);
+    public MemoryStorage(Class<? extends T> storedObjectsClass) {
+        this(storedObjectsClass, INITIAL_CAPACITY);
+    }
+
+    public void destroy() throws Throwable {
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        destroy();
+        super.finalize();
+    }
+
+
+    //****************** Factory method ******************//
+    
+    /**
+     * Creates a new memory storage. The additional parameters are specified in the parameters map with
+     * the following recognized key names:
+     * <ul>
+     *   <li><em>initialCapacity</em> - the initial capacity of the storage</li>
+     *   <li><em>oneStorage</em> - if <tt>true</tt>, the storage is created only once
+     *              and this created instance is used in subsequent calls</li>
+     * </ul>
+     * 
+     * @param <T> the class of objects that the new storage will work with
+     * @param storedObjectsClass the class of objects that the new storage will work with
+     * @param parameters list of named parameters (see above)
+     * @return a new memory storage instance
+     * @throws IllegalArgumentException if the parameters specified are invalid (null values, etc.)
+     */
+    public static <T> MemoryStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IllegalArgumentException {
+        MemoryStorage<T> storage = null;
+        boolean oneStorage = Convert.getParameterValue(parameters, "oneStorage", Boolean.class, false);
+        
+        if (oneStorage)
+            storage = castToMemoryStorage(storedObjectsClass, parameters.get("storage"));
+
+        if (storage == null)
+            storage = new MemoryStorage<T>(storedObjectsClass, Convert.getParameterValue(parameters, "initialCapacity", Integer.class, INITIAL_CAPACITY));
+
+        if (oneStorage)
+            parameters.put("storage", storage);
+
+        return storage;
+    }
+
+    /**
+     * Cast the provided object to {@link MemoryStorage} with generics typing.
+     * The objects stored in the storage must be of the same type as the <code>storageObjectsClass</code>.
+     * 
+     * @param <E> the class of objects stored in the storage
+     * @param storageObjectsClass the class of objects stored in the storage
+     * @param object the storage instance
+     * @return the generics-typed {@link MemoryStorage} object
+     * @throws ClassCastException if passed <code>object</code> is not a {@link MemoryStorage} or the storage objects are incompatible
+     */
+    public static <E> MemoryStorage<E> castToMemoryStorage(Class<E> storageObjectsClass, Object object) throws ClassCastException {
+        if (object == null)
+            return null;
+
+        @SuppressWarnings("unchecked")
+        MemoryStorage<E> storage = (MemoryStorage)object; // This IS checked on the following line
+        if (storage.getStoredObjectsClass() != storageObjectsClass)
+            throw new ClassCastException("Storage " + object + " works with incompatible objects");
+        return storage;
     }
 
 
     //****************** Data access methods ******************//
+
+    /**
+     * Returns the class of objects that the this storage works with.
+     * @return the class of objects that the this storage works with
+     */
+    public Class<? extends T> getStoredObjectsClass() {
+        return storedObjectsClass;
+    }
 
     /**
      * Returns the number of elements in this storage.
@@ -79,14 +171,6 @@ public class MemoryStorage<T> implements IntStorage<T>, Serializable {
      */
     public boolean isEmpty() {
 	return size() == 0;
-    }
-
-    /**
-     * Returns the maximal currently allocated address.
-     * @return the maximal currently allocated address
-     */
-    protected int maxAddress() {
-        return size - 1;
     }
 
 
@@ -160,6 +244,74 @@ public class MemoryStorage<T> implements IntStorage<T>, Serializable {
 	for (int i = 1; i < size; i++)
             sb.append(", ").append(items[i]);
         return sb.append(']').toString();
+    }
+
+
+    //****************** Default index implementation ******************//
+
+    public boolean add(T object) throws BucketStorageException {
+        return store(object) != null;
+    }
+
+    public ModifiableSearch<T> search() throws IllegalStateException {
+        return new MemoryStorageSearch<Object>(null, null, null);
+    }
+
+    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+        return new MemoryStorageSearch<C>(comparator, key, key);
+    }
+
+    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+        return new MemoryStorageSearch<C>(comparator, from, to);
+    }
+
+    /**
+     * Implements the basic search in the memory storage.
+     * All objects in the storage are searched from the first one to the last.
+     * 
+     * @param <C> the type the boundaries used by the search
+     */
+    private class MemoryStorageSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+        /** Current position in the storage's array */
+        private int currentIndexPosition = -1;
+
+        /**
+         * Creates a new instance of the IndexedMemoryStorageSearch.
+         * @param comparator the comparator that defines the 
+         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
+         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         */
+        private MemoryStorageSearch(IndexComparator<C, T> comparator, C from, C to) {
+            super(comparator, from, to);
+        }
+
+        @Override
+        protected T readNext() throws BucketStorageException {
+            T object = null;
+
+            // Advance position (and skip null objects, since they are deleted)
+            while (object == null && currentIndexPosition < size - 1)
+                object = read(++currentIndexPosition);
+
+            return object;
+        }
+
+        @Override
+        protected T readPrevious() throws BucketStorageException {
+            T object = null;
+
+            // Advance position (and skip null objects, since they are deleted)
+            while (object == null && currentIndexPosition > 0)
+                object = read(--currentIndexPosition);
+
+            return object;
+        }
+
+        public void remove() throws IllegalStateException, BucketStorageException {
+            if (currentIndexPosition < 0 || currentIndexPosition > size - 1)
+                throw new IllegalStateException("Cannot remove object before next() or previous() is called");
+            MemoryStorage.this.remove(currentIndexPosition);
+        }
     }
 
 }

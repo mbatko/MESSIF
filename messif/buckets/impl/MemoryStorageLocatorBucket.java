@@ -43,7 +43,7 @@ public class MemoryStorageLocatorBucket extends OrderedLocalBucket<String> imple
     /** Object storage with object-id index */
     protected ModifiableOrderedIndex<String, LocalAbstractObject> objects =
             new IntStorageIndex<String, LocalAbstractObject>(
-                    new MemoryStorage<LocalAbstractObject>(),
+                    new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class),
                     LocalAbstractObjectOrder.locatorToLocalObjectComparator
             );
 
