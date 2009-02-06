@@ -128,7 +128,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         this.serializator = serializator;
         this.fileChannel = openFileChannel(file);
         this.outputStream = openOutputStream();
-        this.inputStream = openInputStream();
+        this.inputStream = openInputStream(this.fileChannel);
     }
 
     /**
@@ -345,7 +345,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
         deletedFragments = 0;
 
         // Read all objects (by seeking)
-        FileChannelInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, position, maximalLength - headerSize);
+        BufferInputStream reader = openInputStream(fileChannel);
         try {
             // End iterating one an "null" object is found
             for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
@@ -368,11 +368,12 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
     //****************** Construction methods ******************//
 
     /**
-     * Create input stream on the current file channel.
+     * Create input stream on the specified channel.
+     * @param fileChannel the file channel
      * @return the created input stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BufferInputStream openInputStream() throws IOException {
+    protected BufferInputStream openInputStream(FileChannel fileChannel) throws IOException {
         if (bufferSize < 0)
             return new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength - headerSize);
         else
@@ -434,7 +435,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
             // Reopen the input stream
             field = DiskStorage.class.getDeclaredField("inputStream");
             field.setAccessible(true);
-            field.set(this, openInputStream());
+            field.set(this, openInputStream(fileChannel));
 
             // Reopen the output stream
             field = DiskStorage.class.getDeclaredField("outputStream");
@@ -610,7 +611,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Seria
             super(comparator, from, to);
             try {
                 flush(false);
-                this.inputStream = openInputStream();
+                this.inputStream = openInputStream(fileChannel);
             } catch (IOException e) {
                 throw new IllegalStateException("Cannot initialize disk storage search", e);
             }
