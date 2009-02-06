@@ -111,7 +111,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Interanal comparator that compares {@link Comparable} objects.
      * @param <T> type of objects to compare
      */
-    private static final class Comparable2IndexComparator<T> implements Comparator<T> {
+    private static final class Comparable2IndexComparator<T> implements Comparator<T>, Serializable {
         /** class serial id for serialization */
         private static final long serialVersionUID = 1L;
 

@@ -39,6 +39,7 @@ import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AnswerType;
+import messif.operations.BulkInsertOperation;
 import messif.operations.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
 
@@ -252,6 +253,34 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             return false;
         }
     }
+
+    @Override
+    public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
+        return addObjects(objects.iterator());
+    }
+
+    @Override
+    public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
+
+        BulkInsertOperation operation = new BulkInsertOperation(objects);
+        try {
+            algorithm.executeOperation(operation);
+            objectCount += operation.getInsertedObjects().size();
+        } catch (NoSuchMethodException e) {
+            super.addObjects(objects);
+        } catch (AlgorithmMethodException e) {
+            super.addObjects(objects);
+        }
+
+        // Update object counter
+        if (operation.wasSuccessful()) {
+            return operation.getInsertedObjects().size();
+        } else {
+            return 0;
+        }
+    }
+
+
 
     public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
         return new AlgorithmStorageSearch<Object>(null, null, null);

@@ -172,7 +172,7 @@ public class ReplicationBucket extends LocalBucket {
     /****************** Overrides for all manipulation methods of LocalBucket ******************/
     
     @Override
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException {
+    public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
             int ret = encapsulatedBucket.addObjects(objects);
@@ -188,7 +188,7 @@ public class ReplicationBucket extends LocalBucket {
     }
     
     @Override
-    public int addObjects(Collection<? extends AbstractObject> objects) throws BucketStorageException {
+    public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
         try {
             int ret = encapsulatedBucket.addObjects(objects);

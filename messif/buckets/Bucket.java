@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.buckets.split.SplitPolicy;
-import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
@@ -86,7 +85,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @return number of objects actually added to bucket
      * @throws BucketStorageException if there was an object that cannot be inserted into the bucket
      */
-    public int addObjects(Collection<? extends AbstractObject> objects) throws BucketStorageException {
+    public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
         return addObjects(objects.iterator());
     }
 
@@ -100,7 +99,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @return number of objects actually added to bucket
      * @throws BucketStorageException if there was an object that cannot be inserted into the bucket
      */
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException {
+    public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
         if (objects == null)
             return 0;
         

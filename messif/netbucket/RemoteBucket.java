@@ -241,7 +241,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
     @Override
-    public int addObjects(Iterator<? extends AbstractObject> objects) throws BucketStorageException, IllegalStateException {
+    public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).addObjects(objects);

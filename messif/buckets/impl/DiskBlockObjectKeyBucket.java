@@ -13,8 +13,13 @@ import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
+import messif.buckets.OrderedLocalBucket;
+import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableOrderedIndex;
+import messif.buckets.index.impl.LongStorageIndex;
 import messif.buckets.storage.impl.DiskStorage;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.MultiClassSerializator;
 
@@ -33,7 +38,7 @@ import messif.objects.nio.MultiClassSerializator;
  * @see DiskBucket
  * @see SimpleDiskBucket
  */
-public class DiskBlockBucket extends LocalBucket implements Serializable {
+public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectKey> implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -47,7 +52,7 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
     //****************** Data storage ******************//
 
     /** Object storage */
-    protected final ModifiableIndex<LocalAbstractObject> objects;
+    protected final ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> objects;
 
 
     /****************** Constructors ******************/
@@ -63,7 +68,7 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @param file the file where the bucket will be stored
      * @throws IOException if there was a problem opening or creating the bucket file
      */
-    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file) throws IOException {
+    public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file) throws IOException {
         this(capacity, softCapacity, lowOccupation, file, 16*1024, true, false, new MultiClassSerializator<LocalAbstractObject>(LocalAbstractObject.class));
     }
 
@@ -81,8 +86,8 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @param serializator the {@link BinarySerializator binary serializator} used to store objects
      * @throws IOException if there was a problem opening or creating the bucket file
      */
-    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, boolean memoryMap, BinarySerializator serializator) throws IOException {
-        this(capacity, softCapacity, lowOccupation, true,  new DiskStorage<LocalAbstractObject>(
+    public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, boolean memoryMap, BinarySerializator serializator) throws IOException {
+        this(capacity, softCapacity, lowOccupation, true, new DiskStorage<LocalAbstractObject>(
                 LocalAbstractObject.class, file, bufferSize, directBuffers, memoryMap, 0, capacity,
                 serializator
         ));
@@ -98,9 +103,9 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      * @param diskStorage the object storage for this bucket
      */
-    private DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, DiskStorage<LocalAbstractObject> diskStorage) {
+    private DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, DiskStorage<LocalAbstractObject> diskStorage) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
-        objects = diskStorage;
+        objects = new LongStorageIndex<AbstractObjectKey, LocalAbstractObject>(diskStorage, LocalAbstractObjectOrder.keyToLocalObjectComparator);
     }
 
     @Override
@@ -126,15 +131,15 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @throws InstantiationException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
-    public static DiskBlockBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException, ClassNotFoundException {
-        return new DiskBlockBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, DiskStorage.create(LocalAbstractObject.class, parameters));
+    public static DiskBlockObjectKeyBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, InstantiationException, ClassNotFoundException {
+        return new DiskBlockObjectKeyBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, DiskStorage.create(LocalAbstractObject.class, parameters));
     }
 
 
     //****************** Overrides ******************//
 
     @Override
-    protected ModifiableIndex<LocalAbstractObject> getModifiableIndex() {
+    protected ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> getModifiableIndex() {
         return objects;
     }
 }
