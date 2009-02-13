@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
-import messif.statistics.Statistics;
 import messif.utility.Convert;
 
 /**
@@ -261,36 +260,8 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    @Override
     protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         return getDistanceImpl(obj, null, distThreshold);
-    }
-
-    /**
-     * Metric distance function.
-     * Measures the distance between this object and <code>obj</code>.
-     * The array <code>metaDistances</code> is filled with the distances
-     * of the respective encapsulated objects.
-     * 
-     * <p>
-     * Note that this method does not use the fast access to the 
-     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
-     * even if there is a filter that supports it.
-     * </p>
-     *
-     * @param obj the object to compute distance to
-     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
-     * @param distThreshold the threshold value on the distance
-     * @return the actual distance between obj and this if the distance is lower than distThreshold.
-     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
-     *         must be greater than the threshold distance.
-     */
-    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
-        // This check is to enhance performance when statistics are disabled
-        if (Statistics.isEnabledGlobally())
-            counterDistanceComputations.add();
-
-        return getDistanceImpl(obj, metaDistances, distThreshold);
     }
 
     /**
@@ -304,8 +275,20 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
+    }
+
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    @Override
+    public float[] createMetaDistancesHolder() {
+        return new float[getObjectCount()];
     }
 
 

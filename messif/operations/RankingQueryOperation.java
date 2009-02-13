@@ -185,6 +185,14 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
     /**
+     * Returns <tt>true</tt> if sub-distances for metaobjects are stored in the answer.
+     * @return <tt>true</tt> if sub-distances for metaobjects are stored in the answer
+     */
+    public boolean isStoringMetaDistances() {
+        return storeMetaDistances;
+    }
+    
+    /**
      * Add an object to the answer. The rank of the object is computed automatically
      * as a distance between the query object and the specified object.
      * 
@@ -196,19 +204,11 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        if (queryObject instanceof MetaObject && storeMetaDistances) {
-            MetaObject metaQueryObject = (MetaObject)queryObject;
-            float[] metaDistances = new float[metaQueryObject.getObjectCount()];
-            float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            return addToAnswer(object, distance, metaDistances);
-        } else {
-            float distance = queryObject.getDistance(object, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            return addToAnswer(object, distance, null);
-        }
+        float[] metaDistances = storeMetaDistances?queryObject.createMetaDistancesHolder():null;
+        float distance = queryObject.getDistance(object, metaDistances, distThreshold);
+        if (distance > distThreshold)
+            return null;
+        return addToAnswer(object, distance, metaDistances);
     }
 
      /**

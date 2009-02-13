@@ -153,7 +153,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the distance between this object and the provided object <code>obj</code>
      */
     public final float getDistance(LocalAbstractObject obj) {
-        return getDistance(obj, MAX_DISTANCE);
+        return getDistance(obj, null, MAX_DISTANCE);
     }
 
     /**
@@ -187,6 +187,34 @@ public abstract class LocalAbstractObject extends AbstractObject {
     }
 
     /**
+     * Metric distance function.
+     * Measures the distance between this object and <code>obj</code>.
+     * The array <code>metaDistances</code> is filled with the distances
+     * of the respective encapsulated objects if this object contains any, i.e.
+     * this object is a descendant of {@link MetaObject}.
+     * 
+     * <p>
+     * Note that this method does not use the fast access to the 
+     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
+     * even if there is a filter that supports it.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        // This check is to enhance performance when statistics are disabled
+        if (Statistics.isEnabledGlobally())
+            counterDistanceComputations.add();
+
+        return getDistanceImpl(obj, metaDistances, distThreshold);
+    }
+
+    /**
      * The actual implementation of the metric function (see {@link #getDistance} for full explanation).
      * The implementation should not increment distanceComputations statistics.
      *
@@ -195,6 +223,31 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      */
     protected abstract float getDistanceImpl(LocalAbstractObject obj, float distThreshold);
+
+    /**
+     * The actual implementation of the metric function that updates the distances
+     * of encapsulated objects. This is required for the {@link MetaObject}
+     * descendants.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return getDistanceImpl(obj, distThreshold);
+    }
+
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    public float[] createMetaDistancesHolder() {
+        return null;
+    }
 
     /**
      * Normalized metric distance function, i.e. the result of {@link #getDistance}
