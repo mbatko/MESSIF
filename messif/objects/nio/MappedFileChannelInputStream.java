@@ -7,7 +7,6 @@ package messif.objects.nio;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -23,18 +22,8 @@ import java.nio.channels.FileChannel;
  */
 public class MappedFileChannelInputStream extends BufferInputStream {
 
-    /** The file from which to read data */
-    private final FileChannel fileChannel;
-
     /** Starting position of the file */
     private final long startPosition;
-
-    /** The maximal amount of data that can be accessed in the file */
-    private final long maxLength;
-
-    /** Internal buffer for the whole file */
-    private transient MappedByteBuffer byteBuffer;
-
 
     /**
      * Creates a new instance of FileChannelInputStream.
@@ -44,10 +33,8 @@ public class MappedFileChannelInputStream extends BufferInputStream {
      * @throws IOException if there was an error using readChannel
      */
     public MappedFileChannelInputStream(FileChannel fileChannel, long position, long maxLength) throws IOException {
-        super(null);
-        this.fileChannel = fileChannel;
+        super(bufferFile(fileChannel, position, maxLength));
         this.startPosition = position;
-        this.maxLength = maxLength;
     }
 
     /**
@@ -58,18 +45,13 @@ public class MappedFileChannelInputStream extends BufferInputStream {
         setPosition(startPosition);
     }
 
-    @Override
-    public void discard() {
-        byteBuffer = null;
-    }
-
     /**
      * Returns the current position in the file.
      * @return the current position in the file
      */
     @Override
     public long getPosition() {
-        return startPosition + getBuffer().position();
+        return startPosition + super.getPosition();
     }
 
     /**
@@ -79,31 +61,41 @@ public class MappedFileChannelInputStream extends BufferInputStream {
      */
     @Override
     public void setPosition(long position) throws IOException {
-        try {
-            getBuffer().position((int)(position - startPosition));
-        } catch (IllegalArgumentException e) {
-            throw new IOException("Position " + position + " is outside the allowed range");
-        }
-    }
-
-    @Override
-    protected ByteBuffer getBuffer() {
-        if (byteBuffer != null)
-            return byteBuffer;
-        try {
-            byteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startPosition, Math.min(fileChannel.size(), maxLength));
-            byteBuffer.load();
-            return byteBuffer;
-        } catch (IOException e) {
-            throw new InternalError(e.toString());
-        }
+        super.setPosition(position - startPosition);
     }
 
     @Override
     public ByteBuffer readInput(int minBytes) throws IOException {
-        ByteBuffer buffer = getBuffer();
-        if (buffer.remaining() < minBytes)
-            throw new EOFException("Cannot read more bytes - end of file encountered");
+        // There is enough data remaining in the buffer
+        if (minBytes <= byteBuffer.remaining())
+            return byteBuffer;
+        else
+            throw new EOFException("Cannot read more bytes - end of buffer reached");
+    }
+
+    /**
+     * Reads the whole file into a buffer.
+     * @param fileChannel the file to read the data from
+     * @param position the starting position in the file
+     * @param maxLength the maximal number of bytes to read
+     * @return a buffer with file's data
+     * @throws java.io.IOException
+     */
+    private static ByteBuffer bufferFile(FileChannel fileChannel, long position, long maxLength) throws IOException {
+        long mappingBytes = Math.min(fileChannel.size() - position, maxLength);
+
+        MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, position, mappingBytes);
+        buffer.load();
+
+        /*
+        if (mappingBytes >= Integer.MAX_VALUE)
+            throw new IOException("Buffer for " + mappingBytes + " bytes cannot be allocated");
+        ByteBuffer buffer = ByteBuffer.allocateDirect((int)mappingBytes);
+        if (fileChannel.read(buffer, position) < mappingBytes)
+            throw new IOException("File channel provided less than " + mappingBytes + " bytes");
+        buffer.flip();
+        */
+
         return buffer;
     }
 }

@@ -9,6 +9,7 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.ModifiableSearch;
+import messif.buckets.storage.Lock;
 import messif.utility.SortedArrayData;
 
 /**
@@ -36,11 +37,19 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      */
     protected abstract boolean remove(int index);
 
+    /**
+     * Locks this index and returns a lock object if it is supported.
+     * A <tt>null</tt> is returned otherwise.
+     * The called must call the {@link Lock#unlock()} method if this method has returned non-null.
+     * @return a lock on this index or <tt>null</tt>
+     */
+    protected abstract Lock lock();
+
 
     //****************** Search methods ******************//
 
     public ModifiableSearch<T> search() throws IllegalStateException {
-        return new OrderedModifiableSearch(0, 0, size() - 1);
+        return new OrderedModifiableSearch(0, 0, size() - 1, lock());
     }
 
     public ModifiableSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
@@ -58,7 +67,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         // If from not found and to is the same, there is no object that can be accessed
         if (fromIndex < 0) {
             if (from == to)
-                return new OrderedModifiableSearch(0, 0, -1);
+                return new OrderedModifiableSearch(0, 0, -1, lock());
             else
                 fromIndex = -fromIndex - 1;
         }
@@ -94,7 +103,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             while ((toIndex < size() - 1) && comparator().compare(to, get(toIndex + 1)) == 0)
                 toIndex++;
 
-        return new OrderedModifiableSearch(startIndex, fromIndex, toIndex);
+        return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
     }
 
     public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
@@ -102,7 +111,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
-        return new FullScanModifiableSearch<C>(comparator, from, to);
+        return new FullScanModifiableSearch<C>(comparator, from, to, lock());
     }
 
 
@@ -129,17 +138,30 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         /** Object found by the last search */
         private T currentObject;
 
+        /** Lock object for this search */
+        private final Lock searchLock;
+
         /**
          * Creates a new internal list iterator that starts from the specified position.
          * The iteration is bound by the min/max limits.
          * @param cursor the position where to start this iterator
          * @param minIndex minimal (inclusive) position that this iterator will access
          * @param maxIndex maximal (inclusive) position that this iterator will access
+         * @param searchLock the lock object for the search - its {@link Lock#unlock()}
+         *          method is called when this search is finalized
          */
-        OrderedModifiableSearch(int cursor, int minIndex, int maxIndex) {
+        OrderedModifiableSearch(int cursor, int minIndex, int maxIndex, Lock searchLock) {
             this.cursor = cursor;
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
+            this.searchLock = searchLock;
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            if (searchLock != null)
+                searchLock.unlock();
+            super.finalize();
         }
 
         public T getCurrentObject() {
@@ -194,14 +216,27 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 	 */
 	private int lastRet = -1;
 
+        /** Lock object for this search */
+        private final Lock searchLock;
+
         /**
          * Creates a new instance of FullScanModifiableSearch for the specified search comparator and [from,to] bounds.
          * @param comparator the comparator that defines the 
          * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * @param searchLock the lock object for the search - its {@link Lock#unlock()}
+         *          method is called when this search is finalized
          */
-        public FullScanModifiableSearch(IndexComparator<C, T> comparator, C from, C to) {
+        public FullScanModifiableSearch(IndexComparator<C, T> comparator, C from, C to, Lock searchLock) {
             super(comparator, from, to);
+            this.searchLock = searchLock;
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            if (searchLock != null)
+                searchLock.unlock();
+            super.finalize();
         }
 
         @Override

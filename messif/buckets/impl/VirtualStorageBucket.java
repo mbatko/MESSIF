@@ -8,10 +8,10 @@ package messif.buckets.impl;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
-import messif.buckets.LocalBucket;
+import messif.buckets.OrderedLocalBucket;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.LocalAbstractObjectOrder;
-import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.impl.AddressStorageIndex;
 import messif.buckets.index.impl.IntStorageIndex;
 import messif.buckets.index.impl.LongStorageIndex;
@@ -24,9 +24,10 @@ import messif.utility.Convert;
 /**
  * Encapsulating bucket for generic indices and storages.
  * 
+ * @param <C> type of the keys that this bucket's objects are ordered by
  * @author xbatko
  */
-public final class VirtualStorageBucket extends LocalBucket {
+public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -34,7 +35,7 @@ public final class VirtualStorageBucket extends LocalBucket {
     //****************** Attributes ******************//
 
     /** Internal index with encapsulated storage */
-    private final ModifiableIndex<LocalAbstractObject> index;
+    private final ModifiableOrderedIndex<C, LocalAbstractObject> index;
 
 
     //****************** Constructor ******************//
@@ -48,7 +49,7 @@ public final class VirtualStorageBucket extends LocalBucket {
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      * @param index the index to encapsulate
      */
-    public VirtualStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, ModifiableIndex<LocalAbstractObject> index) {
+    public VirtualStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, ModifiableOrderedIndex<C, LocalAbstractObject> index) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes);
         this.index = index;
     }
@@ -60,7 +61,7 @@ public final class VirtualStorageBucket extends LocalBucket {
     }
     
     @Override
-    protected ModifiableIndex<LocalAbstractObject> getModifiableIndex() {
+    protected ModifiableOrderedIndex<C, LocalAbstractObject> getModifiableIndex() {
         return index;
     }
 
@@ -89,23 +90,21 @@ public final class VirtualStorageBucket extends LocalBucket {
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
-     * @param parameters list of named parameters - this bucket supports "file" and "path" (see above)
+     * @param parameters list of named parameters (see above)
      * @return a new SimpleDiskBucket instance
      * @throws IOException if something goes wrong when working with the filesystem
      * @throws IllegalArgumentException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
-    public static VirtualStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
+    public static VirtualStorageBucket<?> getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
         try {
-            // Get storage class
+            // Create storage - retrieve class from parameter and use "create" factory method
             Class<? extends Storage> storageClass = Convert.genericCastToClass(parameters.get("storageClass"), Storage.class);
-
-            // Create storage
             @SuppressWarnings("unchecked")
             Storage<LocalAbstractObject> storage = Convert.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, parameters);
 
             // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
-            return new VirtualStorageBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, createIndex(storage, createComparator(parameters)));
+            return getBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage, createComparator(parameters));
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(e.toString());
         } catch (NoSuchMethodException e) {
@@ -113,6 +112,25 @@ public final class VirtualStorageBucket extends LocalBucket {
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException(e.toString());
         }
+    }
+
+    /**
+     * Creates a bucket for the given storage and comparator.
+     * 
+     * @param <T> type of the keys that the new bucket's objects will be ordered by
+     * @param capacity maximal capacity of the bucket - cannot be exceeded
+     * @param softCapacity maximal soft capacity of the bucket
+     * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
+     * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
+     * @param storage the underlying storage for object persistence
+     * @param comparator the comparator that imposes order on the indexed objects
+     * @return a new SimpleDiskBucket instance
+     * @throws IOException if something goes wrong when working with the filesystem
+     * @throws IllegalArgumentException if the parameters specified are invalid (non existent directory, null values, etc.)
+     * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
+     */
+    public static <T> VirtualStorageBucket<T> getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Storage<LocalAbstractObject> storage, IndexComparator<T, LocalAbstractObject> comparator) throws IOException, IllegalArgumentException, ClassNotFoundException {
+        return new VirtualStorageBucket<T>(capacity, softCapacity, lowOccupation, occupationAsBytes, createIndex(storage, comparator));
     }
 
     /**
@@ -159,19 +177,17 @@ public final class VirtualStorageBucket extends LocalBucket {
     /**
      * Creates an index for the given storage and comparator.
      * 
+     * @param <T> the type of the keys the objects in the index will be ordered by
      * @param storage the storage over which the new index will operate
      * @param comparator the comparator that imposes order of keys in the index
      * @return a new instance of index
-     * @throws IllegalArgumentException if the storage does not implement {@link ModifiableIndex} and no comparator was specified
+     * @throws IllegalArgumentException if the comparator is <tt>null</tt>
      */
     @SuppressWarnings("unchecked")
-    private static ModifiableIndex<LocalAbstractObject> createIndex(Storage<LocalAbstractObject> storage, IndexComparator<?, LocalAbstractObject> comparator) throws IllegalArgumentException {
+    private static <T> ModifiableOrderedIndex<T, LocalAbstractObject> createIndex(Storage<LocalAbstractObject> storage, IndexComparator<T, LocalAbstractObject> comparator) throws IllegalArgumentException {
         // All the conversions here are unchecked, but if the storage operates on LocalAbstractObject, everything is correct
         if (comparator == null) {
-            if (storage instanceof ModifiableIndex)
-                return (ModifiableIndex)storage;
-            else
-                throw new IllegalArgumentException("Storage " + storage + " does not implement a modifiable index and no comparator was specified");
+            throw new IllegalArgumentException("Cannot create index for null comparator");
         } else if (storage instanceof IntStorage) {
             return new IntStorageIndex((IntStorage)storage, comparator);
         } else if (storage instanceof LongStorage) {

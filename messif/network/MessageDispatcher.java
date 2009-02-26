@@ -102,7 +102,7 @@ public class MessageDispatcher implements Receiver, Serializable {
      * The size of the TCP connection pool.
      * Represents the number of simultaneous TCP connections that are kept open for sending messages.
      */
-    private static final int tcpConnectionPoolSize = 50;
+    private static final int tcpConnectionPoolSize = 0;
 
 
     //****************** Receivers ******************//

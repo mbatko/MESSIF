@@ -88,7 +88,7 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      */
     public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, boolean memoryMap, BinarySerializator serializator) throws IOException {
         this(capacity, softCapacity, lowOccupation, true, new DiskStorage<LocalAbstractObject>(
-                LocalAbstractObject.class, file, bufferSize, directBuffers, memoryMap, 0, capacity,
+                LocalAbstractObject.class, file, false, bufferSize, directBuffers, memoryMap, 0, capacity,
                 serializator
         ));
     }

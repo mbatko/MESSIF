@@ -35,7 +35,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
     //****************** Attributes ******************//
 
     /** The buffer where data is stored */
-    private final ByteBuffer byteBuffer;
+    final ByteBuffer byteBuffer;
 
 
     //****************** Constructor ******************//
@@ -76,7 +76,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
      * @return the current position in this input stream
      */
     public long getPosition() {
-        return getBuffer().position();
+        return byteBuffer.position();
     }
 
     /**
@@ -85,25 +85,17 @@ public class BufferInputStream extends InputStream implements BinaryInput {
      * @throws IOException if the position is invalid or there was another I/O error
      */
     public void setPosition(long position) throws IOException {
-        if (position < 0 || position > Integer.MAX_VALUE)
+        if (position < 0 || position > byteBuffer.limit())
             throw new IOException("Position " + position + " is outside the allowed range");
-        getBuffer().position((int)position);
+        byteBuffer.position((int)position);
     }
 
     /**
-     * Discards all buffered data.
-     * Next attempt to read data <em>will</em> use the input.
+     * Returns the number of bytes currently in the buffer.
+     * @return the number of bytes currently in the buffer
      */
-    public void discard() {
-        getBuffer().limit(0);
-    }
-
-    /**
-     * Returns the current buffer.
-     * @return the current buffer
-     */
-    protected ByteBuffer getBuffer() {
-        return byteBuffer;
+    public int bufferedSize() {
+        return byteBuffer.limit();
     }
 
 
@@ -174,36 +166,34 @@ public class BufferInputStream extends InputStream implements BinaryInput {
 
     @Override
     public int available() {
-        return getBuffer().remaining();
+        return byteBuffer.remaining();
     }
 
 
     //****************** Implementation of BinaryInput ******************//
 
     public ByteBuffer readInput(int minBytes) throws IOException {
-        ByteBuffer buffer = getBuffer();
-
         // There is enough data remaining in the buffer
-        if (minBytes <= buffer.remaining())
-            return buffer;
+        if (minBytes <= byteBuffer.remaining())
+            return byteBuffer;
 
         // Requested minimal size is too big
-        if (buffer.remaining() + minBytes > buffer.capacity())
+        if (byteBuffer.remaining() + minBytes > byteBuffer.capacity())
             throw new IOException("Buffer is too small to accomodate " + minBytes + " additional bytes");
 
+        // Switch buffer to reading from stream
+        byteBuffer.compact();
         try {
-            // Switch buffer to reading from stream
-            buffer.compact();
             do {
                 // Read next chunk of data
-                read(buffer);
-            } while (buffer.position() < minBytes); // Until enough data is read (this is usually only one run)
+                read(byteBuffer);
+            } while (byteBuffer.position() < minBytes); // Until enough data is read (this is usually only one run)
         } finally {
             // Switch buffer to providing data
-            buffer.flip();
+            byteBuffer.flip();
         }
 
-        return buffer;
+        return byteBuffer;
     }
 
     /** 
@@ -216,7 +206,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
      * @throws IOException if there was an error reading data
      */
     protected void read(ByteBuffer buffer) throws EOFException, IOException {
-        throw new EOFException("Cannot read more bytes - end of file encountered");
+        throw new EOFException("Cannot read more bytes - end of buffer reached");
     }
 
     /**
@@ -229,12 +219,11 @@ public class BufferInputStream extends InputStream implements BinaryInput {
      * @throws IOException if there was an I/O error reading from the channel
      */
     public int read(ReadableByteChannel channel) throws IOException {
-        ByteBuffer buffer = getBuffer();
+        byteBuffer.compact();
         try {
-            buffer.compact();
-            return channel.read(buffer);
+            return channel.read(byteBuffer);
         } finally {
-            buffer.flip();
+            byteBuffer.flip();
         }
     }
 
@@ -249,12 +238,11 @@ public class BufferInputStream extends InputStream implements BinaryInput {
      * @throws IOException if there was an I/O error reading from the channel
      */
     public int read(FileChannel channel, long position) throws IOException {
-        ByteBuffer buffer = getBuffer();
+        byteBuffer.compact();
         try {
-            buffer.compact();
-            return channel.read(buffer, position);
+            return channel.read(byteBuffer, position);
         } finally {
-            buffer.flip();
+            byteBuffer.flip();
         }
     }
 

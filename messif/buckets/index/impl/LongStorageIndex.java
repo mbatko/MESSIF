@@ -8,6 +8,8 @@ package messif.buckets.index.impl;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
+import messif.buckets.storage.Lock;
+import messif.buckets.storage.Lockable;
 import messif.buckets.storage.LongStorage;
 
 /**
@@ -50,7 +52,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
     }
 
     public void destroy() throws Throwable {
-        storage.flush();
+        storage.destroy();
     }
 
     @Override
@@ -131,6 +133,14 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         } catch (BucketStorageException e) {
             throw new IllegalStateException("Cannot read object from storage", e);
         }
+    }
+
+    @Override
+    protected Lock lock() {
+        if (storage instanceof Lockable)
+            return ((Lockable)storage).lock(true);
+        else
+            return null;
     }
 
 }

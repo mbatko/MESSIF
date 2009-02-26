@@ -100,18 +100,18 @@ public class FileChannelInputStream extends ChannelInputStream {
      */
     @Override
     public void setPosition(long position) throws IOException {
-        int bufferedSize = getBuffer().limit();
-
         // Check relative position and current buffer position
-        if (position < this.position - bufferedSize || position > this.position) { // Outside buffer
+        if (position < this.position - bufferedSize() || position > this.position) { // Outside buffer
             // Check position validity
             if (position < startPosition || position > endPosition)
                 throw new IOException("Position " + position + " is outside the allowed range");
 
-            discard();
+            // Set buffer's position to end, so that next readInput will need to read data
+            super.setPosition(bufferedSize());
+
             this.position = position;
         } else { // Inside buffer
-            getBuffer().position(bufferedSize - (int)(this.position - position));
+            super.setPosition(bufferedSize() - (int)(this.position - position));
         }
     }
 

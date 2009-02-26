@@ -86,9 +86,6 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
     public void destroy() throws Throwable {
     }
 
-    public void flush() throws IOException {
-    }
-
     @Override
     protected void finalize() throws Throwable {
         destroy();

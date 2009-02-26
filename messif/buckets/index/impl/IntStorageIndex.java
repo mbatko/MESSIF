@@ -9,6 +9,8 @@ import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.storage.IntStorage;
+import messif.buckets.storage.Lock;
+import messif.buckets.storage.Lockable;
 
 /**
  * Implementation of a single index over a {@link IntStorage storage with integer addresses}.
@@ -50,7 +52,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
     }
 
     public void destroy() throws Throwable {
-        storage.flush();
+        storage.destroy();
     }
 
     @Override
@@ -131,6 +133,14 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         } catch (BucketStorageException e) {
             throw new IllegalStateException("Cannot read object from storage", e);
         }
+    }
+
+    @Override
+    protected Lock lock() {
+        if (storage instanceof Lockable)
+            return ((Lockable)storage).lock(true);
+        else
+            return null;
     }
 
 }
