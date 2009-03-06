@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
 import messif.statistics.OperationStatistics;
 
@@ -87,6 +88,15 @@ public class RMIAlgorithm extends Algorithm {
     @AlgorithmConstructor(description = "creates an RMI algorithm stub", arguments = {"host", "RMI port"})
     public RMIAlgorithm(String host, int port) throws UnknownHostException {
         this(InetAddress.getByName(host), port);
+    }
+
+    /**
+     * Creates a new instance of RMI algorithm.
+     * @param networkNode host + RMI port of the remote algorithm
+     */
+    @AlgorithmConstructor(description = "creates an RMI algorithm stub", arguments = {"network node"})
+    public RMIAlgorithm(NetworkNode networkNode) {
+        this(networkNode.getHost(), networkNode.getPort());
     }
 
     @Override
