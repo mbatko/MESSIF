@@ -10,7 +10,7 @@ package messif.operations;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.ThresholdFunction;
+import messif.objects.util.AggregationFunction;
 
 
 /**
@@ -24,7 +24,7 @@ import messif.objects.util.ThresholdFunction;
  * </p>
  * 
  * @see messif.objects.MetaObject
- * @see ThresholdFunction
+ * @see AggregationFunction
  * @author xbatko
  */
 @AbstractOperation.OperationName("Combined top-k query")
@@ -50,7 +50,7 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
     /** Query operation to execute for sorted accesses */
     protected final Class<? extends QueryOperation> initialSAQueryClass;
     /** Threshold function for measuring the overall similarity */
-    protected final ThresholdFunction thresholdFunction;
+    protected final AggregationFunction thresholdFunction;
 
 
     //****************** Constructors ******************//
@@ -69,7 +69,7 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
      * @param thresholdFunction the aggregation function for combining the distances from sorted lists
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Progressive sorted access flag", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
-    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, ThresholdFunction thresholdFunction) {
+    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, AggregationFunction thresholdFunction) {
         this.queryObject = (MetaObject)queryObject;
         this.k = k;
         this.numberOfInitialSA = numberOfInitialSA;
@@ -166,7 +166,7 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
      * Returns the threshold function for measuring the overall similarity.
      * @return the threshold function for measuring the overall similarity
      */
-    public ThresholdFunction getThresholdFunction() {
+    public AggregationFunction getThresholdFunction() {
         return thresholdFunction;
     }
 

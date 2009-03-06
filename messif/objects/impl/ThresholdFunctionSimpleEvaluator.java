@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import messif.objects.util.ThresholdFunction;
+import messif.objects.util.AggregationFunction;
 
 /**
  * Evaluator for basic arithmetic functions.
@@ -19,7 +19,7 @@ import messif.objects.util.ThresholdFunction;
  * 
  * @author xbatko
  */
-public class ThresholdFunctionSimpleEvaluator extends ThresholdFunction {
+public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
 
     /** class id for serialization */
     private static final long serialVersionUID = 1L;

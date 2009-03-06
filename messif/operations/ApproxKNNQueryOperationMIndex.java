@@ -31,11 +31,18 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     protected boolean limitBranchingByPenalty;
 
     /** Maximal number of peers to visit within the best leaf-node cluster */
-    protected int maxPeersForBestCluster;
+    protected int maxPeersForGreatClusters;
+
+    /** The cluster is considered "great" while having penalty under this limit */
+    protected float greatClusterPenaltyLimit;
 
     /** Maximal number of peers to visit within (other than best) leaf-node cluster */
     protected int maxPeersForClusters;
 
+    /** Maximal penalty of visited peer on each level - setting to MAX_FLOAT naturally switches this funcionality off. */
+    protected float penaltyLimit;
+
+    
     // ************************************ Getters and setters  ******************************* //
 
     public int getInitialLevel() {
@@ -58,12 +65,20 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         return minClustersForBranching;
     }
 
-    public int getMaxPeersForBestCluster() {
-        return maxPeersForBestCluster;
-    }
-
     public int getMaxPeersForClusters() {
         return maxPeersForClusters;
+    }
+
+    public float getPenaltyLimit() {
+        return penaltyLimit;
+    }
+
+    public float getGreatClusterPenaltyLimit() {
+        return greatClusterPenaltyLimit;
+    }
+
+    public int getMaxPeersForGreatClusters() {
+        return maxPeersForGreatClusters;
     }
 
     /**
@@ -100,7 +115,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, 6, 3, true, 1, 2, 1, 1, localSearchParam, localSearchType);
+        this(queryObject, k, 6, 3, true, 1, 2, Float.MAX_VALUE, 1, 0.01f, 1, localSearchParam, localSearchType);
     }
 
     /**
@@ -113,14 +128,14 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param limitBranchingByPenalty if this flag is true then each super-cluster brings a penalty from the upper level and limits the sub-clusters penalties by this value
      * @param minClustersForBranching minimal fixed number of sub-clusters to be visited within a cluster (internal node)
      * @param maxClustersForBranching maximal fixed number of sub-clusters to be visited within a cluster (internal node)
-     * @param maxPeersForBestCluster Maximal number of peers to visit within the best leaf-node cluster
+     * @param maxPeersForGreatClusters Maximal number of peers to visit within the best leaf-node cluster
      * @param maxPeersForClusters Maximal number of peers to visit within (other than best) leaf-node cluster
      * @param localSearchParam local search parameter - typically approximation parameter
      * @param localSearchType type of the local search parameter
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
-    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, int maxPeersForBestCluster, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, maxPeersForBestCluster, maxPeersForClusters, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS, LocalAbstractObject.UNKNOWN_DISTANCE);
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForBestCluster, float greatClusterPenaltyLimit, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType) {
+        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForBestCluster, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
     
     /**
@@ -133,7 +148,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param initialLevel M-Index level to be used for generating the initial set of clusters to be visited
      * @param limitBranchingByPenalty if this flag is true then each super-cluster brings a penalty from the upper level and limits the sub-clusters penalties by this value
      * @param minClustersForBranching minimal fixed number of sub-clusters to be visited within a cluster (internal node)
-     * @param maxPeersForBestCluster Maximal number of peers to visit within the best leaf-node cluster
+     * @param maxPeersForGreatClusters Maximal number of peers to visit within the best leaf-node cluster
      * @param maxPeersForClusters Maximal number of peers to visit within (other than best) leaf-node cluster 
      * @param maxClustersForBranching maximal fixed number of sub-clusters to be visited within a cluster (internal node)
      * @param localSearchParam local search parameter - typically approximation parameter
@@ -141,14 +156,16 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param radiusGuaranteed radius for which the answer is guaranteed
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of objects", "Fixed # clusters<br/>to visit", "M-Index level to <br/>generate cluster <br/>variants for", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
-    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, int maxPeersForBestCluster, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType, float radiusGuaranteed) {
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType, float radiusGuaranteed) {
         super(queryObject, k, answerType, localSearchParam, localSearchType, radiusGuaranteed);
         this.initialLevelClusterNumber = initialLevelClusterNumber;
         this.initialLevel = initialLevel;
         this.limitBranchingByPenalty = limitBranchingByPenalty;
+        this.penaltyLimit = penaltyLimit;
         this.minClustersForBranching = minClustersForBranching;
         this.maxClustersForBranching = maxClustersForBranching;
-        this.maxPeersForBestCluster = maxPeersForBestCluster;
+        this.maxPeersForGreatClusters = maxPeersForGreatClusters;
+        this.greatClusterPenaltyLimit = greatClusterPenaltyLimit;
         this.maxPeersForClusters = maxPeersForClusters;
     }
         
@@ -189,7 +206,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return 8;
+        return 2;
     }    
     
     /**
@@ -201,7 +218,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         return new StringBuffer(super.toString()).
                 append("\n initial clusters to visit: ").append(initialLevelClusterNumber).append(" at level: ").append(initialLevel).
                 append("; [min,max] branching: [").append(minClustersForBranching).append(",").append(maxClustersForBranching).
-                append("]; ").append((limitBranchingByPenalty ? "YES" : "NO")).append(" use the penalty limiting").
+                append("]; ").append((limitBranchingByPenalty ? "YES" : "NO")).append(" use the penalty limiting; penalty limit: ").append(penaltyLimit).
                 append("; local search param: ").append(localSearchParam).append("; guaranteed radius: ").append(radiusGuaranteed).
                 toString();
     }
