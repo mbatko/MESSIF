@@ -38,7 +38,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     //****************** Attributes ******************//
 
     /** Set holding the answer of this query */
-    private final SortedCollection<RankedAbstractObject> answer;
+    private SortedCollection<RankedAbstractObject> answer;
 
     /** Flag whether to store sub-distances for metaobjects */
     private final boolean storeMetaDistances;
@@ -89,6 +89,30 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
             this.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
         else
             this.answer = new SortedCollection<RankedAbstractObject>(null);
+    }
+
+
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public RankingQueryOperation clone() throws CloneNotSupportedException {
+        RankingQueryOperation operation = (RankingQueryOperation)super.clone();
+
+        // Create a new collection for the answer set
+        int maxAnswerSize = operation.answer.getMaximalCapacity();
+        if (maxAnswerSize < Integer.MAX_VALUE)
+            operation.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
+        else
+            operation.answer = new SortedCollection<RankedAbstractObject>(null);
+
+        return operation;
     }
 
 

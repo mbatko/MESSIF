@@ -447,13 +447,12 @@ public class BucketDispatcher implements Serializable {
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      * @param storageClassParams additional parameters for creating a new instance of the storageClass
      * @return a new instance of the specified bucket class
-     * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws IllegalArgumentException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the storageClass does not have a proper constructor (String,long,long)</li>
      *                                         <li>the correct constructor of storageClass is not accesible</li>
      *                                         <li>the constuctor of storageClass has failed</li></ul>
      */
-    public static LocalBucket createBucket(Class<? extends LocalBucket> storageClass, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> storageClassParams) throws CapacityFullException, IllegalArgumentException {
+    public static LocalBucket createBucket(Class<? extends LocalBucket> storageClass, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> storageClassParams) throws IllegalArgumentException {
         // Update provided parameters to correct values
         if (softCapacity < 0) softCapacity = 0;
         if (capacity < softCapacity) capacity = softCapacity;

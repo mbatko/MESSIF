@@ -154,6 +154,14 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     }
 
     /**
+     * Returns the maximal capatity of this collection.
+     * @return the maximal capatity of this collection
+     */
+    public int getMaximalCapacity() {
+        return capacity;
+    }
+
+    /**
      * Returns <tt>true</tt> if this list contains the specified element.
      * More formally, returns <tt>true</tt> if and only if this list contains
      * at least one element <tt>e</tt> such that
