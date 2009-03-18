@@ -3,7 +3,7 @@
  *
  */
 
-package messif.objects.impl;
+package messif.objects.util.impl;
 
 import java.text.NumberFormat;
 import java.util.HashMap;

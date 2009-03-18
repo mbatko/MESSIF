@@ -28,29 +28,27 @@ import messif.objects.util.AggregationFunction;
  * @author xbatko
  */
 @AbstractOperation.OperationName("Combined top-k query")
-public class TopCombinedQueryOperation extends RankingQueryOperation {
+public class TopCombinedQueryOperation extends AggregationFunctionQueryOperation {
+
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 85603L;
 
     //****************** Attributes ******************//
 
-    /** Query object (accessible directly) */
-    protected final MetaObject queryObject;
-    /** Number of nearest (top) objects to retrieve */
-    protected final int k;
     /** Number of sorted access objects to retrieve */
     protected final int numberOfInitialSA;
+
     /**
      * Progressive flag for the number of initial sorted accesses.
      * If set to <tt>true</tt>, the number of numberOfInitialSA is multiplied by {@link #k k}.
      */
     protected final boolean numberOfInitialSAProgressive;
+
     /** Number of random accesses to execute */
     protected final int numberOfRandomAccesses;
+
     /** Query operation to execute for sorted accesses */
     protected final Class<? extends QueryOperation> initialSAQueryClass;
-    /** Threshold function for measuring the overall similarity */
-    protected final AggregationFunction thresholdFunction;
 
 
     //****************** Constructors ******************//
@@ -66,17 +64,15 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
      * @param numberOfInitialSAProgressive flag whether the <code>numberOfInitialSA</code> is a multiplier of <code>k</code> (<tt>true</tt>) or an absolute number (<tt>false</tt>)
      * @param numberOfRandomAccesses the maximal number of random accesses
      * @param initialSAQueryClass the query operation used to retrieve sorted access objects
-     * @param thresholdFunction the aggregation function for combining the distances from sorted lists
+     * @param aggregationFunction the aggregation function for combining the distances from sorted lists
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Progressive sorted access flag", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
-    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, AggregationFunction thresholdFunction) {
-        this.queryObject = (MetaObject)queryObject;
-        this.k = k;
+    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, AggregationFunction aggregationFunction) {
+        super(queryObject, k, aggregationFunction);
         this.numberOfInitialSA = numberOfInitialSA;
         this.numberOfInitialSAProgressive = numberOfInitialSAProgressive;
         this.numberOfRandomAccesses = numberOfRandomAccesses;
         this.initialSAQueryClass = initialSAQueryClass;
-        this.thresholdFunction = thresholdFunction;
     }
 
     /**
@@ -102,7 +98,7 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
         case 5:
             return initialSAQueryClass;
         case 6:
-            return thresholdFunction;
+            return aggregationFunction;
         default:
             throw new IndexOutOfBoundsException("TopCombinedQueryOperation has only four arguments");
         }
@@ -115,18 +111,6 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
     @Override
     public int getArgumentCount() {
         return 7;
-    }
-
-    public MetaObject getQueryObject() {
-        return queryObject;
-    }
-
-    /**
-     * Returns the number of nearest (top) objects to retrieve.
-     * @return the number of nearest (top) objects to retrieve
-     */
-    public int getK() {
-        return k;
     }
 
     /**
@@ -162,42 +146,6 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
         return initialSAQueryClass;
     }
 
-    /**
-     * Returns the threshold function for measuring the overall similarity.
-     * @return the threshold function for measuring the overall similarity
-     */
-    public AggregationFunction getThresholdFunction() {
-        return thresholdFunction;
-    }
-
-
-    //****************** Implementation of query evaluation ******************//
-
-    /**
-     * Evaluate this query on a given set of objects.
-     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
-     *
-     * @param objects the collection of objects on which to evaluate this query
-     * @return number of objects satisfying the query
-     */
-    @Override
-    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
-        int beforeCount = getAnswerCount();
-        float[] descriptorDistances = new float[thresholdFunction.getParameterNames().length];
-
-        while (objects.hasNext()) {
-            // Get current object
-            MetaObject object = (MetaObject)objects.next();
-
-            // Compute overall distance (the object must be MetaObject otherwise ClassCastException is thrown)
-            float distance = thresholdFunction.getDistance(queryObject, object, descriptorDistances);
-
-            // Object satisfies the query (i.e. distance is smaller than radius)
-            addToAnswer(object, distance, descriptorDistances.clone());
-        }
-
-        return getAnswerCount() - beforeCount;
-    }
 
     //****************** Overrides ******************//
 
@@ -227,17 +175,14 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
         // The argument obj is always TopCombinedQueryOperation or its descendant, because it has only abstract ancestors
         TopCombinedQueryOperation castObj = (TopCombinedQueryOperation)obj;
 
-        if (!queryObject.dataEquals(castObj.queryObject))
+        if (!super.dataEquals(obj))
             return false;
-        if (k != castObj.k)
-            return false;
+
         if (numberOfInitialSA != castObj.numberOfInitialSA)
             return false;
         if (numberOfRandomAccesses != castObj.numberOfRandomAccesses)
             return false;
-        if (!initialSAQueryClass.equals(castObj.initialSAQueryClass))
-            return false;
-        return thresholdFunction.equals(castObj.thresholdFunction);
+        return initialSAQueryClass.equals(castObj.initialSAQueryClass);
     }
 
     /**
@@ -246,7 +191,7 @@ public class TopCombinedQueryOperation extends RankingQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return (queryObject.dataHashCode() << 8) + k;
+        return (super.dataHashCode() << 8) + numberOfInitialSA + numberOfRandomAccesses;
     }
 
 }

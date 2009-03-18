@@ -42,7 +42,12 @@ public class SubdistanceToken implements PatternToken {
         this.index = currentSubdistanceList.size() - 1;
     }
 
-    public float evaluate(float[] subdistances) {
+    /**
+     * The subdistance knows a priori its index to the array of subdistances
+     * @param subdistances specific subdistances for the two meta objects compared
+     * @return one of the subdistances given
+     */
+    public final float evaluate(float[] subdistances) {
         return subdistances[index];
     }
 

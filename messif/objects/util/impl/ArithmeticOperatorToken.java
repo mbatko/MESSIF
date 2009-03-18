@@ -51,7 +51,12 @@ public class ArithmeticOperatorToken implements PatternToken {
     }
 
 
-    public float evaluate(float[] subdistances) {
+    /**
+     * Evalutes the arithmetic operator on its operands given a specific subdistances for the two meta objects compared
+     * @param subdistances specific subdistances for the two meta objects compared
+     * @return result of the arithmetic operation
+     */
+    public final float evaluate(float[] subdistances) {
         switch (this.operator) {
             case PLUS:
                 return operand1.evaluate(subdistances) + operand2.evaluate(subdistances);

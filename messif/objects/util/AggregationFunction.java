@@ -88,7 +88,7 @@ public abstract class AggregationFunction implements Serializable {
     static { // Initializer for the thresholdFunctionFactoryConstructor
         try {
             Class<AggregationFunction> factoryClass = Convert.getClassForName(
-                    System.getProperty("messif.objects.thresholdFunction.factoryClass", "messif.objects.impl.ThresholdFunctionSimpleEvaluator"),
+                    System.getProperty("messif.objects.util.aggregationFunction.factoryClass", "messif.objects.util.impl.AggregationFunctionEvaluator"),
                     AggregationFunction.class
             );
             setFactoryClass(factoryClass);

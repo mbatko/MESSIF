@@ -47,10 +47,10 @@ public class ArithmeticFunctionToken implements PatternToken {
 
     /**
      * Apply the arithmetic function on the argument evaluated on the passed subdistances.
-     * @param subdistances
-     * @return
+     * @param subdistances specific subdistances for the two meta objects compared
+     * @return result of the arithmetic function application to the argument evaluation
      */
-    public float evaluate(float[] subdistances) {
+    public final float evaluate(float[] subdistances) {
         switch (function) {
             case LOG:
                 return (float) Math.log(operand.evaluate(subdistances));
