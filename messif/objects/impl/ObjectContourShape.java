@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -14,7 +18,7 @@ import messif.objects.LocalAbstractObject;
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:david.novak@fi.muni.cz">david.novak@fi.muni.cz</a>
  */
-public class ObjectContourShape extends LocalAbstractObject {
+public class ObjectContourShape extends LocalAbstractObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
@@ -497,5 +501,37 @@ public class ObjectContourShape extends LocalAbstractObject {
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("cloneRandomlyModify not supported yet");
     }
-    
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectByteVector loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectByteVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectContourShape(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        globalCurvatureVector = serializator.readByteArray(input);
+        prototypeCurvatureVector = serializator.readByteArray(input);
+        highestPeakY = serializator.readByte(input);
+        peak = serializator.readByteArray(input);
+    }
+
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, globalCurvatureVector) + serializator.write(output, prototypeCurvatureVector) +
+               serializator.write(output, highestPeakY) + serializator.write(output, peak);
+    }
+
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return  super.getBinarySize(serializator) + 
+                serializator.getBinarySize(globalCurvatureVector) + serializator.getBinarySize(prototypeCurvatureVector) +
+                1 + serializator.getBinarySize(peak);
+    }
+
 }
