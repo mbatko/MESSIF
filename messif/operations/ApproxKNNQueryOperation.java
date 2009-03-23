@@ -121,7 +121,27 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
+    /**
+     * Creates a new instance of ApproxKNNQueryOperation for a given query object,
+     * maximal number of objects to return and parameters that control the approximation.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
+     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @param answerType the type of objects this operation stores in its answer
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
+    public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, k, storeMetaDistances, answerType);
+        this.localSearchParam = localSearchParam;
+        this.localSearchType = localSearchType;
+        this.radiusGuaranteed = radiusGuaranteed;
+    }
 
+    
     //****************** Attribute access ******************//
 
     /**

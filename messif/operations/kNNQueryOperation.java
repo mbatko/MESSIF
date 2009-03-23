@@ -57,6 +57,21 @@ public class kNNQueryOperation extends RankingQueryOperation {
         this.k = k;
     }
 
+    /**
+     * Creates a new instance of kNNQueryOperation for a given query object and maximal number of objects to return.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param k the number of nearest neighbors to retrieve
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
+     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type"})
+    public kNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType) {
+        super(answerType, k, storeMetaDistances);
+        this.queryObject = queryObject;
+        this.k = k;
+    }
+
 
     //****************** Attribute access ******************//
 
