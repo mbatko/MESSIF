@@ -669,11 +669,11 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
         return new DiskStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, from, to);
     }
 
@@ -696,7 +696,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
          * @throws IllegalStateException if there was a problem initializing disk storage
          */
-        public DiskStorageSearch(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+        public DiskStorageSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
             super(comparator, from, to);
             try {
                 flush(false);

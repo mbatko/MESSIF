@@ -106,12 +106,16 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
-        return new FullScanModifiableSearch<C>(comparator, from, to, lock());
+    @SuppressWarnings("unchecked")
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
+        if (comparator.equals(comparator()))
+            return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
+        else
+            return new FullScanModifiableSearch<C>(comparator, from, to, lock());
     }
 
 
@@ -227,7 +231,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
          * @param searchLock the lock object for the search - its {@link Lock#unlock()}
          *          method is called when this search is finalized
          */
-        public FullScanModifiableSearch(IndexComparator<C, T> comparator, C from, C to, Lock searchLock) {
+        public FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, C from, C to, Lock searchLock) {
             super(comparator, from, to);
             this.searchLock = searchLock;
         }

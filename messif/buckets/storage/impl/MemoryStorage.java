@@ -258,11 +258,11 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
         return new MemoryStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<C, T> comparator, C from, C to) throws IllegalStateException {
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, from, to);
     }
 
@@ -282,7 +282,7 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
          * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
          */
-        private MemoryStorageSearch(IndexComparator<C, T> comparator, C from, C to) {
+        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
             super(comparator, from, to);
         }
 

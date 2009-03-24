@@ -286,11 +286,11 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         return new AlgorithmStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C key) throws IllegalStateException {
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C key) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, from, to);
     }
 
@@ -311,7 +311,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
             super(comparator, from, to);
 
             // Execute operation to get objects from the algorithm
@@ -335,10 +335,10 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @param to the upper-bound key for which to create an operation
          * @return a new instance of query operation for the given key
          */
-        protected QueryOperation<?> createOperation(IndexComparator<C, LocalAbstractObject> comparator, C from, C to) {
+        protected QueryOperation<?> createOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) {
             // Get the results from algorithm using operation
             if (comparator != null && from != null && comparator instanceof OperationIndexComparator)
-                return ((OperationIndexComparator<C>)comparator).createIndexOperation(from, to);
+                return ((OperationIndexComparator<C>)comparator).createIndexOperation(from, to); // This cast IS checked because the OperationIndexComparator is always a subtype
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }

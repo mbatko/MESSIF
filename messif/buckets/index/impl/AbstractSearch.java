@@ -37,7 +37,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     //****************** Attributes ******************//
 
     /** Comparator used for search */
-    private final IndexComparator<C, T> comparator;
+    private final IndexComparator<? super C, ? super T> comparator;
     /** Lower bound on search */
     private final C from;
     /** Upper bound on search */
@@ -54,7 +54,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
      * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
      * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
      */
-    protected AbstractSearch(IndexComparator<C, T> comparator, C from, C to) {
+    protected AbstractSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
         this.comparator = comparator;
         this.from = from;
         this.to = to;
