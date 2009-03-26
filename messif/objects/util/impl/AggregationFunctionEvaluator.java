@@ -9,9 +9,10 @@ import messif.objects.util.AggregationFunction;
 
 /**
  * Evaluator for basic arithmetic operations + application of arithmethmetic functins on particular sub-distances.
- * Basic arithmetic operations (+, -, *, /) are supported as well as numeric constants (treated as floats).
- * Application of "log" function
- * @author xbatko
+ * Basic arithmetic operations (+, -, *, /, ^) are supported as well as numeric constants (treated as floats).
+ * Application of "log" and "log10" function.
+ * 
+ * @author david.novak@fi.muni.cz
  */
 public class AggregationFunctionEvaluator extends AggregationFunction {
 
@@ -21,7 +22,7 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
     //****************** Constants ******************//
 
     /** Pattern used to retrieve tokens from the function string */
-      private static final Pattern tokenizerPattern = Pattern.compile("\\s*(([\\w.,]+)|([-+*/])|(\\([^\\(\\)]*)|(\\)))\\s*");
+    private static final Pattern tokenizerPattern = Pattern.compile("\\s*(([\\w.,]+)|([-+*/\\^])|(\\([^\\(\\)]*)|(\\)))\\s*");
 
     //****************** Attributes ******************//
 
@@ -54,6 +55,14 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
 
     //****************** Expression parsing ******************//
 
+    /**
+     * Internal method for parsing the aggregation function string. It is called recursively for expressions in brackets.
+     * @param patternString agg. function string to parse
+     * @param currentSubdistanceList list of tokens for subdistances found in the string - used internaly when
+     *    calling this method recursively
+     * @return root of the parsed tree created from the expression passed
+     * @throws java.lang.IllegalArgumentException if the passed string is not valid
+     */
     private PatternToken parse(String patternString, List<SubdistanceToken> currentSubdistanceList) throws IllegalArgumentException {
 
         // Parse pattern string
@@ -137,25 +146,6 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
                             operand = new SubdistanceToken(tokenString, currentSubdistanceList);
                         }
                     }
-                } else {
-    //                // if it is a "right bracket"
-    //                tokenString = token.group(5);
-    //                if (tokenString != null) {
-    //                    if (bracketsLevel <= 0) {
-    //                        throw new IllegalArgumentException("parsing ')' while no '(' matches: " + patternString);
-    //                    }
-    //                    bracketsLevel --;
-    //                    bracketsString.append(tokenString);
-    //
-    //                    // if a good bracket string was parsed
-    //                    if (bracketsLevel != 0) {
-    //                        continue;
-    //                    }
-    //                    String bracket = bracketsString.toString();
-    //                    bracketsString = new StringBuffer();
-    //                    bracket = bracket.substring(1, bracket.length() - 1);
-    //                    operand = parse(bracket, currentSubdistanceList);
-    //                }
                 }
             }
             
@@ -215,8 +205,7 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
      */
     @Override
     public String toString() {
-        StringBuffer buf = new StringBuffer("f = ").append(pattern.toString());
-        return buf.toString();
+        return pattern.toString();
     }
 
 }

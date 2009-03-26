@@ -39,7 +39,12 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
     /****************** Constructors ******************/
 
-    /** Creates a new instance of ObjectHomogeneousTexture */
+    /** Creates a new instance of ObjectHomogeneousTexture from
+     * @param average
+     * @param standardDeviation
+     * @param energy 
+     * @param energyDeviation
+     */
     public ObjectHomogeneousTexture(short average, short standardDeviation, short[] energy, short[] energyDeviation) {
         this.average = average;
         this.standardDeviation = standardDeviation;
@@ -61,12 +66,13 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     //****************** Text file store/retrieve methods ******************
     
     /** Creates a new instance of ObjectHomogeneousTexture from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
-     * Throws NumberFormatException when the line read from given stream does
-     * not consist of comma-separated or space-separated numbers.
+     * @param stream input stream to read the data from
+     * @throws IOException when an error appears during reading from given stream
+     *    throws EOFException when eof of the given stream is reached.
+     * @throws NumberFormatException when the line read from given stream does
+       * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectHomogeneousTexture(BufferedReader stream) throws IOException, NumberFormatException, IndexOutOfBoundsException {
+    public ObjectHomogeneousTexture(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
         do {
@@ -76,21 +82,27 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         } while (processObjectComment(line));
         
         String[] fields = line.trim().split(";\\p{Space}*");
-        this.average = Short.parseShort(fields[0]);
+        int averageInt = Integer.parseInt(fields[0]);
+        if ((averageInt < 0) || (averageInt > 256)) {
+            throw new NumberFormatException("the first number (average) of HomogeneousTexture must be of type unsigned8: " + averageInt);
+        }
+        this.average = (short) averageInt;
         this.standardDeviation = Short.parseShort(fields[1]);
-        String[] energy = fields[2].trim().split(",\\p{Space}*");
-        this.energy = new short[energy.length];
-        for (int i = 0; i < energy.length; i++)
-            this.energy[i] = Short.parseShort(energy[i]);
+        String[] energyStrings = fields[2].trim().split(",\\p{Space}*");
+        this.energy = new short[energyStrings.length];
+        for (int i = 0; i < energyStrings.length; i++)
+            this.energy[i] = Short.parseShort(energyStrings[i]);
         if (fields.length >= 4 && fields[3].length() > 0) {
-            String[] energyDeviation = fields[3].trim().split(",\\p{Space}*");
-            this.energyDeviation = new short[energyDeviation.length];
-            for (int i = 0; i < energyDeviation.length; i++)
-                this.energyDeviation[i] = Short.parseShort(energyDeviation[i]);
+            String[] energyDeviationStrings = fields[3].trim().split(",\\p{Space}*");
+            this.energyDeviation = new short[energyDeviationStrings.length];
+            for (int i = 0; i < energyDeviationStrings.length; i++)
+                this.energyDeviation[i] = Short.parseShort(energyDeviationStrings[i]);
         } else this.energyDeviation = null;
     }
 
-    /** Write object to text stream */
+    /** Write object to text stream
+     * @throws IOException
+     */
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.valueOf(average).getBytes());
         stream.write(';');
@@ -338,6 +350,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
      * @param  args  expected size of the array is 2: <b>minVector</b> vector with minimal values in all positions
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
+     * @throws CloneNotSupportedException if predecessors does not support cloning
      */
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectHomogeneousTexture rtv = (ObjectHomogeneousTexture) this.clone();

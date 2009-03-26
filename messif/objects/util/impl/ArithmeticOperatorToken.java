@@ -15,7 +15,8 @@ public class ArithmeticOperatorToken implements PatternToken {
         PLUS,
         MINUS,
         TIMES,
-        SLASH
+        SLASH,
+        POW
     }
 
     /** First operand */
@@ -44,8 +45,10 @@ public class ArithmeticOperatorToken implements PatternToken {
             this.operator = OperatorType.TIMES;
         } else if ("/".equals(operator)) {
             this.operator = OperatorType.SLASH;
+        } else if ("^".equals(operator)) {
+            this.operator = OperatorType.POW;
         } else {
-            throw new IllegalArgumentException("none of known operators +,-,*,/: "+operator);
+            throw new IllegalArgumentException("none of known operators +, -, *, /, ^: "+operator);
         }
         this.operand2 = operand2;
     }
@@ -66,6 +69,8 @@ public class ArithmeticOperatorToken implements PatternToken {
                 return operand1.evaluate(subdistances) * operand2.evaluate(subdistances);
             case SLASH:
                 return operand1.evaluate(subdistances) / operand2.evaluate(subdistances);
+            case POW:
+                return (float) Math.pow(operand1.evaluate(subdistances), operand2.evaluate(subdistances));
             default:
                 return 0f;
         }

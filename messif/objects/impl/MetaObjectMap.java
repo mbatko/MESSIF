@@ -27,6 +27,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.utility.Logger;
 
 /**
  * Implementation of {@link MetaObject} that stores encapsulated objects
@@ -202,7 +203,12 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
 
         // Read objects and add them to the collection
         for (i++; i < uriNamesClasses.length; i += 2) {
-            LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
+            LocalAbstractObject object = null;
+            try {
+                object = readObject(stream, uriNamesClasses[i]);
+            } catch (IOException iOException) {
+                Logger.getLoggerEx("MetaObject").warning(new StringBuffer("Error creating object ").append(uriNamesClasses[i - 1]).append(" for MetaObject with ID ").append(this.getLocatorURI()).append(":\n ").append(iOException.toString()).toString());
+            }
             if (object != null && (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1]))) {
                 object.setObjectKey(this.objectKey);
                 objects.put(uriNamesClasses[i - 1], object);
