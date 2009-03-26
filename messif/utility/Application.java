@@ -1559,7 +1559,7 @@ public class Application {
     /****************** Control file command functions ******************/
 
     /** Pattern that match variables in control files */
-    private static final Pattern variablePattern = Pattern.compile("<([^>]+)>", Pattern.MULTILINE);
+    private static final Pattern variablePattern = Pattern.compile("<([^>]+?)(?::([^>]+))?>", Pattern.MULTILINE);
 
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).
@@ -1574,7 +1574,7 @@ public class Application {
      */
     protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
         // Check for postponed execution
-        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, variables);
+        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, 2, variables);
         if (postponeUntil != null) {
             try {
                 long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
@@ -1595,14 +1595,14 @@ public class Application {
         String arg = props.getProperty(actionName, actionName);
         do {
             // Add var-substituted arg to arguments list
-            arguments.add(Convert.substituteVariables(arg, variablePattern, 1, variables));
+            arguments.add(Convert.substituteVariables(arg, variablePattern, 1, 2, variables));
 
             // Read next property with name <actionName>.param.{1,2,3,4,...}
             arg = props.getProperty(actionName + ".param." + Integer.toString(arguments.size()));
         } while (arg != null);
 
         // Store the method name in a separate variable to speed things up
-        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, variables);
+        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, 2, variables);
 
         // SPECIAL! For objectStreamOpen method a third parameter is automatically added from action name
         if (methodName.equals("objectStreamOpen") && arguments.size() == 3)
@@ -1614,7 +1614,7 @@ public class Application {
         // Read outputFile parameter and set output to correct stream (if parameter outputFile was specified, file is opened, otherwise the default 'out' is used)
         PrintStream outputStream;
         try {
-            String fileName = Convert.substituteVariables(props.getProperty(actionName + ".outputFile"), variablePattern, 1, variables);
+            String fileName = Convert.substituteVariables(props.getProperty(actionName + ".outputFile"), variablePattern, 1, 2, variables);
             if (fileName != null && fileName.length() > 0) {
                 outputStream = outputStreams.get(fileName);
                 if (outputStream == null) // Output stream not opened yet
@@ -1629,7 +1629,7 @@ public class Application {
         }
 
         // Read assign parameter
-        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, variables);
+        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, 2, variables);
         ByteArrayOutputStream assignOutput;
         if (assignVariable != null) {
             assignOutput = new ByteArrayOutputStream();
@@ -1639,10 +1639,10 @@ public class Application {
         }
 
         // Read number of repeats of this method
-        int repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, variables));
+        int repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, 2, variables));
 
         // Read foreach parameter of this method
-        String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, variables);
+        String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, 2, variables);
 
         // Parse foreach values
         String[] foreachValues;
@@ -1662,7 +1662,7 @@ public class Application {
 
                 // Show description if set
                 if (description != null)
-                    outputStream.println(Convert.substituteVariables(description, variablePattern, 1, variables));
+                    outputStream.println(Convert.substituteVariables(description, variablePattern, 1, 2, variables));
 
                 // Perform action
                 if (methodName.indexOf(' ') != -1) {

@@ -1205,11 +1205,15 @@ public abstract class Convert {
      *
      * @param string the string to be modified
      * @param variableRegex regular expression that matches variables
-     * @param variableRegexGroup parenthesis group within regular expression that holds the variable name
+     * @param variableRegexGroup parenthesis group within regular expression
+     *          that holds the variable name
+     * @param defaultValueRegexGroup parenthesis group within regular expression
+     *          that holds the default value for a variable that is not present
+     *          in the <code>variables</code> map
      * @param variables the variable names with their values
      * @return the original string with all variables replaced
      */
-    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, Map<String,String> variables) {
+    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String,String> variables) {
         // Check null strings
         if (string == null)
             return null;
@@ -1222,6 +1226,10 @@ public abstract class Convert {
         while (matcher.find()) {
             // Get variable with the name from the matched pattern group
             String value = variables.get(matcher.group(variableRegexGroup));
+
+            // Set the default value if specified
+            if (value == null && defaultValueRegexGroup > 0)
+                value = matcher.group(defaultValueRegexGroup);
 
             // Do the replacement, if variable is not found, the variable placeholder is removed
             matcher.appendReplacement(sb, (value != null)?value:"");
