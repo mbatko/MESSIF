@@ -390,7 +390,7 @@ public abstract class Algorithm implements Serializable {
             if (maximalConcurrentOperations > 0)
                 runningOperations.release(operationsCount);
             
-            List<E> retList = list.getAllMethodsArgument(argClass);
+            List<E> retList = list.getAllMethodsReturnValue(argClass);
             
             // clear the list of finished threads
             list.clearThreadLists();

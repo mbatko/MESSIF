@@ -505,7 +505,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             return rtv.toString();
         }
 
-        protected static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+        public static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
             // Append opening descriptor tag
             xmlString.append('<');
             xmlString.append(descriptorTagName);
