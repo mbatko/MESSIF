@@ -11,6 +11,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
@@ -118,7 +120,7 @@ public abstract class Convert {
         // Converting string maps
         if (type.equals(Map.class)) {
             Map<String, Object> rtv = new HashMap<String, Object>();
-            putStringIntoMap(string, rtv);
+            putStringIntoMap(string, rtv, String.class);
             // Add streams parameter to a Map that contain a 'objectStreams' key but it is null
             if (rtv.containsKey("objectStreams") && rtv.get("objectStreams") == null)
                 rtv.put("objectStreams", objectStreams);
@@ -213,17 +215,46 @@ public abstract class Convert {
      * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
      * For example:
      * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * <p>
+     * The values are converted using the {@link #stringToType(java.lang.String, java.lang.Class) stringToType}
+     * method to the specified <code>valueType</code>.
+     * </p>
+     *
+     * @param <E> the class of values in the map
      * @param string the string value to be converted
      * @param map a table to which the string key-value pairs are added
+     * @param valueType the class of values in the map
+     * @throws InstantiationException if the conversion of a value has failed
      */
-    public static void putStringIntoMap(String string, Map<? super String, ? super String> map) {
+    public static <E> void putStringIntoMap(String string, Map<? super String, ? super E> map, Class<E> valueType) throws InstantiationException {
         Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*(,|$)").matcher(string);
-        while (m.find()) {
-            String value = (m.group(4) == null)?m.group(3):m.group(4);
-            if (value.equals("null"))
-                value = null;
-            map.put((m.group(2) == null)?m.group(1):m.group(2), value);
-        }
+        while (m.find())
+            map.put(
+                (m.group(2) == null)?m.group(1):m.group(2), // Key
+                stringToType((m.group(4) == null)?m.group(3):m.group(4), valueType) // Converted value
+            );
+    }
+
+    /**
+     * Returns a map of string key-value pairs parsed from the specified string.
+     * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
+     * For example:
+     * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * <p>
+     * The values are converted using the {@link #stringToType(java.lang.String, java.lang.Class) stringToType}
+     * method to the specified <code>valueType</code>.
+     * </p>
+     *
+     * @param <E> the class of values in the map
+     * @param string the string value to be converted
+     * @param valueType the class of values in the map
+     * @throws InstantiationException if the conversion of a value has failed
+     * @return a map of string key-value pairs
+     */
+    public static <E> Map<String, E> stringToMap(String string, Class<E> valueType) throws InstantiationException {
+        Map<String, E> rtv = new HashMap<String, E>();
+        putStringIntoMap(string, rtv, valueType);
+        return rtv;
     }
 
     /**
@@ -235,9 +266,11 @@ public abstract class Convert {
      * @return a map of string key-value pairs
      */
     public static Map<String, String> stringToMap(String string) {
-        Map<String, String> rtv = new HashMap<String, String>();
-        putStringIntoMap(string, rtv);
-        return rtv;
+        try {
+            return stringToMap(string, String.class);
+        } catch (InstantiationException thisShouldNeverHappen) {
+            throw new InternalError();
+        }
     }
 
     /**

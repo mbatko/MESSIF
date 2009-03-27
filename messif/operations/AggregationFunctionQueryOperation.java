@@ -134,20 +134,23 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
-        float[] descriptorDistances = isStoringMetaDistances() ? new float[aggregationFunction.getParameterNames().length] : null;
 
         while (objects.hasNext()) {
             // Get current object
             MetaObject object = (MetaObject)objects.next();
 
+            // Prepare array for subdistances
+            float[] descriptorDistances;
+            if (isStoringMetaDistances())
+                descriptorDistances = new float[aggregationFunction.getParameterNames().length];
+            else
+                descriptorDistances = null;
+
             // Compute overall distance (the object must be MetaObject otherwise ClassCastException is thrown)
             float distance = aggregationFunction.getDistance(queryObject, object, descriptorDistances);
 
-            // clone the subdistances
-            float[] actualDescriptorDistances = descriptorDistances == null ? null : descriptorDistances.clone();
-
             // Object satisfies the query (i.e. distance is smaller than radius)
-            addToAnswer(object, distance, actualDescriptorDistances);
+            addToAnswer(object, distance, descriptorDistances);
         }
 
         return getAnswerCount() - beforeCount;

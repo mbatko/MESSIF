@@ -3,14 +3,16 @@ package messif.objects.util.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import messif.objects.LocalAbstractObject;
 import messif.objects.util.AggregationFunction;
 
 /**
- * Evaluator for basic arithmetic operations + application of arithmethmetic functins on particular sub-distances.
- * Basic arithmetic operations (+, -, *, /, ^) are supported as well as numeric constants (treated as floats).
- * Application of "log" and "log10" function.
+ * Evaluator for basic arithmetic operators and functions applied on particular sub-distances.
+ * Basic arithmetic operators (+, -, *, /, ^) and "log" and "log10" functions are
+ * supported as well as numeric constants (treated as floats).
  * 
  * @author david.novak@fi.muni.cz
  */
@@ -29,27 +31,46 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
     /** Parsed variable names that are used in evaluation */
     private final String[] variableNames;
 
+    /** Maximal distances for the variables */
+    private final float[] maxDistances;
+
     /** The top level token that encapsulates the whole aggregation function string. */
     private final PatternToken pattern;
 
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ThresholdFunctionSimpleEvaluator.
+     * Creates a new instance of AggregationFunctionEvaluator.
      * The specified function is parsed and compiled. Basic arithmetic operations
-     * (+, -, *, /) are supported as well as numeric constants (float).
+     * are supported as well as numeric constants.
+     * Blank space is ignored and everything else is considered to be a variable.
+     * @param function the function string
+     * @param maxDistances the list of maximal distances (map values) for the variable names (map keys)
+     * @throws IllegalArgumentException if the specified function cannot be parsed
+     */
+    public AggregationFunctionEvaluator(String function, Map<String, Float> maxDistances) throws IllegalArgumentException {
+        List<SubdistanceToken> subdistancesList = new ArrayList<SubdistanceToken>();
+        
+        this.pattern = parse(function, subdistancesList);
+        variableNames = new String[subdistancesList.size()];
+        this.maxDistances = new float[variableNames.length];
+        for (int i = 0; i < variableNames.length; i++) {
+            variableNames[i] = subdistancesList.get(i).getName();
+            Float maxDistance = (maxDistances == null)?null:maxDistances.get(variableNames[i]);
+            this.maxDistances[i] = (maxDistance == null)?LocalAbstractObject.MAX_DISTANCE:maxDistance;
+        }
+    }
+
+    /**
+     * Creates a new instance of AggregationFunctionEvaluator.
+     * The specified function is parsed and compiled. Basic arithmetic operations
+     * are supported as well as numeric constants.
      * Blank space is ignored and everything else is considered to be a variable.
      * @param function the function string
      * @throws IllegalArgumentException if the specified function cannot be parsed
      */
     public AggregationFunctionEvaluator(String function) throws IllegalArgumentException {
-        List<SubdistanceToken> subdistancesList = new ArrayList<SubdistanceToken>();
-        
-        this.pattern = parse(function, subdistancesList);
-        variableNames = new String[subdistancesList.size()];
-        for (int i = 0; i < variableNames.length; i++) {
-            variableNames[i] = subdistancesList.get(i).getName();
-        }
+        this(function, null);
     }
 
 
@@ -134,7 +155,7 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
                     // if it is function (log)
                     if (ArithmeticFunctionToken.isFunctionString(tokenString)) {
                         if ((operand1 != null) && (operationString == null)) {
-                            throw new IllegalArgumentException("Arithm. function parsed but operation expected: "+patternString);
+                            throw new IllegalArgumentException("Arithmetic function parsed but operation expected: "+patternString);
                         }
                         functionString = tokenString;
                         continue;
@@ -154,7 +175,7 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
                 // if this operand succeeds function symbol
                 if (functionString != null) {
                     if ((operand1 != null) && (operationString == null)) {
-                        throw new IllegalArgumentException("function cannot be applied where operation expected: " + patternString);
+                        throw new IllegalArgumentException("Function cannot be applied where operation expected: " + patternString);
                     }
                     operand = new ArithmeticFunctionToken(functionString, operand);
                     functionString = null;
@@ -163,13 +184,13 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
                 // if this is second operand for an operation
                 if (operationString != null) {
                     if (operand1 == null) {
-                        throw new IllegalArgumentException("second operand parsed while the first was not parsed before: "+ patternString);
+                        throw new IllegalArgumentException("Second operand parsed while the first was not parsed before: "+ patternString);
                     }
                     operand1 = new ArithmeticOperatorToken(operand1, operationString, operand);
                     operationString = null;
                 } else { // this was the first operand
                     if (operand1 != null) {
-                        throw new IllegalArgumentException("fist operand expected but one already created: "+ operand1.toString() +", while parsing " + tokenString +" in: " + patternString);
+                        throw new IllegalArgumentException("Fist operand expected but one already created: "+ operand1.toString() +", while parsing " + tokenString +" in: " + patternString);
                     }
                     operand1 = operand;
                 }
@@ -194,6 +215,11 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
 
     public String[] getParameterNames() {
         return variableNames;
+    }
+
+    @Override
+    public float getParameterMaximalDistance(int parameterIndex) {
+        return maxDistances[parameterIndex];
     }
 
 

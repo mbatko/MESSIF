@@ -23,21 +23,39 @@ import messif.utility.Convert;
 public abstract class AggregationFunction implements Serializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
+
+    //****************** Aggregation function evaluation ******************//
+
+    /**
+     * Returns the names of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
+     * @return the list of parameter (descriptor) names of the {@link #compute} function
+     */
+    public abstract String[] getParameterNames();
+
+    /**
+     * Returns the maximal distance for the specified parameter of the {@link #compute} function.
+     * This method returns the {@link LocalAbstractObject#MAX_DISTANCE} by default.
+     * @param parameterIndex the index of a parameter (corresponds to the index of the
+     *          parameter name as given by {@link #getParameterNames()})
+     * @return the maximal distances for the parameters of the {@link #compute} function
+     * @throws IndexOutOfBoundsException if the specified parameter index is not valid
+     */
+    public float getParameterMaximalDistance(int parameterIndex) throws IndexOutOfBoundsException {
+        return LocalAbstractObject.MAX_DISTANCE;
+    }
+
     /**
      * Computes the value of the aggregate distance from the provided sub-distances.
+     * The <code>distances</code> array items must correspond with the parameter
+     * names as returned by {@link #getParameterNames()}.
      * @param distances the distances in respective descriptors
      * @return the aggregate distance
      */
     public abstract float compute(float... distances);
 
-    /**
-     * Returns the names of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
-     *
-     * @return the list of parameter (descriptor) names of the {@link #compute} function.
-     */
-    public abstract String[] getParameterNames();
 
+    //****************** Distance evaluation ******************//
 
     /**
      * Computes distance of two meta objects using this combination function.
@@ -60,7 +78,7 @@ public abstract class AggregationFunction implements Serializable {
             LocalAbstractObject descriptorObject2 = object2.getObject(descriptorName);
 
             if (descriptorObject1 == null || descriptorObject2 == null)
-                descriptorDistances[paramIndex] = LocalAbstractObject.MAX_DISTANCE;
+                descriptorDistances[paramIndex] = getParameterMaximalDistance(paramIndex);
             else descriptorDistances[paramIndex] = descriptorObject1.getDistance(descriptorObject2);
             paramIndex++;
         }
@@ -68,7 +86,6 @@ public abstract class AggregationFunction implements Serializable {
         // Compute overall distance
         return compute(descriptorDistances);
     }
-
 
     /**
      * Computes distance of two meta objects using this combination function.
@@ -81,7 +98,7 @@ public abstract class AggregationFunction implements Serializable {
     }
 
 
-    /****************** Factory method ******************/
+    //****************** Factory method ******************//
 
     /** The constructor of the threshold function for the factory method */
     private static Constructor<? extends AggregationFunction> thresholdFunctionFactoryConstructor = null;
