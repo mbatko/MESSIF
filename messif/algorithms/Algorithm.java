@@ -28,10 +28,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
+import messif.objects.LocalAbstractObject;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
@@ -71,7 +73,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Attributes ******************//
 
     /** The name of this algorithm */
-    protected final String algorithmName;
+    private final String algorithmName;
 
     /** Number of actually running operations */
     private transient Semaphore runningOperations;
@@ -118,6 +120,15 @@ public abstract class Algorithm implements Serializable {
      */
     public String getName() {
         return algorithmName;
+    }
+
+    /**
+     * Returns the class of objects indexed by this algorithm.
+     * This methods returns a generic {@link LocalAbstractObject} class.
+     * @return the class of objects indexed by this algorithm
+     */
+    public Class<? extends LocalAbstractObject> getObjectClass() {
+        return LocalAbstractObject.class;
     }
 
 
@@ -261,8 +272,8 @@ public abstract class Algorithm implements Serializable {
      * The operations returned can be further queried on arguments by static methods in AbstractOperation.
      * @return the list of operations this particular algorithm supports
      */
-    public List<Class<AbstractOperation>> getSupportedOperations() {
-        return operationExecutor.getDifferentiatingClasses(AbstractOperation.class);
+    public Collection<Class<AbstractOperation>> getSupportedOperations() {
+        return getSupportedOperations(AbstractOperation.class);
     }
 
     /**
@@ -273,7 +284,7 @@ public abstract class Algorithm implements Serializable {
      * @param subclassToSearch ancestor class of the returned operations.
      * @return the list of operations this particular algorithm supports
      */
-    public <E extends AbstractOperation> List<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
+    public <E extends AbstractOperation> Collection<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
         return operationExecutor.getDifferentiatingClasses(subclassToSearch);
     }
 

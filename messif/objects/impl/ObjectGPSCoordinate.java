@@ -102,6 +102,25 @@ public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySe
     }
 
 
+    //****************** Attributes ******************//
+
+    /**
+     * Returns the geographic latitude on WGS84 ellipsiod in degrees.
+     * @return the geographic latitude on WGS84 ellipsiod in degrees
+     */
+    public float getLatitude() {
+        return latitude;
+    }
+
+    /**
+     * Returns the geographic longitude on WGS84 ellipsiod in degrees.
+     * @return the geographic longitude on WGS84 ellipsiod in degrees
+     */
+    public float getLongitude() {
+        return longitude;
+    }
+
+
     /****************** Data equality functions ******************/
 
     @Override

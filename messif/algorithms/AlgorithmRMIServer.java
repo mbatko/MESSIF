@@ -84,12 +84,13 @@ public class AlgorithmRMIServer extends Thread {
                             ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(connection.getOutputStream()));
                             out.flush();
                             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                            Class<? extends Algorithm> algorithmClass = algorithm.getClass();
 
                             for (;;) {
                                 String methodName = in.readUTF();
                                 Object[] methodArguments = (Object[]) in.readObject();
                                 try {
-                                    Object retVal = Convert.getMethod(algorithm.getClass(), methodName, false, methodArguments).invoke(algorithm, methodArguments);
+                                    Object retVal = Convert.getMethod(algorithmClass, methodName, false, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
                                     out.writeObject(retVal);

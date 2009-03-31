@@ -369,8 +369,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             XMLHandlerSAPIR.appendObjectXML(rtv, "HomogeneousTextureType", homogeneousTexture);
         if (scalableColor != null)
             XMLHandlerSAPIR.appendObjectXML(rtv, "ScalableColorType", scalableColor);
-        if (location != null)
-            XMLHandlerSAPIR.appendObjectXML(rtv, "Location", location);
+        if (location != null) {
+            // HACK! for location
+            rtv.append("<location latitude=\"").append(location.getLatitude());
+            rtv.append("\" longitude=\"").append(location.getLongitude());
+            rtv.append("\"/>");
+        }
         return rtv.toString();
     }
 
