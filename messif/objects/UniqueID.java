@@ -76,10 +76,15 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
                 leastSigBits);
     }
 
-    /** Returns val represented by the specified number of hex digits. */
+    /**
+     * Returns long value <code>val</code> represented by the specified number of hex digits.
+     * @param val the value to convert to hex digits
+     * @param digits the number of digits the convert
+     * @return a string containing the hex-digit representation
+     */
     private static String digits(long val, int digits) {
-	long hi = 1L << (digits * 4);
-	return Long.toHexString(hi | (val & (hi - 1))).substring(1);
+        long hi = 1L << (digits * 4);
+        return Long.toHexString(hi | (val & (hi - 1))).substring(1);
     }
 
     /**
@@ -90,9 +95,9 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
     public String toString() {
         StringBuffer rtv = new StringBuffer(digits(mostSigBits >> 32, 8)).append('-');
         rtv.append(digits(mostSigBits >> 16, 4)).append('-');
-	rtv.append(digits(mostSigBits, 4)).append('-');
-	rtv.append(digits(leastSigBits >> 48, 4)).append('-');
-	rtv.append(digits(leastSigBits, 12));
+        rtv.append(digits(mostSigBits, 4)).append('-');
+        rtv.append(digits(leastSigBits >> 48, 4)).append('-');
+        rtv.append(digits(leastSigBits, 12));
         return rtv.toString();
     }
 

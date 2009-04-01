@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.utility.SortedCollection;
@@ -99,16 +98,12 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     //****************** Answer methods ******************//
 
     @Override
-    public boolean addToAnswer(AbstractObject object, float distance) {
-        if (!super.addToAnswer(object, distance))
-            return false;
-        try { // FIXME: the RankedAbstractObject is created twice (encap is needed)
-            if (currentPartition != null)
-                currentPartition.add(new RankedAbstractObject(answerType.update(object), distance));
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalArgumentException(e);
-        }
-        return true;
+    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+        if (addedObject != null && currentPartition != null)
+            currentPartition.add(addedObject);
+
+        return addedObject;
     }
 
     /**

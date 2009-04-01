@@ -47,6 +47,23 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     }
 
 
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public SingletonQueryOperation clone() throws CloneNotSupportedException {
+        SingletonQueryOperation operation = (SingletonQueryOperation)super.clone();
+        operation.answer = null;
+        return operation;
+    }
+
+
     //****************** Answer access methods ******************//
 
     /**
@@ -80,6 +97,11 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
         else
             list = Collections.singletonList(answer);
         return list.iterator();
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
     }
 
     /**

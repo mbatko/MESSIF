@@ -11,7 +11,7 @@ package messif.buckets;
  * because the minimal capacity limit was reached.
  * @author xbatko
  */
-public class OccupationLowException extends Exception {
+public class OccupationLowException extends BucketStorageException {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;    
@@ -20,6 +20,7 @@ public class OccupationLowException extends Exception {
      * Creates a new instance of OccupationLowException
      */
     public OccupationLowException() {
+        super(BucketErrorCode.LOWOCCUPATION_EXCEEDED);
     }
     
     /**
@@ -28,7 +29,7 @@ public class OccupationLowException extends Exception {
      * @param msg the detail message
      */
     public OccupationLowException(String msg) {
-        super(msg);
+        super(BucketErrorCode.LOWOCCUPATION_EXCEEDED, msg);
     }
     
 }

@@ -3,7 +3,9 @@
  * 
  */
 
-package messif.objects;
+package messif.objects.keys;
+
+import java.io.IOException;
 
 /**
  * This class encapsulates the standard key used by the AbstractObject - the URI locator.

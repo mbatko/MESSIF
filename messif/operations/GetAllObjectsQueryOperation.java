@@ -38,6 +38,7 @@ public class GetAllObjectsQueryOperation extends ListingQueryOperation {
      * Creates a new instance of GetAllObjectsQuery.
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Answer type"})
     public GetAllObjectsQueryOperation(AnswerType answerType) {
         super(answerType);
     }

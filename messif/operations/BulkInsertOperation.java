@@ -1,7 +1,10 @@
 
 package messif.operations;
 
+import java.util.Collection;
+import java.util.Iterator;
 import messif.buckets.BucketErrorCode;
+import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
@@ -22,8 +25,12 @@ public class BulkInsertOperation extends AbstractOperation {
     /****************** Operation request attributes ******************/
     
     /** Inserted object (accessible directly) */
-    public final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
-         
+    protected final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
+
+    public AbstractObjectList<? extends LocalAbstractObject> getInsertedObjects() {
+        return insertedObjects;
+    }
+    
     
     /****************** Constructors ******************/
 
@@ -36,7 +43,28 @@ public class BulkInsertOperation extends AbstractOperation {
     public BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = insertedObjects;
     }
-        
+
+    /**
+     * Creates a new instance of BulkInsertOperation.
+     *
+     * @param insertedObjects a list of objects to be inserted by this operation
+     */
+    @AbstractOperation.OperationConstructor({"Iterator over objects to insert"})
+    public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) {
+        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
+    }
+
+    /**
+     * Creates a new instance of BulkInsertOperation.
+     *
+     * @param insertedObjects a list of objects to be inserted by this operation
+     */
+    @AbstractOperation.OperationConstructor({"Iterator over objects to insert"})
+    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) {
+        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
+    }
+
+    
     /**
      * Creates a new instance of BulkInsertOperation.
      * 

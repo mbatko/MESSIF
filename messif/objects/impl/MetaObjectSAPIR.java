@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
-import messif.objects.AbstractObjectKey;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import org.xml.sax.Attributes;
@@ -501,7 +501,16 @@ public class MetaObjectSAPIR extends MetaObject {
             return rtv.toString();
         }
 
-        protected static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+        public static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+            // Hack for location
+            if (name.equals("Location")) {
+                ObjectGPSCoordinate location = (ObjectGPSCoordinate)object;
+                xmlString.append("<location latitude=\"").append(location.getLatitude());
+                xmlString.append("\" longitude=\"").append(location.getLongitude());
+                xmlString.append("\"/>");
+                return xmlString;
+            }
+
             // Append opening descriptor tag
             xmlString.append('<');
             xmlString.append(descriptorTagName);

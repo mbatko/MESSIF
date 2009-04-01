@@ -27,7 +27,7 @@ public class RemoteAbstractObject extends AbstractObject {
     /**
      * Creates a new instance of RemoteAbstractObject using the specified locator.
      * A new unique object ID is generated and a
-     * new {@link AbstractObjectKey} is generated for
+     * new {@link messif.objects.keys.AbstractObjectKey} is generated for
      * the specified <code>locatorURI</code>.
      * @param locatorURI the locator URI for the new object
      */

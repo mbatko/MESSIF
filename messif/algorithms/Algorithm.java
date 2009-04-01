@@ -25,8 +25,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import messif.executor.MethodExecutor;
+import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
 import messif.utility.Logger;
 
@@ -59,7 +61,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Attributes ******************//
 
     /** The name of this algorithm */
-    protected final String algorithmName;
+    private final String algorithmName;
 
     /** Number of actually running operations */
     private transient Semaphore runningOperations;
@@ -106,6 +108,15 @@ public abstract class Algorithm implements Serializable {
      */
     public String getName() {
         return algorithmName;
+    }
+
+    /**
+     * Returns the class of objects indexed by this algorithm.
+     * This methods returns a generic {@link LocalAbstractObject} class.
+     * @return the class of objects indexed by this algorithm
+     */
+    public Class<? extends LocalAbstractObject> getObjectClass() {
+        return LocalAbstractObject.class;
     }
 
 
@@ -212,12 +223,6 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Resets all the statistics of the executed operations gathered so far.
-     */
-    public void resetOperationStatistics() {
-    }
-
-    /**
      * Initialize operation executor.
      * This method is called from constructor and serialization.
      * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
@@ -238,8 +243,8 @@ public abstract class Algorithm implements Serializable {
      * The operations returned can be further queried on arguments by static methods in AbstractOperation.
      * @return the list of operations this particular algorithm supports
      */
-    public List<Class<AbstractOperation>> getSupportedOperations() {
-        return operationExecutor.getDifferentiatingClasses(AbstractOperation.class);
+    public Collection<Class<AbstractOperation>> getSupportedOperations() {
+        return getSupportedOperations(AbstractOperation.class);
     }
 
     /**
@@ -250,7 +255,7 @@ public abstract class Algorithm implements Serializable {
      * @param subclassToSearch ancestor class of the returned operations.
      * @return the list of operations this particular algorithm supports
      */
-    public <E extends AbstractOperation> List<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
+    public <E extends AbstractOperation> Collection<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
         return operationExecutor.getDifferentiatingClasses(subclassToSearch);
     }
 
@@ -360,7 +365,7 @@ public abstract class Algorithm implements Serializable {
             if (maximalConcurrentOperations > 0)
                 runningOperations.release(operationsCount);
             
-            List<E> retList = list.getAllMethodsArgument(argClass);
+            List<E> retList = list.getAllMethodsReturnValue(argClass);
             
             // clear the list of finished threads
             list.clearThreadLists();
@@ -371,7 +376,6 @@ public abstract class Algorithm implements Serializable {
             throw new AlgorithmMethodException(e);
         }
     }
-
 
     //****************** Operation method specifier ******************//
 

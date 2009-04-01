@@ -235,8 +235,8 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
      */
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
+    public AbstractOperation clone() throws CloneNotSupportedException {
+        return (AbstractOperation)super.clone();
     }
 
 

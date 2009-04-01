@@ -45,7 +45,7 @@ public class NavigationElement implements Serializable {
     private boolean reply = false;
     /** The flag if this message was marked to skip the message waiting for the sender node */
     private boolean skipWaiting = false;
-
+    
 
     /****************** Constructors ******************/
 
@@ -178,6 +178,7 @@ public class NavigationElement implements Serializable {
      * Returns the string representation of this navigation element.
      * @return the string representation of this navigation element
      */
+    @Override
     public String toString() {
         StringBuffer strbuf = new StringBuffer();
         if (reply)

@@ -6,6 +6,8 @@
 
 package messif.objects;
 
+import messif.objects.keys.AbstractObjectKey;
+import java.io.IOException;
 import java.io.Serializable;
 import messif.netbucket.RemoteAbstractObject;
 import messif.utility.Clearable;

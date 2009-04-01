@@ -26,7 +26,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     //****************** Attributes ******************//
 
     /** List holding the answer of this query */
-    private final Collection<AbstractObject> answer;
+    private Collection<AbstractObject> answer;
 
 
     //****************** Constructors ******************//
@@ -60,6 +60,23 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     }
 
 
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public ListingQueryOperation clone() throws CloneNotSupportedException {
+        ListingQueryOperation operation = (ListingQueryOperation)super.clone();
+        operation.answer = new ArrayList<AbstractObject>();
+        return operation;
+    }
+
+
     //****************** Answer access methods ******************//
 
     /**
@@ -87,6 +104,11 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     @Override
     public Iterator<AbstractObject> getAnswer() {
         return answer.iterator();
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
     }
 
 

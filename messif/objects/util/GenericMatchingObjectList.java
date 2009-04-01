@@ -25,7 +25,7 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /** Creates a new instance of MatchingObjectList */
     public GenericMatchingObjectList() {
@@ -42,7 +42,7 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     }
 
     
-    /****************** Parts ******************/
+    //****************** Parts ******************//
     
     public Set<Integer> getPartIDs() {
         return keySet();
@@ -69,8 +69,11 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
         return part;
     }
     
-    /** Returns number of object in the given part */
-    public int objectCount(int partId) {
+    /** Returns number of object in the given part.
+     * @param partId partition id
+     * @return number of objects if partition exists, otherwise zero
+     */
+    public int getObjectCount(int partId) {
         // Try to get the part partId
         try {
             return getPart(partId, false).size();
@@ -80,10 +83,12 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     }
     
 
-    /****************** List access ******************/
+    //****************** List access ******************//
 
-    /** Returns number of object in all parts */
-    public int objectCount() {
+    /** Returns number of object in all parts
+     * @return number of objects
+     */
+    public int getObjectCount() {
         int rtv = 0;
         for (AbstractObjectList<E> list : values())
            rtv += list.size();
@@ -92,16 +97,16 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     }
     
     /** Get object with index position from part partId
-     *  throws NoSuchElementException if part is not found
-     *  throws ArrayIndexOutOfBoundsException if object index is out of bounds
+     *  @throws NoSuchElementException if part is not found
+     *  @throws ArrayIndexOutOfBoundsException if object index is out of bounds
      */
     public E getObject(int index, int partId) {
         return getPart(partId).get(index);
     }
     
     /** Get ID of object with index position from part partId
-     *  throws NoSuchElementException if part is not found
-     *  throws ArrayIndexOutOfBoundsException if object index is out of bounds
+     *  @throws NoSuchElementException if part is not found
+     *  @throws ArrayIndexOutOfBoundsException if object index is out of bounds
      */
     public UniqueID getObjectID(int index, int partId) { 
         return getObject(index, partId).getObjectID();

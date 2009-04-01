@@ -6,6 +6,7 @@
 
 package messif.objects;
 
+import messif.objects.keys.AbstractObjectKey;
 import messif.netbucket.RemoteAbstractObject;
 import messif.utility.Convert;
 import java.io.BufferedReader;
@@ -17,7 +18,7 @@ import java.lang.reflect.InvocationTargetException;
 
 /**
  * This class is ancestor of all objects that hold some data the MESSI Framework can work with.
- * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject<tt> must
+ * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject</tt> must
  * implement a metric function {@link #getDistanceImpl} for its own data.
  *
  * To be able to read/write data from text streams, a constructor with one {@link java.io.BufferedReader} argument
@@ -44,6 +45,8 @@ public abstract class LocalAbstractObject extends AbstractObject {
     /** Supplemental data object */
     public Object suppData = null;
 
+    /** Object for storing and using precomputed distances */
+    private PrecomputedDistancesFilter distanceFilter = null;
 
     //****************** Constructors ******************//
 
@@ -114,7 +117,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //****************** Unused/undefined, min, max distances ******************//
 
     /** Unknown distance constant */
-    public static final float UNKNOWN_DISTANCE = -1.0f;
+    public static final float UNKNOWN_DISTANCE = Float.NEGATIVE_INFINITY;
     /** Minimal possible distance constant */
     public static final float MIN_DISTANCE = 0.0f;
     /** Maximal possible distance constant */
@@ -131,7 +134,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the distance between this object and the provided object <code>obj</code>
      */
     public final float getDistance(LocalAbstractObject obj) {
-        return getDistance(obj, MAX_DISTANCE);
+        return getDistance(obj, null, MAX_DISTANCE);
     }
 
     /**
@@ -151,7 +154,37 @@ public abstract class LocalAbstractObject extends AbstractObject {
      *         must be greater than the threshold distance.
      */
     public final float getDistance(LocalAbstractObject obj, float distThreshold) {
+        if (distanceFilter != null && distanceFilter.isGetterSupported()) {
+            float distance = distanceFilter.getPrecomputedDistance(obj);
+            if (distance != UNKNOWN_DISTANCE)
+                return distance;
+        }
+
         return getDistanceImpl(obj, distThreshold);
+    }
+
+    /**
+     * Metric distance function.
+     * Measures the distance between this object and <code>obj</code>.
+     * The array <code>metaDistances</code> is filled with the distances
+     * of the respective encapsulated objects if this object contains any, i.e.
+     * this object is a descendant of {@link MetaObject}.
+     * 
+     * <p>
+     * Note that this method does not use the fast access to the 
+     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
+     * even if there is a filter that supports it.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return getDistanceImpl(obj, metaDistances, distThreshold);
     }
 
     /**
@@ -165,25 +198,41 @@ public abstract class LocalAbstractObject extends AbstractObject {
     protected abstract float getDistanceImpl(LocalAbstractObject obj, float distThreshold);
 
     /**
-     * Normalized metric distance function.
+     * The actual implementation of the metric function that updates the distances
+     * of encapsulated objects. This is required for the {@link MetaObject}
+     * descendants.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return getDistanceImpl(obj, distThreshold);
+    }
+
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    public float[] createMetaDistancesHolder() {
+        return null;
+    }
+
+    /**
+     * Normalized metric distance function, i.e. the result of {@link #getDistance}
+     * divided by {@link #getMaxDistance}. Note that unless an object overrides
+     * the {@link #getMaxDistance} the resulting distance will be too small.
+     * 
      * @param obj the object to compute distance to
      * @param distThreshold the threshold value on the distance (see {@link #getDistance} for explanation)
      * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
      */
     public final float getNormDistance(LocalAbstractObject obj, float distThreshold) {
-        return getNormDistanceImpl(obj, distThreshold);
-    }
-
-    /**
-     * The actual implementation of the normalized metric function (see {@link #getDistance} for full explanation).
-     * Default implementation divides the result of {@link #getDistance} by {@link #getMaxDistance}.
-     *
-     * @param obj the object to compute distance to
-     * @param distThreshold the threshold value on the distance
-     * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
-     */
-    protected float getNormDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        return getDistanceImpl(obj, distThreshold) / getMaxDistance();
+        return getDistance(obj, distThreshold) / getMaxDistance();
     }
 
     /**
@@ -243,7 +292,178 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return <tt>true</tt> if the <code>obj</code> has been excluded (filtered out) using stored precomputed distance
      */
     public final boolean excludeUsingPrecompDist(LocalAbstractObject obj, float radius) {
+        if (distanceFilter != null && obj.distanceFilter != null)
+            return distanceFilter.excludeUsingPrecompDist(obj.distanceFilter, radius);
+
         return false;
+    }
+
+    /**
+     * Returns <tt>true</tt> if the <code>obj</code> has been included using stored precomputed distance.
+     * Otherwise returns <tt>false</tt>, i.e. when <code>obj</code> must be checked using original distance (see {@link #getDistance}).
+     *
+     * In other words, method returns <tt>true</tt> if the distance of <code>this</code> object and <code>obj</code> is below the <code>radius</code>.
+     * By analogy, returns <tt>false</tt> if <code>this</code> object and <code>obj</code> are more distant than <code>radius</code>.
+     * However, both this cases use only precomputed distances. Thus, the real distance between <code>this</code> object and
+     * <code>obj</code> can be lower than <code>radius</code> although the method returned <tt>false</tt>!
+     * @param obj the object to check the distance for
+     * @param radius the radius between <code>this</code> object and <code>obj</code> to check
+     * @return <tt>true</tt> if the obj has been included using stored precomputed distance
+     */
+    public final boolean includeUsingPrecompDist(LocalAbstractObject obj, float radius) {
+        if (distanceFilter != null && obj.distanceFilter != null)
+            return distanceFilter.includeUsingPrecompDist(obj.distanceFilter, radius);
+
+        return false;
+    }
+
+
+    //****************** Distance filter manipulation ******************//
+
+    /**
+     * Returns a filter of the specified class (or any of its descendants) from this object's filter chain.
+     * If there is no filter with requested class, this method returns <tt>null</tt>.
+     * If there are more filters of the same class, the first one is returned.
+     *
+     * @param <T> the class of the filter to retrieve from the chain
+     * @param filterClass the class of the filter to retrieve from the chain
+     * @return a filter of specified class from this object's filter chain
+     * @throws NullPointerException if the filterClass is <tt>null</tt>
+     */
+    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
+        return getDistanceFilter(filterClass, true);
+    }
+
+    /**
+     * Returns a filter of the specified class from this object's filter chain.
+     * If there is no filter with requested class, this method returns <tt>null</tt>.
+     * If there are more filters of the same class, the first one is returned.
+     *
+     * @param <T> the class of the filter to retrieve from the chain
+     * @param filterClass the class of the filter to retrieve from the chain
+     * @param inheritable if <tt>false</tt>, the exact match of <code>filterClass</code> is required;
+     *          otherwise the first filter that is assignable to <code>filterClass</code> is returned
+     * @return a filter of specified class from this object's filter chain
+     * @throws NullPointerException if the filterClass is <tt>null</tt>
+     */
+    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
+        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
+            Class<?> currentFilterClass = currentFilter.getClass();
+            if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
+                return filterClass.cast(currentFilter);
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns a filter at specified position in this object's filter chain.
+     * @param position a zero based position in the chain (zero returns this filter, negative value returns the last filter)
+     * @return a filter at specified position in this filter's chain
+     * @throws IndexOutOfBoundsException if the specified position is too big
+     */
+    public PrecomputedDistancesFilter getDistanceFilter(int position) throws IndexOutOfBoundsException {
+        // Fill iteration variable
+        PrecomputedDistancesFilter currentFilter = distanceFilter;
+        while (currentFilter != null) {
+            if (position == 0)
+                return currentFilter;
+
+            // Get next iteration value
+            PrecomputedDistancesFilter nextFilter = currentFilter.getNextFilter();
+
+            if (position < 0 && nextFilter == null)
+                return currentFilter;
+
+            currentFilter = nextFilter;
+            position--;    
+        }
+
+        throw new IndexOutOfBoundsException("There is no filter at position " + position);
+    }
+
+    /**
+     * Adds the specified filter to the end of this object's filter chain.
+     * 
+     * @param filter the filter to add to this object's filter chain
+     * @param replaceIfExists if <tt>true</tt> and there is another filter with the same class as the inserted filter, it is replaced
+     * @return either the replaced or the existing filter that has the same class as the newly inserted one; <tt>null</tt> is
+     *         returned if the filter was appended to the end of the chain
+     * @throws IllegalArgumentException if the provided chain has set nextFilter attribute
+     */
+    public final PrecomputedDistancesFilter chainFilter(PrecomputedDistancesFilter filter, boolean replaceIfExists) throws IllegalArgumentException {
+        if (filter.nextFilter != null)
+            throw new IllegalArgumentException("This filter is a part of another chain");
+
+        // Add this filter to the object's distance filter chain
+        if (distanceFilter == null) {
+            // We are at the end of the chain
+            distanceFilter = filter;
+            return null;
+        } else if (distanceFilter.getClass().equals(filter.getClass())) {
+            if (!replaceIfExists)
+                return distanceFilter;
+            // Preserve the chain link
+            filter.nextFilter = distanceFilter.nextFilter;
+            // Replace filter
+            PrecomputedDistancesFilter storedFilter = distanceFilter;
+            distanceFilter = filter;
+            return storedFilter;
+        } else return distanceFilter.chainFilter(filter, replaceIfExists);
+    }
+
+    /**
+     * Deletes the specified filter from this object's filter chain.
+     * A concerete instance of filter is deleted (the same reference must be present in the chain).
+     * 
+     * @param filter the concrete instance of filter to delete from this object's filter chain
+     * @return <tt>true</tt> if the filter was unchained (deleted). If the given filter was not found, <tt>false</tt> is returned.
+     */
+    public boolean unchainFilter(PrecomputedDistancesFilter filter) {
+        if (distanceFilter == null)
+            return false;
+        
+        if (distanceFilter == filter) {
+            distanceFilter = distanceFilter.nextFilter;
+            return true;
+        } else {
+            PrecomputedDistancesFilter prev = distanceFilter;
+            PrecomputedDistancesFilter curr = distanceFilter.nextFilter;
+            while (curr != null) {
+                if (curr == filter) {
+                    prev.nextFilter = curr.nextFilter;
+                    return true;
+                }
+                prev = curr;
+                curr = curr.nextFilter;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Destroys whole filter chain of this object.
+     * The first (head of the chain) filter is returned.
+     * @return the first filter in the chain; the rest of the chain can be
+     *         obtained by calling {@link PrecomputedDistancesFilter#getNextFilter getNextFilter}
+     */
+    public final PrecomputedDistancesFilter chainDestroy() {
+        PrecomputedDistancesFilter rtv = distanceFilter;
+        distanceFilter = null;
+        return rtv;
+    }
+
+    /**
+     * Clear non-messif data stored in this object.
+     * In addition to changing object key, this method removes
+     * the {@link #suppData supplemental data} and
+     * all {@link #distanceFilter distance filters}.
+     */
+    @Override
+    public void clearSurplusData() {
+        super.clearSurplusData();
+        suppData = null;
+        distanceFilter = null;
     }
 
 
@@ -418,6 +638,10 @@ public abstract class LocalAbstractObject extends AbstractObject {
      */
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         LocalAbstractObject rtv = (LocalAbstractObject)super.clone();
+        if (cloneFilterChain && rtv.distanceFilter != null)
+            rtv.distanceFilter = (PrecomputedDistancesFilter)rtv.distanceFilter.clone();
+        else
+            rtv.distanceFilter = null;
 
         // Clone the supplemental data
         if ((suppData != null) && (suppData instanceof Cloneable))
@@ -477,20 +701,26 @@ public abstract class LocalAbstractObject extends AbstractObject {
             } else if (splitLine[0].equals("#filter")) {
                 if (splitLine.length < 3)
                     throw new IOException("comment must be of format '#filterKey filterClass filter value': "+line);
+
+                // Get key class constructor
+                Constructor<PrecomputedDistancesFilter> keyConstructor = Convert.getClassForName(splitLine[1], PrecomputedDistancesFilter.class)
+                        .getConstructor(String.class);
+                // Create and set the key 
+                chainFilter(keyConstructor.newInstance(splitLine[2]), false);
             }
             
         } catch (ClassNotFoundException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (NoSuchMethodException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (IllegalAccessException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (InstantiationException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (InvocationTargetException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         } catch (IllegalArgumentException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e.toString());
         }
         return true;
     }
@@ -533,6 +763,19 @@ public abstract class LocalAbstractObject extends AbstractObject {
                 stream.write('\n');
             }
 
+            // write the filters as comments
+            PrecomputedDistancesFilter filter = this.distanceFilter;
+            while (filter != null) {
+                try {
+                    String filterText = filter.getText();
+                    stream.write("#filter ".getBytes());
+                    stream.write(filter.getClass().getName().getBytes());
+                    stream.write(' ');
+                    stream.write(filterText.getBytes());
+                    stream.write('\n');
+                } catch (UnsupportedOperationException ignore) { }
+                filter = filter.getNextFilter();
+            }
         }
         writeData(stream);
     }

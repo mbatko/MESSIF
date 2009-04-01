@@ -75,27 +75,66 @@ public class MetaObjectSAPIRWeightedDist2 extends MetaObjectSAPIR {
     }
 
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectSAPIR castObj = (MetaObjectSAPIR)obj;
         
         float rtv = 0;
 
-        if (colorLayout != null && castObj.colorLayout != null)
-            rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)*1.5/300.0;
-        if (colorStructure != null && castObj.colorStructure != null)
-            rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)*2.5/40.0/255.0;
-        if (edgeHistogram != null && castObj.edgeHistogram != null)
-            rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)*4.5/68.0;
-        if (homogeneousTexture != null && castObj.homogeneousTexture != null)
-            rtv += homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold)*0.5/25.0;
-        if (scalableColor != null && castObj.scalableColor != null)
-            rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.5/3000.0;
-        
+        if (colorLayout != null && castObj.colorLayout != null) {
+            if (metaDistances != null) {
+                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)/300.0f;
+                rtv += metaDistances[0] * 1.5;
+            } else {
+                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)*1.5/300.0;
+            }
+        }
+
+        if (colorStructure != null && castObj.colorStructure != null) {
+            if (metaDistances != null) {
+                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)/40.0f/255.0f;
+                rtv += metaDistances[1] * 2.5;
+            } else {
+                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)*2.5/40.0/255.0;
+            }
+        }
+
+        if (edgeHistogram != null && castObj.edgeHistogram != null) {
+            if (metaDistances != null) {
+                metaDistances[2] = edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)/68.0f;
+                rtv += metaDistances[2] * 4.5;
+            } else {
+                rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)*4.5/68.0;
+            }
+        }
+
+        if (homogeneousTexture != null && castObj.homogeneousTexture != null) {
+            if (metaDistances != null) {
+                metaDistances[3] = homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold)/25.0f;
+                rtv += metaDistances[3] * 0.5;
+            } else {
+                rtv += homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold)*0.5/25.0;
+            }
+        }
+
+        if (scalableColor != null && castObj.scalableColor != null) {
+            if (metaDistances != null) {
+                metaDistances[4] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)/3000.0f;
+                rtv += metaDistances[4] * 2.5;
+            } else {
+                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.5/3000.0;
+            }
+        }
+
         return rtv;
     }
 
     public static float[] getWeights() {
-        return new float[] { 1.5f, 2.5f, 4.5f, 0.5f, 2.5f };
+        return new float[] { 1.5f, 2.5f, 4.5f, 0.5f, 2.5f, 0.0f };
     }
+
+    @Override
+    public float getMaxDistance() {
+        return 16f;
+    }    
 
 }

@@ -6,15 +6,15 @@
 
 package messif.algorithms;
 
+import messif.network.MessageDispatcher;
+import messif.network.NetworkNode;
+import messif.operations.AbstractOperation;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
-import messif.network.MessageDispatcher;
-import messif.network.NetworkNode;
 import messif.network.ReplyReceiver;
-import messif.operations.AbstractOperation;
 
 /**
  *  Abstract distributed algorithm framework with support for request/reply messaging and respective operation executive.
@@ -215,8 +215,7 @@ public abstract class DistributedAlgorithm extends Algorithm {
 
     /**
      * This method should return an array of additional parameters that are needed for operation execution.
-     * The list must be consistent with the {@link #getSingleOperationExecutorParams}.
-     * 
+     * The list must be consistent with the parameters array passed to {@link #execute} and {@link #backgroundExecute}.
      * @return array of additional parameters that are needed for operation execution
      */
     @Override

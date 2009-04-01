@@ -1,5 +1,5 @@
 /*
- * ThresholdFunction.java
+ * AggregationFunction.java
  *
  * Created on 21. cerven 2007, 16:44
  *
@@ -20,24 +20,42 @@ import messif.utility.Convert;
  *
  * @author xbatko
  */
-public abstract class ThresholdFunction implements Serializable {
+public abstract class AggregationFunction implements Serializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
+
+    //****************** Aggregation function evaluation ******************//
+
+    /**
+     * Returns the names of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
+     * @return the list of parameter (descriptor) names of the {@link #compute} function
+     */
+    public abstract String[] getParameterNames();
+
+    /**
+     * Returns the maximal distance for the specified parameter of the {@link #compute} function.
+     * This method returns the {@link LocalAbstractObject#MAX_DISTANCE} by default.
+     * @param parameterIndex the index of a parameter (corresponds to the index of the
+     *          parameter name as given by {@link #getParameterNames()})
+     * @return the maximal distances for the parameters of the {@link #compute} function
+     * @throws IndexOutOfBoundsException if the specified parameter index is not valid
+     */
+    public float getParameterMaximalDistance(int parameterIndex) throws IndexOutOfBoundsException {
+        return LocalAbstractObject.MAX_DISTANCE;
+    }
+
     /**
      * Computes the value of the aggregate distance from the provided sub-distances.
+     * The <code>distances</code> array items must correspond with the parameter
+     * names as returned by {@link #getParameterNames()}.
      * @param distances the distances in respective descriptors
      * @return the aggregate distance
      */
     public abstract float compute(float... distances);
 
-    /**
-     * Returns the names of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
-     *
-     * @return the list of parameter (descriptor) names of the {@link #compute} function.
-     */
-    public abstract String[] getParameterNames();
 
+    //****************** Distance evaluation ******************//
 
     /**
      * Computes distance of two meta objects using this combination function.
@@ -60,7 +78,7 @@ public abstract class ThresholdFunction implements Serializable {
             LocalAbstractObject descriptorObject2 = object2.getObject(descriptorName);
 
             if (descriptorObject1 == null || descriptorObject2 == null)
-                descriptorDistances[paramIndex] = LocalAbstractObject.MAX_DISTANCE;
+                descriptorDistances[paramIndex] = getParameterMaximalDistance(paramIndex);
             else descriptorDistances[paramIndex] = descriptorObject1.getDistance(descriptorObject2);
             paramIndex++;
         }
@@ -68,7 +86,6 @@ public abstract class ThresholdFunction implements Serializable {
         // Compute overall distance
         return compute(descriptorDistances);
     }
-
 
     /**
      * Computes distance of two meta objects using this combination function.
@@ -81,15 +98,15 @@ public abstract class ThresholdFunction implements Serializable {
     }
 
 
-    /****************** Factory method ******************/
+    //****************** Factory method ******************//
 
     /** The constructor of the threshold function for the factory method */
-    private static Constructor<? extends ThresholdFunction> thresholdFunctionFactoryConstructor = null;
+    private static Constructor<? extends AggregationFunction> thresholdFunctionFactoryConstructor = null;
     static { // Initializer for the thresholdFunctionFactoryConstructor
         try {
-            Class<ThresholdFunction> factoryClass = Convert.getClassForName(
-                    System.getProperty("messif.objects.thresholdFunction.factoryClass", "messif.objects.impl.ThresholdFunctionSimpleEvaluator"),
-                    ThresholdFunction.class
+            Class<AggregationFunction> factoryClass = Convert.getClassForName(
+                    System.getProperty("messif.objects.util.aggregationFunction.factoryClass", "messif.objects.util.impl.AggregationFunctionEvaluator"),
+                    AggregationFunction.class
             );
             setFactoryClass(factoryClass);
         } catch (Throwable e) {
@@ -104,9 +121,9 @@ public abstract class ThresholdFunction implements Serializable {
      * @param string the theshold function (using standard expression syntax)
      * @throws NoSuchMethodException if there is no threshold function class set by {@link #setFactoryClass} yet
      * @throws InvocationTargetException if the parsing of the threshold function has thrown an exception
-     * @return a new instance of <code>ThresholdFunction</code>
+     * @return a new instance of <code>AggregationFunction</code>
      */
-    public static ThresholdFunction valueOf(String string) throws NoSuchMethodException, InvocationTargetException {
+    public static AggregationFunction valueOf(String string) throws NoSuchMethodException, InvocationTargetException {
         if (thresholdFunctionFactoryConstructor == null)
             throw new NoSuchMethodException("The factory class for the threshold function was not specified");
         try {
@@ -129,7 +146,7 @@ public abstract class ThresholdFunction implements Serializable {
      * @param factoryClass the new class for factory method
      * @throws NoSuchMethodException if the specified class is abstract or lacks a public constructor with one <code>String</code> argument
      */
-    public static void setFactoryClass(Class<? extends ThresholdFunction> factoryClass) throws NoSuchMethodException {
+    public static void setFactoryClass(Class<? extends AggregationFunction> factoryClass) throws NoSuchMethodException {
         if (Modifier.isAbstract(factoryClass.getModifiers()))
             throw new NoSuchMethodException("Class " + factoryClass.getName() + " is abstract");
         thresholdFunctionFactoryConstructor = factoryClass.getConstructor(String.class);
@@ -139,7 +156,7 @@ public abstract class ThresholdFunction implements Serializable {
      * Returns the class currently set for the factory method {@link #valueOf}.
      * @return the class currently set for the factory method {@link #valueOf}
      */
-    public static Class<? extends ThresholdFunction> getFactoryClass() {
+    public static Class<? extends AggregationFunction> getFactoryClass() {
         return (thresholdFunctionFactoryConstructor == null)?null:thresholdFunctionFactoryConstructor.getDeclaringClass();
     }
 }

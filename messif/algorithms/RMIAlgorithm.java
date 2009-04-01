@@ -11,7 +11,8 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.List;
+import java.util.Collection;
+import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 
 /**
@@ -229,24 +230,26 @@ public class RMIAlgorithm extends Algorithm {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public Class<? extends LocalAbstractObject> getObjectClass() {
+        return (Class<? extends LocalAbstractObject>)methodExecute("getObjectClass"); // This cast IS checked
+    }
+
+    @Override
     public int getRunningOperationsCount() {
         return (Integer)methodExecute("getRunningOperationsCount");
     }
 
     @Override
-    public void resetOperationStatistics() {
-        methodExecute("resetOperationStatistics");
+    @SuppressWarnings("unchecked")
+    public Collection<Class<AbstractOperation>> getSupportedOperations() {
+        return (Collection<Class<AbstractOperation>>)methodExecute("getSupportedOperations"); // This cast IS checked
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<Class<AbstractOperation>> getSupportedOperations() {
-        return (List<Class<AbstractOperation>>)methodExecute("getSupportedOperations"); // This cast IS checked
-    }
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T extends AbstractOperation> List<Class<T>> getSupportedOperations(Class<T> subclassToSearch) {
-        return (List<Class<T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
+    public <T extends AbstractOperation> Collection<Class<T>> getSupportedOperations(Class<T> subclassToSearch) {
+        return (Collection<Class<T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
     }
 
     @Override

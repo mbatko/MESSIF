@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+import messif.objects.keys.AbstractObjectKey;
 import messif.utility.Convert;
 
 /**
@@ -244,24 +245,52 @@ public abstract class MetaObject extends LocalAbstractObject {
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     /**
      * The actual implementation of the metric function.
-     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * Method {@link #getDistance(messif.objects.LocalAbstractObject, float[], float)}
+     * is called with <tt>null</tt> meta distances array in order to compute the
+     * actual distance.
      *
      * @param obj the object to compute distance to
      * @param distThreshold the threshold value on the distance
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
+    protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        return getDistanceImpl(obj, null, distThreshold);
+    }
+
+    /**
+     * The actual implementation of the metric function.
+     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * The array <code>metaDistances</code> is ignored.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
     }
 
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    @Override
+    public float[] createMetaDistancesHolder() {
+        return new float[getObjectCount()];
+    }
 
-    /****************** Additional overrides ******************/
+
+    //****************** Additional overrides ******************//
 
     /**
      * Returns the size of this object in bytes.

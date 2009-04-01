@@ -11,12 +11,15 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +28,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
+ * Utility class that provides methods for type conversions and instantiation.
+ * 
  * @author xbatko
  */
 public abstract class Convert {
@@ -61,29 +65,9 @@ public abstract class Convert {
         if (string.equals("null"))
             return null;
         
-        // Converting the primitive types
-        if (type.isPrimitive()) 
-            try {
-                if (type == Integer.TYPE)
-                    return (E)Integer.valueOf(string); // This cast IS checked
-                if (type == Long.TYPE)
-                    return (E)Long.valueOf(string); // This cast IS checked
-                if (type == Boolean.TYPE)
-                    return (E)Boolean.valueOf(string); // This cast IS checked
-                if (type == Double.TYPE)
-                    return (E)Double.valueOf(string); // This cast IS checked
-                if (type == Byte.TYPE)
-                    return (E)Byte.valueOf(string); // This cast IS checked
-                if (type == Float.TYPE)
-                    return (E)Float.valueOf(string); // This cast IS checked
-                if (type == Short.TYPE)
-                    return (E)Short.valueOf(string); // This cast IS checked
-                if (type == Character.TYPE)
-                    return (E)Character.valueOf(string.charAt(0)); // This cast IS checked
-                throw new InstantiationException("Can't create '" + type.getName() + "' from '" + string + "' because " + type + " is an unknown primitive type");
-            } catch (NumberFormatException e) {
-                throw new InstantiationException(e.toString());
-            }
+        // Use "valueOf" static method of primitive wrappers
+        if (type.isPrimitive())
+            type = wrapPrimitiveType(type);
 
         if (type.equals(String.class))
             return (E)string; // This cast IS checked
@@ -136,7 +120,7 @@ public abstract class Convert {
         // Converting string maps
         if (type.equals(Map.class)) {
             Map<String, Object> rtv = new HashMap<String, Object>();
-            putStringIntoMap(string, rtv);
+            putStringIntoMap(string, rtv, String.class);
             // Add streams parameter to a Map that contain a 'objectStreams' key but it is null
             if (rtv.containsKey("objectStreams") && rtv.get("objectStreams") == null)
                 rtv.put("objectStreams", objectStreams);
@@ -197,21 +181,80 @@ public abstract class Convert {
     }
 
     /**
+     * Returns a wrapper class for primitive type.
+     * If the type is not primitive, it is returned as is.
+     * @param <T> a primitive type class
+     * @param type a primitive type class
+     * @return a wrapper class for primitive type
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> wrapPrimitiveType(Class<T> type) {
+        if (!type.isPrimitive())
+            return type;
+        if (type == Integer.TYPE)
+            return (Class<T>)Integer.class; // This cast IS checked
+        if (type == Long.TYPE)
+            return (Class<T>)Long.class; // This cast IS checked
+        if (type == Boolean.TYPE)
+            return (Class<T>)Boolean.class; // This cast IS checked
+        if (type == Double.TYPE)
+            return (Class<T>)Double.class; // This cast IS checked
+        if (type == Byte.TYPE)
+            return (Class<T>)Byte.class; // This cast IS checked
+        if (type == Float.TYPE)
+            return (Class<T>)Float.class; // This cast IS checked
+        if (type == Short.TYPE)
+            return (Class<T>)Short.class; // This cast IS checked
+        if (type == Character.TYPE)
+            return (Class<T>)Character.class; // This cast IS checked
+        throw new InternalError("Unknown primitive type");
+    }
+
+    /**
      * Parses string key-value pairs from the specified string and adds them to the map.
      * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
      * For example:
      * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * <p>
+     * The values are converted using the {@link #stringToType(java.lang.String, java.lang.Class) stringToType}
+     * method to the specified <code>valueType</code>.
+     * </p>
+     *
+     * @param <E> the class of values in the map
      * @param string the string value to be converted
      * @param map a table to which the string key-value pairs are added
+     * @param valueType the class of values in the map
+     * @throws InstantiationException if the conversion of a value has failed
      */
-    public static void putStringIntoMap(String string, Map<? super String, ? super String> map) {
+    public static <E> void putStringIntoMap(String string, Map<? super String, ? super E> map, Class<E> valueType) throws InstantiationException {
         Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*(,|$)").matcher(string);
-        while (m.find()) {
-            String value = (m.group(4) == null)?m.group(3):m.group(4);
-            if (value.equals("null"))
-                value = null;
-            map.put((m.group(2) == null)?m.group(1):m.group(2), value);
-        }
+        while (m.find())
+            map.put(
+                (m.group(2) == null)?m.group(1):m.group(2), // Key
+                stringToType((m.group(4) == null)?m.group(3):m.group(4), valueType) // Converted value
+            );
+    }
+
+    /**
+     * Returns a map of string key-value pairs parsed from the specified string.
+     * String contains key=value pairs (key, value or both can be quoted) that are separated by commas.
+     * For example:
+     * <pre>one = 1, "two"=2,"three"="3", four=null</pre>
+     * <p>
+     * The values are converted using the {@link #stringToType(java.lang.String, java.lang.Class) stringToType}
+     * method to the specified <code>valueType</code>.
+     * </p>
+     *
+     * @param <E> the class of values in the map
+     * @param string the string value to be converted
+     * @param valueType the class of values in the map
+     * @throws InstantiationException if the conversion of a value has failed
+     * @return a map of string key-value pairs
+     */
+    public static <E> Map<String, E> stringToMap(String string, Class<E> valueType) throws InstantiationException {
+        Map<String, E> rtv = new HashMap<String, E>();
+        putStringIntoMap(string, rtv, valueType);
+        return rtv;
     }
 
     /**
@@ -223,9 +266,11 @@ public abstract class Convert {
      * @return a map of string key-value pairs
      */
     public static Map<String, String> stringToMap(String string) {
-        Map<String, String> rtv = new HashMap<String, String>();
-        putStringIntoMap(string, rtv);
-        return rtv;
+        try {
+            return stringToMap(string, String.class);
+        } catch (InstantiationException thisShouldNeverHappen) {
+            throw new InternalError();
+        }
     }
 
     /**
@@ -747,6 +792,56 @@ public abstract class Convert {
     }
 
     /**
+     * Creates a new instance of a class with a string constructor signature.
+     * The string must contain a fully specified class name with all comma-separated
+     * arguments enclosed by parenthesis. For example:
+     * <pre>
+     *      messif.pivotselection.StreamSequencePivotChooser(messif.objects.impl.MetaObjectMap, file)
+     * </pre>
+     * <p>
+     * Note that only types convertible by {@link #stringToType} method can be used in constructors.
+     * </p>
+     *
+     * @param <E> the type of the instantiated object
+     * @param constructorSignature constructor call with string arguments
+     * @param checkClass the superclass of (or the same class as) the instantiated object
+     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @return a new instance of the specified object
+     * @throws InvocationTargetException
+     *              if the constructor can't be found for the specified arguments,
+     *              the argument string-to-type convertion has failed or
+     *              there was an error during instantiation
+     * @throws ClassNotFoundException if the class in the constructor signature was not found or is not a descendant of checkClass
+     */
+    public static <E> E createInstanceWithStringArgs(String constructorSignature, Class<E> checkClass, Map<String, StreamGenericAbstractObjectIterator> objectStreams) throws InvocationTargetException, ClassNotFoundException {
+        // Search for braces
+        int openParenthesisPos = constructorSignature.indexOf('(');
+
+        // If no braces found, use the no-args constructor
+        if (openParenthesisPos == -1)
+            try {
+                return getClassForName(constructorSignature, checkClass).newInstance();
+            } catch (InstantiationException e) {
+                new InvocationTargetException(e, constructorSignature);
+            } catch (IllegalAccessException e) {
+                new InvocationTargetException(e, constructorSignature);
+            }
+
+        try {
+            // Get class from the string (up to parenthesis)
+            Class<E> clazz = getClassForName(constructorSignature.substring(0, openParenthesisPos), checkClass);
+            // Get constructors from the string (up to parenthesis)
+            @SuppressWarnings("unchecked")
+            List<Constructor<E>> constructors = Arrays.asList((Constructor<E>[])clazz.getConstructors());
+            // Get all arguments - closed in parenthesis and comma separated
+            String[] args = constructorSignature.substring(openParenthesisPos + 1, constructorSignature.lastIndexOf(')')).split("\\s*,\\s*");
+            return createInstanceWithStringArgs(constructors, args);
+        } catch (IndexOutOfBoundsException ignore) {
+            throw new IllegalArgumentException("Missing closing parenthesis: " + constructorSignature);
+        }
+    }
+
+    /**
      * Creates a new instance of a class.
      * First, a constructor for the specified arguments is searched in the provided class.
      * Then, an instance is created and returned.
@@ -764,6 +859,33 @@ public abstract class Convert {
         } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
         } catch (InstantiationException e) {
+            throw new NoSuchMethodException(e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new instance of a class.
+     * First, a factory method for the specified arguments is searched in the provided class and its ancestors.
+     * Then, an instance is created and returned.
+     *
+     * @param <E> the type of the instantiated object
+     * @param instanceClass the class for which to create an instance
+     * @param methodName the name of the factory method
+     * @param arguments the arguments for the factory method
+     * @return a new instance of the class
+     * @throws NoSuchMethodException if there was no factory method for the specified list of arguments
+     * @throws InvocationTargetException if there was an exception during instantiation
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> E createInstanceUsingFactoryMethod(Class<E> instanceClass, String methodName, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
+        try {
+            Method factoryMethod = getMethod(instanceClass, methodName, false, arguments);
+            if (!Modifier.isStatic(factoryMethod.getModifiers()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to be static");
+            if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to return " + instanceClass);
+            return (E)factoryMethod.invoke(null, arguments); // This cast IS checked on the previous line
+        } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
         }
     }
@@ -804,6 +926,42 @@ public abstract class Convert {
         }
         str.append(')');
         throw new NoSuchMethodException(str.toString());
+    }
+
+    /**
+     * Returns a method for the specified class that accepts the specified arguments.
+     * The <code>clazz</code>'s declared methods are searched for the one that
+     * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the 
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper method is found. Their types then will be
+     * compatible with the method.
+     * 
+     * @param clazz the class for which to get the method
+     * @param methodName the name of the method to get
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link #stringToType}
+     * @param arguments the arguments for the method
+     * @return a method of the specified class
+     * @throws NoSuchMethodException if there was no method with the specified name and arguments
+     */
+    @SuppressWarnings("unchecked")
+    public static Method getMethod(Class<?> clazz, String methodName, boolean convertStringArguments, Object[] arguments) throws NoSuchMethodException {
+        if (clazz == null || methodName == null)
+            throw new NoSuchMethodException("There is not method '" + methodName + "' that accepts " + Arrays.toString(arguments));
+
+        // Search all methods of the execution object and register the matching ones
+        for (Method method : clazz.getDeclaredMethods()) {
+            // Skip methods with different name if methodNames parameter was specified
+            if (!methodName.equals(method.getName()))
+                continue;
+
+            // Check prototype
+            if (isPrototypeMatching(method.getParameterTypes(), arguments, convertStringArguments))
+                return method;
+        }
+
+        // Recurse to superclass
+        return getMethod(clazz.getSuperclass(), methodName, convertStringArguments, arguments);
     }
 
     /**
@@ -877,7 +1035,7 @@ public abstract class Convert {
             if (arguments[i] == null)
                 continue;
             // The argument of the method must be the same as or a superclass of the provided prototype class
-            if (!prototype[i].isInstance(arguments[i])) {
+            if (!wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {
                 if (!convertStringArguments || !(arguments[i] instanceof String))
                     return false;
                 // Try to convert string argument
@@ -898,7 +1056,7 @@ public abstract class Convert {
 
         return true;
     }
-    
+
     /**
      * Returns a new instance of a static array.
      * @param <T> the type of components of the new array
@@ -921,6 +1079,92 @@ public abstract class Convert {
     @SuppressWarnings("unchecked")
     public static <T> T[] createGenericArray(T[] array, int size) {
         return (T[])Array.newInstance(array.getClass().getComponentType(), size);
+    }
+
+    /**
+     * Copies the specified array, truncating or padding with nulls (if necessary)
+     * so the copy has the specified length.  For all indices that are
+     * valid in both the original array and the copy, the two arrays will
+     * contain identical values.  For any indices that are valid in the
+     * copy but not the original, the copy will contain <tt>null</tt>.
+     * Such indices will exist if and only if the specified length
+     * is greater than that of the original array.
+     * The resulting array is of the class <tt>newType</tt>.
+     *
+     * @param <T> the type of objects in the array
+     * @param original the array to be copied
+     * @param newLength the length of the copy to be returned
+     * @param componentType the class of array components
+     * @return a copy of the original array, truncated or padded with nulls
+     *     to obtain the specified length
+     * @throws NegativeArraySizeException if <tt>newLength</tt> is negative
+     */
+    public static <T> T[] resizeArray(T[] original, int newLength, Class<T> componentType) throws NegativeArraySizeException {
+        T[] copy = createGenericArray(componentType, newLength);
+        if (original != null)
+            System.arraycopy(original, 0, copy, 0, Math.min(original.length, newLength));
+        return copy;
+    }
+
+    /**
+     * Adds an item to the end of a specified static array (enlarging its size by one).
+     * @param <T> the type of objects in the array
+     * @param original the array where the item is added
+     * @param componentType the class of array components
+     * @param item the item to add
+     * @return a copy of the original array with added item
+     */
+    public static <T> T[] addToArray(T[] original, Class<T> componentType, T item) {
+        T[] ret = resizeArray(original, (original == null)?1:(original.length + 1), componentType);
+        ret[ret.length - 1] = item;
+        return ret;
+    }
+
+    /**
+     * Search the array for the specified item.
+     * @param <T> the type of objects in the array
+     * @param array the array to search
+     * @param item the item to search for
+     * @param backwards if set to <tt>true</tt>, the search is started from the last element
+     * @return index of the array element, where the item was found, or -1 if it was not
+     */
+    public static <T> int searchArray(T[] array, T item, boolean backwards) {
+        if (array == null)
+            return -1;
+        if (backwards) {
+            for (int i = array.length - 1; i >= 0; i--)
+                if (item.equals(array[i]))
+                    return i;
+        } else {
+            for (int i = 0; i < array.length; i++)
+                if (item.equals(array[i]))
+                    return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Removes an item from the specified static array (shrinking its size by one).
+     * The removed array element is the last one that is equal to the specified item.
+     * If the element is not found, the same array (original) is returned.
+     * If the removed element was the last one, <tt>null</tt> is returned.
+     * @param <T> the type of objects in the array
+     * @param original the array from which the item is removed
+     * @param item the item to remove
+     * @return a copy of the original array with added item
+     */
+    public static <T> T[] removeFromArray(T[] original, T item) {
+        // Search for the array element to remove
+        int i = searchArray(original, item, true);
+
+        if (i == -1)
+            return original;
+        if (original.length == 1)
+            return null;
+        T[] ret = createGenericArray(original, original.length - 1);
+        System.arraycopy(original, 0, ret, 0, i);
+        System.arraycopy(original, i + 1, ret, i, original.length - i - 1);
+        return ret;
     }
 
     /**
@@ -994,11 +1238,15 @@ public abstract class Convert {
      *
      * @param string the string to be modified
      * @param variableRegex regular expression that matches variables
-     * @param variableRegexGroup parenthesis group within regular expression that holds the variable name
+     * @param variableRegexGroup parenthesis group within regular expression
+     *          that holds the variable name
+     * @param defaultValueRegexGroup parenthesis group within regular expression
+     *          that holds the default value for a variable that is not present
+     *          in the <code>variables</code> map
      * @param variables the variable names with their values
      * @return the original string with all variables replaced
      */
-    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, Map<String,String> variables) {
+    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String,String> variables) {
         // Check null strings
         if (string == null)
             return null;
@@ -1011,6 +1259,10 @@ public abstract class Convert {
         while (matcher.find()) {
             // Get variable with the name from the matched pattern group
             String value = variables.get(matcher.group(variableRegexGroup));
+
+            // Set the default value if specified
+            if (value == null && defaultValueRegexGroup > 0)
+                value = matcher.group(defaultValueRegexGroup);
 
             // Do the replacement, if variable is not found, the variable placeholder is removed
             matcher.appendReplacement(sb, (value != null)?value:"");

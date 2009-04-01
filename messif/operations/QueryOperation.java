@@ -33,7 +33,7 @@ import messif.objects.util.AbstractObjectIterator;
  */
 public abstract class QueryOperation<TAnswer> extends AbstractOperation {
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** Attributes ******************//
 
@@ -74,7 +74,7 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
 
     /**
      * Evaluate this query on a given set of objects.
-     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
+     * The objects found by this evaluation are added to the answer of the particular query.
      *
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
@@ -109,7 +109,13 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * @return an iterator over all objects in the answer to this query
      */
     public abstract Iterator<TAnswer> getAnswer();
-    
+
+    /**
+     * Returns an iterator over all {@link AbstractObject}s in the answer to this query.
+     * This method unwraps the objects from the results.
+     * @return an iterator over all {@link AbstractObject}s in the answer to this query
+     */
+    public abstract Iterator<AbstractObject> getAnswerObjects();
 
     /**
      * Reset the current query answer.

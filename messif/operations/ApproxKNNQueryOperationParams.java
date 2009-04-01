@@ -6,7 +6,6 @@
 package messif.operations;
 
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.RankedAbstractObject;
 
 /**
  * Parametrized approximate k-nearest neighbors query.
@@ -41,18 +40,32 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
     /**
      * Creates a new instance of ApproxKNNQueryOperationParams.
      * The parameters are set to reasonable default values.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be retured
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects"})
     public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, 0, 20, null, 25, ApproxKNNQueryOperation.LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
-        this.ceilingClustersToVisit = 4;
-        this.ceilingNodesToVisit = 7;
+        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
     }
     
     /**
      * Creates a new instance of ApproxKNNQueryOperationParams.
+     * The approximation parameters are set to reasonable default values.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param k the number of nearest neighbors to retrieve
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Answer type"})
+    public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k, AnswerType answerType) {
+        this(queryObject, k, answerType, 0, 20, null, 25, ApproxKNNQueryOperation.LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this.ceilingClustersToVisit = 4;
+        this.ceilingNodesToVisit = 7;
+    }
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationParams.
+     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      * @param clustersToVisit number of clusters to be visited by this approx. query; if is equal to 0, then determined adaptively
@@ -65,6 +78,26 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Number of clusters<br/>to visit", "% of nodes to<br/>visit in each cluster",  "Nodes visited in particular <br/> clusters: [cluster: number]", "Local search param", "Type of <br/>local search param", "The minimal radius of guaranteed answer (-1 to switch off)"})
     public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k, int clustersToVisit, int nodesToVisitPercentage, String nodesToVisit, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
         super(queryObject, k, localSearchParam, localSearchType, radiusGuaranteed);
+        this.clustersToVisit = clustersToVisit;
+        this.nodesToVisitPercentage = nodesToVisitPercentage;
+        this.nodesToVisit = nodesToVisit;
+    }
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationParams.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param answerType the type of objects this operation stores in its answer
+     * @param clustersToVisit number of clusters to be visited by this approx. query; if is equal to 0, then determined adaptively
+     * @param nodesToVisitPercentage percentage of individual clusters to be visited by the query
+     * @param nodesToVisit this is a output string to determine particular clusters visited and nodes within the cluster
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius for which the answer is guaranteed
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Answer type", "Number of clusters<br/>to visit", "% of nodes to<br/>visit in each cluster",  "Nodes visited in particular <br/> clusters: [cluster: number]", "Local search param", "Type of <br/>local search param", "The minimal radius of guaranteed answer (-1 to switch off)"})
+    public ApproxKNNQueryOperationParams(LocalAbstractObject queryObject, int k, AnswerType answerType, int clustersToVisit, int nodesToVisitPercentage, String nodesToVisit, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, k, answerType, localSearchParam, localSearchType, radiusGuaranteed);
         this.clustersToVisit = clustersToVisit;
         this.nodesToVisitPercentage = nodesToVisitPercentage;
         this.nodesToVisit = nodesToVisit;

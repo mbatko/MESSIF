@@ -24,7 +24,7 @@ public class ObjectContourShape extends LocalAbstractObject {
     // number of peaks is peak.length / 2
 	protected final byte [] globalCurvatureVector; // length 2
 	protected final byte [] prototypeCurvatureVector; // length 0-2; NOT USED IN THE DISTANCE FUNCTION
-	protected final byte highestPeakY; // NOT USED IN THE DISTANCE FUNCTION
+	//protected final byte highestPeakY; // NOT USED IN THE DISTANCE FUNCTION
 	protected final byte [] peak; // 2 x (1-62): 
 
 
@@ -34,13 +34,11 @@ public class ObjectContourShape extends LocalAbstractObject {
      * Creates a new instance of ObjectContourShape
      * @param globalCurvatureVector
      * @param prototypeCurvatureVector
-     * @param highestPeakY
      * @param peak 
      */
-    public ObjectContourShape(byte [] globalCurvatureVector, byte [] prototypeCurvatureVector, byte highestPeakY, byte [] peak) {
+    public ObjectContourShape(byte [] globalCurvatureVector, byte [] prototypeCurvatureVector, byte [] peak) {
         this.globalCurvatureVector = globalCurvatureVector;
         this.prototypeCurvatureVector = prototypeCurvatureVector;
-        this.highestPeakY = highestPeakY;
         this.peak = peak;
     }
 
@@ -54,7 +52,6 @@ public class ObjectContourShape extends LocalAbstractObject {
      *   comma-separated or space-separated numbers.
      * @throws IndexOutOfBoundsException when the line is not of this format: <br/>
      *    globalCurvatureVector; prototypeCurvatureVector; highhestPeakY; peaks vector
-     * 
      */
     public ObjectContourShape(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IndexOutOfBoundsException {
         // Keep reading the lines while they are comments, then read the first line of the object
@@ -79,10 +76,8 @@ public class ObjectContourShape extends LocalAbstractObject {
         for (int i = 0; i < prototypeCurvatureVectorStrings.length; i++)
             this.prototypeCurvatureVector[i] = Byte.parseByte(prototypeCurvatureVectorStrings[i]);
         
-        this.highestPeakY = Byte.parseByte(fields[2]);
-        
         // Read peaks vector
-        String[] peaksStrings = fields[3].trim().split(",\\p{Space}*");
+        String[] peaksStrings = fields[2].trim().split(",\\p{Space}*");
         this.peak = new byte[peaksStrings.length];
         for (int i = 0; i < peaksStrings.length; i++)
             this.peak[i] = Byte.parseByte(peaksStrings[i]);
@@ -108,11 +103,6 @@ public class ObjectContourShape extends LocalAbstractObject {
             stream.write(' ');
         }
 
-        // writhe the highest peak
-        stream.write(String.valueOf(highestPeakY).getBytes());
-        stream.write(';');
-        stream.write(' ');
-
         // Write the peaks vector
         for (int i = 0; i < peak.length; i++) {
             stream.write(String.valueOf(peak[i]).getBytes());
@@ -129,7 +119,7 @@ public class ObjectContourShape extends LocalAbstractObject {
     /****************** Size function ******************/
 
     public int getSize() {
-        return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + 1 + this.peak.length) * Byte.SIZE / 8;
+        return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + this.peak.length) * Byte.SIZE / 8;
     }
 
 
@@ -142,7 +132,6 @@ public class ObjectContourShape extends LocalAbstractObject {
         return
                 Arrays.equals(globalCurvatureVector, castObj.globalCurvatureVector) &&
                 Arrays.equals(prototypeCurvatureVector, castObj.prototypeCurvatureVector) && 
-                highestPeakY == castObj.highestPeakY &&
                 Arrays.equals(peak, castObj.peak);
     }
 
@@ -231,11 +220,13 @@ public class ObjectContourShape extends LocalAbstractObject {
     }
     
     /**
-     * The distance algorithm is taken from the ContourShapeSearch.cpp. The "ref" object from the algorithm
-     *  is the "obj" object in this method and the "query" is "this" object.
-     * @param obj
-     * @param distThreshold
-     * @return
+     * The distance algorithm is taken from the ContourShapeSearch.cpp of the XM library.
+     * The "ref" object from the algorithm is the <code>obj</code> object in this method
+     * and the "query" is <code>this</code> object.
+     * 
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
      */
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
 
@@ -495,5 +486,5 @@ public class ObjectContourShape extends LocalAbstractObject {
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("cloneRandomlyModify not supported yet");
     }
-    
+
 }
