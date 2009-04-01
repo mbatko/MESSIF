@@ -369,12 +369,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             XMLHandlerSAPIR.appendObjectXML(rtv, "HomogeneousTextureType", homogeneousTexture);
         if (scalableColor != null)
             XMLHandlerSAPIR.appendObjectXML(rtv, "ScalableColorType", scalableColor);
-        if (location != null) {
-            // HACK! for location
-            rtv.append("<location latitude=\"").append(location.getLatitude());
-            rtv.append("\" longitude=\"").append(location.getLongitude());
-            rtv.append("\"/>");
-        }
+        if (location != null)
+            XMLHandlerSAPIR.appendObjectXML(rtv, "Location", location);
         return rtv.toString();
     }
 
@@ -510,6 +506,15 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         }
 
         public static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+            // Hack for location
+            if (name.equals("Location")) {
+                ObjectGPSCoordinate location = (ObjectGPSCoordinate)object;
+                xmlString.append("<location latitude=\"").append(location.getLatitude());
+                xmlString.append("\" longitude=\"").append(location.getLongitude());
+                xmlString.append("\"/>");
+                return xmlString;
+            }
+
             // Append opening descriptor tag
             xmlString.append('<');
             xmlString.append(descriptorTagName);
