@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
 
@@ -24,7 +25,7 @@ import messif.utility.Convert;
  * @author xhomola
  */
 
-public abstract class ObjectFeatureSet extends LocalAbstractObject {
+public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 666L;
 
@@ -296,9 +297,8 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject {
 
     @Override
     public int getBinarySize(BinarySerializator serializator) {
-        int size = super.getBinarySize(serializator);
-        int objcount = objects.size();
-        size += serializator.getBinarySize (objcount);
+        int size = super.getBinarySize(serializator);        
+        size += 4; // print integer "objectCount"
         for (LocalAbstractObject obj : objects) {
             size += serializator.getBinarySize(obj);
         }

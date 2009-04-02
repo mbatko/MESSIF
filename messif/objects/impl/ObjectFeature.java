@@ -7,9 +7,10 @@ import java.io.OutputStream;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
-public abstract class ObjectFeature extends LocalAbstractObject {
+public abstract class ObjectFeature extends LocalAbstractObject implements BinarySerializable {
 
     protected float x,  y,  ori,  scl;
 
