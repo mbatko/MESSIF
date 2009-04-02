@@ -41,11 +41,14 @@ public class ObjectFeatureSetSumOfMinDists extends ObjectFeatureSet {
         double setdistance = 0.0;
         double setdistancerev = 0.0;
         float retval = 0;
-        float distances[][] = new float[((ObjectFeatureSet)obj).getObjectCount()][getObjectCount()];
+
+        ObjectFeatureSet objSet = (ObjectFeatureSet) obj;
+
+        float distances[][] = new float[objSet.getObjectCount()][getObjectCount()];
         for (int i = 0; i < this.getObjectCount(); i++) {
             float shortest = Float.MAX_VALUE;
-            for (int j = 0; j < ((ObjectFeatureSet)obj).getObjectCount(); j++) {
-                distances[j][i] = this.getObject(i).getDistance(((ObjectFeatureSet)obj).getObject(j), distThreshold);
+            for (int j = 0; j < objSet.getObjectCount(); j++) {
+                distances[j][i] = this.getObject(i).getDistance(objSet.getObject(j), distThreshold);
                 if (distances[j][i] < shortest) {
                     shortest = distances[j][i];
                 }
@@ -56,7 +59,7 @@ public class ObjectFeatureSetSumOfMinDists extends ObjectFeatureSet {
             }
             // we can stop now if (setdistance > 2 * distTreshold) and return distTreshold
         }
-        for (int j = 0; j < ((ObjectFeatureSet)obj).getObjectCount(); j++) {
+        for (int j = 0; j < objSet.getObjectCount(); j++) {
             float shortest = Float.MAX_VALUE;
             for (int i = 0; i < getObjectCount(); i++) {
                 if (distances[j][i] < shortest) {
@@ -72,7 +75,7 @@ public class ObjectFeatureSetSumOfMinDists extends ObjectFeatureSet {
         if ((setdistance + setdistancerev) / 2 > Float.MAX_VALUE) {
             retval = Float.MAX_VALUE;
         } else {
-            retval = (float) ((setdistance + setdistancerev) / 2.0);
+            retval = (float) ((setdistance + setdistancerev) / 2.0) / (this.getObjectCount() + objSet.getObjectCount());
         }
         return retval;
     }
