@@ -910,7 +910,7 @@ public abstract class BinarySerializator {
             }
         } catch (InstantiationException e) {
             // The provided class is abstract
-            throw new IllegalArgumentException(e.getMessage());
+            throw new IllegalArgumentException("Cannot instantiate abstract class via " + constructor);
         } catch (IllegalAccessException e) {
             // The constructor/factory should be "accessible"
             throw new IllegalArgumentException(e.toString());

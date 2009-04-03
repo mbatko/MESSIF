@@ -27,7 +27,7 @@ import messif.utility.Convert;
  */
 public class MultiClassSerializator<T> extends BinarySerializator implements Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /** Constant indicating that the standard Java {@link java.io.Serializable serialization} is used */
     protected static final byte JAVA_SERIALIZATION = -1;
@@ -40,10 +40,10 @@ public class MultiClassSerializator<T> extends BinarySerializator implements Ser
     protected final Class<? extends T> defaultClass;
 
     /** The cached constructor for the default class */
-    protected final Constructor<?> constructor;
+    protected transient final Constructor<?> constructor;
 
     /** The cached factory method for the default class */
-    protected final Method factoryMethod;
+    protected transient final Method factoryMethod;
 
 
     //************************ Constructor ************************//
@@ -267,12 +267,12 @@ public class MultiClassSerializator<T> extends BinarySerializator implements Ser
             // Get constructor for the base class
             if (BinarySerializable.class.isAssignableFrom(defaultClass)) {
                 // Restore the constructor (set it through reflection to overcome the "final" flag)
-                Field field = getClass().getDeclaredField("constructor");
+                Field field = MultiClassSerializator.class.getDeclaredField("constructor");
                 field.setAccessible(true);
                 field.set(this, getNativeSerializableConstructor(defaultClass));
 
                 // Restore the factory method
-                field = getClass().getDeclaredField("factoryMethod");
+                field = MultiClassSerializator.class.getDeclaredField("factoryMethod");
                 field.setAccessible(true);
                 field.set(this, getNativeSerializableFactoryMethod(defaultClass));
             }

@@ -9,12 +9,14 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import messif.utility.Convert;
 
 /**
@@ -70,8 +72,11 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
         // Fill the predefined data
         for (Class selClass : cachedClasses) {
             try {
+                if (Modifier.isAbstract(selClass.getModifiers()))
+                    throw new IllegalArgumentException("Cannot cache class '" + selClass.getName() + "' because it is abstract");
                 Class<? extends BinarySerializable> castClass = Convert.genericCastToClass(selClass, BinarySerializable.class);
-                this.cachedClasses.put(castClass, addToCache(castClass));
+                if (this.cachedClasses.put(castClass, addToCache(castClass)) != null)
+                    throw new IllegalArgumentException("Class '" + selClass.getName() + "' was specified twice");
             } catch (ClassCastException e) {
                 throw new IllegalArgumentException("Class '" + selClass.getName() + "' does not implement BinarySerializable");
             }
@@ -161,6 +166,8 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
             return position;
 
         // Other class
+        if (log.isLoggable(Level.INFO))
+            log.info("Consider using cache for class " + object.getClass());
         return CLASSNAME_SERIALIZATION;
     }
 

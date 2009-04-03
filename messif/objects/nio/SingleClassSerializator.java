@@ -154,12 +154,12 @@ public class SingleClassSerializator<T> extends BinarySerializator implements Se
             // Get constructor for the base class
             if (BinarySerializable.class.isAssignableFrom(deserializationClass)) {
                 // Restore the constructor (set it through reflection to overcome the "final" flag)
-                Field field = getClass().getDeclaredField("constructor");
+                Field field = SingleClassSerializator.class.getDeclaredField("constructor");
                 field.setAccessible(true);
                 field.set(this, getNativeSerializableConstructor(deserializationClass));
 
                 // Restore the factory method
-                field = getClass().getDeclaredField("factoryMethod");
+                field = SingleClassSerializator.class.getDeclaredField("factoryMethod");
                 field.setAccessible(true);
                 field.set(this, getNativeSerializableFactoryMethod(deserializationClass));
             }
