@@ -138,6 +138,9 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
      */
     public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
+        // Test for the same classes
+        if (! this.getClass().equals(targetFilter.getClass()))
+            throw new IllegalArgumentException("Trying to use different filters to filter an object: thisFilter=" + this.getClass() + " objectFilter=" + targetFilter.getClass());
         if (excludeUsingPrecompDistImpl(targetFilter, radius)) {
             counterPrecomputedDistanceSavings.add();
             return true;

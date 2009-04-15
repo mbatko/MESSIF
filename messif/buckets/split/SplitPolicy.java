@@ -39,8 +39,20 @@ import messif.objects.util.ObjectMatcher;
  */
 public abstract class SplitPolicy implements ObjectMatcher {
 
+    //****************** Attributes ******************
+
     /** The table of annotated parameters of this split policy */
     private Map<String, Parameter> parameters;
+
+    //****************** Constants ******************
+
+    /**
+     * Identification of any partition (returned if a region cannot fit a single partition).
+     * Equal to <code>-1</code>
+     */
+    public final static int PART_ID_ANY = -1;
+
+    //****************** Constructor ******************
 
     /**
      * Creates a new instance of SplitPolicy.
@@ -105,7 +117,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
     }
 
 
-    /****************** Parameter handling ******************/
+    //****************** Parameter handling ******************
 
     /**
      * Returns <tt>true</tt> if this policy has all the arguments necessary for a split defined.

@@ -30,7 +30,7 @@ import messif.objects.util.ObjectMatcher;
  */
 public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMatcher {
 
-    /****************** Attributes ******************/
+    //****************** Attributes ******************
 
     /** Policy parameter <i>pivot</i> */
     @SplitPolicy.ParameterField("pivot")
@@ -44,14 +44,28 @@ public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMa
     /** The distance to the pivot computed by the last call to match(Region). */
     protected float dist = LocalAbstractObject.UNKNOWN_DISTANCE;
     
-    /****************** Constructor ******************/
+    //****************** Constants ******************
+
+    /**
+     * Identification of the inner partition.
+     * Equal to <code>0</code>
+     */
+    public final static int PART_ID_INNER = 0;
+
+    /**
+     * Identification of the outer partition.
+     * Equal to <code>1</code>
+     */
+    public final static int PART_ID_OUTER = 1;
+
+    //****************** Constructor ******************
 
     /** Creates a new instance of SplitPolicyBallPartitioning */
     public SplitPolicyBallPartitioning() {
     }
 
 
-    /****************** Parameter quick setter/getters ******************/
+    //****************** Parameter quick setter/getters ******************
 
     /**
      * Sets the pivot for ball partitioning.
@@ -96,7 +110,7 @@ public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMa
         return dist;
     }
 
-    /****************** Matching ******************/
+    //****************** Matching ******************
     
     /**
      * Returns 1 for objects outside the ball partition defined by this policy and 0 for objects belonging to the partition.
@@ -106,13 +120,13 @@ public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMa
      */
     public int match(LocalAbstractObject object) {
         if (object.includeUsingPrecompDist(pivot, radius))
-            return 0;
+            return PART_ID_INNER;
         
         // Precomputed distances didn't help, so compute the exact distance
         if (object.getDistance(pivot) <= radius)
-            return 0;
+            return PART_ID_INNER;
         else 
-            return 1;
+            return PART_ID_OUTER;
     }
 
     /**
@@ -139,23 +153,23 @@ public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMa
         
         if (pivot.includeUsingPrecompDist(region.getPivot(), radius - region.getRadius()))
             // <=
-            return 0;
+            return PART_ID_INNER;
         if (pivot.excludeUsingPrecompDist(region.getPivot(), radius + region.getRadius()))
             // >
-            return 1;
+            return PART_ID_OUTER;
         
         // Compute the distance and decide on its basis
         dist = pivot.getDistance(region.getPivot());
 
         if (dist + region.getRadius() <= radius)        // The region 'region' is completely included
             // <=
-            return 0;
+            return PART_ID_INNER;
         else if (dist - region.getRadius() > radius)    // Regions do not intersect nor touch
             // >
-            return 1;
+            return PART_ID_OUTER;
         else
             // The region intersects both the partitions
-            return -1;
+            return PART_ID_ANY;
 
        // Original implementation!
 //            float overlap = region.getOverlapWith(pivot, radius);

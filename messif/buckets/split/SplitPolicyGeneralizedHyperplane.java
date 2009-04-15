@@ -20,7 +20,7 @@ import messif.objects.LocalAbstractObject;
  */
 public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
     
-    /****************** Attributes ******************/
+    //****************** Attributes ******************
 
     /** Policy parameter <i>left pivot</i> */
     @SplitPolicy.ParameterField("left pivot")
@@ -41,14 +41,29 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
     protected float rightDist = LocalAbstractObject.UNKNOWN_DISTANCE;
 
 
-    /****************** Constructor ******************/
+    //****************** Constants ******************
+
+    /**
+     * Identification of the left partition.
+     * Equal to <code>0</code>
+     */
+    public final static int PART_ID_LEFT = 0;
+
+    /**
+     * Identification of the right partition.
+     * Equal to <code>1</code>
+     */
+    public final static int PART_ID_RIGHT = 1;
+
+
+    //****************** Constructor ******************
 
     /** Creates a new instance of SplitPolicyBallPartitioning */
     public SplitPolicyGeneralizedHyperplane() {
     }
 
 
-    /****************** Parameter quick setter/getters ******************/
+    //****************** Parameter quick setter/getters ******************
 
     /**
      * Sets the first pivot for generalized hyperplane partitioning.
@@ -121,7 +136,7 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
     }
 
     
-    /****************** Matching ******************/
+    //****************** Matching ******************
     
     /**
      * Returns 0 for objects near the left pivot defined by this policy (or exactly in the middle) and 1 for objects near the right pivot.
@@ -133,15 +148,15 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
         // The GH-partitioning is defined that object (<=) fall in 0 partition and the others in 1 partition.
         // includeUsingPrecompDist used <= as well, so calling it against leftPivot and then against rightPivot is correct.
         if (object.includeUsingPrecompDist(leftPivot, halfPivotDistance))
-            return 0;
+            return PART_ID_LEFT;
         if (object.includeUsingPrecompDist(rightPivot, halfPivotDistance))
-            return 1;
+            return PART_ID_RIGHT;
 
         // Definition of GH partitioning.
         if (leftPivot.getDistance(object) <= rightPivot.getDistance(object))
-            return 0;
+            return PART_ID_LEFT;
         else 
-            return 1;
+            return PART_ID_RIGHT;
     }
 
     /**
@@ -172,26 +187,26 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
         // includeUsingPrecompDist used <= as well, so calling it against leftPivot and then against rightPivot is correct.
         if (leftPivot.includeUsingPrecompDist(region.getPivot(), halfPivotDistance - region.getRadius()))
             // <=
-            return 0;
+            return PART_ID_LEFT;
         if (rightPivot.includeUsingPrecompDist(region.getPivot(), halfPivotDistance - region.getRadius()))
             // >
-            return 1;
+            return PART_ID_RIGHT;
         
         
         // Compute the distance to the left pivot and decide on its basis
         leftDist = leftPivot.getDistance(region.getPivot());
         if (leftDist + region.getRadius() <= halfPivotDistance)        // The region 'region' is completely on the left
             // <=
-            return 0;
+            return PART_ID_LEFT;
 
         // Compute the distance to the right pivot and decide on its basis
         rightDist = rightPivot.getDistance(region.getPivot());
         if (rightDist + region.getRadius() < halfPivotDistance)        // The region 'region' is completely on the right
             // >
-            return 1;
+            return PART_ID_RIGHT;
         
         // The region intersects both the partitions
-        return -1;
+        return PART_ID_ANY;
 
         // Original implementation!            
 //        float overlap = region.getOverlapWith(leftPivot, halfPivotDistance);

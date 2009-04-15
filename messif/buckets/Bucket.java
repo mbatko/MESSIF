@@ -196,10 +196,22 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     /**
      * Splits this bucket according to the specified policy.
      * Objects from this bucket are examined using the policy's matcher method.
-     * If the method returned 0, the object is kept in this bucket.
-     * Otherwise, object is moved from this bucket to the target bucket denoted by the matcher (e.g. if matcher returns 1 object is inserted into targetBuckets.get(0), etc.).
-     * The number of target buckets must match the number of partitions of the policy minus one or the <code>bucketCreator</code>
+     * Based on the integer value returned the objects are separated into new buckets.
+     * The new buckets are added to their position in <code>targetBuckets</code> parameters.
+     * The position is the value returned by the policy's matcher method.
+     * The parameter <code>whoStays</code> denotes the partition that corresponds to <code>this</code> bucket, i.e.,
+     * the objects marked with this number (<code>whoStays</code>) by the policy's matcher are left in this bucket
+     * and not moved to any new bucket. As a result, the <code>whoStays</code> index in <code>targetBuckets</code>
+     * is <code>null</code> (if this index existed in <code>targetBuckets</code>, it is left untouched).
+     *
+     * The list <code>targetBuckets</code> is extended to contain all {@link SplitPolicy#getPartitionsCount() getPartitionsCount()} items.
+     * The items correponding to indexes that have not been returned by matcher for any object are initialized to <code>null</code> (or left
+     * untouched if the index have already existed).
+     * If <code>targetBuckets</code> is not initialized with references to buckets, the <code>bucketCreator</code>
      * must be able to create additional buckets.
+     *
+     * Remark: to partition all objects to new buckets pass an empty instance of list in <code>targetBuckets</code> and set <code>whoStays</code> to
+     * a negative value since the matcher returns non-negative values only.
      * 
      * @param policy the split policy used to split this bucket
      * @param targetBuckets the list of target buckets to split the objects to
@@ -215,12 +227,12 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
         // Sanity checks
         if (targetBuckets == null)
             throw new IllegalArgumentException("Target buckets for split must be set");
-        if (bucketCreator == null && (targetBuckets.size() < policy.getPartitionsCount() - 1))
+        if (bucketCreator == null && (targetBuckets.size() < policy.getPartitionsCount()))
             throw new IllegalArgumentException("Not enough buckets for split, policy " + policy + " requires at least " + (policy.getPartitionsCount() - 1) + " buckets");
         // Fill target buckets list with nulls to match the policy's partition count
-        while (targetBuckets.size() < policy.getPartitionsCount() - 1)
+        while (targetBuckets.size() < policy.getPartitionsCount())
             targetBuckets.add(null);
-        
+
         // Get all objects and use policy's matcher to mark the moved ones
         int count = 0;
         AbstractObjectIterator<LocalAbstractObject> iterator = getAllObjects();
@@ -228,12 +240,12 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
             LocalAbstractObject object = iterator.next();
             int partId = policy.match(object);
             // If object is subject to move
-            if (partId > 0) {
+            if (partId != whoStays) {
                 try {
                     // Add object to target bucket
-                    Bucket bucket = targetBuckets.get(partId - 1);
+                    Bucket bucket = targetBuckets.get(partId);
                     if (bucket == null) // The bucket was not initialized, use bucket creator to create a new one
-                        targetBuckets.set(partId - 1, bucket = bucketCreator.createBucket());
+                        targetBuckets.set(partId, bucket = bucketCreator.createBucket());
                     bucket.addObject(object);
                 } catch (IndexOutOfBoundsException e) {
                     throw new IllegalArgumentException("Wrong partition ID '" + partId + "' in policy " + policy);
@@ -245,12 +257,6 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
                 count++;
             }
         }
-
-        // Remove unused buckets
-        Iterator<Bucket> bucketIter = targetBuckets.iterator();
-        while (bucketIter.hasNext())
-            if (bucketIter.next() == null)
-                bucketIter.remove();
 
         return count;
     }
@@ -311,6 +317,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * The iterator for provided objects for ObjectProvider interface.
      * @return iterator for provided objects
      */
+    @Override
     public AbstractObjectIterator<LocalAbstractObject> provideObjects() {
         return getAllObjects();
     }

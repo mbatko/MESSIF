@@ -133,13 +133,11 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      */
     @Override
     protected void appendErrorCode(StringBuilder str) {
-        if (!errValue.isSet()) {
-            str.append(" has not finished yet (").append(getAnswerCount()).append(" objects returned so far)");
-        } else if (wasSuccessful()) {
-            str.append(" returned ").append(getAnswerCount()).append(" objects");
-        } else {
-            str.append(" failed: ").append(errValue.toString());
-        }
+        str.append(" returned ").append(getAnswerCount()).append(" objects");
+        if (!errValue.isSet())
+            str.append("(has not finished yet)");
+        else
+            str.append("(failed: ").append(errValue.toString()).append(")");
     }
 
 }

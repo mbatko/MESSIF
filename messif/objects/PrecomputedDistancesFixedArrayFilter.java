@@ -104,6 +104,21 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return actualSize;
     }
 
+    /** Add the passed distances at the end of internal list of precomputed distances.
+     * @param  dists   array of distances to append
+     * @return The total number of precomputed distances stored.
+     */
+    public synchronized int addPrecompDist(float[] dists) {
+        // Resize the internal array if necessary
+        resizePrecompDistArray(dists.length + actualSize);
+
+        // Copy the array
+        System.arraycopy(dists, 0, precompDist, actualSize, dists.length);
+        actualSize += dists.length;
+
+        return actualSize;
+    }
+
     /** Add distance at the end of internal list of precomputed distances. The distance is computed between the objects passed.
      * @param p   first object (usually pivot)
      * @param o   second object
@@ -232,11 +247,24 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      * @throws IndexOutOfBoundsException is thrown when <code>pos</code> is out of bounds. 
      */
     public synchronized void removePrecompDist(int pos) throws IndexOutOfBoundsException {
-        if (precompDist == null)
-            throw new IndexOutOfBoundsException("There are no precomputed distances to remove");
+        if (precompDist == null || actualSize <= pos)
+            throw new IndexOutOfBoundsException("There are no precomputed distance at the passed position to remove");
         
         System.arraycopy(precompDist, pos + 1, precompDist, pos, actualSize - 1 - pos);
         actualSize--;
+    }
+
+    /** Removes the requested number of distances from the end of the array.
+     * @param cnt    the number of distances to remove
+     * @throws IndexOutOfBoundsException is thrown when the list of precomputed distance is already empty.
+     */
+    public synchronized void removeLastPrecompDists(int cnt) throws IndexOutOfBoundsException {
+        if (precompDist == null || actualSize == 0)
+            throw new IndexOutOfBoundsException("There are no precomputed distances to remove");
+
+        actualSize-=cnt;
+        if (actualSize < 0)
+            actualSize = 0;
     }
 
     /** Replaces the current array of precomputed distances with the values passed in the argument.
