@@ -60,13 +60,12 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     public abstract void addObject(LocalAbstractObject object) throws BucketStorageException;
 
     /**
-     * Insert a new object into the bucket.
-     * The object is passed through the {@link #storeObject} method to the lower layer
+     * Insert a new object into this bucket and returns error code instead of exception.
      *
      * @param object the new object to be inserted
      * @return the success/failure error code of the object insertion
      */
-    public final BucketErrorCode addObjectErrCode(LocalAbstractObject object) {
+    public BucketErrorCode addObjectErrCode(LocalAbstractObject object) {
         try {
             addObject(object);
             return BucketErrorCode.OBJECT_INSERTED;

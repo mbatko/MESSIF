@@ -10,8 +10,8 @@ import messif.buckets.BucketStorageException;
 /**
  * Interface for storage that uses int addresses.
  * The {@link #store} method stores the provided object into the storage
- * and returns its address. This address can be used to {@link #readInt read}
- * or {@link #removeInt remove} the object at any time later.
+ * and returns its address. This address can be used to {@link #read}
+ * or {@link #remove remove} the object at any time later.
  * 
  * @param <T> the class of objects stored in this storage
  * @author xbatko

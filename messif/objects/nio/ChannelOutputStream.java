@@ -14,7 +14,7 @@ import java.nio.channels.WritableByteChannel;
  * 
  * <p>
  * Note that it is <em>not safe</em> to use several {@link ChannelOutputStream ChannelOutputStreams} over the
- * same channel (even if synchronized). For file channels, the {@link ByteBufferFileOutputStream}
+ * same channel (even if synchronized). For file channels, the {@link FileChannelOutputStream}
  * can be used if you need this functionality. Use copy-pipes if you need it
  * on other channel types.
  * </p>

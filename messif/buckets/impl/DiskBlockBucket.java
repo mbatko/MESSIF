@@ -30,8 +30,7 @@ import messif.objects.nio.MultiClassSerializator;
  * @author  xbatko
  * @see BucketDispatcher
  * @see LocalBucket
- * @see DiskBucket
- * @see SimpleDiskBucket
+ * @see DiskBlockObjectKeyBucket
  */
 public class DiskBlockBucket extends LocalBucket implements Serializable {
     /** class serial id for serialization */

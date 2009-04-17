@@ -156,8 +156,8 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param maxPeersForClusters Maximal number of peers to visit within (other than best) leaf-node cluster
      * @param maxClustersForBranching maximal fixed number of sub-clusters to be visited within a cluster (internal node)
      * @param localSearchParam local search parameter - typically approximation parameter
-     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
-     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
      * @param localSearchType type of the local search parameter
      * @param radiusGuaranteed radius for which the answer is guaranteed
      */

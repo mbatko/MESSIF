@@ -370,6 +370,16 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         addObject(object, getModifiableIndex());
     }
 
+    @Override
+    public final BucketErrorCode addObjectErrCode(LocalAbstractObject object) {
+        // Bacward compatibility for soft capacity error code
+        BucketErrorCode ret = super.addObjectErrCode(object);
+        if (isSoftCapacityExceeded() && ret.equals(BucketErrorCode.OBJECT_INSERTED))
+            return BucketErrorCode.SOFTCAPACITY_EXCEEDED;
+        else
+            return ret;
+    }
+
     public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         // Search for objects with the specified ID
         ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);

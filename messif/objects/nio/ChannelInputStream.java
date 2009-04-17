@@ -16,7 +16,7 @@ import java.nio.channels.ReadableByteChannel;
  * 
  * <p>
  * Note that it is <em>not safe</em> to use several {@link ChannelInputStream ChannelInputStreams} over the
- * same channel (even if synchronized). For file channels, the {@link ByteBufferFileInputStream}
+ * same channel (even if synchronized). For file channels, the {@link FileChannelInputStream}
  * can be used if you need this functionality. Use copy-pipes if you need it
  * on other channel types.
  * </p>

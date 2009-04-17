@@ -7,8 +7,8 @@ package messif.buckets.storage;
 
 /**
  * Interface for objects that supports object-locking.
- * The {@link #lock()} method can be used to acquire a lock that holds
- * until the {@link Lock#unlock()} method is called.
+ * The {@link #lock(boolean) lock} method can be used to acquire a lock that holds
+ * until the {@link Lock#unlock() unlock} method is called on that returned instance.
  * 
  * @author xbatko
  */

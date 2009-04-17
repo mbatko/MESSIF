@@ -15,7 +15,6 @@ import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
 import messif.buckets.OrderedLocalBucket;
 import messif.buckets.index.LocalAbstractObjectOrder;
-import messif.buckets.index.ModifiableIndex;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.impl.LongStorageIndex;
 import messif.buckets.storage.impl.DiskStorage;
@@ -35,8 +34,7 @@ import messif.objects.nio.MultiClassSerializator;
  * @author  xbatko
  * @see BucketDispatcher
  * @see LocalBucket
- * @see DiskBucket
- * @see SimpleDiskBucket
+ * @see DiskBlockBucket
  */
 public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectKey> implements Serializable {
     /** class serial id for serialization */

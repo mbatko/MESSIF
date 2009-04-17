@@ -102,7 +102,7 @@ public abstract class SortedArrayData<K, T> {
     /**
      * Searches a range in this collection for objects that are equal to the specified key.
      * If the comparator is not <tt>null</tt> it is used to check for equality.
-     * Otherwise, the {@link java.lang.Object#euals} is used.
+     * Otherwise, the {@link java.lang.Object#equals} is used.
      * 
      * @param <C> type of keys for the comparator
      * @param comparator the comparator used to check for equality of objects (can be <tt>null</tt>)

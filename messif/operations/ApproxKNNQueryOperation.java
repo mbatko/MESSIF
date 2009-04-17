@@ -126,8 +126,8 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
      * maximal number of objects to return and parameters that control the approximation.
      * @param queryObject query object
      * @param k number of objects to be returned
-     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
-     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
      * @param answerType the type of objects this operation stores in its answer
      * @param localSearchParam local search parameter - typically approximation parameter
      * @param localSearchType type of the local search parameter

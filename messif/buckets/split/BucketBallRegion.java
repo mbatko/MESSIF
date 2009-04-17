@@ -46,7 +46,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd
     /**
      * Creates a new instance of BucketBallRegion.
      * @param bucket the bucket on which the ball region should be maintained
-     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
+     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilter bucket filter} is desirable
      */
     public BucketBallRegion(LocalBucket bucket, boolean registerAsFilter) {
         this(bucket, registerAsFilter, null, LocalAbstractObject.MIN_DISTANCE);
@@ -55,7 +55,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd
     /**
      * Creates a new instance of BucketBallRegion.
      * @param bucket the bucket on which the ball region should be maintained
-     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
+     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilter bucket filter} is desirable
      * @param pivot the pivot for the new ball region
      */
     public BucketBallRegion(LocalBucket bucket, boolean registerAsFilter, LocalAbstractObject pivot) {
@@ -65,7 +65,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd
     /**
      * Creates a new instance of BucketBallRegion with specified pivot and radius.
      * @param bucket the bucket on which the ball region should be maintained
-     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilterInterface bucket filter} is desirable
+     * @param registerAsFilter specifies if the automatic registration as {@link messif.buckets.BucketFilter bucket filter} is desirable
      * @param pivot the pivot for the new ball region
      * @param radius the radius for the new ball region
      */

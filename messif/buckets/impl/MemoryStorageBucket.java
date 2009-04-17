@@ -37,7 +37,7 @@ public class MemoryStorageBucket extends LocalBucket implements Serializable {
 
     /**
      * Constructs a new MemoryStorageBucket instance.
-     * It uses an {@link IndexedMemoryStorage} to actually strore the objects.
+     * It uses an {@link MemoryStorage} to actually strore the objects.
      * @param capacity maximal capacity of the bucket - cannot be exceeded
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered

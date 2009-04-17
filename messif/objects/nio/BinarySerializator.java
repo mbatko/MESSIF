@@ -24,8 +24,10 @@ import messif.utility.Logger;
  * It operates on any {@link BinaryInput}/{@link BinaryOutput}.
  * 
  * @author xbatko
- * @see ByteBufferFileInputStream
- * @see ByteBufferFileOutputStream
+ * @see BufferInputStream
+ * @see BufferOutputStream
+ * @see ChannelInputStream
+ * @see ChannelOutputStream
  */
 public abstract class BinarySerializator {
 
