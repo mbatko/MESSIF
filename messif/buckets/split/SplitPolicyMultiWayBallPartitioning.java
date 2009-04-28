@@ -31,7 +31,7 @@ import messif.objects.util.ObjectMatcher;
  *
  * @author Vlastislav Dohnal, dohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
-public class SplitPolityMultiWayBallPartitioning extends SplitPolicy implements ObjectMatcher {
+public class SplitPolicyMultiWayBallPartitioning extends SplitPolicy implements ObjectMatcher {
 
     //****************** Attributes ******************
 
@@ -50,7 +50,7 @@ public class SplitPolityMultiWayBallPartitioning extends SplitPolicy implements 
     //****************** Constructor ******************
 
     /** Creates a new instance of SplitPolicyBallPartitioning */
-    public SplitPolityMultiWayBallPartitioning() {
+    public SplitPolicyMultiWayBallPartitioning() {
     }
 
 
