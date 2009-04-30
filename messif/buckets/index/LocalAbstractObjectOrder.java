@@ -39,7 +39,10 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             case LOCATOR:
                 return o1.getLocatorURI().compareTo(o2.getLocatorURI());
             case DATA:
-                return o1.dataHashCode() - o2.dataHashCode();
+                int cmp = o1.dataHashCode() - o2.dataHashCode();
+                if (cmp == 0 && !o1.dataEquals(o2))
+                    cmp = o1.compareTo(o2);     // Order object by their uniqueID
+                return cmp;
             case KEY:
                 return o1.getObjectKey().compareTo(o2.getObjectKey());
         }

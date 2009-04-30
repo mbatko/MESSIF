@@ -996,7 +996,7 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args file name to read from, class name of objects to be read from the file, optional name of the object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional constructor arguments (not required)" })
@@ -1026,28 +1026,31 @@ public class Application {
      * See {@link #objectStreamOpen} method for explanation of the concept of 
      * additional constructor parameters.
      * This method requires three arguments:
-     *   the name of the stream the name of which to change,
-     *   the constructor parameter index to change (zero-based) and
-     *   the the new value for the parameter.
+     * <ul>
+     *   <li>the name of the stream the name of which to change,</li>
+     *   <li>the the new value for the parameter,</li>
+     *   <li>the constructor parameter index to change (zero-based).</li>
+     * </ul>
+     * The third argument is optional. If not specified, <tt>0</tt> is assumed.
      * 
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data 1 new_string_value
+     * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data new_string_value 1
      * </pre>
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of objects stream, new parameter value to object's contructor, and zero-based index of the parameter
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required)" })
+    @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required -- zero if not given)" })
     public boolean objectStreamSetParameter(PrintStream out, String... args) {
         StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
             try {
                 // Set parameter
-                objectStream.setConstructorParameter((args.length > 3)?Integer.parseInt(args[3]):1, args[2]);
+                objectStream.setConstructorParameter((args.length > 3)?Integer.parseInt(args[3]):0, args[2]);
                 return true;
             } catch (IndexOutOfBoundsException e) {
                 out.println(e.toString());
@@ -1073,7 +1076,7 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
@@ -1103,13 +1106,45 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "reset an AbstractObjectStream stream to read objects from the beginning", arguments = { "name of the stream" })
     public boolean objectStreamReset(PrintStream out, String... args) {
         StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
+            try {
+                // Reset the returned stream
+                objectStream.reset();
+                return true;
+            } catch (IOException e) {
+                out.println(e.toString());
+            }
+        else out.print("Stream '" + args[1] + "' is not opened");
+        return false;
+    }
+
+    /**
+     * Skips the passed number of objects in the stream.
+     * The objects are skipped from the current position in the stream.
+     * Arguments specifying the name of the stream to reset and the number
+     * of objects to skip are required.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamSkip my_data 5
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args name of opened object stream and number of objects to skip
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "skip the given number of objects in AbstractObjectStream stream", arguments = { "name of the stream", "number of objects to skip" })
+    public boolean objectStreamSkip(PrintStream out, String... args) {
+        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
+        if (objectStream != null)
             try {
                 // Reset the returned stream
                 objectStream.reset();
@@ -1131,7 +1166,7 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args no arguments required
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "list all names of current streams", arguments = {})
