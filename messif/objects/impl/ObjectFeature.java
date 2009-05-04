@@ -9,6 +9,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.utility.Logger;
 
 public abstract class ObjectFeature extends LocalAbstractObject implements BinarySerializable {
 
@@ -28,11 +29,16 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Binar
                 throw new EOFException ("EoF reached wehile initializing ObjectFeature!");
             }
         } while (processObjectComment(line));
-        String[] params = line.trim().split("[, ]+");
-        this.x = Float.parseFloat(params[0]);
-        this.y = Float.parseFloat(params[1]);
-        this.ori = Float.parseFloat(params[2]);
-        this.scl = Float.parseFloat(params[3]);
+        try {
+            String[] params = line.trim().split("[, ]+");
+            this.x = Float.parseFloat(params[0]);
+            this.y = Float.parseFloat(params[1]);
+            this.ori = Float.parseFloat(params[2]);
+            this.scl = Float.parseFloat(params[3]);
+        } catch (NumberFormatException numberFormatException) {
+            Logger.getLoggerEx("LocalAbstractObject").warning("error while parsing line '"+ line+ "' for 4 floats, locator: " + getLocatorURI());
+            throw numberFormatException;
+        }
     }
 
     public void writeData(OutputStream stream) throws IOException {

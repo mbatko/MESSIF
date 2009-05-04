@@ -7,7 +7,7 @@ import messif.buckets.BucketErrorCode;
 import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.objects.util.AbstractStreamObjectIterator;
 
 /**
  * Operation for inserting several objects at once.
@@ -72,7 +72,7 @@ public class BulkInsertOperation extends AbstractOperation {
      * @param count the number of objects to read from the stream
      */
     @AbstractOperation.OperationConstructor({"Stream to read objects to insert from, Number of objects to read"})
-    public BulkInsertOperation(StreamGenericAbstractObjectIterator<LocalAbstractObject> stream, int count) {
+    public BulkInsertOperation(AbstractStreamObjectIterator<LocalAbstractObject> stream, int count) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(stream, count);
     }
 

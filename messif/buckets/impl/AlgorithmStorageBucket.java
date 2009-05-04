@@ -37,7 +37,7 @@ import messif.buckets.index.OperationIndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
-import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.objects.util.AbstractStreamObjectIterator;
 import messif.operations.AnswerType;
 import messif.operations.BulkInsertOperation;
 import messif.operations.GetAllObjectsQueryOperation;
@@ -203,7 +203,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
 
         // Create new instance of algorithm
         try {
-            Map<String, StreamGenericAbstractObjectIterator> objectStreams = Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, StreamGenericAbstractObjectIterator.class); // This cast IS checked, because StreamGenericAbstractObjectIterator has LocalAbstractObject as default E
+            Map<String, AbstractStreamObjectIterator> objectStreams = Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, AbstractStreamObjectIterator.class); // This cast IS checked, because AbstractStreamObjectIterator has LocalAbstractObject as default E
             return Convert.createInstanceWithStringArgs(
                     Algorithm.getAnnotatedConstructors(algClass),
                     algParams.toArray(new String[algParams.size()]),

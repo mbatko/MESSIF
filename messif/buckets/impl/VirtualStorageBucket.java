@@ -99,7 +99,13 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
     public static VirtualStorageBucket<?> getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
         try {
             // Create storage - retrieve class from parameter and use "create" factory method
-            Class<? extends Storage> storageClass = Convert.genericCastToClass(parameters.get("storageClass"), Storage.class);
+            Class<? extends Storage> storageClass = null;
+            try {
+                storageClass = Convert.genericCastToClass(parameters.get("storageClass"), Storage.class);
+            } catch (ClassCastException classCastException) {
+                storageClass = Convert.getClassForName((String) parameters.get("storageClass"), Storage.class);
+            }
+            //Class<? extends Storage> storageClass = Convert.getParameterValue(parameters, "storageClass", Class.class, null);
             @SuppressWarnings("unchecked")
             Storage<LocalAbstractObject> storage = Convert.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, parameters);
 

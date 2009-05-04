@@ -28,6 +28,7 @@ import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,7 +44,9 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractStreamObjectIterator;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.objects.util.StreamsMetaObjectMapIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
@@ -164,7 +167,7 @@ public class Application {
     protected final MethodExecutor methodExecutor;
 
     /** List of currently opened object streams */
-    protected final Map<String, StreamGenericAbstractObjectIterator> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator>();
+    protected final Map<String, AbstractStreamObjectIterator> objectStreams = new HashMap<String, AbstractStreamObjectIterator>();
 
     /**
      * Create new instance of Application.
@@ -1022,6 +1025,62 @@ public class Application {
     }
 
     /**
+     * Open a named stream which allows to read {@link MetaObjectMap objects} from several files.
+     * The arguments are the following: 
+     * <p>
+     *  metaObjectMapStreamOpen [["subdistance_name class file"] ...], &lt;name of the stream>
+     * </p>
+     * Each of the arguments tripple specify the
+     * <ol>
+     * <li>sub-distance name of objects from this file</li>
+     * <li>class of objects in this stream</li>
+     * <li>file name from which to open the stream</li>
+     * </ol>
+     *
+     * A last argument is the name under which the stream is opened.
+     *
+     * <p>
+     * If the name (third argument) is then specified in place where {@link LocalAbstractObject}
+     * is argument required, the next object is read from the stream and used as the argument's value.
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args file name to read from, class name of objects to be read from the file, optional name of the object stream
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "create new stream of MetaObjectMap", arguments = { "[[\"<subdistance_name class file>\"] ...]", "name of the stream"})
+    public boolean metaObjectMapStreamOpen(PrintStream out, String... args) {
+        try {
+            // Store new stream into stream registry
+            StreamsMetaObjectMapIterator streamsMetaObjectMapIterator = new StreamsMetaObjectMapIterator();
+            if (objectStreams.put(args[args.length - 1], streamsMetaObjectMapIterator) != null) {
+                out.println("Previously opened stream changed to a new file");
+            }
+            try {
+                for (int argIndex = 1; argIndex < args.length - 1; argIndex++) {
+                    String[] nameClassFile = args[argIndex].split(" ", 3);
+                    streamsMetaObjectMapIterator.addObjectStream(
+                            nameClassFile[0],
+                            Convert.getClassForName(nameClassFile[1], LocalAbstractObject.class),
+                            nameClassFile[2]);
+                }
+            } catch (IllegalArgumentException illegalArgumentException) {
+                out.println(illegalArgumentException.toString());
+                out.println("usage: metaObjectMapStreamOpen [[<subdistance_name class file>] ...] <stream_name>");
+                return false;
+            }
+            return true;
+        } catch (IOException e) {
+            out.println(e.toString());
+            return false;
+        } catch (ClassNotFoundException e) {
+            out.println(e.toString());
+            return false;
+        }
+    }
+
+
+    /**
      * Sets a value of additional constructor parameter of an opened object stream.
      * See {@link #objectStreamOpen} method for explanation of the concept of 
      * additional constructor parameters.
@@ -1046,7 +1105,7 @@ public class Application {
      */
     @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required -- zero if not given)" })
     public boolean objectStreamSetParameter(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
+        AbstractStreamObjectIterator objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
             try {
                 // Set parameter
@@ -1081,7 +1140,7 @@ public class Application {
      */
     @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
     public boolean objectStreamClose(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.remove(args[1]);
+        AbstractStreamObjectIterator objectStream = objectStreams.remove(args[1]);
         if (objectStream != null)
             try {
                 // Close the returned stream
@@ -1111,40 +1170,8 @@ public class Application {
      */
     @ExecutableMethod(description = "reset an AbstractObjectStream stream to read objects from the beginning", arguments = { "name of the stream" })
     public boolean objectStreamReset(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
+        AbstractStreamObjectIterator objectStream = objectStreams.get(args[1]);
         if (objectStream != null) 
-            try {
-                // Reset the returned stream
-                objectStream.reset();
-                return true;
-            } catch (IOException e) {
-                out.println(e.toString());
-            }
-        else out.print("Stream '" + args[1] + "' is not opened");
-        return false;
-    }
-
-    /**
-     * Skips the passed number of objects in the stream.
-     * The objects are skipped from the current position in the stream.
-     * Arguments specifying the name of the stream to reset and the number
-     * of objects to skip are required.
-     *
-     * <p>
-     * Example of usage:
-     * <pre>
-     * MESSIF &gt;&gt;&gt; objectStreamSkip my_data 5
-     * </pre>
-     * </p>
-     *
-     * @param out a stream where the application writes information for the user
-     * @param args name of opened object stream and number of objects to skip
-     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */
-    @ExecutableMethod(description = "skip the given number of objects in AbstractObjectStream stream", arguments = { "name of the stream", "number of objects to skip" })
-    public boolean objectStreamSkip(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
-        if (objectStream != null)
             try {
                 // Reset the returned stream
                 objectStream.reset();
@@ -1171,7 +1198,7 @@ public class Application {
      */
     @ExecutableMethod(description = "list all names of current streams", arguments = {})
     public boolean objectStreamList(PrintStream out, String... args) {
-        for(Map.Entry<String, StreamGenericAbstractObjectIterator> entry : objectStreams.entrySet())
+        for(Map.Entry<String, AbstractStreamObjectIterator> entry : objectStreams.entrySet())
             out.println(entry);
         return true;
     }

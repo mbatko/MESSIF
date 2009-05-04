@@ -17,7 +17,11 @@ public class ArithmeticFunctionToken implements PatternToken {
         LOG10
     }
 
-    /** This static method should be in compliance with types recognized by consructor. */
+    /**
+     * This static method should be in compliance with types recognized by consructor - LOG (for ln), LOG10 (for log_10).
+     * @param functionString string to check
+     * @return true, if this string is recognized as some arithmetic function
+     */
     public static boolean isFunctionString(String functionString) {
         return ("log".equalsIgnoreCase(functionString) || "log10".equalsIgnoreCase(functionString));
     }

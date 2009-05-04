@@ -100,7 +100,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         try {
             return readObject(stream, Convert.getClassForName(className, LocalAbstractObject.class));
         } catch (ClassNotFoundException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         }
     }
 
@@ -121,13 +121,13 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
             // Read the object
             return objectClass.getConstructor(BufferedReader.class).newInstance(stream);
         } catch (InstantiationException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         } catch (IllegalAccessException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         } catch (InvocationTargetException e) {
-            throw new IOException("Can't create object from stream: " + e.getCause());
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         } catch (NoSuchMethodException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         }
     }
 

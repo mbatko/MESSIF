@@ -28,7 +28,7 @@ import messif.utility.DirectoryInputStream;
  * @param <E> the class of objects provided by this stream iterator (must be descendant of {@link LocalAbstractObject})
  * @author xbatko
  */
-public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends AbstractObjectIterator<E> implements Closeable {
+public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> extends AbstractStreamObjectIterator<E> {
     
     //****************** Attributes ******************//
 
