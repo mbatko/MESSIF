@@ -182,14 +182,35 @@ public class MessageDispatcher implements Receiver, Serializable {
      * @throws IOException if there was error when opening communication sockets
      */
     public MessageDispatcher(int port, int broadcastPort) throws IOException {
+        this(new NetworkNode(InetAddress.getLocalHost(), port), broadcastPort);
+    }
+
+    /**
+     * Creates a new instance of MessageDispatcher with specified TCP/UDP and broadcast ports.
+     * @param localHost the local IP address to bind the communication to
+     * @param port the TCP/UDP port used for communication
+     * @param broadcastPort the UDP port used for sending and receiving broadcasts
+     * @throws IOException if there was error when opening communication sockets
+     */
+    public MessageDispatcher(String localHost, int port, int broadcastPort) throws IOException {
+        this(new NetworkNode(localHost, port), broadcastPort);
+    }
+
+    /**
+     * Creates a new instance of MessageDispatcher with specified TCP/UDP and broadcast ports.
+     * @param localAddress local address to bind the TCP/UDP communication to
+     * @param broadcastPort the UDP port used for sending and receiving broadcasts
+     * @throws IOException if there was error when opening communication sockets
+     */
+    public MessageDispatcher(NetworkNode localAddress, int broadcastPort) throws IOException {
+        // Set network node info
+        ourNetworkNode = localAddress;
+        
         // Create server TCP socket endpoint
-        tcpSocket = new ServerSocket(port);
+        tcpSocket = new ServerSocket(localAddress.getPort(), 0, localAddress.getHost());
         
         // Create server UDP socket endpoint
-        udpSocket = new DatagramSocket(tcpSocket.getLocalPort());
-        
-        // Set network node info
-        ourNetworkNode = new NetworkNode(InetAddress.getLocalHost(), tcpSocket.getLocalPort());
+        udpSocket = new DatagramSocket(tcpSocket.getLocalPort(), tcpSocket.getInetAddress());
         
         // Initialize tcp connection pool
         tcpConnectionPool = Collections.synchronizedMap(new HashMap<NetworkNode, ObjectOutputStream>(tcpConnectionPoolSize));
