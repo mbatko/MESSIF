@@ -170,7 +170,20 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public int getObjectCount() {
-        return 6;
+        int count = 0;
+        if (colorLayout != null)
+            count++;
+        if (colorStructure != null)
+            count++;
+        if (edgeHistogram != null)
+            count++;
+        if (homogeneousTexture != null)
+            count++;
+        if (scalableColor != null)
+            count++;
+        if (location != null)
+            count++;
+        return count;
     }
 
     /**
