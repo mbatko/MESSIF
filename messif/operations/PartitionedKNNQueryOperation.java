@@ -187,6 +187,15 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
             }
         }
     }
+
+    /**
+     * Returns a simple string representation of this operation.
+     * @return a string representation of this operation.
+     */
+    public String toSimpleString() {
+        StringBuffer buffer = new StringBuffer("Partitioned kNN query <").append(queryObject).append(',').append(k).append("> returned ").append(getAnswerCount()).append(" objects");
+        return buffer.toString();
+    }
     
     /**
      * Returns a string representation of this operation.
@@ -203,7 +212,18 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
                 buffer.append(", ");
             }
         }
-        buffer.append("}");
+        buffer.append("}\n");
+        //buffer.append("AnswerObjects: \n");
+        for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
+            buffer.append(entry.getKey()).append(": ");
+            for (Iterator<RankedAbstractObject> it = entry.getValue().iterator(); it.hasNext(); ) {
+                buffer.append(it.next());
+                if (it.hasNext()) {
+                    buffer.append(", ");
+                }
+            }
+            buffer.append("\n");
+        }
         return buffer.toString();
     }
 }

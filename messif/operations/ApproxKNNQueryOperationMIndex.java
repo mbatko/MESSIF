@@ -162,7 +162,9 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param radiusGuaranteed radius for which the answer is guaranteed
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of objects", "Fixed # clusters<br/>to visit", "M-Index level to <br/>generate cluster <br/>variants for", "Local search param", "Type of <br/>local search param", "Store the meta-object subdistances?", "answer type", "guaranteed radius <br/>(-1 to switch off)"})
-    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType, boolean storeMetaDistances, AnswerType answerType, float radiusGuaranteed) {
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, 
+            int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit,
+            int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType, boolean storeMetaDistances, AnswerType answerType, float radiusGuaranteed) {
         super(queryObject, k, storeMetaDistances, answerType, localSearchParam, localSearchType, radiusGuaranteed);
         this.initialLevelClusterNumber = initialLevelClusterNumber;
         this.initialLevel = initialLevel;
@@ -173,6 +175,17 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         this.maxPeersForGreatClusters = maxPeersForGreatClusters;
         this.greatClusterPenaltyLimit = greatClusterPenaltyLimit;
         this.maxPeersForClusters = maxPeersForClusters;
+    }
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex copying most of the params from a given operaiton.
+     * @param queryObject query object
+     * @param operation operation to copy everything, but query object, from
+     */
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, ApproxKNNQueryOperationMIndex operation) {
+        this(queryObject, operation.k, operation.initialLevelClusterNumber, operation.initialLevel, operation.limitBranchingByPenalty,
+                operation.minClustersForBranching, operation.maxClustersForBranching, operation.greatClusterPenaltyLimit, operation.maxPeersForGreatClusters, operation.greatClusterPenaltyLimit,
+                operation.maxPeersForGreatClusters, operation.localSearchParam, operation.localSearchType, operation.isStoringMetaDistances(), operation.answerType, operation.radiusGuaranteed);
     }
 
     
