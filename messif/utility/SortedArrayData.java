@@ -11,7 +11,7 @@ import messif.buckets.index.IndexComparator;
 
 /**
  * Abstract implementation of a basic sorted array data.
- * The order is maintained by the {@link #compare} method.
+ * The order is maintained by the {@link #indexCompare} method.
  * Methods for binary search with O(log n) complexity
  * as well as some basic collection operations are provided.
  * 
@@ -44,7 +44,7 @@ public abstract class SortedArrayData<K, T> {
      * zero, or a positive integer as the first argument is less than, equal
      * to, or greater than the second.<p>
      *
-     * @param key the key to compare
+     * @param key the key to indexCompare
      * @param object the object to be compared
      * @return a negative integer, zero, or a positive integer as the
      * 	       first argument is less than, equal to, or greater than the
@@ -132,7 +132,7 @@ public abstract class SortedArrayData<K, T> {
 
         // Comparator search
         for (int i = low; i <= high; i++)
-            if (comparator.compare(key, get(i)) == 0)
+            if (comparator.indexCompare(key, get(i)) == 0)
                 return i;
         return -1;
     }

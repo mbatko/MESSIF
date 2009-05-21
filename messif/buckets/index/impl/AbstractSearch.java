@@ -18,11 +18,11 @@ import messif.buckets.index.Search;
  * [<code>from</code>, <code>to</code>] boundaries. Specifically, all objects
  * that are bigger or equal to <code>from</code> and smaller or equal to <code>to</code>
  * are returned, i.e.
- * {@link Comparator#compare comparator.compare}<code>(from, o) &lp= 0</code> and
- * {@link Comparator#compare comparator.compare}<code>(to, o) == 0</code> holds.
+ * {@link Comparator#indexCompare comparator.indexCompare}<code>(from, o) &lp= 0</code> and
+ * {@link Comparator#indexCompare comparator.indexCompare}<code>(to, o) == 0</code> holds.
  * 
  * <p>
- * The {@link Comparator#compare comparator.compare} method will always have
+ * The {@link Comparator#indexCompare comparator.indexCompare} method will always have
  * the <code>from/to</code> attributes passesed as the first argument and
  * the object that is checked as the second argument.
  * </p>
@@ -110,12 +110,12 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
 
         // If from/to boundaries are the same object, we do just equality test
         if (from == to) {// this is correct (no equals!)
-            return from == null || comparator.compare(from, object) == 0; // from = object
+            return from == null || comparator.indexCompare(from, object) == 0; // from = object
         } else {
             // Do boundary check
-            if (from != null && comparator.compare(from, object) > 0) // from > object
+            if (from != null && comparator.indexCompare(from, object) > 0) // from > object
                 return false;
-            if (to != null && comparator.compare(to, object) < 0) // to < object
+            if (to != null && comparator.indexCompare(to, object) < 0) // to < object
                 return false;
             return true;
         }

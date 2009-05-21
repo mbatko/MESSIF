@@ -1,21 +1,21 @@
-/*
- *  AbstractArrayIndex
- * 
- */
 
 package messif.buckets.index.impl;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.ModifiableSearch;
+import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
 import messif.buckets.storage.Lock;
+import messif.buckets.storage.Lockable;
+import messif.buckets.storage.LongStorage;
 import messif.utility.SortedArrayData;
 
 /**
- * Implementation of index that stores the indexed data in a sorted array.
- * Access to the actual array is abstract through the {@link #add add},
- * {@link #remove remove} and {@link #get get} methods.
+ * Implementation of disk (long) index that stores the indexed data in a sorted array and keeps the
+ * keys to be compared always in memory.
  * 
  * <p>
  * All search methods are correctly implemented using binary search on
@@ -24,18 +24,128 @@ import messif.utility.SortedArrayData;
  * 
  * @param <K> the type of keys this index is ordered by
  * @param <T> the type of objects stored in this collection
- * @author xbatko
+ * @author xbatko (xnovak8)
  */
-public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> implements ModifiableOrderedIndex<K, T> {
+public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressPair<K>> implements ModifiableOrderedIndex<K, T>, Serializable {
 
-    //****************** Modification methods ******************//
+    /** Class serial id for serialization. */
+    private static final long serialVersionUID = 102302L;
+
+
+    //****************** Attributes ******************//
+
+    /** Storage associated with this index */
+    private final LongStorage<T> storage;
+
+    /** Index of addresses into the storage */
+    private ArrayList<KeyAddressPair> index;
+
+    /** Comparator imposing natural order of this index */
+    private final IndexComparator<K, T> comparator;
+
+
+    //****************** Constructor ******************//
 
     /**
-     * Removes the element at the specified position in this collection.
-     * @param index index of the element to remove
+     * Creates a new instance of LongStorageMemoryIndex for the specified storage.
+     * @param storage the storage to associate with this index
+     * @param comparator the comparator imposing natural order of this index
+     */
+    public LongStorageMemoryIndex(LongStorage<T> storage, IndexComparator<K, T> comparator) {
+        this.storage = storage;
+        this.comparator = comparator;
+        this.index = new ArrayList<KeyAddressPair>();
+    }
+
+    public void destroy() throws Throwable {
+        storage.destroy();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        destroy();
+        super.finalize();
+    }
+
+
+
+    // ******************     Comparator methods      ****************** //
+
+    public IndexComparator<K, T> comparator() {
+        return comparator;
+    }
+
+    @Override
+    protected int compare(K key, KeyAddressPair<K> object) throws ClassCastException {
+        return comparator.compare(key, object.key);
+    }
+
+
+    // ******************     Index access methods     ****************** //
+
+    /**
+     * Given a storage position, this method simply returns object on given position in the storeage.
+     * @param position storage position
+     * @return object on given position in the storeage
+     */
+    private T getObject(long position) {
+        try {
+            return storage.read(position);
+        } catch (BucketStorageException ex) {
+            throw new IllegalStateException("Cannot read object from storage", ex);
+        }
+    }
+
+    public int size() {
+        return index.size();
+    }
+
+    /**
+     * Searches for the point where to insert the object <code>object</code>.
+     * @param key key of the object to be inserted
+     * @return the point in the array where to put the object
+     * @throws BucketStorageException if there was a problem determining the point
+     */
+    protected int insertionPoint(K key) throws BucketStorageException {
+        return binarySearch(key, 0, index.size() - 1, false);
+    }
+
+    public boolean add(T object) throws BucketStorageException {
+        // Search for the position where the object is added into index
+        K key = comparator.extractKey(object);
+        int pos = insertionPoint(key);
+
+        index.add(pos, new KeyAddressPair(key, storage.store(object).getAddress()));
+
+        return true;
+    }
+
+    /**
+     * Removes the element at the specified position in this collection - from both index and storage.
+     * @param i index of the element to remove
      * @return <tt>false</tt> if the object was not removed (e.g. because there is no object with this index)
      */
-    protected abstract boolean remove(int index);
+    protected boolean remove(int i) {
+        if (i < 0 || i >= index.size())
+            return false;
+
+        try {
+            // remove the object from the storage
+            storage.remove(index.get(i).position);
+
+            // remove the key from the index
+            index.remove(i);
+
+            return true;
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Cannot remove object from storage", e);
+        }
+    }
+
+    @Override
+    protected KeyAddressPair<K> get(int i) throws IndexOutOfBoundsException, IllegalStateException {
+        return index.get(i);
+    }
 
     /**
      * Locks this index and returns a lock object if it is supported.
@@ -43,7 +153,12 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      * The called must call the {@link Lock#unlock()} method if this method has returned non-null.
      * @return a lock on this index or <tt>null</tt>
      */
-    protected abstract Lock lock();
+    protected Lock lock() {
+        if (storage instanceof Lockable)
+            return ((Lockable)storage).lock(true);
+        else
+            return null;
+    }
 
 
     //****************** Search methods ******************//
@@ -95,12 +210,12 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
         // Expand lower boundary backwards for all items on which the comparator returns zero
         if (from != null)
-            while (fromIndex > 0 && comparator().indexCompare(from, get(fromIndex - 1)) == 0)
+            while (fromIndex > 0 && comparator().compare(from, get(fromIndex - 1).key) == 0)
                 fromIndex--;
 
         // Expand upper boundary forward for all items on which the comparator returns zero
         if (to != null)
-            while ((toIndex < size() - 1) && comparator().indexCompare(to, get(toIndex + 1)) == 0)
+            while ((toIndex < size() - 1) && comparator().compare(to, get(toIndex + 1).key) == 0)
                 toIndex++;
 
         return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
@@ -123,6 +238,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
     /** Internal class that implements ordered search for this index */
     private class OrderedModifiableSearch implements ModifiableSearch<T> {
+
         /** Minimal (inclusive) index that this iterator will access in the array */
         private final int minIndex;
 
@@ -130,14 +246,14 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         private int maxIndex;
 
         /** Index of an element to be returned by subsequent call to next */
-	private int cursor = 0;
+        private int cursor = 0;
 
         /**
-	 * Index of element returned by most recent call to next or
-	 * previous. It is reset to -1 if this element is deleted by a call
-	 * to remove.
-	 */
-	private int lastRet = -1;
+         * Index of element returned by most recent call to next or
+         * previous. It is reset to -1 if this element is deleted by a call
+         * to remove.
+         */
+        private int lastRet = -1;
 
         /** Object found by the last search */
         private T currentObject;
@@ -163,8 +279,9 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
         @Override
         protected void finalize() throws Throwable {
-            if (searchLock != null)
+            if (searchLock != null) {
                 searchLock.unlock();
+            }
             super.finalize();
         }
 
@@ -172,36 +289,40 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             return currentObject;
         }
 
-	public boolean next() throws IllegalStateException {
-	    if (cursor > maxIndex)
+        public boolean next() throws IllegalStateException {
+            if (cursor > maxIndex) {
                 return false;
-            currentObject = get(cursor);
+            }
+            currentObject = getObject(get(cursor).position);
             lastRet = cursor++;
             return true;
-	}
+        }
 
         public boolean previous() throws IllegalStateException {
-	    if (cursor <= minIndex)
+            if (cursor <= minIndex) {
                 return false;
-            currentObject = get(cursor - 1);
+            }
+            currentObject = getObject(get(cursor - 1).position);
             lastRet = --cursor;
             return true;
         }
 
-	public void remove() throws IllegalStateException {
-	    if (lastRet == -1)
-		throw new IllegalStateException();
+        public void remove() throws IllegalStateException {
+            if (lastRet == -1) {
+                throw new IllegalStateException();
+            }
 
-            AbstractArrayIndex.this.remove(lastRet);
-            if (lastRet < cursor)
+            LongStorageMemoryIndex.this.remove(lastRet);
+            if (lastRet < cursor) {
                 cursor--;
+            }
             maxIndex--;
             lastRet = -1;
-	}
+        }
 
         @Override
         public OrderedModifiableSearch clone() throws CloneNotSupportedException {
-            return (OrderedModifiableSearch)super.clone();
+            return (OrderedModifiableSearch) super.clone();
         }
     }
 
@@ -210,16 +331,16 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      * @param <C> type of boundaries used while comparing objects
      */
     private class FullScanModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+
         /** Index of an element to be returned by subsequent call to next */
-	private int cursor = 0;
-
+        private int cursor = 0;
         /**
-	 * Index of element returned by most recent call to next or
-	 * previous. It is reset to -1 if this element is deleted by a call
-	 * to remove.
-	 */
-	private int lastRet = -1;
-
+         * Index of element returned by most recent call to next or
+         * previous. It is reset to -1 if this element is deleted by a call
+         * to remove.
+         */
+        private int lastRet = -1;
+        
         /** Lock object for this search */
         private final Lock searchLock;
 
@@ -238,33 +359,61 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
         @Override
         protected void finalize() throws Throwable {
-            if (searchLock != null)
+            if (searchLock != null) {
                 searchLock.unlock();
+            }
             super.finalize();
         }
 
         @Override
         protected T readNext() throws BucketStorageException {
-            if (cursor >= size())
+            if (cursor >= size()) {
                 return null;
-            return get(lastRet = cursor++);
+            }
+            return getObject(get(lastRet = cursor++).position);
         }
 
         @Override
         protected T readPrevious() throws BucketStorageException {
-            if (cursor <= 0)
+            if (cursor <= 0) {
                 return null;
-            return get(lastRet = --cursor);
+            }
+            return getObject(get(lastRet = --cursor).position);
         }
 
         public void remove() throws IllegalStateException, BucketStorageException {
-	    if (lastRet == -1)
-		throw new IllegalStateException();
+            if (lastRet == -1) {
+                throw new IllegalStateException();
+            }
 
-            AbstractArrayIndex.this.remove(lastRet);
-            if (lastRet < cursor)
+            LongStorageMemoryIndex.this.remove(lastRet);
+            if (lastRet < cursor) {
                 cursor--;
+            }
             lastRet = -1;
         }
     }
+    
+
+    /**
+     * Class encapsulating the key and long position in the storage.
+     * 
+     * @param <K> the type of keys this index is ordered by
+     */
+    protected static class KeyAddressPair<K> implements Serializable {
+
+        /** Class serial id for serialization. */
+        private static final long serialVersionUID = 102401L;
+
+        public final K key;
+        
+        public final long position;
+
+        public KeyAddressPair(K key, long position) {
+            this.key = key;
+            this.position = position;
+        }
+    }
+
+
 }

@@ -71,7 +71,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
 
     @Override
     protected int compare(K key, T object) throws ClassCastException {
-        return comparator.compare(key, object);
+        return comparator.indexCompare(key, object);
     }
 
 

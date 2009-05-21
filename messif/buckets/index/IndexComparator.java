@@ -6,6 +6,7 @@
 package messif.buckets.index;
 
 import java.io.Serializable;
+import java.util.Comparator;
 
 /**
  * A comparison function, which imposes a <i>total ordering</i> on some
@@ -18,7 +19,7 @@ import java.io.Serializable;
  * @author xbatko
  * @see java.util.Comparator
  */
-public interface IndexComparator<K, O> extends Serializable {
+public interface IndexComparator<K, O> extends Serializable, Comparator<K> {
     /**
      * Compares its two arguments for order. Returns a negative integer,
      * zero, or a positive integer as the first argument is less than, equal
@@ -32,7 +33,7 @@ public interface IndexComparator<K, O> extends Serializable {
      * @throws ClassCastException if the arguments' types prevent them from
      * 	       being compared by this comparator.
      */
-    int compare(K k, O o);
+    int indexCompare(K k, O o);
 
     /**
      * Returns the key (used for comparison) from an indexed object.
@@ -48,8 +49,8 @@ public interface IndexComparator<K, O> extends Serializable {
      * {@link Object#equals(Object)}.  Additionally, this method can return
      * <tt>true</tt> <i>only</i> if the specified object is also a comparator
      * and it imposes the same ordering as this comparator.  Thus,
-     * <code>comp1.equals(comp2)</code> implies that <tt>sgn(comp1.compare(o1,
-     * o2))==sgn(comp2.compare(o1, o2))</tt> for every object reference
+     * <code>comp1.equals(comp2)</code> implies that <tt>sgn(comp1.indexCompare(o1,
+     * o2))==sgn(comp2.indexCompare(o1, o2))</tt> for every object reference
      * <tt>o1</tt> and <tt>o2</tt>.<p>
      *
      * Note that it is <i>always</i> safe <i>not</i> to override

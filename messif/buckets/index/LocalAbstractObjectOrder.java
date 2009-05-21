@@ -31,7 +31,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     /** Order defined by object keys */
     KEY;
 
-    public int compare(LocalAbstractObject o1, LocalAbstractObject o2) {
+    public int indexCompare(LocalAbstractObject o1, LocalAbstractObject o2) {
         switch (this) {
             case UNIQUE_ID:
             default:
@@ -48,6 +48,11 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     }
 
+    public int compare(LocalAbstractObject o1, LocalAbstractObject o2) {
+        return indexCompare(o1, o2);
+    }
+
+
     public LocalAbstractObject extractKey(LocalAbstractObject object) {
         return object;
     }
@@ -57,7 +62,11 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25102L;
 
-        public int compare(UniqueID o1, LocalAbstractObject o2) {
+        public int indexCompare(UniqueID o1, LocalAbstractObject o2) {
+            return compare(o1, o2);
+        }
+
+        public int compare(UniqueID o1, UniqueID o2) {
             return o1.compareTo(o2);
         }
 
@@ -78,8 +87,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25103L;
 
-        public int compare(String o1, LocalAbstractObject o2) {
-            return o1.compareTo(o2.getLocatorURI());
+        public int indexCompare(String o1, LocalAbstractObject o2) {
+            return compare(o1, o2.getLocatorURI());
+        }
+
+        public int compare(String o1, String o2) {
+            return o1.compareTo(o2);
         }
 
         public String extractKey(LocalAbstractObject object) {
@@ -99,8 +112,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25104L;
 
-        public int compare(AbstractObjectKey o1, LocalAbstractObject o2) {
-            return o1.compareTo(o2.getObjectKey());
+        public int indexCompare(AbstractObjectKey o1, LocalAbstractObject o2) {
+            return compare(o1, o2.getObjectKey());
+        }
+
+        public int compare(AbstractObjectKey o1, AbstractObjectKey o2) {
+            return o1.compareTo(o2);
         }
 
         public AbstractObjectKey extractKey(LocalAbstractObject object) {

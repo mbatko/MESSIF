@@ -70,7 +70,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
 
     @Override
     protected int compare(K key, T object) throws ClassCastException {
-        return comparator.compare(key, object);
+        return comparator.indexCompare(key, object);
     }
 
 
