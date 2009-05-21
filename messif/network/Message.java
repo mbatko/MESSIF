@@ -36,7 +36,7 @@ public abstract class Message implements Serializable, Cloneable {
     private static final long serialVersionUID = 3L;
 
 
-    /****************** Message ID ******************/
+    //****************** Message ID ******************//
 
     /** Automatic message ID counter (per network node) */
     private final static AtomicLong lastMessageID = new AtomicLong(1);
@@ -53,7 +53,7 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
 
-    /****************** Navigation Path Attributes ******************/
+    //****************** Navigation Path Attributes ******************//
 
     /** Navigation path this message has gone through */
     protected final List<NavigationElement> navigationPath = new ArrayList<NavigationElement>();
@@ -62,7 +62,7 @@ public abstract class Message implements Serializable, Cloneable {
     protected NavigationElement actualNavigationElement = new NavigationElement();
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of Message.
@@ -73,9 +73,10 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
     /**
-     * Creates a new instance of Message copying the messageID and navigation path.
+     * Creates a new instance of Message copying the messageID and the navigation path.
      * This constructor is accessible only from ReplyMessage, because a new message must
      * have a new ID except for the reply message.
+     * @param originalMessage the original message from which to get the messageID and the navigation path
      */
     Message(Message originalMessage) { // DO NOT MAKE THIS CONSTRUCTOR PROTECTED OR PUBLIC!!!
         messageID = originalMessage.messageID;
@@ -84,28 +85,43 @@ public abstract class Message implements Serializable, Cloneable {
         
         actualNavigationElement = new NavigationElement(originalMessage.actualNavigationElement);
     }
-    
+
     /**
      * Returns a clone of this message.
      * This can be useful when forwarding a sightly modified message to different nodes while waiting for the response.
-     * 
+     *
+     * <p>
      * This method <b>must</b> be overriden whenever not-immutable attributes are added to subclasses.
      * The <tt>CloneNotSupportedException</tt> is never thrown by this class, but might not be true for its subclasses.
-     * 
+     * </p>
+     *
+     * <p>
+     * WARNING: The navigation path of this message is not clonned,
+     *  it rather holds the same reference for all the clones!
+     *  Therefore, adding a path element to one message adds it to all of them.
+     *  This is a correct behavior (used by forwarding).
+     * </p>
+     *
      * @return a clone of this message
      * @throws CloneNotSupportedException if this instance cannot be cloned
      */
+    @Override
     public Object clone() throws CloneNotSupportedException {
-        /* WARNING: Attribute navigationPath is not clonned, it rather holds the same reference for 
-                    all the clones! Therefore, adding path element to one message adds it to all of them.
-                    This is correct behaviour for the forwarding. */
         return super.clone();
     }
 
 
-    /****************** Serialization (accessible only from within network framework package) ******************/
+    //****************** Serialization (accessible only from within network framework package) ******************//
     
-    /** Deserialization from network socket */
+    /**
+     * Deserialization from network socket.
+     * The actual navigation element is added to the navigation path and
+     * a new element is created.
+     *
+     * @param in the object input stream from which to read this message's data
+     * @throws IOException if there was a problem reading the data from the stream
+     * @throws ClassNotFoundException if an unknown class was encountered while reading objects from the stream
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
 
@@ -115,24 +131,39 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
 
-    /****************** Actual Navigation Element Handling ******************/
+    //****************** Actual Navigation Element Handling ******************//
     
-    /** */
-    protected void addNotWaitingDestination(NetworkNode sender, NetworkNode destination, boolean skipWaiting) {
+    /**
+     * Adds a not-waiting destination to the actual navigation element.
+     *
+     * @param sender the sender of the message
+     * @param destination the destination of the message
+     * @param skipWaiting flag that this (sender) node will not provide a reply for this message
+     */
+    void addNotWaitingDestination(NetworkNode sender, NetworkNode destination, boolean skipWaiting) {
         actualNavigationElement.setSender(sender);
         if (skipWaiting)
             actualNavigationElement.skipWaiting();
         actualNavigationElement.addNotWaitingDestination(destination);
     }
 
-    /** */
-    protected void addWaitingDestination(NetworkNode sender, NetworkNode destination) {
+    /**
+     * Adds a waiting destination to the actual navigation element.
+     *
+     * @param sender the sender of the message
+     * @param destination the destination of the message
+     */
+    void addWaitingDestination(NetworkNode sender, NetworkNode destination) {
         actualNavigationElement.setSender(sender);
         actualNavigationElement.addWaitingDestination(destination);
     }
     
-    /** Updates this message navigation path to reply and returns the reply destination node */
-    protected NetworkNode setReply(NetworkNode sender) {        
+    /**
+     * Updates this message navigation path to reply and returns the reply destination node.
+     * @param sender the sender of the message
+     * @return the node that is waiting for a reply to this message
+     */
+    NetworkNode setReply(NetworkNode sender) {        
         // Get traversing (backwards) iterator
         ListIterator<NavigationElement> iterator = navigationPath.listIterator(navigationPath.size());
         
@@ -161,8 +192,10 @@ public abstract class Message implements Serializable, Cloneable {
         return null;
     }
 
-    /** Set statistics in actual navigation element.
-     *  A reference to current thread's operation statistics is added.
+    /**
+     * Set statistics in actual navigation element.
+     * A reference to current thread's operation statistics is added.
+     * @return the added operation statistics object
      */
     protected OperationStatistics setNavigationPathStatistics() {
         OperationStatistics statistics = OperationStatistics.getLocalThreadStatistics();
@@ -173,23 +206,36 @@ public abstract class Message implements Serializable, Cloneable {
         return statistics;
     }
 
-    /** Add statistics to actual navigation element and bind it to some global stat */
+    /**
+     * Add a statistic to the actual navigation element and bind it to some global statistic.
+     * @param name the name of a global statistic
+     * @param asName the name of the new bound statistic
+     * @return the bound statistic of the actual navigation element
+     * @throws InstantiationException if the statistic with the specified name was not found in global statistics
+     */
     public Statistics registerBoundStat(String name, String asName) throws InstantiationException {
         return setNavigationPathStatistics().registerBoundStat(name, asName);
     }
 
-    /** Add statistics to actual navigation element and bind it to some global stat.
-     *  Prepend "NavigationElement." to the stat name. */
+    /**
+     * Add a statistic to the actual navigation element and bind it to some global statistic.
+     * String "NavigationElement.<code>name</code>" will be used as a name for the bound statistic.
+     *
+     * @param name the name of a global statistic
+     * @return the bound statistic of the actual navigation element
+     * @throws InstantiationException if the statistic with the specified name was not found in global statistics
+     */
     public Statistics registerBoundStat(String name) throws InstantiationException {
-        return setNavigationPathStatistics().registerBoundStat(name, "NavigationElement." + name);
+        return registerBoundStat(name, "NavigationElement." + name);
     }
-    
+
     /** Deregisters all operation statistics in this thread. */
     public void deregisterOperStats() {
         setNavigationPathStatistics().unbindAllStats();
     }
-    
-    /****************** Navigation Path Handling ******************/
+
+
+    //****************** Navigation Path Handling ******************//
 
     /**
      * Returns the network node from which this message arrived.
@@ -257,17 +303,24 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
 
-    /****************** Equality handling ******************/
+    //****************** Equality handling ******************//
 
     /**
      * Indicates whether some other object is "equal to" this message.
      * The obj is equal to this message if and only if it is an instance of Message
      * that has the same ID and the same original sender.
      *
+     * <p>
+     * The <code>equals</code> method cannot be overriden to avoid bugs while
+     * receiving reply messages. If you need to use a different hashing on messages,
+     * use a wrapper class.
+     * </p>
+     *
      * @param obj the reference object with which to compare
      * @return <code>true</code> if this message is the same as the obj argument; <code>false</code> otherwise
      */
-    public boolean equals(Object obj) {
+    @Override
+    public final boolean equals(Object obj) {
         if (!(obj instanceof Message))
             return false;
         Message msg = (Message)obj;
@@ -282,20 +335,29 @@ public abstract class Message implements Serializable, Cloneable {
      * Returns a hash code value for this message. 
      * The hashcode of a message is its ID (the low part of the long).
      *
+     * <p>
+     * The <code>hashCode</code> method cannot be overriden to avoid bugs while 
+     * receiving reply messages. If you need to use a different hashing on messages,
+     * use a wrapper class.
+     * </p>
+     *
      * @return a hash code value for this message
      */
-    public int hashCode() {
+    @Override
+    public final int hashCode() {
         return (int)messageID;
     }
-    
-    /****************** String representation ******************/
+
+
+    //****************** String representation ******************//
 
     /**
      * Returns a string representation of this message.
      * @return a string representation of this message
      */
+    @Override
     public String toString() {
         return new StringBuffer(getClass().getSimpleName()).append("(ID:").append(messageID).append(", from: ").append(getOriginalSender()).append(")").toString();
     }
-    
+
 }

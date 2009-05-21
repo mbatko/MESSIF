@@ -186,6 +186,17 @@ public class MessageDispatcher implements Receiver, Serializable {
     }
 
     /**
+     * Creates a new instance of MessageDispatcher with specified TCP/UDP port.
+     * Broadcast is disabled.
+     * @param localHost the local IP address to bind the communication to
+     * @param port the TCP/UDP port used for communication
+     * @throws IOException if there was error when opening communication sockets
+     */
+    public MessageDispatcher(String localHost, int port) throws IOException {
+        this(localHost, port, 0);
+    }
+
+    /**
      * Creates a new instance of MessageDispatcher with specified TCP/UDP and broadcast ports.
      * @param localHost the local IP address to bind the communication to
      * @param port the TCP/UDP port used for communication
@@ -194,6 +205,16 @@ public class MessageDispatcher implements Receiver, Serializable {
      */
     public MessageDispatcher(String localHost, int port, int broadcastPort) throws IOException {
         this(new NetworkNode(localHost, port), broadcastPort);
+    }
+
+    /**
+     * Creates a new instance of MessageDispatcher with specified TCP/UDP port.
+     * Broadcast is disabled.
+     * @param localAddress local address to bind the TCP/UDP communication to
+     * @throws IOException if there was error when opening communication sockets
+     */
+    public MessageDispatcher(NetworkNode localAddress) throws IOException {
+        this(localAddress, 0);
     }
 
     /**
@@ -437,48 +458,19 @@ public class MessageDispatcher implements Receiver, Serializable {
     }
 
     /**
-     * Send the message to the specified network node and wait for the replies.
-     * Note that a particular message can be sent several times (to different nodes) using this method -
-     * a reply is then expected from each of these nodes. The same instance of <tt>ReplyReceiver</tt> is returned
-     * for the repeatedly sent message.
-     *
-     * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
-     * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
-     *
-     * @param <E> the type of reply message to wait for
-     * @param msg the message to send
-     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
-     * @param removeOnAccept flag that controls whether the returned receiver is removed
-     *                       from the waiting list when the last message arrives (<tt>true</tt>)
-     *                       or when the getReplies is called (<tt>false</tt>)
-     * @param node the destination network node
-     * @return the receiver used to gather all the replies
-     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
-     */
-    public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, boolean removeOnAccept, NetworkNode node) throws IOException {
-        // Create reply receiver for the message
-        ReplyReceiver<E> receiver = replyReceivers.createReplyReceiver(msg, replyMessageClass, removeOnAccept);
-        
-        // Update navigation path
-        msg.addWaitingDestination(getNetworkNode(), node);
-        
-        List<NetworkNode> path = msg.getSenderList();
-        path.add(node);
-        receiver.addWaitingPath(path);
-        
-        // Send message to destination
-        send(msg, node);
-        
-        // Return the receiver to allow results retrieval
-        return receiver;
-    }
-
-    /**
      * Send the message to multiple network nodes and wait for the replies.
      * A reply is expected from each of these nodes.
      *
+     * <p>
      * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
      * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive. The removal can be postponed until the {@link ReplyReceiver#getReplies} is called
+     * (the <code>removeOnAccept</code> is <tt>false</tt>), which is suitable if this method
+     * is called several times to send a message to multiple nodes. In that case, the same
+     * receiver is returned from all the calls and can be used afterwards to gather all
+     * reply messages.
+     * </p>
      *
      * @param <E> the type of reply message to wait for
      * @param msg the message to send
@@ -491,13 +483,26 @@ public class MessageDispatcher implements Receiver, Serializable {
      * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
      */
     public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, boolean removeOnAccept, Collection<NetworkNode> nodes) throws IOException {
-        // Create reply receiver for the message
-        ReplyReceiver<E> receiver = null;
-        
-        for (NetworkNode node : nodes)
-            receiver = sendMessageWaitReply(msg, replyMessageClass, removeOnAccept, node);
-        
-        return receiver;
+        synchronized (replyReceivers) {
+            // Create reply receiver for the message
+            ReplyReceiver<E> receiver = replyReceivers.createReplyReceiver(msg, replyMessageClass, removeOnAccept);
+
+            for (NetworkNode node : nodes) {
+                // Update navigation path
+                msg.addWaitingDestination(getNetworkNode(), node);
+
+                // Update receiver's waiting paths
+                List<NetworkNode> path = msg.getSenderList();
+                path.add(node);
+                receiver.addWaitingPath(path);
+
+                // Send message to destination
+                send(msg, node);
+            }
+
+            // Return the receiver to allow results retrieval
+            return receiver;
+        }
     }
 
     /**
@@ -506,8 +511,89 @@ public class MessageDispatcher implements Receiver, Serializable {
      * a reply is then expected from each of these nodes. The same instance of <tt>ReplyReceiver</tt> is returned
      * for the repeatedly sent message.
      *
+     * <p>
      * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
      * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive. The removal can be postponed until the {@link ReplyReceiver#getReplies} is called
+     * (the <code>removeOnAccept</code> is <tt>false</tt>), which is suitable if this method
+     * is called several times to send a message to multiple nodes. In that case, the same
+     * receiver is returned from all the calls and can be used afterwards to gather all
+     * reply messages.
+     * </p>
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param removeOnAccept flag that controls whether the returned receiver is removed
+     *                       from the waiting list when the last message arrives (<tt>true</tt>)
+     *                       or when the getReplies is called (<tt>false</tt>)
+     * @param node the destination network node
+     * @return the receiver used to gather all the replies
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     */
+    public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, boolean removeOnAccept, NetworkNode node) throws IOException {
+        return sendMessageWaitReply(msg, replyMessageClass, removeOnAccept, Collections.singleton(node));
+    }
+
+    /**
+     * Send the message to multiple network nodes and wait for the replies.
+     * A reply is expected from each of these nodes.
+     *
+     * <p>
+     * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
+     * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive and the {@link ReplyReceiver#getReplies} is called.
+     * </p>
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param nodes the list of destination network nodes
+     * @return the receiver used to gather all the replies
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     */
+    public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, Collection<NetworkNode> nodes) throws IOException {
+        return sendMessageWaitReply(msg, replyMessageClass, false, nodes);
+    }
+
+    /**
+     * Send the message to the specified network node and wait for the replies.
+     * Note that a particular message can be sent several times (to different nodes) using this method -
+     * a reply is then expected from each of these nodes. The same instance of <tt>ReplyReceiver</tt> is returned
+     * for the repeatedly sent message.
+     *
+     * <p>
+     * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
+     * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive and the {@link ReplyReceiver#getReplies} is called.
+     * </p>
+     *
+     * @param <E> the type of reply message to wait for
+     * @param msg the message to send
+     * @param replyMessageClass the reply messages class to wait for (other messages are ignored even if the message ID matches)
+     * @param node the destination network node
+     * @return the receiver used to gather all the replies
+     * @throws IOException if the communication failed, e.g. the destination node cannot be reached, etc.
+     */
+    public <E extends ReplyMessage> ReplyReceiver<E> sendMessageWaitReply(Message msg, Class<E> replyMessageClass, NetworkNode node) throws IOException {
+        return sendMessageWaitReply(msg, replyMessageClass, Collections.singleton(node));
+    }
+
+    /**
+     * Send the message to the specified network node and wait for the replies.
+     * Note that a particular message can be sent several times (to different nodes) using this method -
+     * a reply is then expected from each of these nodes. The same instance of <tt>ReplyReceiver</tt> is returned
+     * for the repeatedly sent message.
+     *
+     * <p>
+     * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
+     * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive.
+     * </p>
      *
      * @param msg the message to send
      * @param node the destination network node
@@ -522,8 +608,12 @@ public class MessageDispatcher implements Receiver, Serializable {
      * Send the message to multiple network nodes and wait for the replies.
      * A reply message is expected from each of these nodes.
      *
+     * <p>
      * The returned <tt>ReplyReceiver</tt> can be used to block until all replies are gathered or to control
      * the process of waiting. It is also used to retrieve the list of received replies (instances of {@link ReplyMessage}).
+     * Note that the receiver is registered automatically and unregistered when all the expected reply messages
+     * arrive.
+     * </p>
      *
      * @param msg the message to send
      * @param nodes the list of destination network nodes
@@ -536,7 +626,8 @@ public class MessageDispatcher implements Receiver, Serializable {
 
     /**
      * Send the message to a network node and wait for a single reply.
-     * This method blocks until the reply message arrives (or forever if something bad happens).
+     * This method blocks until the respective reply message arrives
+     * (or forever if something bad happens).
      *
      * @param <E> the type of reply message to wait for
      * @param msg the message to send
@@ -551,7 +642,8 @@ public class MessageDispatcher implements Receiver, Serializable {
 
     /**
      * Send the message to a network node and wait for a single reply.
-     * This method blocks until the reply message arrives (or forever if something bad happens).
+     * This method blocks until the respective reply message arrives
+     * (or forever if something bad happens).
      *
      * @param <E> the type of reply message to wait for
      * @param msg the message to send

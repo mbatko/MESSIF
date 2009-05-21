@@ -28,7 +28,6 @@ import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -512,7 +511,11 @@ public class Application {
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
             for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (IllegalArgumentException ex) {
+                    out.println(opClass.getName() + " can be processed but not instantiated");
+                }
             return false;
         }
     }
@@ -1025,7 +1028,7 @@ public class Application {
     }
 
     /**
-     * Open a named stream which allows to read {@link MetaObjectMap objects} from several files.
+     * Open a named stream which allows to read {@link messif.objects.impl.MetaObjectMap objects} from several files.
      * The arguments are the following: 
      * <p>
      *  metaObjectMapStreamOpen [["subdistance_name class file"] ...], &lt;name of the stream>

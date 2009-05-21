@@ -9,6 +9,7 @@ package messif.operations;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractObject;
@@ -204,15 +205,18 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int count = 0;
-        while (!locators.isEmpty()) {
-            LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-            if (queryObjectForDistances != null)
-                addToAnswer(queryObjectForDistances, object, LocalAbstractObject.MAX_DISTANCE);
-            else
-                addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
-            count++;
+        try {
+            while (!locators.isEmpty()) {
+                LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
+                if (queryObjectForDistances != null)
+                    addToAnswer(queryObjectForDistances, object, LocalAbstractObject.MAX_DISTANCE);
+                else
+                    addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
+                count++;
+            }
+        } catch (NoSuchElementException e) { // Search ended, there are no more objects in the bucket
         }
-        
+
         return count;
     }
 

@@ -40,6 +40,7 @@ public abstract class ReplyMessage extends Message {
      * @return nothing, because this method always throws CloneNotSupportedException
      * @throws CloneNotSupportedException if this instance cannot be cloned
      */
+    @Override
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException("Reply messages cannot be cloned");
     }
@@ -51,6 +52,7 @@ public abstract class ReplyMessage extends Message {
      * Returns a string representation of this response message.
      * @return a string representation of this response message
      */
+    @Override
     public String toString() {
         return "ReplyMessage (ID:" + messageID + ") <<" + getClass().getName() + ">>";
     }
