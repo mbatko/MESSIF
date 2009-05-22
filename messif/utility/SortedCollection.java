@@ -94,6 +94,17 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     }
 
     /**
+     * Constructs an empty collection with the specified initial capacity.
+     * The order is defined using the natural order of items.
+     * The capacity of this collection is not limited.
+     * @param initialCapacity the initial capacity of the collection
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
+     */
+    public SortedCollection(int initialCapacity) throws IllegalArgumentException {
+        this(initialCapacity, null);
+    }
+
+    /**
      * Constructs an empty collection.
      * The order is defined using the natural order of items.
      * The initial capacity of the collection is set to 16 and maximal capacity

@@ -9,7 +9,6 @@ package messif.pivotselection;
 import java.io.Serializable;
 import messif.buckets.BucketFilterAfterAdd;
 import messif.buckets.BucketFilterAfterRemove;
-import messif.buckets.FilterRejectException;
 import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
