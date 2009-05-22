@@ -307,6 +307,24 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return true;
         }
 
+        public boolean skip(int count) throws IllegalStateException {
+            if (count < 0 && cursor + count >= minIndex) {
+                cursor += count + 1;
+                currentObject = getObject(get(cursor - 1).position);
+                lastRet = --cursor;
+                return true;
+            }
+
+            if (count > 0 && cursor + count - 1 <= maxIndex) {
+                cursor += count - 1;
+                currentObject = getObject(get(cursor).position);
+                lastRet = cursor++;
+                return true;
+            }
+
+            return false;
+        }
+
         public void remove() throws IllegalStateException {
             if (lastRet == -1) {
                 throw new IllegalStateException();

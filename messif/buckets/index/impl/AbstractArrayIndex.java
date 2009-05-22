@@ -130,14 +130,14 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         private int maxIndex;
 
         /** Index of an element to be returned by subsequent call to next */
-	private int cursor = 0;
+        private int cursor = 0;
 
         /**
-	 * Index of element returned by most recent call to next or
-	 * previous. It is reset to -1 if this element is deleted by a call
-	 * to remove.
-	 */
-	private int lastRet = -1;
+         * Index of element returned by most recent call to next or
+         * previous. It is reset to -1 if this element is deleted by a call
+         * to remove.
+         */
+        private int lastRet = -1;
 
         /** Object found by the last search */
         private T currentObject;
@@ -172,32 +172,50 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             return currentObject;
         }
 
-	public boolean next() throws IllegalStateException {
-	    if (cursor > maxIndex)
+        public boolean next() throws IllegalStateException {
+            if (cursor > maxIndex)
                 return false;
             currentObject = get(cursor);
             lastRet = cursor++;
             return true;
-	}
+        }
 
         public boolean previous() throws IllegalStateException {
-	    if (cursor <= minIndex)
+            if (cursor <= minIndex)
                 return false;
             currentObject = get(cursor - 1);
             lastRet = --cursor;
             return true;
         }
 
-	public void remove() throws IllegalStateException {
-	    if (lastRet == -1)
-		throw new IllegalStateException();
+        public boolean skip(int count) throws IllegalStateException {
+            if (count < 0 && cursor + count >= minIndex) {
+                cursor += count + 1;
+                currentObject = get(cursor - 1);
+                lastRet = --cursor;
+                return true;
+            }
+
+            if (count > 0 && cursor + count - 1 <= maxIndex) {
+                cursor += count - 1;
+                currentObject = get(cursor);
+                lastRet = cursor++;
+                return true;
+            }
+
+            return false;
+        }
+
+        public void remove() throws IllegalStateException {
+            if (lastRet == -1)
+                throw new IllegalStateException();
 
             AbstractArrayIndex.this.remove(lastRet);
             if (lastRet < cursor)
                 cursor--;
             maxIndex--;
             lastRet = -1;
-	}
+        }
 
         @Override
         public OrderedModifiableSearch clone() throws CloneNotSupportedException {
@@ -211,14 +229,14 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      */
     private class FullScanModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
         /** Index of an element to be returned by subsequent call to next */
-	private int cursor = 0;
+        private int cursor = 0;
 
         /**
-	 * Index of element returned by most recent call to next or
-	 * previous. It is reset to -1 if this element is deleted by a call
-	 * to remove.
-	 */
-	private int lastRet = -1;
+         * Index of element returned by most recent call to next or
+         * previous. It is reset to -1 if this element is deleted by a call
+         * to remove.
+         */
+        private int lastRet = -1;
 
         /** Lock object for this search */
         private final Lock searchLock;
@@ -258,8 +276,8 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         }
 
         public void remove() throws IllegalStateException, BucketStorageException {
-	    if (lastRet == -1)
-		throw new IllegalStateException();
+            if (lastRet == -1)
+                throw new IllegalStateException();
 
             AbstractArrayIndex.this.remove(lastRet);
             if (lastRet < cursor)

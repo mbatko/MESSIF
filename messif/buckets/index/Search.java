@@ -32,7 +32,7 @@ public interface Search<T> extends Cloneable {
      * Searches for the next object (forward search) and returns <tt>false</tt>
      * if none is found. Otherwise, the found object can be retrieved by
      * {@link #getCurrentObject()}.
-     * 
+     *
      * @return <tt>true</tt> if a next satisfying object is found
      * @throws IllegalStateException if there was a problem retrieving the next object from the underlying storage
      */
@@ -47,6 +47,26 @@ public interface Search<T> extends Cloneable {
      * @throws IllegalStateException if there was a problem retrieving the next object from the underlying storage
      */
     public boolean previous() throws IllegalStateException;
+
+    /**
+     * Skips <code>count</code> objects using {@link #next()} or {@link #previous()}
+     * search and returns <tt>false</tt> if <code>count</code> objects cannot be skipped.
+     * Otherwise, the found object can be retrieved by {@link #getCurrentObject()}.
+     *
+     * <p>
+     * Note that this is equivalent to calling {@link #next()} or {@link #previous()}
+     * while <tt>true</tt> is returned up to <code>count</code> times. So if the
+     * method returns <tt>false</tt>, the {@link #getCurrentObject()} may not return
+     * a valid object.
+     * </p>
+     *
+     * @param count number of objects to skip, 
+     *      i.e. the number of calls to {@link #next()} if count is positive
+     *      or {@link #previous()} if count is negative
+     * @return <tt>true</tt> if the <code>count</code> objects has been skipped
+     * @throws IllegalStateException if there was a problem retrieving the next/previous object from the underlying storage
+     */
+    public boolean skip(int count) throws IllegalStateException;
 
     /**
      * Creates and returns a copy of this search.

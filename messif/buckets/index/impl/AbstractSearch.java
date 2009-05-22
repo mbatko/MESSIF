@@ -80,6 +80,14 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
         return false;
     }
 
+    public boolean skip(int count) throws IllegalStateException {
+        while (count < 0 && previous())
+            count++;
+        while (count > 0 && next())
+            count--;
+        return count == 0;
+    }
+
     public boolean previous() throws IllegalStateException {
         try {
             for (currentObject = readPrevious(); currentObject != null; currentObject = readPrevious()) {

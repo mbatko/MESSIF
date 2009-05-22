@@ -80,6 +80,16 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj.getClass() == this.getClass();
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
+        }
     };
 
     /** Index order defined by object locators */
@@ -105,6 +115,16 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj.getClass() == this.getClass();
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
+        }
     };
 
     /** Index order defined by object keys */
@@ -122,6 +142,16 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
 
         public AbstractObjectKey extractKey(LocalAbstractObject object) {
             return object.getObjectKey();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj.getClass() == this.getClass();
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
         }
     };
 
