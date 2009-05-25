@@ -830,8 +830,12 @@ public class MessageDispatcher implements Receiver, Serializable {
             throw new IOException("Broadcast not supported - no port specified");
         
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        putMessageIntoStream(msg, new ObjectOutputStream(stream), null);
+        ObjectOutputStream objStream = new ObjectOutputStream(stream);
+        putMessageIntoStream(msg, objStream, null);
+        objStream.close();
         byte[] data = stream.toByteArray();
+        if (data.length > SocketThreadUDP.MAX_UDP_LENGTH)
+            throw new IOException("Cannot broadcast message bigger than " + SocketThreadUDP.MAX_UDP_LENGTH + " bytes");
         
         broadcastSocket.send(new DatagramPacket(data, data.length, BROADCAST_GROUP, broadcastSocket.getLocalPort()));
     }

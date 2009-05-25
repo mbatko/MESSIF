@@ -24,7 +24,7 @@ public class SocketThreadUDP extends Thread {
     protected static Logger log = Logger.getLoggerEx("messif.network");
     
     /****************** Data ******************/
-    protected static final int MAX_UDP_LENGTH = 1450/*63000*/;
+    protected static final int MAX_UDP_LENGTH = 63000;
     protected static final String NAME = "SocketThread";
     
     protected final MessageDispatcher messageDispatcher;
