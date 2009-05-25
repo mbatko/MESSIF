@@ -8,7 +8,6 @@
 package messif.objects.util;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -40,6 +39,8 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     protected E nextObject;
     /** Instance of the current object */
     protected E currentObject;
+    /** Number of objects read from the stream */
+    protected int objectsRead;
     /** Class instance of objects of type E needed for instantiating objects read from a stream */
     protected final Constructor<? extends E> constructor;
     /** Arguments for the constructor (first will always be the stream) */
@@ -250,23 +251,24 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     protected E nextStreamObject() throws IllegalArgumentException, IllegalStateException {
         try {
-            return constructor.newInstance(constructorArgs);
+            E ret = constructor.newInstance(constructorArgs);
+            objectsRead++;
+            return ret;
         } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor is unaccesible (permission denied): " + e.getMessage());
+            throw new IllegalArgumentException("Constructor " + constructor + " is unaccessible (permission denied)");
         } catch (InstantiationException e) {
-            throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor instantiation failed: " + e.getMessage());
+            throw new IllegalArgumentException("Constructor " + constructor + " is unaccessible (abstract class)");
         } catch (InvocationTargetException e) {
-            // The constructor threw an exception
-            if (e.getCause() instanceof EOFException) {
-                // End of file is normal exit
+            // End of file is normal exit
+            if (e.getCause() instanceof EOFException)
                 return null;
-            } else if (e.getCause() instanceof IOException) {
-                // Other I/O exception (is related to this stream and not the object)
-                throw new IllegalStateException("Cannot read object: " + e.getCause());
-            } else {
-                // Other exception
-                throw new IllegalArgumentException("Object " + constructor.getDeclaringClass() + " constructor invocation ended up with an exception: " + e.getCause());
-            }
+
+            // Exception while reading the object from the stream
+            throw new IllegalStateException(
+                    "Cannot read instance #" + (objectsRead + 1) + " of " +
+                    constructor.getDeclaringClass().getName() + " from " +
+                    ((fileName == null) ? "STDIN" : fileName) + ": " +
+                    e.getCause());
         }
     }
 
@@ -297,7 +299,8 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
         stream.close();
         stream = newStream;
         constructorArgs[0] = stream;
-        
+        objectsRead = 0;
+
         nextObject = nextStreamObject();
     }
 
