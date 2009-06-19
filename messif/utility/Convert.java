@@ -11,12 +11,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractStreamObjectIterator;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -56,85 +55,62 @@ public abstract class Convert {
      * @param <E> the type of the value to return
      * @param string the string value to be converted
      * @param type the class of the value
-     * @param objectStreams map of openned streams for getting {@link messif.objects.LocalAbstractObject objects}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the converted value
      * @throws InstantiationException if the type cannot be created from the string value
      */
     @SuppressWarnings("unchecked")
-    public static <E> E stringToType(String string, Class<E> type, Map<String, AbstractStreamObjectIterator> objectStreams) throws InstantiationException {
+    public static <E> E stringToType(String string, Class<E> type, Map<String, Object> namedInstances) throws InstantiationException {
         if (string.equals("null"))
             return null;
         
-        // Use "valueOf" static method of primitive wrappers
-        if (type.isPrimitive())
-            type = wrapPrimitiveType(type);
-
-        if (type.equals(String.class))
+        // Converting string types
+        if (type == String.class)
             return (E)string; // This cast IS checked
-        
-        // Object stream type is returned if found
-        if ((objectStreams != null) && type.isAssignableFrom(AbstractStreamObjectIterator.class)) {
-            E rtv = (E)objectStreams.get(string); // This cast IS checked
-            if (rtv == null)
-                throw new InstantiationException("Stream '" + string + "' is not opened");
-            return rtv;
-        }
-
-        // Try to get LocalAbstractObject from string
-        if ((objectStreams != null) && type.isAssignableFrom(AbstractObjectList.class)) {
-            int colonPos = string.lastIndexOf(':');
-            if (colonPos != -1) {
-                AbstractStreamObjectIterator<?> objectIterator = objectStreams.get(string.substring(0, colonPos));
-                if (objectIterator != null)
-                    try {
-                        return (E)new AbstractObjectList<LocalAbstractObject>(objectIterator, Integer.parseInt(string.substring(colonPos + 1))); // This cast IS checked
-                    } catch (NumberFormatException e) {
-                        // Ignored, might get converted later
-                    }
-            }
-        }
-        
-        // Try to get LocalAbstractObject from string
-        if (type.isAssignableFrom(LocalAbstractObject.class)) {
-            if (objectStreams != null) {
-                AbstractStreamObjectIterator objectIterator = objectStreams.get(string);
-                if (objectIterator != null)
-                    // Returns next object or throws NoSuchElement exception if there is no next objects
-                    return (E)objectIterator.next(); // This cast IS checked
-            }
-
-            try {
-                return (E)LocalAbstractObject.valueOf(string); // This cast IS checked
-            } catch (InvocationTargetException e) {
-                throw new InstantiationException("Can't create '" + type.getName() + "' from '" + string + "' - there is no stream with this name and " + e.getCause().toString());
-            }
-        }
 
         // Converting class types
-        if (type.equals(Class.class)) try {
+        if (type == Class.class) try {
             return (E)Class.forName(string); // This cast IS checked
         } catch (ClassNotFoundException e) {
             throw new InstantiationException(e.toString());
         }
 
-        // Converting string maps
-        if (type.equals(Map.class)) {
+        // Converting map types
+        if (type == Map.class) {
             Map<String, Object> rtv = new HashMap<String, Object>();
             putStringIntoMap(string, rtv, String.class);
-            // Add streams parameter to a Map that contain a 'objectStreams' key but it is null
-            if (rtv.containsKey("objectStreams") && rtv.get("objectStreams") == null)
-                rtv.put("objectStreams", objectStreams);
+            // Add streams parameter to a Map that contain a 'namedInstances' key but it is null
+            if (rtv.containsKey("namedInstances") && rtv.get("namedInstances") == null)
+                rtv.put("namedInstances", namedInstances);
             return (E)rtv; // This cast IS checked
         }
 
-        // Converting arrays
+        // Converting static arrays
         if (type.isArray()) {
             String[] items = string.split("\\p{Space}*,\\p{Space}*");
             Class<?> componentType = type.getComponentType();
             Object array = Array.newInstance(componentType, items.length);
             for (int i = 0; i < items.length; i++)
-                Array.set(array, i, stringToType(items[i], componentType, objectStreams));
+                Array.set(array, i, stringToType(items[i], componentType, namedInstances));
             return (E)array; // This cast IS checked
+        }
+
+        // Wrap primitive types, so that their 'valueOf' method can be used
+        if (type.isPrimitive())
+            type = wrapPrimitiveType(type);
+
+        // Named instances of objects
+        if (namedInstances != null) {
+            Object instance = namedInstances.get(string);
+            if (instance != null) {
+                // Return named object as-is
+                if (type.isInstance(instance))
+                    return (E)instance; // This cast IS checked
+
+                // Try the LocalAbstractObject iterators
+                if (type.isAssignableFrom(LocalAbstractObject.class))
+                    return (E)((AbstractStreamObjectIterator<?>)instance).next();
+            }
         }
 
         // Try string public constructor
@@ -150,7 +126,7 @@ public abstract class Convert {
                 // Method not found, but never mind, other conversions might be possible...
             }
         }
-        
+
         // Try the static valueOf method of a primitive type
         try {
             Method method = type.getMethod("valueOf", String.class);
@@ -165,7 +141,7 @@ public abstract class Convert {
             // Method not found, but never mind, other conversions might be possible...
         }
         
-        throw new InstantiationException("String '" + string + "' cannot be converted into '" + type.toString() + "'");
+        throw new InstantiationException("String '" + string + "' cannot be converted to '" + type.getName() + "'");
     }
 
     /**
@@ -453,11 +429,11 @@ public abstract class Convert {
      * @param types array of classes that the strings should be converted to
      * @param argStartIndex index in the strings array which denotes the first changable argument
      * @param argEndIndex index in the strings array which denotes the last changable argument
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex, Map<String, AbstractStreamObjectIterator> objectStreams) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws InstantiationException {
         // Create return array
         Object[] rtv = new Object[types.length];
         
@@ -469,12 +445,12 @@ public abstract class Convert {
             rtv[types.length - 1] = Array.newInstance(varargClass, argEndIndex - argStartIndex + 1 - (types.length - 1));
             // Fill array items with conversion
             for (int i = argEndIndex - argStartIndex - (types.length - 1); i >= 0; i--, argEndIndex--)
-                Array.set(rtv[types.length - 1], i, stringToType(strings[argEndIndex], varargClass, objectStreams));
+                Array.set(rtv[types.length - 1], i, stringToType(strings[argEndIndex], varargClass, namedInstances));
         }
 
         // Convert every string to a proper class
         for (int i = 0; argStartIndex <= argEndIndex; argStartIndex++, i++)
-            rtv[i] = stringToType(strings[argStartIndex], types[i], objectStreams);
+            rtv[i] = stringToType(strings[argStartIndex], types[i], namedInstances);
         
         return rtv;
     }
@@ -528,12 +504,12 @@ public abstract class Convert {
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
      * @param argStartIndex index in the strings array which denotes the first changable argument
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, Map<String, AbstractStreamObjectIterator> objectStreams) throws InstantiationException {
-        return parseTypesFromString(strings, types, argStartIndex, strings.length - 1, objectStreams);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, Map<String, Object> namedInstances) throws InstantiationException {
+        return parseTypesFromString(strings, types, argStartIndex, strings.length - 1, namedInstances);
     }
     
     /**
@@ -560,12 +536,12 @@ public abstract class Convert {
      * 
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, Map<String, AbstractStreamObjectIterator> objectStreams) throws InstantiationException {
-        return parseTypesFromString(strings, types, 0, objectStreams);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, Map<String, Object> namedInstances) throws InstantiationException {
+        return parseTypesFromString(strings, types, 0, namedInstances);
     }
     
     /**
@@ -600,14 +576,14 @@ public abstract class Convert {
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
      * @param argEndIndex index in the string arguments array to which to expect arguments (all the following items are ignored)
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return a new instance of the class the constructors were specified for
      * @throws InvocationTargetException
      *              if the constructor can't be found for the specified arguments,
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, int argEndIndex, Map<String, AbstractStreamObjectIterator> objectStreams) throws InvocationTargetException {
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws InvocationTargetException {
         InstantiationException lastException = null;
         Constructor<E> lastConstructor = null;
         
@@ -624,7 +600,7 @@ public abstract class Convert {
                         continue;
                 
                 // Try to convert the string arguments
-                return constructor.newInstance(parseTypesFromString(arguments, argTypes, argStartIndex, argEndIndex, objectStreams));
+                return constructor.newInstance(parseTypesFromString(arguments, argTypes, argStartIndex, argEndIndex, namedInstances));
             } catch (InstantiationException e) {
                 lastException = e;
                 lastConstructor = constructor;
@@ -721,15 +697,15 @@ public abstract class Convert {
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
      * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return a new instance of the class the constructors were specified for
      * @throws InvocationTargetException
      *              if the constructor can't be found for the specified arguments,
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, Map<String, AbstractStreamObjectIterator> objectStreams) throws InvocationTargetException {
-        return createInstanceWithStringArgs(constructors, arguments, argStartIndex, arguments.length - 1, objectStreams);
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, int argStartIndex, Map<String, Object> namedInstances) throws InvocationTargetException {
+        return createInstanceWithStringArgs(constructors, arguments, argStartIndex, arguments.length - 1, namedInstances);
     }
 
     /**
@@ -780,64 +756,88 @@ public abstract class Convert {
      * @param <E> the type of the instantiated object
      * @param constructors the list of constructors of the desired class to try
      * @param arguments the string arguments for the constructor that will be converted to correct types
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return a new instance of the class the constructors were specified for
      * @throws InvocationTargetException
      *              if the constructor can't be found for the specified arguments,
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      */
-    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, Map<String, AbstractStreamObjectIterator> objectStreams) throws InvocationTargetException {
-        return createInstanceWithStringArgs(constructors, arguments, 0, objectStreams);
+    public static <E> E createInstanceWithStringArgs(List<Constructor<E>> constructors, String[] arguments, Map<String, Object> namedInstances) throws InvocationTargetException {
+        return createInstanceWithStringArgs(constructors, arguments, 0, namedInstances);
     }
 
     /**
-     * Creates a new instance of a class with a string constructor signature.
-     * The string must contain a fully specified class name with all comma-separated
-     * arguments enclosed by parenthesis. For example:
+     * Creates a new instance of a class with a string constructor/factory-method/static-field signature.
+     * The string must contain a fully specified name of constructor optionally with arguments enclosed by parenthesis, e.g.:
      * <pre>
      *      messif.pivotselection.StreamSequencePivotChooser(messif.objects.impl.MetaObjectMap, file)
      * </pre>
+     * Or the string can be a fully specified name of a factory method (package.class.methodName)
+     * with arguments enclosed by parenthesis, e.g.:
+     * <pre>
+     *      messif.utility.ExtendedProperties.getProperties(file)
+     * </pre>
+     * Or the string can be a fully specified name of a public static field (package.class.fieldName), e.g.:
+     * <pre>
+     *     messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator
+     * </pre>
      * <p>
-     * Note that only types convertible by {@link #stringToType} method can be used in constructors.
+     * Note that only types convertible by {@link #stringToType} method can be used in arguments.
      * </p>
      *
      * @param <E> the type of the instantiated object
-     * @param constructorSignature constructor call with string arguments
+     * @param signature constructor or factory method call with string arguments or a static field
      * @param checkClass the superclass of (or the same class as) the instantiated object
-     * @param objectStreams map of openned streams for getting LocalAbstractObjects
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return a new instance of the specified object
      * @throws InvocationTargetException
-     *              if the constructor can't be found for the specified arguments,
+     *              if the constructor/factory-method/static-field can't be found for the specified arguments,
      *              the argument string-to-type convertion has failed or
      *              there was an error during instantiation
      * @throws ClassNotFoundException if the class in the constructor signature was not found or is not a descendant of checkClass
      */
-    public static <E> E createInstanceWithStringArgs(String constructorSignature, Class<E> checkClass, Map<String, AbstractStreamObjectIterator> objectStreams) throws InvocationTargetException, ClassNotFoundException {
-        // Search for braces
-        int openParenthesisPos = constructorSignature.indexOf('(');
+    public static <E> E createInstanceWithStringArgs(String signature, Class<E> checkClass, Map<String, Object> namedInstances) throws InvocationTargetException, ClassNotFoundException {
+        // Parse arguments (enclosed in braces)
+        String[] args;
+        String callname;
+        int openParenthesisPos = signature.indexOf('(');
+        int closeParenthesisPos = signature.lastIndexOf(')');
+        if (openParenthesisPos == -1 || openParenthesisPos == closeParenthesisPos - 1) { // There are no parenthesis or they are empty
+            args = new String[0];
+            callname = signature;
+        } else if (closeParenthesisPos == -1) {
+            throw new IllegalArgumentException("Missing closing parenthesis: " + signature);
+        } else {
+            args = signature.substring(openParenthesisPos + 1, closeParenthesisPos).split("\\s*,\\s*");
+            callname = signature.substring(0, openParenthesisPos);
+        }
 
-        // If no braces found, use the no-args constructor
-        if (openParenthesisPos == -1)
-            try {
-                return getClassForName(constructorSignature, checkClass).newInstance();
-            } catch (InstantiationException e) {
-                new InvocationTargetException(e, constructorSignature);
-            } catch (IllegalAccessException e) {
-                new InvocationTargetException(e, constructorSignature);
-            }
-
+        // Create instance
         try {
-            // Get class from the string (up to parenthesis)
-            Class<E> clazz = getClassForName(constructorSignature.substring(0, openParenthesisPos), checkClass);
-            // Get constructors from the string (up to parenthesis)
+            // Try call name as a constructor
+            Class<E> clazz = getClassForName(callname, checkClass);
             @SuppressWarnings("unchecked")
             List<Constructor<E>> constructors = Arrays.asList((Constructor<E>[])clazz.getConstructors());
-            // Get all arguments - closed in parenthesis and comma separated
-            String[] args = constructorSignature.substring(openParenthesisPos + 1, constructorSignature.lastIndexOf(')')).split("\\s*,\\s*");
-            return createInstanceWithStringArgs(constructors, args);
-        } catch (IndexOutOfBoundsException ignore) {
-            throw new IllegalArgumentException("Missing closing parenthesis: " + constructorSignature);
+            return createInstanceWithStringArgs(constructors, args, namedInstances);
+        } catch (ClassNotFoundException e) {
+            // Class not found, try dot earlier
+            int dotPos = callname.lastIndexOf('.');
+            if (dotPos == -1)
+                throw e;
+
+            // Class without last item, which is supposed to be a factory method name or a field name
+            Class<E> clazz = getClassForName(callname.substring(0, dotPos), checkClass);
+            callname = callname.substring(dotPos + 1);
+
+            try {
+                // We have correct class, now check if it is method or attribute
+                return (openParenthesisPos == -1)?
+                    checkClass.cast(createInstanceStaticField(clazz, callname)):
+                    createInstanceUsingFactoryMethod(clazz, callname, (Object[])args);
+            } catch (NoSuchMethodException ex) {
+                throw new InvocationTargetException(ex);
+            }
         }
     }
 
@@ -887,6 +887,28 @@ public abstract class Convert {
             return (E)factoryMethod.invoke(null, arguments); // This cast IS checked on the previous line
         } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
+        }
+    }
+
+    /**
+     * Get instance from a static field of a class.
+     *
+     * @param clazz the class the field of which to access
+     * @param name the name of the <code>clazz</code>'s static field
+     * @return a new instance of the class
+     * @throws IllegalArgumentException if there was no public static field for the specified <code>clazz</code> and <code>name</code>
+     */
+    @SuppressWarnings("unchecked")
+    public static Object createInstanceStaticField(Class<?> clazz, String name) throws IllegalArgumentException {
+        try {
+            Field field = clazz.getField(name);
+            if (!Modifier.isStatic(field.getModifiers()))
+                throw new IllegalArgumentException("Field '" + name + "' in " + clazz + " is not static");
+            return field.get(null);
+        } catch (NoSuchFieldException e) {
+            throw new IllegalArgumentException("Field '" + name + "' was not found in " + clazz);
+        } catch (IllegalAccessException e) { // This should never happen
+            throw new IllegalArgumentException("Field '" + name + "' in " + clazz + " is not accessible");
         }
     }
 

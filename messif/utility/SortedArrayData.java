@@ -11,7 +11,7 @@ import messif.buckets.index.IndexComparator;
 
 /**
  * Abstract implementation of a basic sorted array data.
- * The order is maintained by the {@link #indexCompare} method.
+ * The order is maintained by the {@link #compare} method.
  * Methods for binary search with O(log n) complexity
  * as well as some basic collection operations are provided.
  * 

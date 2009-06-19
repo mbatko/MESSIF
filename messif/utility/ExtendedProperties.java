@@ -24,6 +24,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
@@ -54,6 +55,15 @@ import javax.sql.DataSource;
 public class ExtendedProperties extends Properties {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
+
+    //****************** Constants ******************//
+
+    /** Pattern that match variables properties */
+    private static final Pattern variablePattern = Pattern.compile("<([^>]+?)(?::([^>]+))?>", Pattern.MULTILINE);
+    /** Group number in the <code>variablePattern</code> that represents the variable name */
+    private static final int variablePatternNameGroup = 1;
+    /** Group number in the <code>variablePattern</code> that represents the default value for the variable */
+    private static final int variablePatternDefaultValueGroup = 2;
 
 
     //****************** Attributes ******************//
@@ -160,6 +170,23 @@ public class ExtendedProperties extends Properties {
     }
 
     /**
+     * Return {@link ExtendedProperties} from the specified <code>properties</code> with variable expansion.
+     * Only keys with the given prefix are copied and the prefix is removed from the keys.
+     * A {@link Convert#substituteVariables variable substitution} is
+     * performed on all values (no substitution is done on keys).
+     *
+     * @param properties the properties to copy from
+     * @param prefix the starting prefix on the keys
+     * @param variables the variable names with their values
+     * @return a new instance of {@link ExtendedProperties} populated from <code>properties</code>
+     */
+    public static ExtendedProperties restrictProperties(Properties properties, String prefix, Map<String, String> variables) {
+        ExtendedProperties ret = new ExtendedProperties();
+        ret.load(properties, prefix, variables);
+        return ret;
+    }
+
+    /**
      * Return {@link ExtendedProperties} from the specified <code>properties</code>.
      * Only keys with the given prefix are copied and the prefix is removed from the
      * keys.
@@ -169,9 +196,7 @@ public class ExtendedProperties extends Properties {
      * @return a new instance of {@link ExtendedProperties} populated from <code>properties</code>
      */
     public static ExtendedProperties restrictProperties(Properties properties, String prefix) {
-        ExtendedProperties ret = new ExtendedProperties();
-        ret.load(properties, prefix);
-        return ret;
+        return restrictProperties(properties, prefix, null);
     }
 
 
@@ -218,13 +243,57 @@ public class ExtendedProperties extends Properties {
      * @throws NullPointerException if the <code>properties</code> is null
      */
     public void load(Properties properties, String prefix) throws NullPointerException {
+        load(properties, prefix, null);
+    }
+
+    /**
+     * Populate this properties with the data stored in another {@link Properties properties}.
+     * Variable substitution is performed on property values (keys are not substituted).
+     * Variables have <code>&lt;name:default_value&gt;</code> format, where the <code>:default_value</code>
+     * part is optional (empty string will be placed if an unknown variable is encountered).
+     * If a <code>prefix</code> is specified, only keys that begins with that prefix are
+     * copied and the prefix is removed in the process.
+     *
+     * @param properties the propertries to load
+     * @param prefix if <tt>null</tt>, all keys from the <code>properties</code>
+     *          are copied; otherwise, only the keys that starts with the prefix
+     *          are copied without the prefix
+     * @param variables the variable names with their values
+     * @throws NullPointerException if the <code>properties</code> is null
+     */
+    public void load(Properties properties, String prefix, Map<String,String> variables) throws NullPointerException {
+        load(properties, prefix, variablePattern, variablePatternNameGroup, variablePatternDefaultValueGroup, variables);
+    }
+
+    /**
+     * Populate this properties with the data stored in another {@link Properties properties}.
+     * Variable substitution is performed on property values (keys are not substituted).
+     * If a <code>prefix</code> is specified, only keys that begins with that prefix are
+     * copied and the prefix is removed in the process.
+     *
+     * @param properties the propertries to load
+     * @param prefix if <tt>null</tt>, all keys from the <code>properties</code>
+     *          are copied; otherwise, only the keys that starts with the prefix
+     *          are copied without the prefix
+     * @param variableRegex regular expression that matches variables
+     * @param variableRegexGroup parenthesis group within regular expression
+     *          that holds the variable name
+     * @param defaultValueRegexGroup parenthesis group within regular expression
+     *          that holds the default value for a variable that is not present
+     *          in the <code>variables</code> map
+     * @param variables the variable names with their values
+     * @throws NullPointerException if the <code>properties</code> is null
+     */
+    public void load(Properties properties, String prefix, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String,String> variables) throws NullPointerException {
         Enumeration<?> names = properties.propertyNames();
         while (names.hasMoreElements()) {
             String name = (String)names.nextElement();
-            if (prefix == null)
-                setProperty(name, properties.getProperty(name));
-            else if (name.startsWith(prefix))
-                setProperty(name.substring(prefix.length()), properties.getProperty(name));
+            if (prefix != null && !name.startsWith(prefix))
+                continue;
+            String value = properties.getProperty(name);
+            if (variables != null)
+                value = Convert.substituteVariables(value, variableRegex, variableRegexGroup, defaultValueRegexGroup, variables);
+            setProperty((prefix == null)?name:name.substring(prefix.length()), value);
         }
     }
 

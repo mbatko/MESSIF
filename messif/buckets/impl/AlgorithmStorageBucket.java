@@ -203,11 +203,11 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
 
         // Create new instance of algorithm
         try {
-            Map<String, AbstractStreamObjectIterator> objectStreams = Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, AbstractStreamObjectIterator.class); // This cast IS checked, because AbstractStreamObjectIterator has LocalAbstractObject as default E
+            Map<String, Object> namedInstances = Convert.safeGenericCastMap(parameters.get("namedInstances"), String.class, Object.class);
             return Convert.createInstanceWithStringArgs(
                     Algorithm.getAnnotatedConstructors(algClass),
                     algParams.toArray(new String[algParams.size()]),
-                    objectStreams
+                    namedInstances
             );
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Can't create algorithm '" + algClass.getName() + "' for AlgorithmStorageBucket", e.getCause());

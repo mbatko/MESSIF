@@ -18,11 +18,11 @@ import messif.buckets.index.Search;
  * [<code>from</code>, <code>to</code>] boundaries. Specifically, all objects
  * that are bigger or equal to <code>from</code> and smaller or equal to <code>to</code>
  * are returned, i.e.
- * {@link Comparator#indexCompare comparator.indexCompare}<code>(from, o) &lp= 0</code> and
- * {@link Comparator#indexCompare comparator.indexCompare}<code>(to, o) == 0</code> holds.
+ * {@link Comparator#compare comparator.indexCompare}<code>(from, o) &lp= 0</code> and
+ * {@link Comparator#compare comparator.indexCompare}<code>(to, o) == 0</code> holds.
  * 
  * <p>
- * The {@link Comparator#indexCompare comparator.indexCompare} method will always have
+ * The {@link Comparator#compare comparator.indexCompare} method will always have
  * the <code>from/to</code> attributes passesed as the first argument and
  * the object that is checked as the second argument.
  * </p>

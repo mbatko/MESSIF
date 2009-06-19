@@ -13,7 +13,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import messif.objects.LocalAbstractObject;
-import messif.executor.MethodThreadList;
 import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
 import messif.statistics.OperationStatistics;

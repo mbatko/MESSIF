@@ -6,6 +6,7 @@
 
 package messif.operations;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
@@ -14,6 +15,7 @@ import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
+import messif.utility.Convert;
 import messif.utility.SortedCollection;
 
 
@@ -123,6 +125,36 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the query object of this ranking query
      */
     public abstract LocalAbstractObject getQueryObject();
+
+    /**
+     * Set a new collection that maintains the answer list of this ranking query.
+     * Note that this method should be used only for changing the reranking/filtering
+     * of the results.
+     * A new instance of clazz is created with the specified constructor parameters.
+     *
+     * @param clazz the class for which to create a collection instance
+     * @param constructorParams the arguments for the constructor
+     * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
+     * @throws InvocationTargetException if there was an exception during instantiation
+     */
+    public void setAnswerCollection(Class <? extends SortedCollection> clazz, Object... constructorParams) throws NoSuchMethodException, InvocationTargetException {
+        @SuppressWarnings("unchecked")
+        SortedCollection<RankedAbstractObject> collection = Convert.createInstanceWithInheritableArgs(clazz, constructorParams);
+        setAnswerCollection(collection);
+    }
+
+    /**
+     * Set a new collection that maintains the answer list of this ranking query.
+     * Note that this method should be used only for changing the reranking/filtering
+     * of the results.
+     * @param collection a new instance of answer collection
+     */
+    public void setAnswerCollection(SortedCollection<RankedAbstractObject> collection) {
+        if (!collection.isEmpty())
+            collection.clear();
+        collection.addAll(answer);
+        this.answer = collection;
+    }
 
     @Override
     public Class<? extends RankedAbstractObject> getAnswerClass() {
