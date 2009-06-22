@@ -177,13 +177,29 @@ public class ExtendedProperties extends Properties {
      *
      * @param properties the properties to copy from
      * @param prefix the starting prefix on the keys
+     * @param defaultProperties the default properties to use (see {@link Properties#Properties(java.util.Properties)})
+     * @param variables the variable names with their values
+     * @return a new instance of {@link ExtendedProperties} populated from <code>properties</code>
+     */
+    public static ExtendedProperties restrictProperties(Properties properties, String prefix, Properties defaultProperties, Map<String, String> variables) {
+        ExtendedProperties ret = new ExtendedProperties(defaultProperties);
+        ret.load(properties, prefix, variables);
+        return ret;
+    }
+
+    /**
+     * Return {@link ExtendedProperties} from the specified <code>properties</code> with variable expansion.
+     * Only keys with the given prefix are copied and the prefix is removed from the keys.
+     * A {@link Convert#substituteVariables variable substitution} is
+     * performed on all values (no substitution is done on keys).
+     *
+     * @param properties the properties to copy from
+     * @param prefix the starting prefix on the keys
      * @param variables the variable names with their values
      * @return a new instance of {@link ExtendedProperties} populated from <code>properties</code>
      */
     public static ExtendedProperties restrictProperties(Properties properties, String prefix, Map<String, String> variables) {
-        ExtendedProperties ret = new ExtendedProperties();
-        ret.load(properties, prefix, variables);
-        return ret;
+        return restrictProperties(properties, prefix, null, variables);
     }
 
     /**
