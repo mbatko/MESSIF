@@ -102,7 +102,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Answer type"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, AnswerType answerType) {
-        this(queryObject, k, 5000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT);
+        this(queryObject, k, 10000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT);
     }
 
     /**
@@ -115,7 +115,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, 6, 3, true, 1, 2, Float.MAX_VALUE, 1, 0.01f, 1, localSearchParam, localSearchType);
+        this(queryObject, k, 10, 2, false, 0, 4, 0.095f, 3, 0.04f, 1, localSearchParam, localSearchType);
     }
 
     /**
