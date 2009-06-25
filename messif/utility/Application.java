@@ -53,6 +53,7 @@ import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
+import messif.statistics.StatisticCounter;
 import messif.statistics.Statistics;
 
 
@@ -499,7 +500,7 @@ public class Application {
             OperationStatistics.resetLocalThreadStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            algorithm.executeOperation(lastOperation);
+            lastOperation = algorithm.executeOperation(lastOperation);
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
@@ -929,6 +930,41 @@ public class Application {
     }
 
     /**
+     * Gets a value from a global statistic.
+     * If the global statistic does not exist, a new one is created.
+     * <p>
+     * Two arguments are required:
+     *   <ul>
+     *     <li>the name of the statistic</li>
+     *     <li>the class of the statistic</li>
+     *   </ul>
+     * </p>
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsGlobalGet DistanceComputations messif.statistics.StatisticCounter
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name and class of the global statistic
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "get/create global statistic", arguments = { "statistic name", "statistic class" })
+    public boolean statisticsGlobalGet(PrintStream out, String... args) {
+        try {
+            out.println(Convert.createInstanceUsingFactoryMethod(Convert.getClassForName(args[2], Statistics.class), "getStatistics", args[1]));
+        } catch (InvocationTargetException e) {
+            out.println("Cannot get global statistics: " + e.getCause());
+            return false;
+        } catch (Exception e) {
+            out.println("Cannot get global statistics: " + e);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Reset all global statistics.
      * An optional parameter is a regular expression applied on names as a filter.
      * 
@@ -978,10 +1014,10 @@ public class Application {
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsLastOperation(PrintStream out, String... args) {
         if (args.length >= 3)
-            out.println(OperationStatistics.getLocalThreadStatistics().printStatistics(args[1], args[2]));
+            out.println(algorithm.getOperationStatistics().printStatistics(args[1], args[2]));
         else if (args.length >= 2)
-            out.println(OperationStatistics.getLocalThreadStatistics().printStatistics(args[1]));
-        else out.println(OperationStatistics.getLocalThreadStatistics().printStatistics());
+            out.println(algorithm.getOperationStatistics().printStatistics(args[1]));
+        else out.println(algorithm.getOperationStatistics().printStatistics());
         return true;
     }
 
