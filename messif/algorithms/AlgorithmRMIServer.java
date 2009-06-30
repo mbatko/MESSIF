@@ -88,20 +88,20 @@ public class AlgorithmRMIServer extends Thread {
 
                             for (;;) {
                                 String methodName = in.readUTF();
-                                Object[] methodArguments = (Object[]) in.readObject();
+                                Object[] methodArguments = (Object[]) in.readUnshared();
                                 try {
                                     Object retVal = Convert.getMethod(algorithmClass, methodName, false, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
-                                    out.writeObject(retVal);
+                                    out.writeUnshared(retVal);
                                 } catch (InvocationTargetException e) {
-                                    out.writeObject(e.getCause());
+                                    out.writeUnshared(e.getCause());
                                 } catch (NoSuchMethodException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 } catch (IllegalAccessException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 } catch (RuntimeException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 }
                                 out.flush();
                             }
