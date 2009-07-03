@@ -9,17 +9,15 @@ package messif.objects.util;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.NoSuchElementException;
-import java.util.zip.GZIPInputStream;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
+import messif.utility.DirectoryInputStream;
 
 /**
  * This class represents an iterator on {@link LocalAbstractObject}s that are read from a file.
@@ -96,13 +94,15 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * If the <code>fileName</code> is empty, <tt>null</tt> or dash, standard input is used.
      *
      * @param objClass the class used to create the instances of objects in this stream
-     * @param fileName the path to a file from which objects are read
+     * @param fileName the path to a file from which objects are read;
+     *          if it is a directory, all files that match the glob pattern are loaded
+     *          (see {@link DirectoryInputStream#open(java.lang.String) DirectoryInputStream} for more informations)
      * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IOException if there was an error opening the file
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Collection<?> constructorArgs) throws IllegalArgumentException, IOException {
-        this(objClass, new BufferedReader(new InputStreamReader(openFileInputStream(fileName))), constructorArgs);
+        this(objClass, new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName))), constructorArgs);
 
         // Set file name to provided value - it is used in reset functionality
         if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
@@ -135,20 +135,6 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
         this(objClass, stream, null);
-    }
-
-    /**
-     * Open input stream for the specified file name.
-     * If the file name ends with "gz", GZIP stream decompression is used.
-     * @param fileName the file path to open
-     * @return a new instance of InputStream
-     */
-    private static InputStream openFileInputStream(String fileName) throws IOException {
-        if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
-            return System.in;
-        else if (fileName.endsWith("gz"))
-            return new GZIPInputStream(new FileInputStream(fileName));
-        else return new FileInputStream(fileName);
     }
 
 
@@ -301,7 +287,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
             throw new IOException("Cannot reset this stream, file name not provided");
         
         // Try to reopen the file (throws IOException if file was not found)
-        BufferedReader newStream = new BufferedReader(new InputStreamReader(openFileInputStream(fileName)));
+        BufferedReader newStream = new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName)));
         
         // Reset current stream
         stream.close();
