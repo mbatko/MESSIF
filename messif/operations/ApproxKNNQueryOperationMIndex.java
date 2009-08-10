@@ -102,7 +102,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Answer type"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, AnswerType answerType) {
-        this(queryObject, k, 5000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT);
+        this(queryObject, k, 5000, ApproxKNNQueryOperation.LocalSearchType.ABS_OBJ_COUNT, answerType);
     }
 
     /**
@@ -115,7 +115,21 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, 6, 3, true, 1, 2, Float.MAX_VALUE, 1, 0.01f, 1, localSearchParam, localSearchType);
+        this(queryObject, k, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS);
+    }
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters for distributed processing
+     *  and specify parameters for centralized approximation.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Local search param", "Type of <br/>local search param",  "Answer type"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType) {
+        this(queryObject, k, 6, 3, true, 1, 2, Float.MAX_VALUE, 1, 0.01f, 1, localSearchParam, localSearchType, answerType);
     }
 
     /**
@@ -138,7 +152,30 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForGreatClusters, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, false, AnswerType.REMOTE_OBJECTS, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForGreatClusters, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS);
+    }
+    
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters for distributed processing
+     *  and specify parameters for centralized approximation.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param initialLevelClusterNumber if greater than 0 then taken as the fixed number of clusters to be visited by the operation
+     * @param initialLevel M-Index level to be used for generating the initial set of clusters to be visited
+     * @param limitBranchingByPenalty if this flag is true then each super-cluster brings a penalty from the upper level and limits the sub-clusters penalties by this value
+     * @param minClustersForBranching minimal fixed number of sub-clusters to be visited within a cluster (internal node)
+     * @param maxClustersForBranching maximal fixed number of sub-clusters to be visited within a cluster (internal node)
+     * @param penaltyLimit absolute penalty limit for all clusters visited by the algorithm (implicitly 0.01)
+     * @param maxPeersForGreatClusters Maximal number of peers to visit within clusters that are considered "great"
+     * @param greatClusterPenaltyLimit all clusters with penalty under this limit are considered "great"
+     * @param maxPeersForClusters Maximal number of peers to visit within (other than "great") leaf-node cluster
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Local search param", "Type of <br/>local search param", "Answer type"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit, int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType) {
+        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForGreatClusters, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, false, answerType, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
     
     /**
