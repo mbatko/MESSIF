@@ -454,6 +454,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
         
         if (distanceFilter == filter) {
             distanceFilter = distanceFilter.nextFilter;
+            filter.nextFilter = null;
             return true;
         } else {
             PrecomputedDistancesFilter prev = distanceFilter;
@@ -461,6 +462,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
             while (curr != null) {
                 if (curr == filter) {
                     prev.nextFilter = curr.nextFilter;
+                    filter.nextFilter = null;
                     return true;
                 }
                 prev = curr;

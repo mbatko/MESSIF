@@ -40,7 +40,12 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
          * Stop after the specific number of evaluations of distance functions.
          * {@link #localSearchParam} is the threshold on the number of distance computations.
          */
-        ABS_DC_COUNT
+        ABS_DC_COUNT,
+        /**
+         * Stop after a specific number of "data regions" (buckets, clusters) is accessed and searched.
+         * {@link #localSearchParam} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
+         */
+        DATA_PARTITIONS
     }
 
     /** Type of the local approximation parameter used. */

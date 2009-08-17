@@ -503,6 +503,7 @@ public abstract class Algorithm implements Serializable {
         try {
             OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
             OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
         } catch (ClassNotFoundException ex) {
             log.severe(ex);
             throw new AlgorithmMethodException(ex);

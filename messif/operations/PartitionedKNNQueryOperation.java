@@ -55,7 +55,17 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public PartitionedKNNQueryOperation(LocalAbstractObject queryObject, int k) {
-        super(queryObject, k);
+        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
+    }
+
+    /**
+     * Creates a new instance of kNNQueryOperation given the query object, radius and specifying the answer type.
+     * @param queryObject the query object
+     * @param k the query radius
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
+    public PartitionedKNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
+        super(queryObject, k, answerType);
         partitionedAnswer = new HashMap<Object, SortedCollection<RankedAbstractObject>>();
     }
 
@@ -75,7 +85,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
             currentPartition = partitionedAnswer.get(partitionObject);
             if (currentPartition == null) {
                 currentPartition = new SortedCollection<RankedAbstractObject>(k, k, null);
-                partitionedAnswer.put(partitionObject, currentPartition);
+                partitionedAnswer.put(partitionObject, currentPartition);                
             }
         }
     }
@@ -112,7 +122,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
                 // Remove the last object in the current answer from the partition information
                 for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
                     if (entry.getValue().remove(lastObject)) {
-                        if (entry.getValue().isEmpty()) {
+                        if (entry.getValue().isEmpty() && (entry.getValue() != currentPartition)) {
                             partitionedAnswer.remove(entry.getKey());
                         }
                         break;
@@ -187,6 +197,16 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
             }
         }
     }
+
+    /** Remove empty partitions */
+    public void removeEmptyPartitions() {
+        for (Iterator<Map.Entry<Object, SortedCollection<RankedAbstractObject>>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {
+            if (itt.next().getValue().isEmpty()) {
+                itt.remove();
+            }
+        }
+    }
+
 
     /**
      * Returns a simple string representation of this operation.
