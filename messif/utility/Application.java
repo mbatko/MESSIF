@@ -53,7 +53,6 @@ import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
-import messif.statistics.StatisticCounter;
 import messif.statistics.Statistics;
 
 
@@ -495,9 +494,9 @@ public class Application {
                 out.println(AbstractOperation.getConstructorDescription(operationClass));
                 return false;
             }
-            
+
             // Execute operation
-            OperationStatistics.resetLocalThreadStatistics();
+            algorithm.resetOperationStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
             lastOperation = algorithm.executeOperation(lastOperation);

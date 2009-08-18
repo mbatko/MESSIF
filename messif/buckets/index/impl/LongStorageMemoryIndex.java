@@ -1,6 +1,8 @@
 
 package messif.buckets.index.impl;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import messif.buckets.BucketStorageException;
@@ -11,6 +13,7 @@ import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 import messif.buckets.storage.LongStorage;
+import messif.buckets.storage.impl.DiskStorage;
 import messif.utility.SortedArrayData;
 
 /**
@@ -35,10 +38,10 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
     //****************** Attributes ******************//
 
     /** Storage associated with this index */
-    private final LongStorage<T> storage;
+    private DiskStorage<T> storage;
 
     /** Index of addresses into the storage */
-    private ArrayList<KeyAddressPair> index;
+    private ArrayList<KeyAddressPair<K>> index;
 
     /** Comparator imposing natural order of this index */
     private final IndexComparator<K, T> comparator;
@@ -51,13 +54,25 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
      * @param storage the storage to associate with this index
      * @param comparator the comparator imposing natural order of this index
      */
-    public LongStorageMemoryIndex(LongStorage<T> storage, IndexComparator<K, T> comparator) {
+    public LongStorageMemoryIndex(DiskStorage<T> storage, IndexComparator<K, T> comparator) {
         this.storage = storage;
         this.comparator = comparator;
-        this.index = new ArrayList<KeyAddressPair>();
+        this.index = new ArrayList<KeyAddressPair<K>>();
     }
 
     public void destroy() throws Throwable {
+        // Reordering on destroy
+        if (storage.isModified()) {
+            DiskStorage<T> oldStorage = storage;
+
+            // Name of the storage file
+            File oldStorageFile = oldStorage.getFile();
+            File newStorageFile = File.createTempFile(oldStorageFile.getPath(), DiskStorage.FILENAME_SUFFIX);
+
+            reorderStorage(newStorageFile);
+            oldStorage.destroy();
+            System.err.println("Reordering on " + oldStorageFile + " to file " + newStorageFile + " finished");
+        }
         storage.destroy();
     }
 
@@ -78,6 +93,24 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
     @Override
     protected int compare(K key, KeyAddressPair<K> object) throws ClassCastException {
         return comparator.compare(key, object.key);
+    }
+
+    //****************** Reorder support ******************//
+
+    public void reorderStorage(File newFile) throws IOException, BucketStorageException {
+        // Create new storage
+        DiskStorage<T> newStorage = new DiskStorage<T>(storage, newFile);
+        ArrayList<KeyAddressPair<K>> newIndex = new ArrayList<KeyAddressPair<K>>();
+
+        synchronized (storage) {
+            // Copy data to the new storage
+            for (KeyAddressPair<K> indexPair : index)
+                newIndex.add(new KeyAddressPair<K>(indexPair.key, newStorage.store(storage.read(indexPair.position)).getAddress()));
+
+            // Switch to new storage
+            this.storage = newStorage;
+            this.index = newIndex;
+        }
     }
 
 
@@ -115,7 +148,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         K key = comparator.extractKey(object);
         int pos = insertionPoint(key);
 
-        index.add(pos, new KeyAddressPair(key, storage.store(object).getAddress()));
+        index.add(pos, new KeyAddressPair<K>(key, storage.store(object).getAddress()));
 
         return true;
     }

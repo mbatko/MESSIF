@@ -61,10 +61,10 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
     //****************** Constants ******************//
 
     /** The prefix for auto-generated filenames */
-    protected static final String FILENAME_PREFIX = "disk_storage_";
+    public static final String FILENAME_PREFIX = "disk_storage_";
 
     /** The suffix for auto-generated filenames */
-    protected static final String FILENAME_SUFFIX = ".ds";
+    public static final String FILENAME_SUFFIX = ".ds";
 
     /** Header flag constant for indication whether the file was correctly closed */
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
@@ -144,6 +144,27 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
         this.serializator = serializator;
         this.fileChannel = openFileChannel(file, readonly);
         this.outputStream = readonly?null:openOutputStream();
+    }
+
+    /**
+     * Creates a new DiskStreamStorage instance.
+     * All parameters are copied from the provided <code>copyAttributesDiskStorage</code>
+     * except for the file name. The bucket is always opened in read-write mode.
+     *
+     * @param copyAttributesDiskStorage the disk storage from which to copy parameters
+     * @param file the file in which to create the bucket
+     * @throws IOException if there was an error opening the bucket file
+     */
+    public DiskStorage(final DiskStorage<? extends T> copyAttributesDiskStorage, File file) throws IOException {
+        this.storedObjectsClass = copyAttributesDiskStorage.storedObjectsClass;
+        this.file = file;
+        this.bufferSize = copyAttributesDiskStorage.bufferSize;
+        this.bufferDirect = copyAttributesDiskStorage.bufferDirect;
+        this.startPosition = copyAttributesDiskStorage.startPosition;
+        this.maximalLength = copyAttributesDiskStorage.maximalLength;
+        this.serializator = copyAttributesDiskStorage.serializator;
+        this.fileChannel = openFileChannel(file, false);
+        this.outputStream = openOutputStream();
     }
 
     /**
@@ -558,11 +579,27 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
     }
 
     /**
+     * Returns the file where the data of this storage are stored.
+     * @return the file where the data of this storage are stored
+     */
+    public File getFile() {
+        return file;
+    }
+
+    /**
      * Returns the number of objects stored in this storage.
      * @return the number of objects stored in this storage
      */
     public int size() {
         return objectCount;
+    }
+
+    /**
+     * Returns <tt>true</tt> if the storage was modified since last open/flush.
+     * @return <tt>true</tt> if the storage was modified since last open/flush
+     */
+    public boolean isModified() {
+        return modified;
     }
 
     /**
