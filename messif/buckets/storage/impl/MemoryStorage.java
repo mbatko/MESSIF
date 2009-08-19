@@ -83,13 +83,12 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
         this(storedObjectsClass, INITIAL_CAPACITY);
     }
 
-    public void destroy() throws Throwable {
+    @Override
+    public void finalize() throws Throwable {
+        super.finalize();
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        destroy();
-        super.finalize();
+    public void destroy() throws Throwable {
     }
 
 

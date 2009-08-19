@@ -52,7 +52,7 @@ public class BucketDispatcher implements Serializable {
     //****************** Bucket dispatcher data ******************//
 
     /** The buckets maintained by this dispatcher organized in hashtable with bucket IDs as keys */
-    private Map<Integer,LocalBucket> buckets = new HashMap<Integer,LocalBucket>();
+    private final Map<Integer,LocalBucket> buckets = new HashMap<Integer,LocalBucket>();
 
     /** Maximal number of buckets maintained by this dispatcher */
     private final int maxBuckets;
@@ -133,14 +133,31 @@ public class BucketDispatcher implements Serializable {
     }
 
     /**
-     * Clean statistics from all buckets.
-     * @throws java.lang.Throwable if there is an error durnig finalizing
+     * Clean up all registered buckets' internals.
+     * This method is called by bucket dispatcher when this bucket is removed
+     * or when the bucket is garbage collected.
+     *
+     * The method removes statistics for this bucket.
+     *
+     * @throws Throwable if there was an error during releasing resources
      */
     @Override
     public void finalize() throws Throwable {
         for (LocalBucket bucket : getAllBuckets())
             bucket.finalize();
         super.finalize();
+    }
+
+    /**
+     * Destroys this bucket. This means release all resources associated with this
+     * bucket (by calling {@link #finalize()}) and clean up all pending data
+     * (e.g. delete temporary files, etc.).
+     *
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable {
+        for (LocalBucket bucket : getAllBuckets())
+            bucket.destroy();
     }
 
 
@@ -631,7 +648,7 @@ public class BucketDispatcher implements Serializable {
         // Reset bucket ID and statistics
         bucket.setBucketID(UNASSIGNED_BUCKET_ID);
         try {
-            bucket.finalize();
+            bucket.destroy();
         } catch (Throwable e) {
             // Log the exception but continue cleanly
             log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);

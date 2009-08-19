@@ -59,6 +59,12 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
         index.destroy();
         super.finalize();
     }
+
+    @Override
+    public void destroy() throws Throwable {
+        index.destroy();
+        super.destroy();
+    }
     
     @Override
     protected ModifiableOrderedIndex<C, LocalAbstractObject> getModifiableIndex() {

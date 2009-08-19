@@ -70,4 +70,16 @@ public class MemoryStorageLocatorBucket extends OrderedLocalBucket<String> imple
         return objects;
     }
 
+    @Override
+    public void finalize() throws Throwable {
+        objects.finalize();
+        super.finalize();
+    }
+
+    @Override
+    public void destroy() throws Throwable {
+        objects.destroy();
+        super.destroy();
+    }
+
 }

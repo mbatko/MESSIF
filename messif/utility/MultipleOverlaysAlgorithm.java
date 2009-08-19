@@ -3,7 +3,6 @@ package messif.utility;
 
 import messif.algorithms.*;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,7 +21,6 @@ import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.ApproxKNNQueryOperationMIndex;
 import messif.operations.PartitionedKNNQueryOperation;
-import messif.utility.SortedCollection;
 
 /**
  * This is a centralized algorithm which connects itself to several remote algorithm (host + RMI port)
@@ -31,6 +29,8 @@ import messif.utility.SortedCollection;
  * @author xnovak8
  */
 public class MultipleOverlaysAlgorithm extends Algorithm {
+    /** class id for serialization */
+    private static final long serialVersionUID = 1L;
 
     /** Multiple remote algorithms. */
     Map<Object, RMIAlgorithm> overlays = new HashMap<Object, RMIAlgorithm>();
@@ -227,6 +227,12 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
         }
     }
 
+    /**
+     * Process operation on a single layer.
+     * This is a HACK method...
+     * @param operation the operation to process
+     * @return <tt>true</tt> only if the operation is approximated KNN on MIndex and the returned value is something...
+     */
     private boolean processOperationSingleLayer(AbstractOperation operation) {
         if (! (operation instanceof ApproxKNNQueryOperationMIndex)) {
             return false;

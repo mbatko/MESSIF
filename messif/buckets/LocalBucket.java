@@ -98,22 +98,32 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     /**
-     * Clean up bucket internals before deletion.
-     * This method is called by bucket dispatcher when this bucket is removed
-     * or when the bucket is garbage collected.
-     * 
-     * The method removes statistics for this bucket.
-     * 
-     * @throws Throwable if there was an error during releasing resources
+     * Finalize this bucket. All transient resources associated with this
+     * storage are released.
+     * After this method is called, the bucket methods' behavior is unpredictable.
+     * This method is called by bucket dispatcher when finishing.
+     *
+     * @throws Throwable if there was an error while cleaning
      */
     @Override
     public void finalize() throws Throwable {
+        super.finalize();
+    }
+
+    /**
+     * Destroy this bucket. This method releases all resources (transient and persistent)
+     * associated with this bucket (e.g. the statistics are deleted).
+     * After this method is called, the bucket methods' behavior is unpredictable.
+     * This method is called by bucket dispatcher when the bucket is deleted from
+     * the dispatcher.
+     *
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable {
         // Remove statistics
         counterBucketAddObject.remove(this);
         counterBucketDelObject.remove(this);
         counterBucketRead.remove(this);
-
-        super.finalize();
     }
 
 

@@ -104,8 +104,14 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
 
     @Override
     public void finalize() throws Throwable {
-        objects.destroy();
+        objects.finalize();
         super.finalize();
+    }
+
+    @Override
+    public void destroy() throws Throwable {
+        objects.destroy();
+        super.destroy();
     }
 
 

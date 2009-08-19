@@ -12,7 +12,6 @@ import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
-import messif.buckets.storage.LongStorage;
 import messif.buckets.storage.impl.DiskStorage;
 import messif.utility.SortedArrayData;
 
@@ -60,28 +59,27 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         this.index = new ArrayList<KeyAddressPair<K>>();
     }
 
-    public void destroy() throws Throwable {
+    @Override
+    public void finalize() throws Throwable {
         // Reordering on destroy
         if (storage.isModified()) {
             DiskStorage<T> oldStorage = storage;
 
             // Name of the storage file
             File oldStorageFile = oldStorage.getFile();
-            File newStorageFile = File.createTempFile(oldStorageFile.getPath(), DiskStorage.FILENAME_SUFFIX);
+            File newStorageFile = File.createTempFile(oldStorageFile.getName(), DiskStorage.FILENAME_SUFFIX, oldStorageFile.getParentFile());
 
             reorderStorage(newStorageFile);
             oldStorage.destroy();
             System.err.println("Reordering on " + oldStorageFile + " to file " + newStorageFile + " finished");
         }
-        storage.destroy();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        destroy();
+        storage.finalize();
         super.finalize();
     }
 
+    public void destroy() throws Throwable {
+        storage.destroy();
+    }
 
 
     // ******************     Comparator methods      ****************** //
@@ -97,6 +95,14 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
     //****************** Reorder support ******************//
 
+    /**
+     * Switches this index to a new storage in which the data are ordered according
+     * the this index's current order.
+     *
+     * @param newFile the file where the new storage is created
+     * @throws IOException if there was a problem writing the the new storage
+     * @throws BucketStorageException if there was a problem reading objects from the old storage or writing them to the new one
+     */
     public void reorderStorage(File newFile) throws IOException, BucketStorageException {
         // Create new storage
         DiskStorage<T> newStorage = new DiskStorage<T>(storage, newFile);

@@ -51,14 +51,14 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         this.index = new long[0];
     }
 
-    public void destroy() throws Throwable {
-        storage.destroy();
+    @Override
+    public void finalize() throws Throwable {
+        storage.finalize();
+        super.finalize();
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        destroy();
-        super.finalize();
+    public void destroy() throws Throwable {
+        storage.destroy();
     }
 
 

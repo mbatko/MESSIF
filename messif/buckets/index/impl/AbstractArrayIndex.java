@@ -45,6 +45,11 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      */
     protected abstract Lock lock();
 
+    @Override
+    public void finalize() throws Throwable {
+        super.finalize();
+    }
+
 
     //****************** Search methods ******************//
 

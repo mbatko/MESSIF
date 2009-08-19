@@ -167,27 +167,22 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
         this.outputStream = openOutputStream();
     }
 
-    /**
-     * Flush file data before garbage collection.
-     * The method updates header and closes the file.
-     * 
-     * @throws Throwable if there was an error during releasing resources
-     */
-    public void destroy() throws Throwable {
-        if (modified) {
-            flush(true);
-            writeHeader(fileChannel, startPosition, FLAG_CLOSED);
-        }
-        if (references <= 0)
+    @Override
+    public void finalize() throws Throwable {
+        if (references <= 0) {
+            if (modified) {
+                flush(true);
+                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+            }
             fileChannel.close();
-        else
+            super.finalize();
+        } else {
             references--;
+        }
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        destroy();
-        super.finalize();
+    public void destroy() throws Throwable {
+        finalize();
     }
 
 

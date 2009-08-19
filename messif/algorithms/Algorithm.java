@@ -102,13 +102,32 @@ public abstract class Algorithm implements Serializable {
     //****************** Destructor ******************//
 
     /**
-     * Public destructor to stop the algorithm.
-     * This should be overriden in order to clean up.
+     * Finalize the algorithm. All transient resources associated with this
+     * algorithm are released.
+     * After this method is called, the behavior of executing any operation is unpredictable.
+     *
      * @throws Throwable if there was an error finalizing
      */
     @Override
     public void finalize() throws Throwable {
         super.finalize();
+    }
+
+    /**
+     * Destroy this algorithm. This method releases all resources (transient and persistent)
+     * associated with this algorithm.
+     * After this method is called, the behavior of executing any operation is unpredictable.
+     *
+     * <p>
+     * This implementation defaults to call {@link #finalize()}, but should be overriden
+     * if the algorithm needs to differentiate between finalizing and destroying. In that case
+     * the "super.destroy()" should <i>not</i> be called if finalizing is not part of destroy.
+     * </p>
+     *
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable {
+        finalize();
     }
 
 

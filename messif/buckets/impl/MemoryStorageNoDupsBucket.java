@@ -87,4 +87,16 @@ public class MemoryStorageNoDupsBucket extends OrderedLocalBucket<LocalAbstractO
         return objects;
     }
 
+    @Override
+    public void finalize() throws Throwable {
+        objects.finalize();
+        super.finalize();
+    }
+
+    @Override
+    public void destroy() throws Throwable {
+        objects.destroy();
+        super.destroy();
+    }
+
 }
