@@ -477,9 +477,10 @@ public class Application {
             // Get class from the first argument
             Class<AbstractOperation> operationClass = Convert.getClassForName(args[1], AbstractOperation.class);
 
+            AbstractOperation operation;
             try {
                 // Create new instance of the operation
-                lastOperation = AbstractOperation.createOperation(
+                operation = AbstractOperation.createOperation(
                         operationClass,
                         Convert.parseTypesFromString(
                             args,
@@ -499,7 +500,7 @@ public class Application {
             algorithm.resetOperationStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            lastOperation = algorithm.executeOperation(lastOperation);
+            lastOperation = algorithm.executeOperation(operation);
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
@@ -570,10 +571,10 @@ public class Application {
             
             return false;
         }
-
+        AbstractOperation operation;
         try {
             // Try to create a new instance of the operation
-            lastOperation = AbstractOperation.createOperation(
+            operation = AbstractOperation.createOperation(
                     operationClass,
                     Convert.parseTypesFromString(
                         args, 
@@ -587,7 +588,7 @@ public class Application {
             OperationStatistics.resetLocalThreadStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            algorithm.backgroundExecuteOperation(lastOperation);
+            algorithm.backgroundExecuteOperation(operation);
             return true;
         } catch (Exception e) {
             log.severe(e);
@@ -621,7 +622,10 @@ public class Application {
         }
 
         try {
-            algorithm.waitBackgroundExecuteOperation();
+            List<AbstractOperation> waitBackgroundExecuteOperation = algorithm.waitBackgroundExecuteOperation();
+            if (! waitBackgroundExecuteOperation.isEmpty()) {
+                lastOperation = waitBackgroundExecuteOperation.get(0);
+            }
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
@@ -653,14 +657,15 @@ public class Application {
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
     public boolean operationExecuteAgain(PrintStream out, String... args) {
         try {
-            if (algorithm != null && lastOperation != null) {
+            AbstractOperation operation = lastOperation;
+            if (algorithm != null && operation != null) {
                 // Execute operation
                 OperationStatistics.resetLocalThreadStatistics();
                 if (bindOperationStatsRegexp != null)
                     OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && lastOperation instanceof QueryOperation)
-                    ((QueryOperation)lastOperation).resetAnswer();
-                algorithm.executeOperation(lastOperation);
+                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && operation instanceof QueryOperation)
+                    ((QueryOperation)operation).resetAnswer();
+                algorithm.executeOperation(operation);
                 if (bindOperationStatsRegexp != null)
                     OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
                 return true;
@@ -723,11 +728,12 @@ public class Application {
      */
     @ExecutableMethod(description = "change the answer collection of the last executed operation", arguments = {"collection class", "arguments for constructor ..."})
     public boolean operationChangeAnswerCollection(PrintStream out, String... args) {
-        if (lastOperation == null) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null) {
             out.println("No operation has been executed yet");
             return false;
         }
-        if (!(lastOperation instanceof RankingQueryOperation)) {
+        if (!(operation instanceof RankingQueryOperation)) {
             out.println("Answer collection can be changed only for ranked results");
             return false;
         }
@@ -741,7 +747,7 @@ public class Application {
             SortedCollection<RankedAbstractObject> newAnswerCollection = Convert.createInstanceWithStringArgs(Arrays.asList((Constructor<SortedCollection>[])clazz.getConstructors()), args, 2);
 
             // Set the instance in the operation
-            ((RankingQueryOperation)lastOperation).setAnswerCollection(newAnswerCollection);
+            ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);
 
             return true;
         } catch (ClassNotFoundException e) {
@@ -784,14 +790,15 @@ public class Application {
      */  
     @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)"})
     public boolean operationAnswer(PrintStream out, String... args) {
-        if (lastOperation == null || !(lastOperation instanceof QueryOperation)) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null || !(operation instanceof QueryOperation)) {
             out.println("The operationAnswer method must be called after some QueryOperation was executed");
             return false;
         }
 
         // Separator is second argument (get newline if not specified)
         String separator = (args.length > 1)?args[1]:System.getProperty("line.separator");
-        Iterator<?> iter = ((QueryOperation<?>)lastOperation).getAnswer();
+        Iterator<?> iter = ((QueryOperation<?>)operation).getAnswer();
         while (iter.hasNext()) {
             out.print(iter.next());
             out.print(separator);

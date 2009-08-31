@@ -61,26 +61,32 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
     @Override
     public void finalize() throws Throwable {
-        // Reordering on destroy
-        if (storage.isModified()) {
-            DiskStorage<T> oldStorage = storage;
+        if (storage != null) {
+            // Reordering on destroy
+            if (storage.isModified()) {
+                DiskStorage<T> oldStorage = storage;
 
-            // Name of the storage file
-            File oldStorageFile = oldStorage.getFile();
-            File newStorageFile = File.createTempFile(oldStorageFile.getName(), DiskStorage.FILENAME_SUFFIX, oldStorageFile.getParentFile());
+                // Name of the storage file
+                File oldStorageFile = oldStorage.getFile();
+                File newStorageFile = File.createTempFile(oldStorageFile.getName(), DiskStorage.FILENAME_SUFFIX, oldStorageFile.getParentFile());
 
-            reorderStorage(newStorageFile);
-            oldStorage.destroy();
-            System.err.println("Reordering on " + oldStorageFile + " to file " + newStorageFile + " finished");
+                reorderStorage(newStorageFile);
+                oldStorage.destroy();
+                System.err.println("Reordering on " + oldStorageFile + " to file " + newStorageFile + " finished");
+            }
+            storage.finalize();
         }
-        storage.finalize();
         super.finalize();
     }
 
     public void destroy() throws Throwable {
         storage.destroy();
+        storage = null;
     }
 
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+    }
 
     // ******************     Comparator methods      ****************** //
 
