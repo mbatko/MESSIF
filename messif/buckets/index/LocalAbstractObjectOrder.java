@@ -34,7 +34,6 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     public int indexCompare(LocalAbstractObject o1, LocalAbstractObject o2) {
         switch (this) {
             case UNIQUE_ID:
-            default:
                 return o1.compareTo(o2);
             case LOCATOR:
                 return o1.getLocatorURI().compareTo(o2.getLocatorURI());
@@ -46,12 +45,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             case KEY:
                 return o1.getObjectKey().compareTo(o2.getObjectKey());
         }
+        throw new InternalError("Compare method is not implemented for order " + this);
     }
 
     public int compare(LocalAbstractObject o1, LocalAbstractObject o2) {
         return indexCompare(o1, o2);
     }
-
 
     public LocalAbstractObject extractKey(LocalAbstractObject object) {
         return object;
@@ -155,4 +154,51 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     };
 
+
+    //****************** Search wrappers ******************//
+
+    /**
+     * Search the specified {@code index} for the object with given ID.
+     * @param <T> type of objects stored in the index
+     * @param index the index to search
+     * @param objectID the object ID to search for
+     * @return the object or <tt>null</tt> if it was not found in the index
+     * @throws IllegalStateException if there was a problem reading objects from the index
+     */
+    public static <T extends LocalAbstractObject> T searchIndexByObjectID(Index<T> index, UniqueID objectID) throws IllegalStateException {
+        Search<T> search = index.search(uniqueIDComparator, objectID);
+        if (!search.next())
+            return null;
+        return search.getCurrentObject();
+    }
+
+    /**
+     * Search the specified {@code index} for the object with given locator.
+     * @param <T> type of objects stored in the index
+     * @param index the index to search
+     * @param locator the locator to search for
+     * @return the object or <tt>null</tt> if it was not found in the index
+     * @throws IllegalStateException if there was a problem reading objects from the index
+     */
+    public static <T extends LocalAbstractObject> T searchIndexByLocator(Index<T> index, String locator) throws IllegalStateException {
+        Search<T> search = index.search(locatorToLocalObjectComparator, locator);
+        if (!search.next())
+            return null;
+        return search.getCurrentObject();
+    }
+
+    /**
+     * Search the specified {@code index} for the object with given key.
+     * @param <T> type of objects stored in the index
+     * @param index the index to search
+     * @param key the key to search for
+     * @return the object or <tt>null</tt> if it was not found in the index
+     * @throws IllegalStateException if there was a problem reading objects from the index
+     */
+    public static <T extends LocalAbstractObject> T searchIndexByKey(Index<T> index, AbstractObjectKey key) throws IllegalStateException {
+        Search<T> search = index.search(keyToLocalObjectComparator, key);
+        if (!search.next())
+            return null;
+        return search.getCurrentObject();
+    }
 }
