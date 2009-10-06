@@ -29,6 +29,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import messif.executor.MethodExecutor;
@@ -41,7 +42,6 @@ import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
-import messif.utility.Convert;
 import messif.utility.Logger;
 
 
@@ -370,6 +370,18 @@ public abstract class Algorithm implements Serializable {
     public <T extends AbstractOperation> T executeOperation(T operation) throws AlgorithmMethodException, NoSuchMethodException {
         execute(Statistics.isEnabledGlobally(), operation);
         return operation;
+    }
+
+    /**
+     * Execute query operation on this algorithm and return the answer.
+     * @param <T> the type of query operation answer
+     * @param operation the operation to execute on this algorithm
+     * @return iterator for the answer of the executed query
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    public <T> Iterator<? extends T> getQueryAnswer(QueryOperation<? extends T> operation) throws AlgorithmMethodException, NoSuchMethodException {
+        return executeOperation(operation).getAnswer();
     }
 
     /**

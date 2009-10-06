@@ -1304,31 +1304,31 @@ public abstract class Convert {
      * @throws NumberFormatException if the specified time has invalid format
      */
     public static long timeToMiliseconds(String time) throws NumberFormatException {
+        Calendar calendar = Calendar.getInstance();
+        String[] hms = time.split("\\p{Space}*[:.]\\p{Space}*", 4);
+        switch (hms.length) {
+            case 4:
+                calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
+                calendar.set(Calendar.MILLISECOND, Integer.parseInt(hms[3]));
+                break;
+            case 3:
+                calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
+                calendar.set(Calendar.MILLISECOND, 0);
+                break;
+            case 2:
+                calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
+                calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                break;
+            default:
+                throw new NumberFormatException("At least hours and minutes must be specified");
+        }
         try {
-            Calendar calendar = Calendar.getInstance();
-            String[] hms = time.split("\\p{Space}*[:.]\\p{Space}*", 4);
-            switch (hms.length) {
-                case 4:
-                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
-                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
-                    calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
-                    calendar.set(Calendar.MILLISECOND, Integer.parseInt(hms[3]));
-                    break;
-                case 3:
-                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
-                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
-                    calendar.set(Calendar.SECOND, Integer.parseInt(hms[2]));
-                    calendar.set(Calendar.MILLISECOND, 0);
-                    break;
-                case 2:
-                    calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hms[0]));
-                    calendar.set(Calendar.MINUTE, Integer.parseInt(hms[1]));
-                    calendar.set(Calendar.SECOND, 0);
-                    calendar.set(Calendar.MILLISECOND, 0);
-                    break;
-                default:
-                    throw new NumberFormatException("At least hours and minutes must be specified");
-            }
             calendar.setLenient(false);
             return calendar.getTimeInMillis();
         } catch (IllegalArgumentException e) {
@@ -1336,7 +1336,7 @@ public abstract class Convert {
             StringBuffer str = new StringBuffer("Value of ");
             str.append(e.getMessage().toLowerCase());
             str.append(" is invalid");
-            throw new NumberFormatException(str.toString()); 
+            throw new NumberFormatException(str.toString());
         }
     }
 

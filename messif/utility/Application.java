@@ -1842,13 +1842,13 @@ public class Application {
     protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
         // Check for postponed execution
         String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, 2, variables);
-        if (postponeUntil != null) {
+        if (postponeUntil != null && postponeUntil.trim().length() > 0) {
             try {
                 long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
                 if (sleepTime > 0)
                     Thread.sleep(sleepTime);
             } catch (NumberFormatException e) {
-                out.println(e.getMessage() + " in postponeUntil parameter of '" + actionName + "'");
+                out.println(e.getMessage() + " for postponeUntil parameter of '" + actionName + "'");
                 return false;
             } catch (InterruptedException e) {
                 out.println("Thread interrupted while waiting for posponed execution");
