@@ -520,7 +520,7 @@ public class HttpApplication extends Application {
                 success = false;
             }
 
-            sendXmlResponse(exchange, success, response);
+            sendTextResponse(exchange, success, response);
         }
 
     }
