@@ -11,7 +11,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Collection;
+import java.util.List;
 import messif.objects.LocalAbstractObject;
 import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
@@ -263,14 +263,14 @@ public class RMIAlgorithm extends Algorithm {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Collection<Class<AbstractOperation>> getSupportedOperations() {
-        return (Collection<Class<AbstractOperation>>)methodExecute("getSupportedOperations"); // This cast IS checked
+    public List<Class<? extends AbstractOperation>> getSupportedOperations() {
+        return (List<Class<? extends AbstractOperation>>)methodExecute("getSupportedOperations"); // This cast IS checked
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends AbstractOperation> Collection<Class<T>> getSupportedOperations(Class<T> subclassToSearch) {
-        return (Collection<Class<T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
+    public <T extends AbstractOperation> List<Class<? extends T>> getSupportedOperations(Class<? extends T> subclassToSearch) {
+        return (List<Class<? extends T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
     }
 
     @Override

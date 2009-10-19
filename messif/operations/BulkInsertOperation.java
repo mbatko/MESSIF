@@ -49,7 +49,6 @@ public class BulkInsertOperation extends AbstractOperation {
      *
      * @param insertedObjects a list of objects to be inserted by this operation
      */
-    @AbstractOperation.OperationConstructor({"Iterator over objects to insert"})
     public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
     }
@@ -59,7 +58,6 @@ public class BulkInsertOperation extends AbstractOperation {
      *
      * @param insertedObjects a list of objects to be inserted by this operation
      */
-    @AbstractOperation.OperationConstructor({"Iterator over objects to insert"})
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
     }

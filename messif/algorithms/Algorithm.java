@@ -291,7 +291,7 @@ public abstract class Algorithm implements Serializable {
      * The operations returned can be further queried on arguments by static methods in AbstractOperation.
      * @return the list of operations this particular algorithm supports
      */
-    public Collection<Class<AbstractOperation>> getSupportedOperations() {
+    public List<Class<? extends AbstractOperation>> getSupportedOperations() {
         return getSupportedOperations(AbstractOperation.class);
     }
 
@@ -303,8 +303,24 @@ public abstract class Algorithm implements Serializable {
      * @param subclassToSearch ancestor class of the returned operations.
      * @return the list of operations this particular algorithm supports
      */
-    public <E extends AbstractOperation> Collection<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
+    public <E extends AbstractOperation> List<Class<? extends E>> getSupportedOperations(Class<? extends E> subclassToSearch) {
         return operationExecutor.getDifferentiatingClasses(subclassToSearch);
+    }
+
+    /**
+     * Returns the first operation that is a supported by this algorithm and is a subclass of (or the same class as) {@code subclassToSearch}.
+     * The operations returned can be further queried on arguments by static methods in AbstractOperation.
+     *
+     * @param <E> type of the returned operations
+     * @param subclassToSearch ancestor class of the returned operations
+     * @return the first operation of {@code subclassToSearch} that is a supported by this algorithm
+     * @throws NoSuchMethodException if this algorithm does not support any operation of the given {@code subclassToSearch}
+     */
+    public final <E extends AbstractOperation> Class<? extends E> getFirstSupportedOperation(Class<? extends E> subclassToSearch) throws NoSuchMethodException {
+        List<Class<? extends E>> supportedOperations = getSupportedOperations(subclassToSearch);
+        if (supportedOperations == null || supportedOperations.isEmpty())
+            throw new NoSuchMethodException("Algorithm does not support operation " + subclassToSearch.getName());
+        return supportedOperations.get(0);
     }
 
     /**

@@ -172,6 +172,9 @@ public class Application {
     /** List of currently created named instances */
     protected final Map<String, Object> namedInstances = new HashMap<String, Object>();
 
+    /** Socket used for command communication */
+    protected ServerSocketChannel cmdSocket;
+
     /**
      * Create new instance of Application.
      * The instance is initialized from the {@link #main} method.
@@ -515,10 +518,10 @@ public class Application {
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
                 try {
                     out.println(AbstractOperation.getConstructorDescription(opClass));
-                } catch (IllegalArgumentException ex) {
+                } catch (NoSuchMethodException ex) {
                     out.println(opClass.getName() + " can be processed but not instantiated");
                 }
             return false;
@@ -566,8 +569,12 @@ public class Application {
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
             
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (NoSuchMethodException ex) {
+                    // Ignore operations that can be processed but not instantiated
+                }
             
             return false;
         }
@@ -594,7 +601,11 @@ public class Application {
             log.severe(e);
             out.println(e.toString());
             out.println("---------------- Operation parameters ----------------");
-            out.println(AbstractOperation.getConstructorDescription(operationClass));
+            try {
+                out.println(AbstractOperation.getConstructorDescription(operationClass));
+            } catch (NoSuchMethodException ex) {
+                out.println("Operation " + operationClass.getName() + " can be processed but not instantiated");
+            }
             return false;
         }
     }
@@ -684,8 +695,12 @@ public class Application {
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (NoSuchMethodException ex) {
+                    // Ignore operations that can be processed but not instantiated
+                }
             return false;
         }
     }
@@ -2305,32 +2320,44 @@ public class Application {
 
 
     //****************** Standalone application's main method ******************//
-    
+
     /**
+     * Internal method called from {@link #main(java.lang.String[]) main} method
+     * to initialize this application. Basically, this method calls {@link #parseArguments(java.lang.String[])}
+     * and prints a usage if <tt>false</tt> is returned.
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            System.err.println("Usage: Application [<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]");
-            return;
-        }
+    void startApplication(String[] args) {
+        if (!parseArguments(args, 0))
+            System.err.println("Usage: Application " + usage());
+        else if (cmdSocket != null)
+            cmdSocketLoop();
+    }
 
-        // Create new instance of application
-        final Application application = new Application();
-        
-        int argIndex = 0;
+    /**
+     * Returns the command line arguments description.
+     * @return the command line arguments description
+     */
+    String usage() {
+        return "[<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]";
+    }
 
-        // Open port for telnet interface (first argument is an integer)
-        ServerSocketChannel cmdSocket;
+    /**
+     * Internal method called from {@link #main(java.lang.String[]) main} method
+     * to read parameters and initialize the application.
+     * @param args the command line arguments
+     * @param argIndex the index of the argument where to start
+     * @return <tt>true</tt> if the arguments were valid
+     */
+    boolean parseArguments(String[] args, int argIndex) {
+        if (argIndex >= args.length)
+            return false;
+
+        // Prepare port for telnet interface (first argument is an integer)
         try {
-            cmdSocket = ServerSocketChannel.open();
-            cmdSocket.socket().bind(new InetSocketAddress(Integer.parseInt(args[0])));
+            cmdSocket = openCmdSocket(Integer.parseInt(args[argIndex]));
             argIndex++;
         } catch (NumberFormatException ignore) { // First argument is not a number (do not start telnet interface)
-            cmdSocket = null;
-        } catch (IOException e) {
-            System.err.println("Can't open telnet interface: " + e.toString());
-            log.warning("Can't open telnet interface: " + e.toString());
             cmdSocket = null;
         }
 
@@ -2352,36 +2379,68 @@ public class Application {
             String[] newArgs = new String[args.length - argIndex + 1];
             System.arraycopy(args, argIndex, newArgs, 1, args.length - argIndex);
             newArgs[0] = "controlFile";
-            application.controlFile(System.out, newArgs);
+            controlFile(System.out, newArgs);
         }
 
-        // Telnet interface main loop
-        if (cmdSocket != null) {
-            try {
-                cmdSocket.configureBlocking(true);
-                for (;;) {
-                    // Get a connection (blocking mode)
-                    final SocketChannel connection = cmdSocket.accept();
-                    new Thread("thApplicationCmdSocket") {
-                        @Override
-                        public void run() {
-                            try {
-                                application.processInteractiveSocket(connection);
-                                connection.close();
-                            } catch (ClosedByInterruptException e) {
-                                // Ignore this exception because it is a correct exit
-                            } catch (IOException e) {
-                                log.warning(e.toString());
-                            }
-                        }
-                    }.start();
-                }
-            } catch (ClosedByInterruptException e) {
-                // Ignore this exception because it is a correct exit
-            } catch (IOException e) {
-                log.warning(e.toString());
-            }
+        return true;
+    }
+
+    /**
+     * Open the port for telnet interface.
+     * @param port the TCP port to use
+     * @return the opened socket or <tt>null</tt> if there was an error opening the port
+     */
+    ServerSocketChannel openCmdSocket(int port) {
+        try {
+            ServerSocketChannel ret = ServerSocketChannel.open();
+            ret.socket().bind(new InetSocketAddress(port));
+            return ret;
+        } catch (IOException e) {
+            System.err.println("Can't open telnet interface: " + e.toString());
+            log.warning("Can't open telnet interface: " + e.toString());
+            return null;
         }
+    }
+
+    /**
+     * Telnet interface loop.
+     * It waits for the next connection on {@link #cmdSocket} and then starts a new thread that
+     * executes the commands given at the prompt.
+     */
+    void cmdSocketLoop() {
+        try {
+            cmdSocket.configureBlocking(true);
+            for (;;) {
+                // Get a connection (blocking mode)
+                final SocketChannel connection = cmdSocket.accept();
+                new Thread("thApplicationCmdSocket") {
+                    @Override
+                    public void run() {
+                        try {
+                            processInteractiveSocket(connection);
+                            connection.close();
+                        } catch (ClosedByInterruptException e) {
+                            // Ignore this exception because it is a correct exit
+                        } catch (IOException e) {
+                            log.warning(e.toString());
+                        }
+                    }
+                }.start();
+            }
+        } catch (ClosedByInterruptException e) {
+            // Ignore this exception because it is a correct exit
+        } catch (IOException e) {
+            log.warning(e.toString());
+        }
+    }
+
+    /**
+     * Start a MESSIF application.
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        // Create new instance of application
+        new Application().startApplication(args);
     }
 
 }

@@ -49,6 +49,24 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
 
     //****************** Constructors ******************//
 
+
+    /**
+     * Creates a new instance of StreamGenericAbstractObjectIterator.
+     * The constructor args must be compatible with the constructor and the first
+     * argument must be a {@link BufferedReader}.
+     *
+     * @param constructor the constructor used to create instances of objects in this stream
+     * @param constructorArgs constructor arguments
+     */
+    public StreamGenericAbstractObjectIterator(Constructor<? extends E> constructor, Object[] constructorArgs) {
+        this.constructor = constructor;
+        this.stream = (BufferedReader)constructorArgs[0];
+        this.constructorArgs = constructorArgs;
+
+        // Read first object from the stream (hasNext is set automatically)
+        this.nextObject = nextStreamObject();
+    }
+
     /**
      * Creates a new instance of StreamGenericAbstractObjectIterator.
      * The objects are loaded from the given stream on the fly as this iterator is iterated.
@@ -66,17 +84,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
         this.stream = stream;
 
         // Read constructor arguments
-        this.constructorArgs = new Object[(constructorArgs == null)?1:(1+constructorArgs.size())];
-
-        // First argument of the prototype is always BufferedReader
-        this.constructorArgs[0] = stream;
-
-        // Next arguments
-        if (constructorArgs != null) {
-            int i = 1;
-            for (Object arg : constructorArgs)
-                this.constructorArgs[i++] = arg;
-        }
+        this.constructorArgs = convertArguments(constructorArgs, stream);
 
         // Get constructor for arguments
         try {
@@ -136,6 +144,34 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
         this(objClass, stream, null);
+    }
+
+
+    //****************** Constructor helper method ******************//
+
+    /**
+     * Convert the constructor arguments from collection to array.
+     * The {@code stream} is added as the first argument in any case.
+     *
+     * @param constructorArgs the additional arguments
+     * @param stream the stream argument
+     * @return the resulting argument array
+     */
+    private static Object[] convertArguments(Collection<?> constructorArgs, BufferedReader stream) {
+        // Read constructor arguments
+        Object[] ret = new Object[(constructorArgs == null)?1:(1+constructorArgs.size())];
+
+        // First argument of the prototype is always BufferedReader
+        ret[0] = stream;
+
+        // Next arguments
+        if (constructorArgs != null) {
+            int i = 1;
+            for (Object arg : constructorArgs)
+                ret[i++] = arg;
+        }
+
+        return ret;
     }
 
 

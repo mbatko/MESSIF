@@ -6,17 +6,14 @@
 
 package messif.executor;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import messif.utility.Convert;
 
 
@@ -39,17 +36,20 @@ import messif.utility.Convert;
  * @author  xbatko
  */
 public class MethodNameExecutor extends MethodExecutor {
-    
+
+    //****************** Attributes ******************//
+
     /** The table of found operation methods */
-    protected final Map<String, Method> registeredMethods = Collections.synchronizedMap(new HashMap<String, Method>());
-    
+    private final Map<String, Method> registeredMethods;
+
     /** Index of an argument from methodPrototype, which will hold the method name */
-    protected final int nameArgIndex;
-    
-    /****************** Constructors ******************/
-    
+    private final int nameArgIndex;
+
+
+    //****************** Constructors ******************//
+
     /**
-     * Create new instance of MethodNameExecutor and search for operation methods 
+     * Create new instance of MethodNameExecutor and search for operation methods.
      * 
      * @param executionObject an instance of the object to execute the operations on
      * @param methodPrototype list of argument types for the registered methods
@@ -67,29 +67,76 @@ public class MethodNameExecutor extends MethodExecutor {
         if ((nameArgIndex < 0) && (nameArgIndex >= methodPrototype.length && methodPrototype[methodPrototype.length - 1].isArray()))
             throw new IllegalArgumentException("Index of method name argument is out of bounds");
         this.nameArgIndex = nameArgIndex;
-        
-        // Search all methods of the execution object and register the matching ones
-        boolean isExecutionClass = executionObject instanceof Class;
-        for (Method method : (isExecutionClass?(Class)executionObject:executionObject.getClass()).getDeclaredMethods()) {
-            // Skip non static members on execution classes
-            if (isExecutionClass && !Modifier.isStatic(method.getModifiers()))
-                continue;
-            
-            // Check prototype and add method to the registry
-            Class<?>[] methodArgTypes = method.getParameterTypes();
-            if (Convert.isPrototypeMatching(methodArgTypes, methodPrototype))
-                registeredMethods.put(method.getName(), method);
+
+        // Get the class where the methods are searched
+        Class<?> executionClass;
+        boolean staticOnly;
+        if (executionObject instanceof Class) {
+            executionClass = (Class)executionObject;
+            staticOnly = true;
+        } else {
+            executionClass = executionObject.getClass();
+            staticOnly = false;
         }
+
+        // Search all methods of the execution object and register the matching ones
+        this.registeredMethods = createRegisteredMethods(executionClass, staticOnly, methodPrototype);
     }
 
+    /**
+     * Create new instance of MethodNameExecutor and search for operation methods.
+     * The {@link #getFirstStringClass(java.lang.Class<?>[]) first string class}
+     * in the given {@code methodPrototype} is expected to hold the method name.
+     *
+     * @param executionObject an instance of the object to execute the operations on
+     * @param methodPrototype list of argument types for the registered methods
+     * @throws IllegalArgumentException if either the method prototype or named argument index is invalid or the executionObject is <tt>null</tt>
+     */
     public MethodNameExecutor(Object executionObject, Class<?>... methodPrototype) throws IllegalArgumentException {
         this(executionObject, getFirstStringClass(methodPrototype), methodPrototype);
     }
 
 
-    /****************** String argument searching ******************/
+    //****************** Metho searching ******************//
 
-    /** Search array for first String class. String[] class is allowed as the last item. */
+    /**
+     * Search the {@code classToSearch} for methods that are matching the given
+     * {@code methodPrototype}. The search is recursive starting from the
+     * top-level (excluding {@link Object}) class to {@code classToSearch}.
+     * 
+     * @param classToSearch the class to search
+     * @param staticOnly the flag if only static methods are added
+     * @param methodPrototype the prototype of the methods to search for
+     * @return the map of methods using the respective method's name as a key
+     */
+    protected Map<String, Method> createRegisteredMethods(Class classToSearch, boolean staticOnly, Class<?>[] methodPrototype) {
+        // Finish recursion
+        if (classToSearch == null || classToSearch == Object.class)
+            return new HashMap<String, Method>();
+
+        // Recurse first
+        Map<String, Method> ret = createRegisteredMethods(classToSearch.getSuperclass(), staticOnly, methodPrototype);
+
+        // Fill methods for the class
+        for (Method method : classToSearch.getDeclaredMethods()) {
+            // Skip non static members on execution classes
+            if (staticOnly && !Modifier.isStatic(method.getModifiers()))
+                continue;
+
+            // Check prototype and add method to the registry
+            Class<?>[] methodArgTypes = method.getParameterTypes();
+            if (Convert.isPrototypeMatching(methodArgTypes, methodPrototype))
+                ret.put(method.getName(), method);
+        }
+
+        return ret;
+    }
+
+    /**
+     * Search array for first String class. String[] class is allowed as the last item.
+     * @param array the array to search
+     * @return the index of the first String class in the array or -1 if it is not found
+     */
     public static int getFirstStringClass(Class<?>[] array) {
         for (int i = 0; i < array.length; i++)
             if (String.class.equals(array[i]))
@@ -100,11 +147,16 @@ public class MethodNameExecutor extends MethodExecutor {
         return -1;
     }
 
-    /** Get string from array at specified position.
-     *  @throws ClassCastException if the array item at the specified position is not a string
-     *  @throws IndexOutOfBoundsExeption if the specified position is invalid
+    /**
+     * Get string from array at specified position.
+     * This method handles the encapsulated string arrays of the varargs.
+     * @param array the array of arguments
+     * @param index the index of the argument to get
+     * @return the string argument at the specified index of the array
+     * @throws ClassCastException if the array item at the specified position is not a string
+     * @throws IndexOutOfBoundsException if the specified position is invalid
      */
-    public static String getStringObject(Object[] array, int index) {
+    public static String getStringObject(Object[] array, int index) throws ClassCastException, IndexOutOfBoundsException {
         // Index is last or beyond end and the last argument is array
         if (index >= array.length - 1 && array[array.length - 1].getClass().isArray())
             return ((String[])array[array.length - 1])[index - array.length + 1];
@@ -114,7 +166,7 @@ public class MethodNameExecutor extends MethodExecutor {
     }
 
 
-    /****************** Implementation of necessary methods ******************/
+    //****************** Implementation of necessary methods ******************//
 
     protected Method getMethod(Object[] arguments) throws NoSuchMethodException {
         Method method = null;
@@ -128,8 +180,13 @@ public class MethodNameExecutor extends MethodExecutor {
 
         return method;
     }
-    
-    /** Returns the list of method names that this executor supports, that match a specified regular expression */
+
+    /**
+     * Returns the list of method names that this executor supports and
+     * that match the specified regular expression.
+     * @param regexp the regular expression for matching method names
+     * @return the list of method names
+     */
     public List<String> getDifferentiatingNames(String regexp) {
         List<String> rtv = new ArrayList<String>();
         for (String key : registeredMethods.keySet())
@@ -138,7 +195,6 @@ public class MethodNameExecutor extends MethodExecutor {
         return rtv;
     }
 
-    /** Return all methods that are registered within this executor */
     protected Collection<Method> getRegisteredMethods() {
         return Collections.unmodifiableCollection(registeredMethods.values());
     }

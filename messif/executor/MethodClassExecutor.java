@@ -6,8 +6,6 @@
 
 package messif.executor;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -253,6 +251,7 @@ public class MethodClassExecutor extends MethodExecutor {
      * This method is typically used to return the list of supported arguments.
      * Only the specified subclasses are returned.
      *
+     * @param <E> the super-class of the returned classes
      * @param subclassesToSearch a filter the list to contain only the subclasses of this parameter
      * @param modifiers or'ed together (see {@link java.lang.reflect.Modifier} for their list). All set modifiers must be present
      *        for a specific method except for the access modifiers. For example, value
@@ -263,14 +262,14 @@ public class MethodClassExecutor extends MethodExecutor {
      *        matches all <b>final transient</b> methods that are either <b>public</b> or <b>protected</b>.
      * @return the list of classes that this executor recognizes
      */
-    public <E> List<Class<E>> getDifferentiatingClasses(Class<E> subclassesToSearch, int modifiers) {
+    public <E> List<Class<? extends E>> getDifferentiatingClasses(Class<? extends E> subclassesToSearch, int modifiers) {
         int accessModifiers = modifiers & accessModifierMask;
         modifiers &= ~accessModifierMask;
-        List<Class<E>> rtv = new ArrayList<Class<E>>();
+        List<Class<? extends E>> rtv = new ArrayList<Class<? extends E>>();
         for (Map.Entry<Class<?>, Method> entry : registeredMethods.entrySet())
             if ((entry.getValue().getModifiers() & modifiers) == modifiers && ((entry.getValue().getModifiers() & accessModifiers) != 0))
                 if (subclassesToSearch.isAssignableFrom(entry.getKey()))
-                    rtv.add((Class<E>)entry.getKey()); // This cast IS checked on the previous line
+                    rtv.add((Class<? extends E>)entry.getKey()); // This cast IS checked on the previous line
         return rtv;
     }
 
@@ -279,10 +278,11 @@ public class MethodClassExecutor extends MethodExecutor {
      * This method is typically used to return the list of supported arguments.
      * Only the specified subclasses that have public method are returned.
      *
+     * @param <E> the super-class of the returned classes
      * @param subclassesToSearch a filter the list to contain only the subclasses of this parameter
      * @return the list of classes that this executor recognizes
      */
-    public <E> List<Class<E>> getDifferentiatingClasses(Class<E> subclassesToSearch) {
+    public <E> List<Class<? extends E>> getDifferentiatingClasses(Class<? extends E> subclassesToSearch) {
         return getDifferentiatingClasses(subclassesToSearch, Modifier.PUBLIC);
     }
 
