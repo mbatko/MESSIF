@@ -473,9 +473,9 @@ public class HttpApplication extends Application {
                 RankedAbstractObject object = iterator.next();
                 response.append('[');
                 response.append(object.getDistance());
-                response.append(',');
+                response.append(",\"");
                 response.append(object.getObject().getLocatorURI());
-                response.append(']');
+                response.append("\"]");
                 if (iterator.hasNext())
                     response.append(',');
             }
