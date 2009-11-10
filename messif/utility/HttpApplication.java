@@ -424,9 +424,10 @@ public class HttpApplication extends Application {
         private void sendTextResponse(HttpExchange exchange, boolean success, String response) throws IOException {
             // Send response back to client
             exchange.getResponseHeaders().add("Content-type", "text/plain; charset=" + charset.name());
-            exchange.sendResponseHeaders(success ? 200 : 400, response.length());
+            exchange.sendResponseHeaders(success ? 200 : 400, response.length() + 2);
             OutputStream os = exchange.getResponseBody();
             os.write(response.getBytes(charset));
+            os.write("\r\n".getBytes());
             exchange.close();
         }
 
