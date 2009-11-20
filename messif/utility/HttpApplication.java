@@ -5,17 +5,18 @@
 
 package messif.utility;
 
+import com.sun.net.httpserver.Authenticator;
+import com.sun.net.httpserver.BasicAuthenticator;
+import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -26,9 +27,12 @@ import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
+import messif.objects.extraction.Extractor;
+import messif.objects.extraction.ExtractorDataSource;
+import messif.objects.extraction.ExtractorException;
+import messif.objects.extraction.Extractors;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.util.RankedAbstractObject;
-import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.RankingQueryOperation;
 
@@ -41,6 +45,8 @@ public class HttpApplication extends Application {
 
     /** HTTP server for algorithm API */
     protected HttpServer httpServer;
+    /** Remembered list of contexts */
+    protected Map<String, HttpContext> httpServerContexts;
 
     //****************** HTTP server command functions ******************//
 
@@ -87,12 +93,16 @@ public class HttpApplication extends Application {
         }
 
         try {
-            httpServer.createContext(args[1], new HttpApplicationHandler<AbstractOperation>(
-                    algorithm,
-                    Convert.getClassForName(args[2], AbstractOperation.class), // operation class
-                    args, 3,
-                    args.length - 3
-            ));
+            HttpContext context = httpServer.createContext(
+                    args[1],
+                    new HttpApplicationHandler<AbstractOperation>(
+                        algorithm,
+                        Convert.getClassForName(args[2], AbstractOperation.class), // operation class
+                        args, 3,
+                        args.length - 3
+                    )
+            );
+            httpServerContexts.put(args[1], context);
             return true;
         } catch (Exception e) {
             out.println("Cannot add HTTP context " + args[0] + ": " + e);
@@ -130,6 +140,90 @@ public class HttpApplication extends Application {
         return true;
     }
 
+    /**
+     * List current contexts of the HTTP server.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; httpListContexts
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args none
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "list HTTP server contexts", arguments = {})
+    public boolean httpListContexts(PrintStream out, String... args) {
+        if (httpServer == null) {
+            out.println("There is no HTTP server started");
+            return false;
+        }
+
+        for (Map.Entry<String, HttpContext> entry : httpServerContexts.entrySet()) {
+            Authenticator authenticator = entry.getValue().getAuthenticator();
+            // Show authorized users if the authenticator is set
+            if (authenticator != null) {
+                out.print(entry.getKey());
+                out.print(" (authorized users: ");
+                out.print(authenticator);
+                out.println(")");
+            } else {
+                out.println(entry.getKey());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Updates a context auth to use HTTP Basic authentication mechanism.
+     * The simple username/password pairs can be added to this method to
+     * authorize a given user to use the specified context path. Several
+     * users can be added by subsequent calls to this method.
+     * If a password is not provided for a user, the user is removed from
+     * the context. If a last user is removed, the authentication is removed
+     * from the context completely.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; httpSetContextAuth /search myuser mypassword
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the context path for which to set auth, the user name and the password (optional, if not set, the user is removed)
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "update authorized users for the HTTP context", arguments = {"context path", "user name", "password (if not set, user is removed)"})
+    public boolean httpSetContextAuth(PrintStream out, String... args) {
+        if (httpServer == null) {
+            out.println("There is no HTTP server started");
+            return false;
+        }
+
+        if (args.length < 3) {
+            out.println("The context path and user must be provided");
+            return false;
+        }
+
+        HttpContext context = httpServerContexts.get(args[1]);
+        if (context == null) {
+            out.println("There is no context for " + args[1]);
+            return false;
+        }
+
+        HttpApplicationAuthenticator authenticator = (HttpApplicationAuthenticator)context.getAuthenticator();
+        if (authenticator == null)
+            authenticator = new HttpApplicationAuthenticator();
+        authenticator.updateCredentials(args[2], args.length > 3 ? args[3] : null);
+        context.setAuthenticator(authenticator.hasCredentials() ? authenticator : null);
+
+        return true;
+    }
+
     @ExecutableMethod(description = "close the whole application (all connections will be closed including the HTTP server)", arguments = { })
     @Override
     public boolean quit(PrintStream out, String... args) {
@@ -154,6 +248,7 @@ public class HttpApplication extends Application {
 
         try {
             httpServer = HttpServer.create(new InetSocketAddress(Integer.parseInt(args[argIndex])), 0);
+            httpServerContexts = new HashMap<String, HttpContext>();
             argIndex++;
         } catch (NumberFormatException e) {
             System.err.println("HTTP port is not valid: " + e.getMessage());
@@ -180,8 +275,98 @@ public class HttpApplication extends Application {
         new HttpApplication().startApplication(args);
     }
 
+    //****************** HTTP authenticator ******************//
 
-    //****************** Dynamic parameters utility methods ******************//
+    /**
+     * Authenticator for the {@link com.sun.net.httpserver.HttpServer HTTP server}
+     * that provides a basic HTTP authentication based on the stored user/password
+     * values.
+     */
+    protected static class HttpApplicationAuthenticator extends BasicAuthenticator {
+
+        //****************** Constants ******************//
+
+        /** Default realm for the constructor */
+        public static final String DEFAULT_REALM = "MESSIF HTTP Application";
+
+
+        //****************** Attributes ******************//
+
+        /** List of users and their passwords for the authentication */
+        private final Map<String, String> credentials;
+
+
+        //****************** Constructors ******************//
+
+        /**
+         * Creates a HttpApplicationAuthenticator for the given HTTP realm.
+         * @param realm the HTTP Basic authentication realm
+         */
+        public HttpApplicationAuthenticator(String realm) {
+            super(realm);
+            this.credentials = new HashMap<String, String>();
+        }
+
+        /**
+         * Creates a HttpApplicationAuthenticator for the {@link #DEFAULT_REALM default realm}.
+         */
+        public HttpApplicationAuthenticator() {
+            this(DEFAULT_REALM);
+        }
+
+        /**
+         * Updates the stored credentials of this authenticator.
+         * If the password is <tt>null</tt>, the user is removed.
+         * Otherwise, the user identified by the password is added to the
+         * list of known users (replacing the previous password if the user
+         * was already known).
+         * 
+         * @param username the user name to add to the list
+         * @param password the password for the username to add to the list
+         */
+        public void updateCredentials(String username, String password) {
+            if (password == null)
+                credentials.remove(username);
+            else
+                credentials.put(username, password);
+        }
+
+        /**
+         * Returns whether this authenticator has at least one user set.
+         * @return <tt>true</tt> if there are credentials for at least one user
+         */
+        public boolean hasCredentials() {
+            return !credentials.isEmpty();
+        }
+
+        /**
+         * Called for each incoming request to verify the given name and password
+         * in the context of this Authenticator's realm.
+         * @param username the username from the request
+         * @param password the password from the request
+         * @return <tt>true</tt> if the credentials are valid, <tt>false</tt> otherwise
+         */
+        @Override
+        public boolean checkCredentials(String username, String password) {
+            String checkPasswd = credentials.get(username);
+            return checkPasswd != null && checkPasswd.equals(password);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder str = new StringBuilder();
+            Iterator<String> iterator = credentials.keySet().iterator();
+            while (iterator.hasNext()) {
+                str.append(iterator.next());
+                if (iterator.hasNext())
+                    str.append(", ");
+            }
+            return str.toString();
+        }
+
+    }
+
+    //****************** HTTP connection handler ******************//
 
     /**
      * Handler for the {@link com.sun.net.httpserver.HttpServer HTTP server}
@@ -194,22 +379,118 @@ public class HttpApplication extends Application {
      */
     protected static class HttpApplicationHandler<T extends AbstractOperation> implements HttpHandler {
 
-        //****************** Constants ******************//
+        //****************** Additional types ******************//
+
+        /** Types of output that this handler supports */
+        public static enum OutputType {
+            /** Outputs data as XML */
+            XML,
+            /** Outputs data as plain text */
+            TEXT;
+        }
 
         /**
-         * Internal interface for external argument fillers.
-         * This is used to fill a value from the HTTP request
-         * (see {@link #createParamFiller(java.lang.Class, int)} and {@link #createObjectFiller(java.lang.String, int)}).
-         * @param <V> the type of value the filler expects
+         * Filler for creating {@link LocalAbstractObject} instances from {@link InputStream input streams}.
          */
-        protected static interface ArgumentFiller<V> {
+        protected static class ObjectFiller {
+            /** Extractor for the object created from the input stream */
+            private final Extractor<? extends LocalAbstractObject> extractor;
+            /** Index of the array element to fill */
+            private final int itemToFill;
+            /**
+             * Flag whether the filler creates {@link AbstractObjectList list of objects}
+             * from the provided input stream, otherwise a single {@link LocalAbstractObject object} is created
+             */
+            private final boolean createList;
+
+            /**
+             * Creates a filler that puts an instance of {@code objectClass} into the {@code itemToFill}
+             * element of the filled array. The object is constructed from the {@link InputStream}
+             * that is provided as the filling value.
+             *
+             * @param objectClassName the class of the objects to create (must be a descendant of {@link LocalAbstractObject})
+             * @param itemToFill the index of the array element to fill
+             * @param createList if <tt>true</tt>, the filler will create {@link AbstractObjectList list of objects}
+             *          from the provided input stream, otherwise a single {@link LocalAbstractObject object} is created
+             * @throws IllegalArgumentException if the specified {@code objectClass} is not valid
+             */
+            public ObjectFiller(String objectClassName, int itemToFill, boolean createList) throws IllegalArgumentException {
+                this.itemToFill = itemToFill;
+                this.createList = createList;
+                try {
+                    this.extractor = Extractors.createExtractor(Class.forName(objectClassName));
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalArgumentException("Class " + objectClassName + " is not valid for LocalAbstractObject parameter");
+                }
+            }
+
+            /**
+             * Fills the appropriate element in {@code args} array with the object(s)
+             * created from the {@code inputStream}.
+             * @param inputStream the input stream used to create instance(s) of {@link LocalAbstractObject}
+             * @param args the array to fill the value into
+             * @throws IllegalArgumentException if there was a problem reading or extracting objects from the stream
+             */
+            public void fill(InputStream inputStream, Object[] args) throws IllegalArgumentException {
+                try {
+                    ExtractorDataSource dataSource = new ExtractorDataSource(inputStream, null);
+                    if (createList) {
+                        AbstractObjectList<LocalAbstractObject> list = new AbstractObjectList<LocalAbstractObject>();
+                        while (true) {
+                            try {
+                                list.add(extractor.extract(dataSource));
+                            } catch (EOFException e) {
+                                break;
+                            }
+                        }
+                    } else {
+                        args[itemToFill] = extractor.extract(dataSource);
+                    }
+                } catch (IOException e) {
+                    throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
+                } catch (ExtractorException e) {
+                    throw new IllegalArgumentException("There was a problem extracting descriptors from the object: " + e.getMessage(), e);
+                }
+            }
+        }
+
+        /**
+         * Filler for arguments passed from HTTP request.
+         * The filler is able to {@link #fill(java.lang.String, java.lang.Object[]) fill}
+         * the given value into the {@code itemToFill} element of the filled array.
+         * The value is {@link Convert#stringToType(java.lang.String, java.lang.Class) converted}
+         * to the given {@code type}.
+         */
+        protected static class ParamFiller {
+            /** Type to convert the http request parameter to */
+            private final Class<?> type;
+            /** Index of the array element to fill */
+            private final int itemToFill;
+
+            /**
+             * Creates a new instance of ParamFiller.
+             *
+             * @param type the class of value
+             * @param itemToFill the index of the array element to fill
+             */
+            public ParamFiller(Class<?> type, int itemToFill) {
+                this.type = type;
+                this.itemToFill = itemToFill;
+            }
+
             /**
              * Use the supplied value to fill the appropriate element in {@code args} array.
              * @param value the value to fill (usually converted by this filler before filled)
              * @param args the array to fill the value into
              * @throws IllegalArgumentException if there was a problem reading or converting the value
              */
-            public void fill(V value, Object[] args) throws IllegalArgumentException;
+            public void fill(String value, Object[] args) throws IllegalArgumentException {
+                try {
+                    args[itemToFill] = Convert.stringToType(value, type);
+                } catch (InstantiationException e) {
+                    throw new IllegalArgumentException(e.getMessage(), e.getCause());
+                }
+            }
         }
 
 
@@ -222,11 +503,13 @@ public class HttpApplication extends Application {
         /** Parameter array with filled constants (note that this is clonned so that the contents remain the same between threads) */
         private final Object[] params;
         /** Dynamic param fillers - these are taken from the HTTP request parameters */
-        private final Map<String, ArgumentFiller<String>> paramFillers;
+        private final Map<String, ParamFiller> paramFillers;
         /** Dynamic filler for the {@link LocalAbstractObject} parameter */
-        private final ArgumentFiller<InputStream> objectFiller;
+        private final ObjectFiller objectFiller;
         /** Charset used to encode results */
         private final Charset charset;
+        /** Flag which output to use (defaults to {@link OutputType#TEXT}) */
+        private OutputType outputType = OutputType.TEXT;
 
 
         //****************** Constructor ******************//
@@ -252,25 +535,45 @@ public class HttpApplication extends Application {
 
             // Fill arguments and fillers
             this.params = new Object[length];
-            this.paramFillers = new HashMap<String, ArgumentFiller<String>>();
-            ArgumentFiller<InputStream> objectFillerTemp = null;
+            this.paramFillers = new HashMap<String, ParamFiller>();
+            ObjectFiller objectFillerTemp = null;
             for (int i = 0; i < length; i++) {
                 // Parse quoted argument
                 String name = parseQuoted(args[i + offset]);
-                if (name == null) { // Parametrized value is NOT quoted
-                    // Check for LocalAbstractObject parameter, which is handled differently
-                    int whichObjectFiller = whichObjectFillerRequired(operationParamTypes[i], objectFillerTemp);
-                    if (whichObjectFiller != 0) {
-                        objectFillerTemp = createObjectFiller(args[i + offset], i, whichObjectFiller);
-                    } else {
-                        params[i] = Convert.stringToType(args[i + offset], operationParamTypes[i]);
-                    }
-                } else {
+                if (name != null) {
                     // Parametrized value is quoted
-                    paramFillers.put(name, createParamFiller(operationParamTypes[i], i));
+                    paramFillers.put(name, new ParamFiller(operationParamTypes[i], i));
+                } else if (operationParamTypes[i].isAssignableFrom(LocalAbstractObject.class)) {
+                    objectFillerTemp = new ObjectFiller(args[i + offset], i, false);
+                } else if (operationParamTypes[i].isAssignableFrom(AbstractObjectList.class)) {
+                    objectFillerTemp = new ObjectFiller(args[i + offset], i, true);
+                } else {
+                    params[i] = Convert.stringToType(args[i + offset], operationParamTypes[i]);
                 }
             }
             this.objectFiller = objectFillerTemp;
+        }
+
+
+        //****************** Attribute access ******************//
+
+        /**
+         * Set the output type to use in this handler.
+         * @param outputType the new value of output type
+         * @throws NullPointerException if the specified {@code outputType} is <tt>null</tt>
+         */
+        public void setOutputType(OutputType outputType) throws NullPointerException {
+            if (outputType == null)
+                throw new NullPointerException();
+            this.outputType = outputType;
+        }
+
+        /**
+         * Returns the current output type used in this handler.
+         * @return the current output type used in this handler
+         */
+        public OutputType getOutputType() {
+            return outputType;
         }
 
 
@@ -287,98 +590,6 @@ public class HttpApplication extends Application {
                 return null;
             else
                 return quotedStr.substring(1, quotedStr.length() - 1);
-        }
-
-        /**
-         * Returns which type of object filler to use for the given parameter class.
-         * <ul>
-         *  <li>2 - fills an {@link AbstractObjectList} from all objects given in the {@link InputStream}</li>
-         *  <li>1 - fills a single {@link LocalAbstractObject} from the first object given in the {@link InputStream}</li>
-         *  <li>0 - not an object filler (e.g. param filler is used instead)</li>
-         * </ul>
-         *
-         * @param parameterType the class of the constructor parameter
-         * @param currentFiller the current object filler
-         * @return the type of the object filler to use
-         * @throws IllegalArgumentException if the {@code currentFiller} is already set
-         */
-        private int whichObjectFillerRequired(Class<?> parameterType, ArgumentFiller<InputStream> currentFiller) throws IllegalArgumentException {
-            int ret;
-            if (parameterType.isAssignableFrom(LocalAbstractObject.class))
-                ret = 1;
-            else if (parameterType.isAssignableFrom(AbstractObjectList.class))
-                ret = 2;
-            else
-                return 0;
-
-            if (currentFiller != null)
-                throw new IllegalArgumentException("Cannot have two LocalAbstractObject parameters");
-
-            return ret;
-        }
-
-        /**
-         * Creates a filler that puts an instance of {@code objectClass} into the {@code itemToFill}
-         * element of the filled array. The object is constructed from the {@link InputStream}
-         * that is provided as the filling value.
-         *
-         * @param objectClass the class of the objects to create (must be a descendant of {@link LocalAbstractObject})
-         * @param itemToFill the index of the array element to fill
-         * @param whichFillerType the type of the filler object according to {@link #whichObjectFillerRequired(java.lang.Class, messif.utility.HttpApplicationHandler.ArgumentFiller)}
-         * @return a new filler instance
-         * @throws IllegalArgumentException if the specified {@code objectClass} is not valid
-         */
-        protected ArgumentFiller<InputStream> createObjectFiller(String objectClass, final int itemToFill, final int whichFillerType) throws IllegalArgumentException {
-            // Prepare constructor
-            final Constructor<? extends LocalAbstractObject> objectConstructor;
-            try {
-                objectConstructor = Convert.getClassForName(objectClass, LocalAbstractObject.class).getConstructor(BufferedReader.class);
-            } catch (ClassNotFoundException e) {
-                throw new IllegalArgumentException("Class " + objectClass + " is not valid for LocalAbstractObject parameter");
-            } catch (NoSuchMethodException e) {
-                throw new IllegalArgumentException("No valid constructor for " + objectClass + " was found: " + e.getMessage());
-            }
-
-
-            return new ArgumentFiller<InputStream>() {
-                public void fill(InputStream value, Object[] args) throws IllegalArgumentException {
-                    try {
-                        BufferedReader valueReader = new BufferedReader(new InputStreamReader(value));
-                        if (whichFillerType == 2) {
-                            // Type is list, so provide list
-                            args[itemToFill] = new AbstractObjectList<LocalAbstractObject>(new StreamGenericAbstractObjectIterator<LocalAbstractObject>(objectConstructor, new Object[] {valueReader}));
-                        } else {
-                            // Provide a single object
-                            args[itemToFill] = objectConstructor.newInstance(valueReader);
-                        }
-                    } catch (InvocationTargetException e) {
-                        throw new IllegalArgumentException("Error reading object: " + e.getCause(), e.getCause());
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Error using object constructor " + objectConstructor + ": " + e, e);
-                    }
-                }
-            };
-        }
-
-        /**
-         * Creates a filler that puts the given value into the {@code itemToFill}
-         * element of the filled array. The value is {@link Convert#stringToType(java.lang.String, java.lang.Class) converted}
-         * to the given {@code type}.
-         *
-         * @param type the class of value
-         * @param itemToFill the index of the array element to fill
-         * @return a new filler instance
-         */
-        protected ArgumentFiller<String> createParamFiller(final Class<?> type, final int itemToFill) {
-            return new ArgumentFiller<String>() {
-                public void fill(String value, Object[] args) throws IllegalArgumentException {
-                    try {
-                        args[itemToFill] = Convert.stringToType(value, type);
-                    } catch (InstantiationException e) {
-                        throw new IllegalArgumentException(e.getMessage(), e.getCause());
-                    }
-                }
-            };
         }
 
 
@@ -403,7 +614,7 @@ public class HttpApplication extends Application {
             // Fill params
             Matcher matcher = paramParser.matcher(exchange.getRequestURI().getQuery());
             while (matcher.find()) {
-                ArgumentFiller<String> filler = paramFillers.get(matcher.group(1));
+                ParamFiller filler = paramFillers.get(matcher.group(1));
                 if (filler != null)
                     filler.fill(matcher.group(2), args);
             }
@@ -521,7 +732,14 @@ public class HttpApplication extends Application {
                 success = false;
             }
 
-            sendTextResponse(exchange, success, response);
+            switch (outputType) {
+                case XML:
+                    sendXmlResponse(exchange, success, response);
+                    break;
+                case TEXT:
+                    sendTextResponse(exchange, success, response);
+                    break;
+            }
         }
 
     }

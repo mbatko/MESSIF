@@ -134,11 +134,15 @@ import messif.statistics.Statistics;
  * <pre>
  *  execmyop = operationExecute
  *  execmyop.param.1 = messif.operations.&lt;myop&gt;
- *  execmyop.param.2 = ...
+ *  execmyop.param.2 = &lt;myparam1:0&gt;
+ *  execmyop.param.3 = ...
  * </pre>
- * This action will execute the operation whose name is provided in variable <i>myop</i>.
- * If the variable is not set, it is replaced by empty string, which in this particular
- * case will result in error.
+ * This action will execute the operation whose name is provided in the variable <i>myop</i>.
+ * If the variable is not set, it is replaced by an empty string, which in this particular
+ * case will result in error. Therefore, it is possible to provide a default value for
+ * a variable by appending a colon and the default value to the variable name.
+ * This is shown in the second parameter in the example above - if the
+ * <i>myparam1</i> variable is not set, the zero value is used for the execmyop.param.2.
  * </p>
  * <p>
  * The default action name that is looked up in the control file is <i>actions</i>

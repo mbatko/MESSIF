@@ -580,12 +580,40 @@ public abstract class LocalAbstractObject extends AbstractObject {
          */
         @Override
         public boolean equals(Object obj) {
-            return object.dataEquals(obj);
+            if (obj instanceof DataEqualObject)
+                return object.dataEquals(((DataEqualObject)obj).object);
+            else
+                return object.dataEquals(obj);
         }
     }
 
 
     //****************** Factory method ******************//
+
+    /**
+     * Creates a new instance of {@code objectClass} from the {@code dataReader}.
+     * The constructor of the {@link LocalAbstractObject} that reads the textual
+     * data is used.
+     *
+     * @param <T> the class of the object to create
+     * @param objectClass the class of the object to create
+     * @param dataReader the buffered reader of the object data
+     * @return a new instance of {@code objectClass}
+     * @throws IllegalArgumentException if the class has is no stream constructor
+     * @throws InvocationTargetException if there was an error during creating a new object instance
+     */
+    public static <T extends LocalAbstractObject> T create(Class<T> objectClass, BufferedReader dataReader) throws IllegalArgumentException, InvocationTargetException {
+        try {
+            // Create instance of the specified object
+            return objectClass.getConstructor(BufferedReader.class).newInstance(dataReader);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException(e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
     /**
      * Creates a new LocalAbstractObject of the specified type from string.
@@ -629,19 +657,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
     public static <E extends LocalAbstractObject> E valueOf(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
-        try {
-            // Create instance of the specified object
-            return objectClass.getConstructor(BufferedReader.class).newInstance(
-                // Create buffered reader from string
-                new BufferedReader(new StringReader(objectData))
-            );
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException(e);
-        } catch (InstantiationException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return create(objectClass, new BufferedReader(new StringReader(objectData)));
     }
 
 
