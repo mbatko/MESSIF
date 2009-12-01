@@ -21,7 +21,7 @@ import java.util.TreeMap;
  *
  * @author xbatko
  */
-class StatisticsList extends AbstractCollection<Statistics> implements Serializable {
+class StatisticsList extends AbstractCollection<Statistics<?>> implements Serializable {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
@@ -29,7 +29,7 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     /**
      * Internal representation of the list of statistics 
      */
-    protected final Map<String, Statistics> statistics;
+    protected final Map<String, Statistics<?>> statistics;
     
     /****************** Constructors ******************/
 
@@ -37,27 +37,27 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
      * Creates a new instance of StatisticsList 
      */
     public StatisticsList() {
-        statistics = new TreeMap<String, Statistics>();
+        statistics = new TreeMap<String, Statistics<?>>();
     }
 
 
     /****************** Collection operations  ******************/
     
     /** Internal iterator for statistics with names that match a regular expression */
-    protected static class StatisticsRegexpIterator implements Iterator<Statistics> {
-        protected final Iterator<Statistics> iterator;
+    protected static class StatisticsRegexpIterator implements Iterator<Statistics<?>> {
+        protected final Iterator<Statistics<?>> iterator;
         protected final String regexp;
-        protected Statistics nextObject;
+        protected Statistics<?> nextObject;
 
         /** Creates new instance of StatisticsRegexpIterator */
-        public StatisticsRegexpIterator(Iterator<Statistics> iterator, String regexp) {
+        public StatisticsRegexpIterator(Iterator<Statistics<?>> iterator, String regexp) {
             this.iterator = iterator;
             this.regexp = (regexp == null)?"":regexp;
             
             this.nextObject = (iterator == null)?null:getNextMatching();
         }
         
-        protected Statistics getNextMatching() {
+        protected Statistics<?> getNextMatching() {
             // Search for next statistic
             while (iterator.hasNext()) {
                 Statistics stat = iterator.next();
@@ -76,7 +76,7 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
         }
 
         /** Returns next statistic object with name that matches the regexp */
-        public Statistics next() {
+        public Statistics<?> next() {
             if (nextObject == null)
                 throw new NoSuchElementException();
 
@@ -93,21 +93,21 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     }
 
     /** Returns iterator through all the stored statistics */
-    public Iterator<Statistics> iterator() {
+    public Iterator<Statistics<?>> iterator() {
         return Collections.unmodifiableCollection(statistics.values()).iterator();
     }
 
     /** Returns iterator through all the stored statistics that match the provided regular expression */
-    public Iterator<Statistics> iterator(String regex) {
+    public Iterator<Statistics<?>> iterator(String regex) {
         if (regex == null)
             return iterator();
         return new StatisticsRegexpIterator(statistics.values().iterator(), regex);
     }
     
     /** Readonly collection of all the stored statistics */
-    protected List<Statistics> getAllStatistics(String regex) {
-        List<Statistics> rtv = new ArrayList<Statistics>();
-        for (Iterator<Statistics> iterator = iterator(regex); iterator.hasNext();)
+    protected List<Statistics<?>> getAllStatistics(String regex) {
+        List<Statistics<?>> rtv = new ArrayList<Statistics<?>>();
+        for (Iterator<Statistics<?>> iterator = iterator(regex); iterator.hasNext();)
             rtv.add(iterator.next());
         return rtv;
     }
@@ -118,7 +118,7 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     }
     
     /** Add specified statistic to the collection. Returns false if a statistic with the same name already exists. */
-    public boolean add(Statistics stat) {
+    public boolean add(Statistics<?> stat) {
         // Disallow duplicate names
         if (statistics.containsKey(stat.getName()))
             return false;
@@ -129,7 +129,7 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     }
     
     /** Get statistic of specified name or null if it doesn't exist */
-    public Statistics get(String name) {
+    public Statistics<?> get(String name) {
         return statistics.get(name);
     }
     
@@ -161,13 +161,13 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     
     /** Resets statistics matching the regular expression */
     public void reset(String regex) {
-        for (Iterator<Statistics> iterator = iterator(regex); iterator.hasNext();)
+        for (Iterator<Statistics<?>> iterator = iterator(regex); iterator.hasNext();)
             iterator.next().reset();
     }
     
     /** Unbind statistics matching the regular expression from their parents */
     public void unbind(String regex) {
-        for (Iterator<Statistics> iterator = iterator(regex); iterator.hasNext();)
+        for (Iterator<Statistics<?>> iterator = iterator(regex); iterator.hasNext();)
             iterator.next().unbind();
     }
     
@@ -180,7 +180,7 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     public String print(String regex, String statSeparator) {
         StringBuffer rtv = new StringBuffer();
         
-        for (Iterator<Statistics> iterator = iterator(regex); iterator.hasNext();) {
+        for (Iterator<Statistics<?>> iterator = iterator(regex); iterator.hasNext();) {
             if (rtv.length() > 0)
                 rtv.append(statSeparator);
             rtv.append(iterator.next().toString());
@@ -208,23 +208,20 @@ class StatisticsList extends AbstractCollection<Statistics> implements Serializa
     /****************** Factory ******************/
     
     /** Create new statistics with specified name or get the one already existing */
-    public <T extends Statistics> T get(String statisticName, Class<T> statisticClass) throws IllegalArgumentException {
+    public <T extends Statistics<? extends T>> T get(String statisticName, Class<? extends T> statisticClass) throws ClassCastException {
         // Get statistics from current registry
-        Statistics stat = get(statisticName);
+        Statistics<?> stat = get(statisticName);
         
-        if (stat != null) {
-            // Check correct type of the returned stat
-            if (!statisticClass.isInstance(stat))
-                throw new IllegalArgumentException("Statistic '" + statisticName + "' exists, but it is not " + statisticClass.getName());
-        } else {
+        if (stat == null) {
             // Create a new instance of the statistics
             stat = Statistics.createInstance(statisticName, statisticClass);
 
             // Register to map
             statistics.put(statisticName, stat);
         }
-        
-        return (T)stat;  // This cast IS checked in the previous
+
+        // Check correct type of the returned stat
+        return statisticClass.cast(stat);
     }
 
 }

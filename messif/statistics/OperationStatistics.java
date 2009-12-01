@@ -58,12 +58,12 @@ public class OperationStatistics implements Serializable {
     protected final StatisticsList statistics = new StatisticsList();
     
     /** Access all statistics */
-    public Iterator<Statistics> getAllStatistics() {
+    public Iterator<Statistics<?>> getAllStatistics() {
         return statistics.iterator();
     }
         
     /** Access statistics whose names match the given regular expression */
-    public Iterator<Statistics> getAllStatistics(String regex) {
+    public Iterator<Statistics<?>> getAllStatistics(String regex) {
         return statistics.iterator(regex);
     }
     
@@ -95,14 +95,14 @@ public class OperationStatistics implements Serializable {
     }
     
     /** Return a statistics of defined class from this operation statistics namespace */
-    public <TStatistics extends Statistics> TStatistics getStatistics(String statisticName, Class<TStatistics> statisticClass) throws ClassCastException {
-        TStatistics stat = statistics.get(statisticName, statisticClass);
+    public <T extends Statistics<T>> T getStatistics(String statisticName, Class<? extends T> statisticClass) throws ClassCastException {
+        T stat = statistics.get(statisticName, statisticClass);
         stat.lockToThread();
         return stat;
     }
     
     /** Returns statistics counter from current thread operation statistics namespace */
-    public static <T extends Statistics> T getOpStatistics(String name, Class<T> statisticsClass) throws ClassCastException {
+    public static <T extends Statistics<T>> T getOpStatistics(String name, Class<? extends T> statisticsClass) throws ClassCastException {
         return getLocalThreadStatistics().getStatistics(name, statisticsClass);
     }
     
@@ -136,21 +136,6 @@ public class OperationStatistics implements Serializable {
         return getLocalThreadStatistics().getStatisticRefCounter(name);
     }
     
-    /** Register a statistics with new name and duplicate value from source */
-    public Statistics duplicateStatistics(String name, String asName) throws InstantiationException {
-        // Get the duplicate of the source statistic from our namespace
-        Statistics stat = statistics.get(name);
-
-        if (stat == null)
-            throw new InstantiationException("Statistic '" + name + "' not found in the registry");
-
-        Statistics newStat = getStatistics(asName, stat.getClass());
-
-        newStat.setFrom(stat); // This cast IS checked, since stat and newStat have exactly the same class...
-
-        return newStat;
-    }
-
     /** Removes given statistic. @return <b>true</b> if statistic existed and was removed, <b>false</b> otherwise. */
     public boolean removeStatistic(String name) {
         return (statistics.remove(name) != null);
@@ -162,14 +147,14 @@ public class OperationStatistics implements Serializable {
      * Register bound statistic (using asName name) in this operation statistics namespace.
      * If there is no global stat of specified name, it is created.
      */
-    public <E extends Statistics> E registerBoundStat(Class<E> statClass, String name, String asName) throws ClassNotFoundException {
+    public <T extends Statistics<T>> T registerBoundStat(Class<? extends T> statClass, String name, String asName) throws ClassNotFoundException {
         // Get the duplicate of the source statistic from global namespace
-        E stat = Statistics.statistics.get(name, statClass);
+        T stat = Statistics.statistics.get(name, statClass);
 
         // Get the new statistic from the local namespace
-        E newStat = getStatistics(asName, statClass);
+        T newStat = getStatistics(asName, statClass);
 
-        newStat.bindTo(stat);       // This cast IS checked, since stat and newStat have exactly the same class...
+        newStat.bindTo(stat);
 
         return newStat;
     }
@@ -185,17 +170,17 @@ public class OperationStatistics implements Serializable {
      * @return the newly registered statistics
      * @throws ClassCastException if there is a statistics with this name, but has different class than <code>bindToStat</code>
      */
-    protected Statistics registerBoundStat(String asName, Statistics bindToStat) throws ClassCastException {
+    protected <T extends Statistics<T>> T registerBoundStat(String asName, Statistics<T> bindToStat) throws ClassCastException {
         // Get the new statistic from the local namespace
-        Statistics newStat = getStatistics(asName, bindToStat.getClass());
-        newStat.bindTo(bindToStat);       // This cast IS checked, since stat and newStat have exactly the same class...
+        T newStat = getStatistics(asName, bindToStat.getTypedClass());
+        newStat.bindTo(bindToStat.cast());       // This cast IS checked, since stat and newStat have exactly the same class...
         return newStat;
     }
 
     /** Register bound statistic (using asName name) in this operation statistics namespace */
-    public Statistics registerBoundStat(String name, String asName) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name, String asName) throws InstantiationException {
         // Get the duplicate of the source statistic from global namespace
-        Statistics stat = Statistics.statistics.get(name);
+        Statistics<?> stat = Statistics.statistics.get(name);
 
         if (stat == null)
             throw new InstantiationException("Statistic '" + name + "' not found in the registry");
@@ -204,14 +189,14 @@ public class OperationStatistics implements Serializable {
     }
 
     /** Register bound statistic in this operation statistics namespace */
-    public Statistics registerBoundStat(String name) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name) throws InstantiationException {
         return registerBoundStat(name, name);
     }
     
     /** In this operation statistics namespace, register and bind statistics which are present in the global namespace and 
      * match the given regular expression. */
     public void registerBoundAllStats(String regex) {
-        for (Statistics stat : Statistics.statistics.getAllStatistics(regex))
+        for (Statistics<?> stat : Statistics.statistics.getAllStatistics(regex))
             registerBoundStat(stat.getName(), stat);
     }
 
@@ -228,11 +213,13 @@ public class OperationStatistics implements Serializable {
     /****************** Statistics merging ******************/
     
     /** Update our statistics with other operation stats */
+    @SuppressWarnings("unchecked")
     public synchronized void updateFrom(OperationStatistics sourceStats) throws InstantiationException {
         // For every source statistics update values in our stat
-        for (Statistics stat : sourceStats.statistics)
+        for (Statistics<?> stat : sourceStats.statistics) {
             // Update our statistics
             getStatistics(stat.getName(), stat.getClass()).updateFrom(stat); // This cast IS checked, since stat and new stat have exactly the same class...
+        }
     }
     
 

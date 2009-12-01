@@ -35,4 +35,9 @@ public class BucketCreateRequestMessage extends BucketRequestMessage<BucketCreat
         return new BucketCreateReplyMessage(this, bucket.getBucketID(), bucket.getCapacity());
     }
 
+    @Override
+    public Class<BucketCreateReplyMessage> replyMessageClass() {
+        return BucketCreateReplyMessage.class;
+    }
+
 }

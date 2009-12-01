@@ -289,12 +289,13 @@ public class StatisticSlidingAvgCounter extends Statistics<StatisticSlidingAvgCo
     }
     
     /** Text representation of the SlidingWindow */
+    @Override
     public String toString() {
         return new StringBuffer().
                 //append(name).append(".min: ").append(getMin()).append(", ").
                 //append(name).append(".max: ").append(getMax()).append(", ").
-                append(name).append(".avg: ").append(getAvg()).append(", ").
-                append(name).append(".sum: ").append(getSum()).append(", ").
-                append(name).append(".cnt: ").append(getCnt()).toString();
+                append(getName()).append(".avg: ").append(getAvg()).append(", ").
+                append(getName()).append(".sum: ").append(getSum()).append(", ").
+                append(getName()).append(".cnt: ").append(getCnt()).toString();
     }
 }

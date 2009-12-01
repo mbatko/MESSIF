@@ -20,35 +20,53 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
+ * Base class for all statistics.
  *
- *
+ * @param <TSelf> the type of this statistic
  * @author  xbatko
  */
-public abstract class Statistics<TSelf extends Statistics> implements Serializable {
+public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Serializable {
     
     /** Class id for serialization */
     private static final long serialVersionUID = 3L;
 
-    /****************** Name internal ******************/
+    //****************** Attributes ******************//
     
-    // Statistic name, used for registration and is mandatory
-    protected final String name;
-    
-    /** Returns the registered name of the statistics */
-    public String getName() {
-        return name;
-    }
+    /** Name of this statistic */
+    private final String name;
+    /** Specifies statistic object, which is this statistic bound to */
+    private transient TSelf boundTo = null;
+    /**
+     * Set of statistics that are bound to this statistic,
+     * i.e. the statistics that receive notifications when the value
+     * of this statistic is updated.
+     * Only keys are relevant, values are not used.
+     */
+    private transient Map<TSelf, Object> boundStatistics = new WeakHashMap<TSelf, Object>();
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
-    /** Creates instance of Statistics with filled internal data */
+    /**
+     * Creates instance of Statistics with filled internal data
+     * @param name the name of this stat
+     */
     protected Statistics(String name) {
         // Set statistic name
         this.name = name;
     }
 
-    protected static <T extends Statistics> T createInstance(String statisticName, Class<T> statisticClass) throws IllegalArgumentException {
+    /**
+     * Creates a new instance of a {@link Statistics}.
+     * This factory method is called either from global statistics registry or from the {@link OperationStatistics}.
+     *
+     * @param <T> the type of the statistic to create
+     * @param statisticName the name of the statistic to create
+     * @param statisticClass the type of the statistic to create
+     * @return a new instance of a {@link Statistics}
+     * @throws IllegalArgumentException if the statistics cannot be created
+     */
+    static <T extends Statistics<? extends T>> T createInstance(String statisticName, Class<? extends T> statisticClass) throws IllegalArgumentException {
         try {
             // Create a new instance of the statistics
             return statisticClass.getDeclaredConstructor(String.class).newInstance(statisticName);
@@ -64,30 +82,86 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
 
 
-    /****************** Statistics data methods ******************/
-    
+    //****************** Attribute access methods ******************//
+
+    /**
+     * Returns the registered name of this statistic.
+     * @return the registered name of this statistic
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Returns the statistic that this stat is bound to.
+     * If this statistic is not bound, <tt>null</tt> is returned.
+     * @return the statistic that this stat is bound to
+     */
+    protected TSelf getBoundTo() {
+        return boundTo;
+    }
+
+    /**
+     * Returns <tt>true</tt> if this statistic is bound to another one.
+     * @return <tt>true</tt> if this statistic is bound to another one
+     */
+    protected boolean isBound() {
+        return boundTo != null;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Class<TSelf> getTypedClass() {
+        return (Class)getClass();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected TSelf cast() {
+        return (TSelf)this;
+    }
+
+
+    //****************** Statistical data access methods ******************//
+
+    /**
+     * Updates the value of this statistic from the given {@code sourceStat}.
+     * Specifically, this method merges the value of the {@code sourceStat}
+     * with this statistic.
+     *
+     * <p>
+     * The actual implementation depends on the type of the statistic.
+     * </p>
+     * 
+     * @param sourceStat the statistic from which to update this stat
+     */
     protected abstract void updateFrom(TSelf sourceStat);
+
+    /**
+     * Set the value of this statistic to the actual value of the given {@code sourceStat}.
+     * @param sourceStat the statistic from which to set this stat
+     */
     protected abstract void setFrom(TSelf sourceStat);
     
-    /** Reset the current statistic (this one only).
+    /**
+     * Reset the value of this statistic.
      */
     public abstract void reset();
     
 
-    /****************** Statistic objects bindings ******************/
+    //****************** Statistic binding ******************//
     
-    /** Specifies statistic object, which is this statistic bound to */
-    protected transient TSelf boundTo = null;
-    
-    /** In this list there are stored all the statistics that has registered to get the same values as this stat */
-    private transient Map<TSelf,Object> boundStatistics = new WeakHashMap<TSelf,Object>();
-    
-    /** Add a statistic into list */
+    /**
+     * Bind a statistic to this statistic.
+     * That is, register the {@code stat} to receive notifications when
+     * the value of this statistic is updated.
+     * @param stat the statistic to register
+     */
     protected void addBoundStat(TSelf stat) {
         boundStatistics.put(stat, null);
     }
 
-    /** Remove a statistic from list */
+    /**
+     * Remove a statistic from list
+     */
     protected void removeBoundStat(TSelf stat) {
         boundStatistics.remove(stat);
     }
@@ -104,7 +178,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
                 synchronized (boundTo) {
                     synchronized (this) {
                         if (boundTo != null) {
-                            boundTo.removeBoundStat(this);
+                            boundTo.removeBoundStat(cast());
                             boundTo = null;
                         }
                     }
@@ -129,14 +203,14 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
                 if (boundTo != null) throw new IllegalArgumentException("Can't bind statistics twice");
             
                 // Adding this statistics into the list of notifications in the target statistic
-                object.addBoundStat(this); // This cast IS checked, if the destination statistics object is correctly typed (which sould be)
+                object.addBoundStat(cast()); // This cast IS checked, if the destination statistics object is correctly typed (which sould be)
                 boundTo = object;
             }
         }
     }
 
 
-    /****************** Thread operation locking ******************/
+    //****************** Thread operation locking ******************//
 
     // The next serial number to be assigned
     private static AtomicInteger nextThreadNum = new AtomicInteger(1);
@@ -166,7 +240,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
 
 
-    /****************** Suspending Stastics Counting ******************/
+    //****************** Suspending Stastics Counting ******************//
     
     /** Flag for enabling/disabling statistics globally */
     private static boolean statisticsEnabled = true;
@@ -190,11 +264,12 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
 
 
-    /****************** Serialization ******************/
+    //****************** Serialization ******************//
     
-    protected transient Statistics replaceWith = null;
+    protected transient Statistics<TSelf> replaceWith = null;
             
     // Initialize boundStatistics attribute (must be empty after deserialization)
+    @SuppressWarnings("unchecked")
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         boundStatistics = new WeakHashMap<TSelf,Object>();
@@ -202,7 +277,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
         // If this stat was registered globally
         if (in.readBoolean()) {
             // Get global statistics with this name
-            replaceWith = statistics.get(getName());
+            replaceWith = (Statistics<TSelf>)statistics.get(getName());
             
             // Register this statistic
             if (replaceWith == null) {
@@ -212,7 +287,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
 
             // Read boundTo statistic name
             String boundToName = (String)in.readObject();
-            Class boundToClass = (Class)in.readObject();
+            Class<TSelf> boundToClass = (Class)in.readObject();
 
             // Restore bindings
             if (boundToName != null && replaceWith.boundTo == null)
@@ -224,7 +299,8 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     protected Object readResolve() throws ObjectStreamException {
         if (replaceWith != null)
             return replaceWith;
-        else return this;
+        else
+            return this;
     }
 
 
@@ -246,7 +322,7 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
 
     
-    /****************** Checkpoint facilities ***********/
+    //****************** Checkpoint facilities ***********//
     
     /** Sets checkpoint. The implementation should store the current state of statistics and
      * provide the information about changes in statistics through changedSinceCheckpoint().
@@ -305,12 +381,12 @@ public abstract class Statistics<TSelf extends Statistics> implements Serializab
     }
     
     /** Access all statistics */
-    public static Iterator<Statistics> getAllStatistics() {
+    public static Iterator<Statistics<?>> getAllStatistics() {
         return getAllStatistics(null);
     }
    
     /** Access statistics whose names match the given regular expression */
-    public static Iterator<Statistics> getAllStatistics(String regex) {
+    public static Iterator<Statistics<?>> getAllStatistics(String regex) {
         return statistics.iterator(regex);
     }
 

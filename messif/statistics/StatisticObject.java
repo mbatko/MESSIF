@@ -73,8 +73,9 @@ public class StatisticObject extends Statistics<StatisticObject> {
     
     /****************** Text representation ******************/
     
+    @Override
     public String toString() {
-        return name + ": " + value;
+        return getName() + ": " + value;
     }
 
 

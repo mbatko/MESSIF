@@ -267,9 +267,13 @@ public class MethodClassExecutor extends MethodExecutor {
         modifiers &= ~accessModifierMask;
         List<Class<? extends E>> rtv = new ArrayList<Class<? extends E>>();
         for (Map.Entry<Class<?>, Method> entry : registeredMethods.entrySet())
-            if ((entry.getValue().getModifiers() & modifiers) == modifiers && ((entry.getValue().getModifiers() & accessModifiers) != 0))
-                if (subclassesToSearch.isAssignableFrom(entry.getKey()))
-                    rtv.add((Class<? extends E>)entry.getKey()); // This cast IS checked on the previous line
+            if ((entry.getValue().getModifiers() & modifiers) == modifiers && ((entry.getValue().getModifiers() & accessModifiers) != 0)) {
+                if (subclassesToSearch.isAssignableFrom(entry.getKey())) {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends E> val = (Class<? extends E>)entry.getKey(); // This cast IS checked on the previous line
+                    rtv.add(val);
+                }
+            }
         return rtv;
     }
 

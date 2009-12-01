@@ -8,10 +8,10 @@ package messif.netbucket;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import messif.buckets.BucketStorageException;
 import messif.utility.Logger;
 import messif.buckets.BucketDispatcher;
-import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.network.MessageDispatcher;
@@ -152,14 +152,18 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * reply message of class <code>T</code> is returned.
      * @param <T> the class of the reply message that is returned
      * @param msg the bucket request message to process
+     * @param networkNode the destination node where the message is sent
+     * @return the returned message
      * @throws IOException if there was an error processing the message
+     * @throws RuntimeException if there was a {@link RuntimeException} when processing the bucket request
+     * @throws BucketStorageException if there was a storage error when processing the bucket request
      */
     protected <T extends BucketReplyMessage> T send(BucketRequestMessage<T> msg, NetworkNode networkNode) throws IOException, RuntimeException, BucketStorageException {
         BucketReplyMessage reply = messageDisp.sendMessageWaitSingleReply(msg, BucketReplyMessage.class, networkNode);
         if (reply instanceof BucketExceptionReplyMessage)
             throw ((BucketExceptionReplyMessage)reply).getException();
         else
-            return (T)reply;
+            return msg.replyMessageClass().cast(reply);
     }
 
 
@@ -182,13 +186,14 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * @param remoteBucket the bucket to remove
      * @return <tt>true</tt> if the bucket was removed on the remote side
      * @throws IOException if there was an error communicating with the remote node
+     * @throws NoSuchElementException if the bucket was not found on the remote network node
      */
-    public boolean removeRemoteBucket(RemoteBucket remoteBucket) throws IOException {
-        return messageDisp.sendMessageWaitSingleReply(
-                new BucketRemoveRequestMessage(remoteBucket.getBucketID()),
-                BucketRemoveReplyMessage.class,
-                remoteBucket.getRemoteNetworkNode()
-        ).getRemoved();
+    public boolean removeRemoteBucket(RemoteBucket remoteBucket) throws IOException, NoSuchElementException {
+        try {
+            return send(new BucketRemoveRequestMessage(remoteBucket.getBucketID()), remoteBucket.getRemoteNetworkNode()).getRemoved();
+        } catch (BucketStorageException e) {
+            throw new InternalError("This should never happen - bucket remove method never throws BucketStorageException");
+        }
     }
 
 }

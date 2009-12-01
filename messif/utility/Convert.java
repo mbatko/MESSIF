@@ -951,6 +951,17 @@ public abstract class Convert {
     }
 
     /**
+     * Returns type-safe public constructors of the given class.
+     * @param <E> the class for which to get the constructors
+     * @param objectClass the class for which to get the constructors
+     * @return all public constructors of the given class
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> Constructor<E>[] getConstructors(Class<? extends E> objectClass) {
+        return (Constructor<E>[])objectClass.getConstructors();  // This IS A STUPID unchecked !!!
+    }
+
+    /**
      * Returns a method for the specified class that accepts the specified arguments.
      * The <code>clazz</code>'s declared methods are searched for the one that
      * accepts the arguments.

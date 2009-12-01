@@ -24,7 +24,6 @@ import messif.buckets.LocalBucket;
 import messif.buckets.index.ModifiableIndex;
 import messif.netbucket.RemoteBucket;
 import messif.network.NetworkNode;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.util.AbstractObjectIterator;

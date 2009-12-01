@@ -50,4 +50,9 @@ public abstract class BucketRequestMessage<T extends BucketReplyMessage> extends
      */
     public abstract T execute(BucketDispatcher bucketDispatcher) throws RuntimeException, BucketStorageException;
 
+    /**
+     * Returns the class of the reply message that is received as a response to this request message.
+     * @return the class of the reply message that is received as a response to this request message
+     */
+    public abstract Class<T> replyMessageClass();
 }

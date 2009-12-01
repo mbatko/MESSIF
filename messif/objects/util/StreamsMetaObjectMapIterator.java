@@ -61,14 +61,15 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
 
     /**
      * Add new object iterator given a name to be generated for this object in the MetaObjectMap.
+     * @param <T> the type of the objects that are created from the file
      * @param name name to be generated for this object in the MetaObjectMap
-     * @param objClass class  of the new object
+     * @param objClass the type of the objects that are created from the file
      * @param fileName file where the objects are stored
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IOException if there was an error opening the file
      */
-    public void addObjectStream(String name, Class<? extends LocalAbstractObject> objClass, String fileName) throws IllegalArgumentException, IOException {
-        addObjectStream(name, new StreamGenericAbstractObjectIterator(objClass, fileName));
+    public <T extends LocalAbstractObject> void addObjectStream(String name, Class<? extends T> objClass, String fileName) throws IllegalArgumentException, IOException {
+        addObjectStream(name, new StreamGenericAbstractObjectIterator<T>(objClass, fileName));
     }
 
 

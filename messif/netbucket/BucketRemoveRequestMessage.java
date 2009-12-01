@@ -33,4 +33,9 @@ public class BucketRemoveRequestMessage extends BucketRequestMessage<BucketRemov
         return new BucketRemoveReplyMessage(this, bucketDispatcher.removeBucket(bucketID) != null);
     }
 
+    @Override
+    public Class<BucketRemoveReplyMessage> replyMessageClass() {
+        return BucketRemoveReplyMessage.class;
+    }
+
 }

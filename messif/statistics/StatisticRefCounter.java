@@ -51,7 +51,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
         
         // Create new counter, if there is not one associated with the key
         if (counter == null && createIfNotExist) {
-            counter = new StatisticCounter(new StringBuffer(name).append(".").append(key.toString()).toString(), initialValue);
+            counter = new StatisticCounter(new StringBuffer(getName()).append(".").append(key.toString()).toString(), initialValue);
             values.put(key, counter);
         }
         
@@ -179,11 +179,9 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
      */
     public void reset() {
         // Unbind all counters of the RefCounter bound to this
-        if (boundTo != null) {
-            for (StatisticCounter stat : boundTo.values.values()) {
+        if (isBound())
+            for (StatisticCounter stat : getBoundTo().values.values())
                 stat.unbind();
-            }
-        }
         
         // Unbind all counters of this RefCounter bound to anything else
         for (StatisticCounter stat : values.values())
@@ -221,12 +219,12 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
 
     /****************** RefCounter binding overrides ******************/
 
-    /** Deregister ourselves from list of "parent" object */
-
+    @Override
     public void unbind() {
-        if (boundTo != null)
-            synchronized (boundTo) {
+        if (isBound())
+            synchronized (getBoundTo()) {
                 synchronized (this) {
+                    /** Deregister ourselves from list of "parent" object */
                     for (StatisticCounter stat : values.values())
                         stat.unbind();
 
@@ -235,9 +233,11 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
             }
     }
 
-    /** Bind current statistics object to receive notifications at the same time as the specified statistics receives some.
-     *  @param object the parent statistics object
+    /**
+     * Bind current statistics object to receive notifications at the same time as the specified statistics receives some.
+     * @param object the parent statistics object
      */
+    @Override
     public void bindTo(StatisticRefCounter object) throws IllegalArgumentException {
         // Ignore null argument
         if (object == null)
@@ -276,7 +276,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
     public String toString() { 
 	StringBuffer buf = new StringBuffer();
         
-        buf.append(name);
+        buf.append(getName());
 	buf.append(": {");
 
 	Iterator<Entry<Object, StatisticCounter>> it = values.entrySet().iterator();

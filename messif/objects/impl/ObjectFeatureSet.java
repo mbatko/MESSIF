@@ -30,7 +30,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     private static final long serialVersionUID = 666L;
 
     // protected final ArrayList<ObjectPair<LocalAbstractObject,?>> objects = new ArrayList();
-    protected final ArrayList<LocalAbstractObject> objects = new ArrayList();
+    protected final ArrayList<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>();
     
     protected String getSaveObjectsClass () {
         return (getObjectCount() > 0) ? objects.get(0).getClass().toString() : "LocalAbstractObject";

@@ -47,4 +47,9 @@ public class BucketProcessQueryRequestMessage extends BucketRequestMessage<Bucke
         return new BucketProcessQueryReplyMessage(this, query);
     }
 
+    @Override
+    public Class<BucketProcessQueryReplyMessage> replyMessageClass() {
+        return BucketProcessQueryReplyMessage.class;
+    }
+
 }

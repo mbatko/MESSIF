@@ -17,6 +17,7 @@ import messif.utility.ErrorCode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import messif.utility.Clearable;
+import messif.utility.Convert;
 
 
 /**
@@ -402,7 +403,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         Constructor<T> minimalConstructor = null;
 
         // Search all its constructors for proper annotation
-        for (Constructor<T> constructor : (Constructor<T>[])operationClass.getConstructors()) {
+        for (Constructor<T> constructor : Convert.getConstructors(operationClass)) {
             if (constructor.isAnnotationPresent(OperationConstructor.class)) {
                 int thisConstructorArgs = constructor.getParameterTypes().length;
                 if (argumentsCount == -1) {

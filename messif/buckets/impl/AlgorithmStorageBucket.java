@@ -336,6 +336,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @param to the upper-bound key for which to create an operation
          * @return a new instance of query operation for the given key
          */
+        @SuppressWarnings("unchecked")
         protected QueryOperation<?> createOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) {
             // Get the results from algorithm using operation
             if (comparator != null && from != null && comparator instanceof OperationIndexComparator)

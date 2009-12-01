@@ -28,7 +28,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +41,7 @@ import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
+import messif.utility.Convert;
 import messif.utility.Logger;
 
 
@@ -625,7 +625,7 @@ public abstract class Algorithm implements Serializable {
         List<Constructor<E>> rtv = new ArrayList<Constructor<E>>();
         
         // Search all its constructors for proper annotation
-        for (Constructor<E> constructor : (Constructor<E>[])algorithmClass.getConstructors()) // This IS A STUPID unchecked !!!
+        for (Constructor<E> constructor : Convert.getConstructors(algorithmClass))
             if (constructor.isAnnotationPresent(AlgorithmConstructor.class))
                 rtv.add(constructor);
         

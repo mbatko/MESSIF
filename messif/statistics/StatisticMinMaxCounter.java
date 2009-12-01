@@ -113,11 +113,11 @@ public final class StatisticMinMaxCounter extends Statistics<StatisticMinMaxCoun
     
     public String toString() {
         return new StringBuffer().
-                append(name).append(".min: ").append(min).append(", ").
-                append(name).append(".max: ").append(max).append(", ").
-                append(name).append(".avg: ").append(getAvg()).append(", ").
-                append(name).append(".sum: ").append(sum).append(", ").
-                append(name).append(".cnt: ").append(count).toString();
+                append(getName()).append(".min: ").append(min).append(", ").
+                append(getName()).append(".max: ").append(max).append(", ").
+                append(getName()).append(".avg: ").append(getAvg()).append(", ").
+                append(getName()).append(".sum: ").append(sum).append(", ").
+                append(getName()).append(".cnt: ").append(count).toString();
      }
 
 
