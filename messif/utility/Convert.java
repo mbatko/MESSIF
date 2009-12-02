@@ -817,9 +817,7 @@ public abstract class Convert {
         try {
             // Try call name as a constructor
             Class<E> clazz = getClassForName(callname, checkClass);
-            @SuppressWarnings("unchecked")
-            List<Constructor<E>> constructors = Arrays.asList((Constructor<E>[])clazz.getConstructors());
-            return createInstanceWithStringArgs(constructors, args, namedInstances);
+            return createInstanceWithStringArgs(Arrays.asList(getConstructors(clazz)), args, namedInstances);
         } catch (ClassNotFoundException e) {
             // Class not found, try dot earlier
             int dotPos = callname.lastIndexOf('.');
@@ -827,14 +825,14 @@ public abstract class Convert {
                 throw e;
 
             // Class without last item, which is supposed to be a factory method name or a field name
-            Class<E> clazz = getClassForName(callname.substring(0, dotPos), checkClass);
+            Class<?> clazz = Class.forName(callname.substring(0, dotPos));
             callname = callname.substring(dotPos + 1);
 
             try {
                 // We have correct class, now check if it is method or attribute
                 return (openParenthesisPos == -1)?
                     checkClass.cast(createInstanceStaticField(clazz, callname)):
-                    createInstanceUsingFactoryMethod(clazz, callname, (Object[])args);
+                    createInstanceUsingFactoryMethod(clazz, callname, checkClass, args);
             } catch (NoSuchMethodException ex) {
                 throw new InvocationTargetException(ex);
             }
@@ -885,6 +883,38 @@ public abstract class Convert {
             if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
                 throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to return " + instanceClass);
             return (E)factoryMethod.invoke(null, arguments); // This cast IS checked on the previous line
+        } catch (IllegalAccessException e) {
+            throw new NoSuchMethodException(e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new instance of a class.
+     * First, a factory method for the specified arguments is searched in the provided class and its ancestors.
+     * Then, string arguments are converted to proper types for the method that was found.
+     * Finally, an instance is created and returned.
+     *
+     * @param <E> the type of the instantiated object
+     * @param declaringClass the class where the factory method is declared
+     * @param methodName the name of the factory method
+     * @param instanceClass the class for which to create an instance
+     * @param arguments the arguments for the factory method
+     * @return a new instance of the class
+     * @throws NoSuchMethodException if there was no factory method for the specified list of arguments
+     * @throws InvocationTargetException if there was an exception during instantiation
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> E createInstanceUsingFactoryMethod(Class<?> declaringClass, String methodName, Class<E> instanceClass, String... arguments) throws NoSuchMethodException, InvocationTargetException {
+        try {
+            // Convert string arguments to object array
+            Object[] args = new Object[arguments.length];
+            System.arraycopy(arguments, 0, args, 0, arguments.length);
+            Method factoryMethod = getMethod(declaringClass, methodName, true, args);
+            if (!Modifier.isStatic(factoryMethod.getModifiers()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to be static");
+            if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
+                throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to return " + instanceClass);
+            return (E)factoryMethod.invoke(null, args); // This cast IS checked on the previous line
         } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
         }
@@ -1065,7 +1095,7 @@ public abstract class Convert {
         // Test arguments
         for (int i = 0; i < prototype.length; i++) {
             // Null value is accepted by any class
-            if (arguments[i] == null)
+            if (arguments[i] == null && !prototype[i].isPrimitive())
                 continue;
             // The argument of the method must be the same as or a superclass of the provided prototype class
             if (!wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {

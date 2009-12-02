@@ -9,11 +9,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Constructor;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.ObjectInstantiator;
 
 /**
  * Collection of utility methods for {@link Extractor}s.
@@ -105,29 +106,48 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass) throws IllegalArgumentException {
-        // Prepare constructor
-        final Constructor<? extends T> constructor;
-        try {
-            constructor = objectClass.getConstructor(BufferedReader.class);
-            if (!Modifier.isPublic(constructor.getModifiers()))
-                throw new IllegalArgumentException("Buffered reader constructor in " + objectClass + " is not public");
-            if (Modifier.isAbstract(objectClass.getModifiers()))
-                throw new IllegalArgumentException("Cannot create abstract " + objectClass);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("There is no buffered reader constructor in " + objectClass, e);
-        }
-
-        // Create extractor
+        final ObjectInstantiator<? extends T> instantiator = new ObjectInstantiator<T>(objectClass, BufferedReader.class);
         return new Extractor<T>() {
-            public T extract(ExtractorDataSource dataSource) throws ExtractorException {
+            public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
-                    return constructor.newInstance(dataSource.getBufferedReader());
+                    return instantiator.newInstance(dataSource.getBufferedReader());
                 } catch (InvocationTargetException e) {
-                    throw new ExtractorException("Cannot create instance of " + constructor.getDeclaringClass() + ": " + e.getCause(), e.getCause());
-                } catch (InstantiationException e) {
-                    throw new InternalError(); // This should never happen - the class is checked
-                } catch (IllegalAccessException e) {
-                    throw new InternalError(); // This should never happen - the constructor is checked
+                    if (e.getCause() instanceof IOException)
+                        throw (IOException)e.getCause();
+                    else
+                        throw new ExtractorException("Cannot create instance using " + instantiator + ": " + e.getCause(), e.getCause());
+                }
+            }
+        };
+    }
+
+    /**
+     * Creates an extractor that creates objects from binary data by external command.
+     * The command is executed using the specified {@code cmdarray} and is expected to
+     * receive the binary data on its standard input and return the text parsable by
+     * the constructor of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param command the external command (including all necessary arguments)
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(final Class<? extends T> objectClass, final String command) throws IllegalArgumentException {
+        final ObjectInstantiator<? extends T> instantiator = new ObjectInstantiator<T>(objectClass, BufferedReader.class);
+        return new Extractor<T>() {
+            public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                Process extractorProcess = Runtime.getRuntime().exec(command);
+                OutputStream os = extractorProcess.getOutputStream();
+                dataSource.pipe(os);
+                os.close();
+                try {
+                    return instantiator.newInstance(new BufferedReader(new InputStreamReader(extractorProcess.getInputStream())));
+                } catch (InvocationTargetException e) {
+                    if (e.getCause() instanceof IOException)
+                        throw (IOException)e.getCause();
+                    else
+                        throw new ExtractorException("Cannot create instance using " + instantiator + ": " + e.getCause(), e.getCause());
                 }
             }
         };

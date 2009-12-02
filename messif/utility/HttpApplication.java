@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -30,7 +31,6 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
-import messif.objects.extraction.Extractors;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
@@ -54,18 +54,20 @@ public class HttpApplication extends Application {
      * Adds a context to the HTTP server that is processed by the specified operation.
      * Additional arguments can be specified for the constructor of the operation.
      * For constructor arguments where a {@link LocalAbstractObject} is required,
-     * the specific class name must be provided. If a parameter is specified via
+     * an extractor must be provided. If a parameter is specified via
      * the URL, use a quoted URL parameter name. Otherwise the argument is a constant
      * that will be used for each query.
      *  
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; httpAddContext /search messif.operations.ApproxKNNQueryOperation messif.objects.impl.MetaObjectSAPIRWeightedDist "k" REMOTE_OBJECTS
+     * MESSIF &gt;&gt;&gt; httpAddContext /search messif.operations.ApproxKNNQueryOperation messif.objects.extraction.Extractors.createTextExtractor(messif.objects.impl.MetaObjectSAPIRWeightedDist) "k" REMOTE_OBJECTS
      * </pre>
      * This will create a Context that will execute {@link messif.operations.ApproxKNNQueryOperation}
-     * using a three parameters. The first parameter will be a {@link messif.objects.impl.MetaObjectSAPIRWeightedDist}
-     * object created from the HTTP request body. The second parameter will be the
+     * using a three parameters. The first parameter will be instance of an extractor created by call to
+     * {@link messif.objects.extraction.Extractors#createTextExtractor} with
+     * a {@link messif.objects.impl.MetaObjectSAPIRWeightedDist} parameter. This extractor will be used
+     * create a {@link LocalAbstractObject object} from the HTTP request body. The second parameter will be the
      * HTTP request get parameter <em>k</em> (e.g. the URL will contain .../search?k=30).
      * The third parameter will be always the {@link messif.operations.AnswerType#REMOTE_OBJECTS} constant.
      * </p>
@@ -99,7 +101,8 @@ public class HttpApplication extends Application {
                         algorithm,
                         Convert.getClassForName(args[2], AbstractOperation.class), // operation class
                         args, 3,
-                        args.length - 3
+                        args.length - 3,
+                        namedInstances
                     )
             );
             httpServerContexts.put(args[1], context);
@@ -408,20 +411,16 @@ public class HttpApplication extends Application {
              * element of the filled array. The object is constructed from the {@link InputStream}
              * that is provided as the filling value.
              *
-             * @param objectClassName the class of the objects to create (must be a descendant of {@link LocalAbstractObject})
+             * @param extractor the extractor for objects to create
              * @param itemToFill the index of the array element to fill
              * @param createList if <tt>true</tt>, the filler will create {@link AbstractObjectList list of objects}
              *          from the provided input stream, otherwise a single {@link LocalAbstractObject object} is created
              * @throws IllegalArgumentException if the specified {@code objectClass} is not valid
              */
-            public ObjectFiller(String objectClassName, int itemToFill, boolean createList) throws IllegalArgumentException {
+            public ObjectFiller(Extractor<? extends LocalAbstractObject> extractor, int itemToFill, boolean createList) throws IllegalArgumentException {
                 this.itemToFill = itemToFill;
                 this.createList = createList;
-                try {
-                    this.extractor = Extractors.createExtractor(Class.forName(objectClassName));
-                } catch (ClassNotFoundException e) {
-                    throw new IllegalArgumentException("Class " + objectClassName + " is not valid for LocalAbstractObject parameter");
-                }
+                this.extractor = extractor;
             }
 
             /**
@@ -466,16 +465,20 @@ public class HttpApplication extends Application {
             private final Class<?> type;
             /** Index of the array element to fill */
             private final int itemToFill;
+            /** Collection of named instances that are used when converting string parameters */
+            private final Map<String, Object> namedInstances;
 
             /**
              * Creates a new instance of ParamFiller.
              *
              * @param type the class of value
              * @param itemToFill the index of the array element to fill
+             * @param namedInstances collection of named instances that are used when converting string parameters
              */
-            public ParamFiller(Class<?> type, int itemToFill) {
+            public ParamFiller(Class<?> type, int itemToFill, Map<String, Object> namedInstances) {
                 this.type = type;
                 this.itemToFill = itemToFill;
+                this.namedInstances = namedInstances;
             }
 
             /**
@@ -486,7 +489,7 @@ public class HttpApplication extends Application {
              */
             public void fill(String value, Object[] args) throws IllegalArgumentException {
                 try {
-                    args[itemToFill] = Convert.stringToType(value, type);
+                    args[itemToFill] = Convert.stringToType(value, type, namedInstances);
                 } catch (InstantiationException e) {
                     throw new IllegalArgumentException(e.getMessage(), e.getCause());
                 }
@@ -523,11 +526,12 @@ public class HttpApplication extends Application {
          * @param args additional arguments for the constructor
          * @param offset the index into {@code args} where the first constructor argument is
          * @param length the number of constructor arguments to use
+         * @param namedInstances collection of named instances that are used when converting string parameters
          * @throws NoSuchMethodException if the operation does not have an annotated constructor with {@code length} arguments
          * @throws InstantiationException if any of the provided {@code args} cannot be converted to the type specified in the operation's constructor
          * @throws IndexOutOfBoundsException if the {@code offset} or {@code length} are not valid for {@code args} array
          */
-        public HttpApplicationHandler(Algorithm algorithm, Class<? extends T> operationClass, String args[], int offset, int length) throws NoSuchMethodException, InstantiationException, IndexOutOfBoundsException {
+        public HttpApplicationHandler(Algorithm algorithm, Class<? extends T> operationClass, String args[], int offset, int length, Map<String, Object> namedInstances) throws NoSuchMethodException, InstantiationException, IndexOutOfBoundsException {
             this.algorithm = algorithm;
             this.operationConstructor = AbstractOperation.getAnnotatedConstructor(operationClass, length);
             this.charset = Charset.defaultCharset();
@@ -542,13 +546,13 @@ public class HttpApplication extends Application {
                 String name = parseQuoted(args[i + offset]);
                 if (name != null) {
                     // Parametrized value is quoted
-                    paramFillers.put(name, new ParamFiller(operationParamTypes[i], i));
+                    paramFillers.put(name, new ParamFiller(operationParamTypes[i], i, namedInstances));
                 } else if (operationParamTypes[i].isAssignableFrom(LocalAbstractObject.class)) {
-                    objectFillerTemp = new ObjectFiller(args[i + offset], i, false);
+                    objectFillerTemp = new ObjectFiller(createExtractor(args[i + offset], namedInstances), i, false);
                 } else if (operationParamTypes[i].isAssignableFrom(AbstractObjectList.class)) {
-                    objectFillerTemp = new ObjectFiller(args[i + offset], i, true);
+                    objectFillerTemp = new ObjectFiller(createExtractor(args[i + offset], namedInstances), i, true);
                 } else {
-                    params[i] = Convert.stringToType(args[i + offset], operationParamTypes[i]);
+                    params[i] = Convert.stringToType(args[i + offset], operationParamTypes[i], namedInstances);
                 }
             }
             this.objectFiller = objectFillerTemp;
@@ -590,6 +594,23 @@ public class HttpApplication extends Application {
                 return null;
             else
                 return quotedStr.substring(1, quotedStr.length() - 1);
+        }
+
+        /**
+         * Creates an extractor using the given signature.
+         * @param signature signature of the extractor instance to use
+         * @param namedInstances collection of named instances that are used when converting string parameters
+         * @return a new instance of extractor
+         * @throws IllegalArgumentException if there was an error creating the extractor instance
+         */
+        private Extractor<?> createExtractor(String signature, Map<String, Object> namedInstances) throws IllegalArgumentException {
+            try {
+                return Convert.createInstanceWithStringArgs(signature, Extractor.class, namedInstances);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalArgumentException("Cannot create " + signature + ": class not found");
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Cannot create " + signature + ": " + e.getCause(), e.getCause());
+            }
         }
 
 

@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -124,6 +125,21 @@ public class ExtractorDataSource {
         if (bufferedReader == null)
             bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         return bufferedReader;
+    }
+
+    /**
+     * Output all data from this data source to the given {@code outputStream}.
+     * @param outputStream the stream to which to write the data
+     * @throws IOException if there was an error reading from this data source or writing to the output stream
+     */
+    public void pipe(OutputStream outputStream) throws IOException {
+        byte[] buffer = new byte[readStreamDataAllocation];
+        int bytes;
+        while ((bytes = inputStream.read(buffer)) > 0)
+            outputStream.write(buffer, 0, bytes);
+
+        // Close the input stream, since all data was read
+        inputStream.close();
     }
 
     /**
