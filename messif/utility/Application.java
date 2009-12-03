@@ -927,16 +927,22 @@ public class Application {
      * Print all global statistics.
      * Statistics are shown as <code>name: value</code>.
      * <p>
-     * Two optional arguments are accepted:
+     * Three optional arguments are accepted:
      *   <ul>
      *     <li>regular expression applied on names as a filter</li>
      *     <li>separator of statistics (defaults to newline)</li>
+     *     <li>separator appended after printed statistics (defaults to newline)</li>
      *   </ul>
      * </p>
      * <p>
      * Example of usage:
+     * To print statistics comma-separated, use:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* ,
+     * </pre>
+     * To avoid appending newline and append comma, use:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* , ,
      * </pre>
      * </p>
      * 
@@ -946,9 +952,14 @@ public class Application {
      */ 
     @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsGlobal(PrintStream out, String... args) {
-        if (args.length >= 3)
-            out.println(Statistics.printStatistics(args[1], args[2]));
-        else if (args.length >= 2)
+        if (args.length >= 3) {
+            String stats = Statistics.printStatistics(args[1], args[2]);
+            if (args.length >= 4) {
+                out.print(stats);
+                out.print(args[3]);
+            } else
+                out.println(stats);
+        } else if (args.length >= 2)
             out.println(Statistics.printStatistics(args[1]));
         else out.println(Statistics.printStatistics());
         return true;
@@ -1019,16 +1030,22 @@ public class Application {
      * it can be done explicitely using the {@link #statisticsSetAutoBinding} method.
      * Statistics are shown as <code>name: value</code>.
      * <p>
-     * Two optional arguments are accepted:
+     * Three optional arguments are accepted:
      *   <ul>
      *     <li>regular expression applied on names as a filter</li>
      *     <li>separator of statistics (defaults to newline)</li>
+     *     <li>separator appended after printed statistics (defaults to newline)</li>
      *   </ul>
      * </p>
      * <p>
      * Example of usage:
+     * To print statistics comma-separated, use:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* ,
+     * </pre>
+     * To avoid appending newline and append comma, use:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* , ,
      * </pre>
      * </p>
      * 
@@ -1038,9 +1055,14 @@ public class Application {
      */ 
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsLastOperation(PrintStream out, String... args) {
-        if (args.length >= 3)
-            out.println(algorithm.getOperationStatistics().printStatistics(args[1], args[2]));
-        else if (args.length >= 2)
+        if (args.length >= 3) {
+            String stats = algorithm.getOperationStatistics().printStatistics(args[1], args[2]);
+            if (args.length >= 4) {
+                out.print(stats);
+                out.print(args[3]);
+            } else
+                out.println(stats);
+        } else if (args.length >= 2)
             out.println(algorithm.getOperationStatistics().printStatistics(args[1]));
         else out.println(algorithm.getOperationStatistics().printStatistics());
         return true;

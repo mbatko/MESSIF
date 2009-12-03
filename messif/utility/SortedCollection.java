@@ -216,18 +216,33 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
 
     /**
-     * Returns the last element of this collection according to the order
+     * Removes and returns the last element of this collection according to the order
      * specified by the comparator.
-     * @return the element at the specified position in this collection
+     * @return the last element in this collection
      * @throws NoSuchElementException if the collection is empty
      */
-    public T popLast() throws NoSuchElementException {
+    public T removeLast() throws NoSuchElementException {
         if (isEmpty())
             throw new NoSuchElementException();
         T last = get(size - 1);
         remove(size - 1);
         return last;
     }
+
+    /**
+     * Removes and returns the first element of this collection according to the order
+     * specified by the comparator.
+     * @return the first element in this collection
+     * @throws NoSuchElementException if the collection is empty
+     */
+    public T removeFirst() throws NoSuchElementException {
+        if (isEmpty())
+            throw new NoSuchElementException();
+        T first = get(0);
+        remove(0);
+        return first;
+    }
+
 
     //****************** Copy methods ******************//
 

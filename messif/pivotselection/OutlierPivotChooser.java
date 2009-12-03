@@ -35,8 +35,8 @@ public class OutlierPivotChooser extends AbstractPivotChooser implements Seriali
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /** Size of the candidate set of pivots from which the best pivot is picked. */
-    public static int SAMPLE_PIVOT_SIZE = 100;
+//    /** Size of the candidate set of pivots from which the best pivot is picked. */
+//    public static int SAMPLE_PIVOT_SIZE = 100;
 
 //    /** List of initial pivots */
 //    protected AbstractObjectList<LocalAbstractObject> initialPivots = null;
