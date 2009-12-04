@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 import messif.algorithms.Algorithm;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
@@ -428,27 +429,22 @@ public class HttpApplication extends Application {
              * created from the {@code inputStream}.
              * @param inputStream the input stream used to create instance(s) of {@link LocalAbstractObject}
              * @param args the array to fill the value into
-             * @throws IllegalArgumentException if there was a problem reading or extracting objects from the stream
+             * @throws ExtractorException if there was a problem reading or extracting objects from the stream
+             * @throws IOException if there was a problem reading or extracting objects from the stream
              */
-            public void fill(InputStream inputStream, Object[] args) throws IllegalArgumentException {
-                try {
-                    ExtractorDataSource dataSource = new ExtractorDataSource(inputStream, null);
-                    if (createList) {
-                        AbstractObjectList<LocalAbstractObject> list = new AbstractObjectList<LocalAbstractObject>();
-                        while (true) {
-                            try {
-                                list.add(extractor.extract(dataSource));
-                            } catch (EOFException e) {
-                                break;
-                            }
+            public void fill(InputStream inputStream, Object[] args) throws ExtractorException, IOException {
+                ExtractorDataSource dataSource = new ExtractorDataSource(inputStream, null);
+                if (createList) {
+                    AbstractObjectList<LocalAbstractObject> list = new AbstractObjectList<LocalAbstractObject>();
+                    while (true) {
+                        try {
+                            list.add(extractor.extract(dataSource));
+                        } catch (EOFException e) {
+                            break;
                         }
-                    } else {
-                        args[itemToFill] = extractor.extract(dataSource);
                     }
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
-                } catch (ExtractorException e) {
-                    throw new IllegalArgumentException("There was a problem extracting descriptors from the object: " + e.getMessage(), e);
+                } else {
+                    args[itemToFill] = extractor.extract(dataSource);
                 }
             }
         }
@@ -629,8 +625,19 @@ public class HttpApplication extends Application {
             Object[] args = params.clone();
 
             // Fill object
-            if (objectFiller != null)
-                objectFiller.fill(exchange.getRequestBody(), args);
+            try {
+                if (objectFiller != null) {
+                    InputStream input = exchange.getRequestBody();
+                    String contentEncoding = exchange.getRequestHeaders().getFirst("content-encoding");
+                    if (contentEncoding != null && contentEncoding.equalsIgnoreCase("gzip"))
+                        input = new GZIPInputStream(input);
+                    objectFiller.fill(input, args);
+                }
+            } catch (IOException e) {
+                throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
+            } catch (ExtractorException e) {
+                throw new IllegalArgumentException("There was a problem extracting descriptors from the object: " + e.getMessage(), e);
+            }
 
             // Fill params
             Matcher matcher = paramParser.matcher(exchange.getRequestURI().getQuery());

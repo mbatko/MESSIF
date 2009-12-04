@@ -2355,7 +2355,7 @@ public class Application {
      */
     void startApplication(String[] args) {
         if (!parseArguments(args, 0))
-            System.err.println("Usage: Application " + usage());
+            System.err.println("Usage: " + getClass().getName() + " " + usage());
         else if (cmdSocket != null)
             cmdSocketLoop();
     }
