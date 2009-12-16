@@ -1129,18 +1129,32 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args file name to read from, class name of objects to be read from the file, optional name of the object stream
+     * @param args file name to read from,
+     *             class name of objects to be read from the file,
+     *             optional name of the object stream,
+     *             optional additional arguments for the object constructor
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream" })
+    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional arguments for the object constructor (optional)" })
     public boolean objectStreamOpen(PrintStream out, String... args) {
         try {
+            // Build collection of additional arguments
+            List<String> additionalArgs;
+            if (args.length > 4) {
+                additionalArgs = new ArrayList<String>();
+                for (int i = 4; i < args.length; i++)
+                    additionalArgs.add(args[i]);
+            } else {
+                additionalArgs = null;
+            }
+
             // Store new stream into stream registry
             if (namedInstances.put(
                 args[3],
                 new StreamGenericAbstractObjectIterator<LocalAbstractObject>(
                     Convert.getClassForName(args[2], LocalAbstractObject.class),
-                    args[1]
+                    args[1],
+                    additionalArgs
                 )
             ) != null)
                 out.println("Previously opened stream changed to a new file");

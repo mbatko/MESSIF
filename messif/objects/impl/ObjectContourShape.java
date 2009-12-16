@@ -23,7 +23,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
-    /****************** Attributes ******************/
+    //****************** Attributes ******************//
 
     // number of peaks is peak.length / 2
 	protected final byte [] globalCurvatureVector; // length 2
@@ -32,7 +32,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
 	protected final byte [] peak; // 2 x (1-62): 
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /** 
      * Creates a new instance of ObjectContourShape
@@ -120,14 +120,14 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     }
 
 
-    /****************** Size function ******************/
+    //****************** Size function ******************//
 
     public int getSize() {
         return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + this.peak.length) * Byte.SIZE / 8;
     }
 
 
-    /****************** Data equality functions ******************/
+    //****************** Data equality functions ******************//
 
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectContourShape))
@@ -144,7 +144,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     private static float range(float x) {
         while (x < 0f) {
@@ -478,7 +478,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     }
 
     
-    /*****************************  Cloning **********************************/
+    //*****************************  Cloning **********************************//
     
     /**
      * Creates and returns a randomly modified copy of this object.
