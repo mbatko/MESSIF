@@ -42,10 +42,13 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
      */
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         float powSum = 0;
-        
-        for (int i = Math.min(this.data.length, ((ObjectFloatVector)obj).data.length) - 1; i >= 0; i--)
-            powSum += Math.pow(this.data[i] - ((ObjectFloatVector)obj).data[i], 2);
-        
+
+        float [] objData = ((ObjectFloatVector)obj).data;
+
+        for (int i = Math.min(this.data.length, objData.length) - 1; i >= 0; i--) {
+            powSum += (this.data[i] - objData[i]) * (this.data[i] - objData[i]);
+        }
+
         return (float)Math.sqrt(powSum);
     }
 }
