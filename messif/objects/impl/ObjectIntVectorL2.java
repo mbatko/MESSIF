@@ -38,8 +38,8 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     }
     
     
-    /** Metric function
-     *      Implements city-block distance measure (so-called L1 metric)
+    /** 
+     * Metric function implements Euclidean (L_2) metric
      */
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
@@ -51,8 +51,10 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
         
         // Get sum of absolute difference on all dimensions
         float rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--)
-            rtv += (data[i] - objdata[i])*(data[i] - objdata[i]);
+        for (int i = data.length - 1; i >= 0; i--) {
+            float dif = (data[i] - objdata[i]);
+            rtv += dif * dif;
+        }
         
         return ((float)Math.sqrt(rtv));
     }

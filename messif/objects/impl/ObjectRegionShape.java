@@ -174,6 +174,18 @@ public class ObjectRegionShape extends LocalAbstractObject implements BinarySeri
         return iQuantTable[m_ArtDE[p][r]];	// Always positive value
     }
 
+    /**
+     * Get element from the array value from the quantization array - without checking the boundaries
+     *   and inlined
+     * @param p index1
+     * @param r index2
+     * @return value from the quantization array
+     */
+    private final double getRealValueFast(int p, int r) {
+        // Inverse Quantization
+        return iQuantTable[m_ArtDE[p][r]];	// Always positive value
+    }
+
 
     // ***********************************    Implementation of abstract methods     *************************** //
 
@@ -188,7 +200,7 @@ public class ObjectRegionShape extends LocalAbstractObject implements BinarySeri
         for (int i = 0; i < ART_ANGULAR; i++) {
             for (int j = 0; j < ART_RADIAL; j++) {
                 if (i != 0 || j != 0) {
-                    distance += Math.abs(getRealValue(i, j) - object.getRealValue(i, j));
+                    distance += Math.abs(getRealValueFast(i, j) - object.getRealValueFast(i, j));
                 }
             }
         }

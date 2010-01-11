@@ -46,7 +46,8 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
         float [] objData = ((ObjectFloatVector)obj).data;
 
         for (int i = Math.min(this.data.length, objData.length) - 1; i >= 0; i--) {
-            powSum += (this.data[i] - objData[i]) * (this.data[i] - objData[i]);
+            float dif = (data[i] - objData[i]);
+            powSum += dif * dif;
         }
 
         return (float)Math.sqrt(powSum);
