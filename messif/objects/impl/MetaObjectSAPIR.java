@@ -471,7 +471,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
                 try {
                     objects.put(descriptorName, (LocalAbstractObject)XMLHandlerSAPIR.class.getMethod("new" + descriptorName, Map.class).invoke(this, descriptorData));
                 } catch (InvocationTargetException e) {
-                    throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack.toString(), e);
+                    throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack.toString(), (Exception)e.getCause());
                 } catch (IllegalArgumentException thisShouldNeverHappen) {
                     thisShouldNeverHappen.printStackTrace();
                 } catch (IllegalAccessException thisShouldNeverHappen) {

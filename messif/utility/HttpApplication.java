@@ -375,8 +375,7 @@ public class HttpApplication extends Application {
     /**
      * Handler for the {@link com.sun.net.httpserver.HttpServer HTTP server}
      * that executes the given operation with the specified arguments.
-     * See the {@link #HttpApplicationHandler(messif.algorithms.Algorithm, java.lang.Class, java.lang.String[], int, int) constructor}
-     * for more informations.
+     * See the constructor for more informations.
      *
      * @param <T> the operation type executed by this handler
      * @author xbatko

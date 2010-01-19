@@ -55,7 +55,7 @@ public class ObjectInstantiator<T> {
     /**
      * Creates a new instance using the encapsulated constructor.
      * The arguments must be compatible with the prototype that was given while
-     * {@link #ObjectInstantiator(java.lang.Class, java.lang.Class<?>[]) creating} this
+     * {@link #ObjectInstantiator(java.lang.Class, java.lang.Class[]) creating} this
      * {@link ObjectInstantiator} class.
      * @param arguments the arguments for the encapsulated constructor
      * @return the new instance

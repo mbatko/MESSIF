@@ -125,7 +125,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         } catch (IllegalAccessException e) {
             throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         } catch (InvocationTargetException e) {
-            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
+            throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.getCause().toString());
         } catch (NoSuchMethodException e) {
             throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         }

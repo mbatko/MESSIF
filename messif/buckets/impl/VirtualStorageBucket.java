@@ -122,7 +122,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(e.toString());
         } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException(e.toString());
+            throw new IllegalArgumentException(e.getCause().toString());
         }
     }
 

@@ -85,7 +85,7 @@ public class MethodNameExecutor extends MethodExecutor {
 
     /**
      * Create new instance of MethodNameExecutor and search for operation methods.
-     * The {@link #getFirstStringClass(java.lang.Class<?>[]) first string class}
+     * The {@link #getFirstStringClass(java.lang.Class[]) first string class}
      * in the given {@code methodPrototype} is expected to hold the method name.
      *
      * @param executionObject an instance of the object to execute the operations on

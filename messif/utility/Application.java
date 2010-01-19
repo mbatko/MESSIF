@@ -773,7 +773,7 @@ public class Application {
             out.println(e);
             return false;
         } catch (InvocationTargetException e) {
-            out.println(e);
+            out.println(e.getCause());
             return false;
         }
     }

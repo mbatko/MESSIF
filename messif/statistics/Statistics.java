@@ -77,7 +77,7 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         } catch (IllegalAccessException e) {
             throw new IllegalArgumentException("Can't create a statistics object", e);
         } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException("Can't create a statistics object", e);
+            throw new IllegalArgumentException("Can't create a statistics object", e.getCause());
         }
     }
 

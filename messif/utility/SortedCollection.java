@@ -229,6 +229,11 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
         return last;
     }
 
+    @Deprecated
+    public T popLast() throws NoSuchElementException {
+        return removeLast();
+    }
+
     /**
      * Removes and returns the first element of this collection according to the order
      * specified by the comparator.

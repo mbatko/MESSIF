@@ -27,7 +27,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     //****************** The list of supported names ******************//
 
     /** The list of the names for the encapsulated objects */
-    protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","ScalableColorType","EdgeHistogramType","RegionShapeType"};
+    protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","EdgeHistogramType","ScalableColorType","RegionShapeType"};
 
 
     //****************** Attributes ******************//
@@ -36,32 +36,32 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     protected ObjectColorLayout colorLayout;
     /** Object for the ColorStructureType */
     protected ObjectShortVectorL1 colorStructure;
-    /** Object for the ScalableColorType */
-    protected ObjectIntVectorL1 scalableColor;
     /** Object for the EdgeHistogramType */
     protected ObjectVectorEdgecomp edgeHistogram;
+    /** Object for the ScalableColorType */
+    protected ObjectIntVectorL1 scalableColor;
     /** Object for the RegionShapeType */
     protected ObjectRegionShape regionShape;
 
 
     //****************** Constructors ******************//
 
-    /** 
+    /**
      * Creates a new instance of MetaObjectPixMacShapeAndColor from the given key and encapsulated objects.
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param colorLayout color layout descriptor
      * @param colorStructure  color structure descriptor
-     * @param scalableColor scalable color descriptor
      * @param edgeHistogram edge histogram descriptor
+     * @param scalableColor scalable color descriptor
      * @param regionShape region shape descriptor
      */
-    public MetaObjectPixMacShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectIntVectorL1 scalableColor, ObjectVectorEdgecomp edgeHistogram, ObjectRegionShape regionShape) {
+    public MetaObjectPixMacShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectIntVectorL1 scalableColor, ObjectRegionShape regionShape) {
         super(locatorURI);
         this.colorLayout = colorLayout;
         this.colorStructure = colorStructure;
-        this.scalableColor = scalableColor;
         this.edgeHistogram = edgeHistogram;
+        this.scalableColor = scalableColor;
         this.regionShape = regionShape;
     }
 
@@ -78,8 +78,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         if (cloneObjects) {
             this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
             this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
             this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
             this.regionShape = (ObjectRegionShape)this.regionShape.clone(objectKey);
         }
     }
@@ -94,8 +94,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         super(locatorURI);
         this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
         this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");
-        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
         this.edgeHistogram = (ObjectVectorEdgecomp)objects.get("EdgeHistogramType");
+        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
         this.regionShape = (ObjectRegionShape)objects.get("RegionShapeType");
     }
 
@@ -115,7 +115,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * The stream may contain the '#...' lines with object key and/or precomputed distances
      * and a mandatory line for each descriptor name, from which the respective
      * descriptor {@link LocalAbstractObject} is loaded.
-     * 
+     *
      * @param stream the stream from which the data are read
      * @param descriptorNames the names of descriptors that are expected in the stream (in the given order)
      * @throws IOException if there was an error reading the data from the stream
@@ -124,20 +124,22 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
         do {
+            stream.mark(1024);
             line = stream.readLine();
             if (line == null)
                 throw new EOFException("EoF reached while initializing MetaObject.");
         } while (processObjectComment(line));
+        stream.reset();
 
         for (int i = 0; i < descriptorNames.length; i++) {
             if ("ColorLayoutType".equals(descriptorNames[i])) {
                 colorLayout = readObject(stream, ObjectColorLayout.class);
             } else if ("ColorStructureType".equals(descriptorNames[i])) {
                 colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            } else if ("ScalableColorType".equals(descriptorNames[i])) {
-                scalableColor = readObject(stream, ObjectIntVectorL1.class);
             } else if ("EdgeHistogramType".equals(descriptorNames[i])) {
                 edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
+            } else if ("ScalableColorType".equals(descriptorNames[i])) {
+                scalableColor = readObject(stream, ObjectIntVectorL1.class);
             } else if ("RegionShapeType".equals(descriptorNames[i])) {
                 regionShape = readObject(stream, ObjectRegionShape.class);
             } else {
@@ -245,21 +247,21 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             }
         }
 
-        if (scalableColor != null && castObj.scalableColor != null) {
-            if (metaDistances != null) {
-                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)/3000.0f;
-                rtv += metaDistances[2]*2.0f;
-            } else {
-                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.0f/3000.0f;
-            }
-        }
-
         if (edgeHistogram != null && castObj.edgeHistogram != null) {
             if (metaDistances != null) {
                 metaDistances[3] = edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)/68.0f;
                 rtv += metaDistances[3]*5.0f;
             } else {
                 rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)*5.0f/68.0f;
+            }
+        }
+
+        if (scalableColor != null && castObj.scalableColor != null) {
+            if (metaDistances != null) {
+                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)/3000.0f;
+                rtv += metaDistances[2]*2.0f;
+            } else {
+                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.0f/3000.0f;
             }
         }
 
@@ -295,7 +297,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     //****************** Clonning ******************//
 
     /**
-     * Creates and returns a copy of this object. The precise meaning 
+     * Creates and returns a copy of this object. The precise meaning
      * of "copy" may depend on the class of the object.
      * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
      * @return a clone of this instance.
@@ -353,13 +355,13 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         else
             stream.write('\n');
 
-        if (scalableColor != null)
-            scalableColor.writeData(stream);
+        if (edgeHistogram != null)
+            edgeHistogram.writeData(stream);
         else
             stream.write('\n');
 
-        if (edgeHistogram != null)
-            edgeHistogram.writeData(stream);
+        if (scalableColor != null)
+            scalableColor.writeData(stream);
         else
             stream.write('\n');
 
@@ -374,7 +376,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
 
     /**
      * Creates a new instance of MetaObjectPixMacShapeAndColor loaded from binary input buffer.
-     * 
+     *
      * @param input the buffer to read the MetaObjectPixMacShapeAndColor from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
@@ -383,8 +385,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         super(input, serializator);
         colorLayout = serializator.readObject(input, ObjectColorLayout.class);
         colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
-        scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
+        scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         regionShape = serializator.readObject(input, ObjectRegionShape.class);
     }
 
@@ -393,8 +395,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, colorLayout);
         size += serializator.write(output, colorStructure);
-        size += serializator.write(output, scalableColor);
         size += serializator.write(output, edgeHistogram);
+        size += serializator.write(output, scalableColor);
         size += serializator.write(output, regionShape);
         return size;
     }
@@ -404,8 +406,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         int size = super.getBinarySize(serializator);
         size += serializator.getBinarySize(colorLayout);
         size += serializator.getBinarySize(colorStructure);
-        size += serializator.getBinarySize(scalableColor);
         size += serializator.getBinarySize(edgeHistogram);
+        size += serializator.getBinarySize(scalableColor);
         size += serializator.getBinarySize(regionShape);
         return size;
     }

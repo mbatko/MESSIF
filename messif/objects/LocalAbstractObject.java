@@ -765,7 +765,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
         } catch (InstantiationException e) {
             throw new IOException(e.toString());
         } catch (InvocationTargetException e) {
-            throw new IOException(e.toString());
+            throw new IOException(e.getCause().toString());
         } catch (IllegalArgumentException e) {
             throw new IOException(e.toString());
         }
