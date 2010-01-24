@@ -543,7 +543,6 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
             in.defaultReadObject();
 
             boolean readonly = !file.canWrite();
-//            boolean readonly = false;
 
             // Reopen file channel (set it through reflection to overcome the "final" flag)
             Field field = DiskStorage.class.getDeclaredField("fileChannel");

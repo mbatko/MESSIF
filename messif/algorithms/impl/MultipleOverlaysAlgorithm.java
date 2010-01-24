@@ -1,7 +1,6 @@
 
-package messif.utility;
+package messif.algorithms.impl;
 
-import messif.algorithms.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,6 +12,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import messif.algorithms.Algorithm;
+import messif.algorithms.AlgorithmMethodException;
+import messif.algorithms.RMIAlgorithm;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
@@ -21,6 +23,7 @@ import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.ApproxKNNQueryOperationMIndex;
 import messif.operations.PartitionedKNNQueryOperation;
+import messif.utility.SortedCollection;
 
 /**
  * This is a centralized algorithm which connects itself to several remote algorithm (host + RMI port)
