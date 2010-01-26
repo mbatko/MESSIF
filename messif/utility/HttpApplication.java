@@ -754,7 +754,7 @@ public class HttpApplication extends Application {
                 }
             } catch (Exception e) {
                 // Error creating/executing operation
-                log.severe(e);
+                logException(e);
                 response = e.toString();
                 success = false;
             }

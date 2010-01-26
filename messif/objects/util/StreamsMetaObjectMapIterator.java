@@ -7,9 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectMap;
-import messif.utility.Logger;
 
 /**
  * This class is to contruct MetaObjects from several simultaneously opened files (subObjectIterators). The iterator expects
@@ -177,7 +177,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
             }
             if ((currentLocator != null) && (! currentLocator.equals(currentSubObject.getLocatorURI()))) {
                 gapAppeared = true;
-                Logger.getLoggerEx("streamIterator").info("GAP in streams: " + entry.getKey() + " provides " + currentSubObject.getLocatorURI() + " instead of " + currentLocator);
+                Logger.getLogger(getClass().getName()).info("GAP in streams: " + entry.getKey() + " provides " + currentSubObject.getLocatorURI() + " instead of " + currentLocator);
                 break;
             }
             objects.put(entry.getKey(), currentSubObject);

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Level;
 import messif.network.ReplyMessage;
 import messif.network.ReplyReceiver;
 import messif.statistics.Statistics;
@@ -71,7 +72,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
             // Start Message dispatcher
             this.messageDisp = new MessageDispatcher(port, broadcastPort);
         } catch (IOException e) {
-            log.severe(e);
+            log.log(Level.SEVERE, e.getClass().toString(), e);
             throw new IllegalArgumentException("Can't start message dispatcher: " + e.getMessage());
         }
     }

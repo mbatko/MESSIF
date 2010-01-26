@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import messif.utility.Logger;
+import java.util.logging.Level;
 
 
 /**
@@ -19,18 +19,16 @@ import messif.utility.Logger;
  * @author  xbatko
  */
 public class SocketThreadUDP extends Thread {
-    
-    /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.network");
-    
-    /****************** Data ******************/
+
+    //****************** Data ******************//
     protected static final int MAX_UDP_LENGTH = 63000;
     protected static final String NAME = "SocketThread";
-    
+
     protected final MessageDispatcher messageDispatcher;
     protected final DatagramSocket socket;
-    
-    /****************** Constructors ******************/
+
+
+    //****************** Constructors ******************//
     
     /**
      * Creates a new instance of SocketThreadUDP 
@@ -41,8 +39,9 @@ public class SocketThreadUDP extends Thread {
         this.socket = socket;
     }    
 
-    /****************** Message receiving methods for sockets ******************/
-        
+
+    //****************** Message receiving methods for sockets ******************//
+
     public void run() {
         for (;;) 
             try {
@@ -65,8 +64,8 @@ public class SocketThreadUDP extends Thread {
                 if ((socket != null) && socket.isClosed()) break;
                 
                 // Show error and continue otherwise
-                log.severe(e);
+                MessageDispatcher.log.log(Level.SEVERE, e.getClass().toString(), e);
             }
     }
-    
+
 }

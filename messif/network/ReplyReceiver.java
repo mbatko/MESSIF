@@ -7,7 +7,6 @@
 package messif.network;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import messif.utility.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A {@link Receiver} for receiving reply messages.
@@ -29,7 +29,7 @@ import java.util.logging.Level;
 public final class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiver {
 
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.network");
+    protected static Logger log = Logger.getLogger("messif.network");
 
 
     //****************** Attributes for reply waiting ******************//

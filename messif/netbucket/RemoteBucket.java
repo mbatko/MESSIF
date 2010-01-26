@@ -7,14 +7,12 @@
 package messif.netbucket;
 
 import java.io.Serializable;
-import messif.utility.Logger;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.buckets.Bucket;
 import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.network.NetworkNode;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
@@ -43,10 +41,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.netbucket");
-
-    /****************** Bucket info ******************/
+    //****************** Bucket info ******************//
 
     /** ID of the bucket on the remote node */
     protected final int bucketID;
@@ -61,7 +56,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     protected final long capacity;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
     
     /**
      * Creates a new instance of RemoteBucket from LocalBucket.
@@ -87,7 +82,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Access methods ******************/
+    //****************** Access methods ******************//
 
     /**
      * Returns the ID of the bucket on remote node.
@@ -122,7 +117,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Local bucket access ******************/
+    //****************** Local bucket access ******************//
 
     /**
      * Returns whether this bucket is local or remote
@@ -133,7 +128,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Object manipulators ******************/
+    //****************** Object manipulators ******************//
 
     /**
      * {@inheritDoc}
@@ -328,7 +323,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
 
-    /****************** Comparing ******************/
+    //****************** Comparing ******************//
 
     /**
      * Indicates whether some other object is "equal to" this one.
@@ -352,7 +347,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
     
     
-    /****************** String representation ******************/
+    //****************** String representation ******************//
 
     /**
      * Returns a string representation of this bucket.

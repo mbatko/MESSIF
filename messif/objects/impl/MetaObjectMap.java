@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
@@ -27,7 +28,6 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Logger;
 
 /**
  * Implementation of {@link MetaObject} that stores encapsulated objects
@@ -212,7 +212,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
             } catch (IOException e) {
                 // Ignore the exception if the object is not loaded anyway
                 if (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1]))
-                    Logger.getLoggerEx("MetaObject").warning(new StringBuffer("Error creating object ").append(uriNamesClasses[i - 1]).append(" for MetaObject with ID ").append(this.getLocatorURI()).append(":\n ").append(e).toString());
+                    Logger.getLogger(getClass().getName()).warning(new StringBuffer("Error creating object ").append(uriNamesClasses[i - 1]).append(" for MetaObject with ID ").append(this.getLocatorURI()).append(":\n ").append(e).toString());
             }
         }
     }

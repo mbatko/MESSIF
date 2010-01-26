@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -153,7 +154,7 @@ import messif.statistics.Statistics;
  */
 public class Application {
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("application");
+    protected static Logger log = Logger.getLogger("application");
 
     /** Currently running algorithm */
     protected Algorithm algorithm = null;
@@ -185,6 +186,14 @@ public class Application {
      */
     protected Application() {
         methodExecutor = new MethodNameExecutor(this, PrintStream.class, String[].class);
+    }
+
+    /**
+     * Log an exception with a {@link Level#SEVERE} level.
+     * @param e the exception to log
+     */
+    protected static void logException(Throwable e) {
+        log.log(Level.SEVERE, e.getClass().toString(), e);
     }
 
 
@@ -237,7 +246,7 @@ public class Application {
             Throwable ex = e.getCause();
             while (ex instanceof InvocationTargetException)
                 ex = ex.getCause();
-            log.severe((ex != null)?ex:e);
+            logException((ex != null)?ex:e);
             out.println((ex != null)?ex:e);
             out.println("---------------- Available constructors ----------------");
             
@@ -512,11 +521,11 @@ public class Application {
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (AlgorithmMethodException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
@@ -602,7 +611,7 @@ public class Application {
             algorithm.backgroundExecuteOperation(operation);
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             out.println("---------------- Operation parameters ----------------");
             try {
@@ -645,7 +654,7 @@ public class Application {
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         }
@@ -689,11 +698,11 @@ public class Application {
                 return false;
             }
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (AlgorithmMethodException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
@@ -877,18 +886,18 @@ public class Application {
             out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
             return false;
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (InvocationTargetException e) {
             Throwable ex = e.getCause();
             if (ex instanceof AlgorithmMethodException || ex instanceof InvocationTargetException)
                 ex = ex.getCause();
-            log.severe(ex);
+            logException(ex);
             out.println(ex.toString());
             return false;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         }
@@ -1487,9 +1496,9 @@ public class Application {
     public boolean loggingLevel(PrintStream out, String... args) {
         try {
             if (args.length < 2)
-                out.println("Current global logging level: " + Logger.getLogLevel());
+                out.println("Current global logging level: " + Logging.getLogLevel());
             else
-                Logger.setLogLevel(Level.parse(args[1].toUpperCase()));
+                Logging.setLogLevel(Level.parse(args[1].toUpperCase()));
         } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return false;
@@ -1518,7 +1527,7 @@ public class Application {
     @ExecutableMethod(description = "set logging level for console", arguments = { "new logging level" })
     public boolean loggingConsoleChangeLevel(PrintStream out, String... args) {
         try {
-            Logger.setConsoleLevel(Level.parse(args[1].toUpperCase()));
+            Logging.setConsoleLevel(Level.parse(args[1].toUpperCase()));
         } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return false;
@@ -1556,13 +1565,13 @@ public class Application {
     @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME" })
     public boolean loggingFileAdd(PrintStream out, String... args) {
         try {
-            Logger.addLogFile(
+            Logging.addLogFile(
                     args[1], 
-                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logger.getLogLevel(),
+                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logging.getLogLevel(),
                     (args.length > 3)?Convert.stringToType(args[3], boolean.class):true,
                     (args.length > 4)?Convert.stringToType(args[4], boolean.class):true,
                     (args.length > 5)?args[5]:null,
-                    (args.length > 6)?Logger.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logger.RegexpFilterAgainst.MESSAGE
+                    (args.length > 6)?Logging.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logging.RegexpFilterAgainst.MESSAGE
             );
             return true;
         } catch (IOException e) {
@@ -1596,7 +1605,7 @@ public class Application {
     @ExecutableMethod(description = "close log file", arguments = { "file name" })
     public boolean loggingFileRemove(PrintStream out, String... args) {
         try {
-            Logger.removeLogFile(args[1]);
+            Logging.removeLogFile(args[1]);
             return true;
         } catch (NullPointerException e) {
             out.println("Log file '" + args[1] + "' is not opened");
@@ -1627,7 +1636,7 @@ public class Application {
     @ExecutableMethod(description = "change file log level", arguments = { "file name", "new logging level" })
     public boolean loggingFileChangeLevel(PrintStream out, String... args) {
         try {
-            Logger.setLogFileLevel(args[1], Level.parse(args[2].toUpperCase()));
+            Logging.setLogFileLevel(args[1], Level.parse(args[2].toUpperCase()));
             return true;
         } catch (NullPointerException e) {
             out.println("Log file '" + args[1] + "' is not opened");
@@ -2032,7 +2041,7 @@ public class Application {
 
             return true; // Execution successful
         } catch (InvocationTargetException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause());
             out.println(e.getMessage());
         } catch (NumberFormatException e) {
@@ -2145,7 +2154,7 @@ public class Application {
             rmiServer.start();
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println("Cannot open RMI service: " + e);
             return false;
         }

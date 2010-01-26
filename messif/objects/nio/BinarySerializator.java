@@ -17,7 +17,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
-import messif.utility.Logger;
+import java.util.logging.Logger;
 
 /**
  * This class provides a framework for {@link BinarySerializable binary serialization} of objects.
@@ -32,7 +32,7 @@ import messif.utility.Logger;
 public abstract class BinarySerializator {
 
     /** Logger for serializators */
-    protected static final Logger log = Logger.getLoggerEx("messif.objects.nio.serializator");
+    protected static final Logger log = Logger.getLogger("messif.objects.nio.serializator");
 
     //************************ Serializing methods for primitive types ************************//
 

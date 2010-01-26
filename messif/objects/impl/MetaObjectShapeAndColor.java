@@ -17,7 +17,6 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Logger;
 
 /**
  *
@@ -131,8 +130,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
             if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i])) {
                 try {
                     readObject(stream, uriNamesClasses[i + 1]); // Read the object, but skip it
-                } catch (IOException iOException) {
-                    Logger.getLoggerEx("messif.objects").warning(iOException.getMessage());
+                } catch (IOException e) { // Ignore the error on skipped objects
                 }
             } else if ("ColorLayoutType".equals(uriNamesClasses[i])) {
                 colorLayout = readObject(stream, ObjectColorLayout.class);

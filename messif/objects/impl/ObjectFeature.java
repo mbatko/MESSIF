@@ -4,12 +4,12 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Logger;
 
 public abstract class ObjectFeature extends LocalAbstractObject implements BinarySerializable {
 
@@ -36,7 +36,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Binar
             this.ori = Float.parseFloat(params[2]);
             this.scl = Float.parseFloat(params[3]);
         } catch (NumberFormatException numberFormatException) {
-            Logger.getLoggerEx("LocalAbstractObject").warning("error while parsing line '"+ line+ "' for 4 floats, locator: " + getLocatorURI());
+            Logger.getLogger(getClass().getName()).warning("error while parsing line '"+ line+ "' for 4 floats, locator: " + getLocatorURI());
             throw numberFormatException;
         }
     }

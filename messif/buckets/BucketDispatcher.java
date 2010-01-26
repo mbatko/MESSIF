@@ -18,10 +18,10 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.pivotselection.AbstractPivotChooser;
 import messif.utility.Convert;
-import messif.utility.Logger;
 
 
 /**
@@ -47,7 +47,8 @@ public class BucketDispatcher implements Serializable {
     private static final long serialVersionUID = 2L;
 
     /** Logger for the bucket dispatcher */
-    private static Logger log = Logger.getLoggerEx("messif.buckets");
+    protected static Logger log = Logger.getLogger(BucketDispatcher.class.getName());
+
 
     //****************** Bucket dispatcher data ******************//
 

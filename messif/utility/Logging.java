@@ -1,7 +1,6 @@
 /*
- * Logger.java
+ * Logging
  *
- * Created on 25. duben 2004, 12:34
  */
 
 package messif.utility;
@@ -21,12 +20,13 @@ import java.util.logging.XMLFormatter;
 
 /**
  * This class provides functionality to control logging via static methods.
- * The loggers created using the {@link #getLoggerEx} provide additional
- * shotrcuts for logging exceptions.
  *
  * @author  xbatko
  */
-public class Logger extends java.util.logging.Logger {
+public abstract class Logging {
+    /** Internal map of opened file log handlers */
+    private static Map<String, FileHandler> handlers = new HashMap<String, FileHandler>();
+
     /**
      * Enumeration of possible regexp matcher targets for {@link #addLogFile}.
      */
@@ -40,23 +40,28 @@ public class Logger extends java.util.logging.Logger {
         /** The regular expression is matched against the name of the method that from which the log record was invoked */
         METHOD_NAME
     };
-    
+
     /**
      * This is a supplementory class providing the functionality of filtering
      *  log messages according to a regular experssion
      */
     private static class RegexpFilter implements java.util.logging.Filter {
-        
+
         /** Regular expression to match the message */
         private final String regexp;
+        /** Target to match the regexp against */
         private final RegexpFilterAgainst regexpAgainst;
-        
-        /** Create a new regular expression filter given a regexp */
+
+        /**
+         * Create a new regular expression filter.
+         * @param regexp the regular expression to match the message
+         * @param regexpAgainst the target to match the regexp against
+         */
         public RegexpFilter(String regexp, RegexpFilterAgainst regexpAgainst) {
             this.regexp = regexp;
             this.regexpAgainst = regexpAgainst;
         }
-        
+
         /** Check if a given log record should be published. The record must match the regular expression to be published. */
         public boolean isLoggable(LogRecord record) {
             String text;
@@ -80,29 +85,7 @@ public class Logger extends java.util.logging.Logger {
             return text.matches(regexp);
         }
     }
-    
-    /**
-     * Create new logger with specified name or return an existing logger with the name specified
-     * @param name Name of the logger that will be returned
-     * @return Logger that corresponds with provided name. New logger is created if there is no
-     * logger associated yet.
-     * @throws ClassCastException if there was a logger associated with this name, but it was not create by this method
-     */
-    public static synchronized Logger getLoggerEx(String name) throws ClassCastException {
-        // Get manager
-        LogManager manager = LogManager.getLogManager();
-        
-        // Get logger from manager if exists
-        Logger rtv = (Logger)manager.getLogger(name); // This can throw exception on loggers created by original getLogger function!
-        if (rtv == null) {
-            // Create new logger (of the current class!), so we can use "severe" and "warning" shortcuts for exceptions
-            rtv = new Logger(name, null);
-            manager.addLogger(rtv);
-        }
-        
-        return rtv;
-    }
-    
+
     /**
      * Returns the root (top-level) logger from the actual log manager.
      * @return the top-level logger
@@ -110,7 +93,7 @@ public class Logger extends java.util.logging.Logger {
     protected static java.util.logging.Logger getRootLogger() {
         return LogManager.getLogManager().getLogger("");
     }
-    
+
     /**
      * Set global logging level.
      *  Every message, that has higher level is discarded.
@@ -122,7 +105,7 @@ public class Logger extends java.util.logging.Logger {
         // Set level of root logger
         getRootLogger().setLevel(level);
     }
-    
+
     /**
      * Get global logging level. Values can be found in Level class (OFF, SEVERE, WARNING, INFO, ..., ALL).
      * @return Current global log level
@@ -130,10 +113,7 @@ public class Logger extends java.util.logging.Logger {
     public static Level getLogLevel() {
         return getRootLogger().getLevel();
     }
-    
-    /** Internal map of opened file log handlers */
-    private static Map<String, FileHandler> handlers = new HashMap<String, FileHandler>();
-    
+
     /**
      * Set logging level for an opened log file.
      * @param fileName the name of the log file
@@ -147,7 +127,7 @@ public class Logger extends java.util.logging.Logger {
         handler.setLevel(level);
         return true;
     }
-    
+
     /**
      * Set logging level of the console.
      * If there is no console handler available nothing is modified.
@@ -159,7 +139,7 @@ public class Logger extends java.util.logging.Logger {
             if (handler instanceof ConsoleHandler)
                 handler.setLevel(level);
     }
-    
+
     /**
      * Adds a new logging file.
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
@@ -180,7 +160,7 @@ public class Logger extends java.util.logging.Logger {
         handlers.put(fileName, handler);
         getRootLogger().addHandler(handler);
     }
-    
+
     /**
      * Adds a new logging file.
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
@@ -192,7 +172,7 @@ public class Logger extends java.util.logging.Logger {
     public static void addLogFile(String fileName, Level level, boolean append, Formatter formatter) throws IOException {
         addLogFile(fileName, level, append, formatter, null, RegexpFilterAgainst.MESSAGE);
     }
-    
+
     /**
      * Adds a new logging file.
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
@@ -207,7 +187,7 @@ public class Logger extends java.util.logging.Logger {
     public static void addLogFile(String fileName, Level level, boolean append, boolean useSimpleFormatter, String regexp, RegexpFilterAgainst regexpAgainst) throws IOException {
         addLogFile(fileName, level, append, useSimpleFormatter?new SimpleFormatter():new XMLFormatter(), regexp, regexpAgainst);
     }
-    
+
     /**
      * Adds a new logging file.
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
@@ -220,7 +200,7 @@ public class Logger extends java.util.logging.Logger {
     public static void addLogFile(String fileName, Level level, boolean append, boolean useSimpleFormatter) throws IOException {
         addLogFile(fileName, level, append, useSimpleFormatter, null, RegexpFilterAgainst.MESSAGE);
     }
-    
+
     /**
      * Close a log file and remove it from logging.
      * @param fileName the name of the log file to remove
@@ -234,39 +214,4 @@ public class Logger extends java.util.logging.Logger {
             return true;
         } else return false;
     }
-    
-    /**
-     * Protected method to construct a logger for a named subsystem.
-     * <p>
-     * The logger will be initially configured with a null Level
-     * and with useParentHandlers true.
-     * @param name A name for the logger.  This should
-     * 				be a dot-separated name and should normally
-     * 				be based on the package name or class name
-     * 				of the subsystem, such as java.net
-     * 				or javax.swing.  It may be null for anonymous Loggers.
-     * @param resourceBundleName name of ResourceBundle to be used for localizing
-     * 				messages for this logger.  May be null if none
-     * 				of the messages require localization.
-     */
-    protected Logger(String name, String resourceBundleName) {
-        super(name, resourceBundleName);
-    }
-    
-    /**
-     * Special method for quick reporting exceptions.
-     * @param e the exception that is to be reported
-     */
-    public void severe(Throwable e) {
-        super.log(Level.SEVERE, e.getClass().toString(), e);
-    }
-    
-    /**
-     * Special method for quick reporting exceptions.
-     * @param e the exception that is to be reported
-     */
-    public void warning(Throwable e) {
-        super.log(Level.WARNING, e.getClass().toString(), e);
-    }
-    
 }

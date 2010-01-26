@@ -13,9 +13,10 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.utility.Clearable;
 import messif.utility.Convert;
-import messif.utility.Logger;
 
 /**
  * Encapsulates an algorithm with an RMI server.
@@ -27,7 +28,7 @@ import messif.utility.Logger;
  */
 public class AlgorithmRMIServer extends Thread {
     /** Logger */
-    private static Logger log = Logger.getLoggerEx("rmi");
+    private static Logger log = Logger.getLogger("rmi");
 
     /** Incoming connections socket */
     private final ServerSocketChannel socket;
@@ -126,7 +127,7 @@ public class AlgorithmRMIServer extends Thread {
         } catch (ClosedByInterruptException e) {
             // Exit this thread by interruption
         } catch (IOException e) {
-            log.severe(e);
+            log.log(Level.SEVERE, e.getClass().toString(), e);
         }
     }
 

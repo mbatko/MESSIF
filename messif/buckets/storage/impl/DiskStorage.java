@@ -18,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
@@ -37,7 +38,6 @@ import messif.objects.nio.FileChannelInputStream;
 import messif.objects.nio.MappedFileChannelInputStream;
 import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
-import messif.utility.Logger;
 
 /**
  * Disk based storage.
@@ -55,7 +55,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
     //****************** Logger ******************//
 
     /** Logger for the disk storage class */
-    private static final Logger log = Logger.getLoggerEx(DiskStorage.class.getName());
+    private static final Logger log = Logger.getLogger(DiskStorage.class.getName());
 
 
     //****************** Constants ******************//

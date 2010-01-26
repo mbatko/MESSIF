@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -29,23 +31,25 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     /** Class id for serialization. */
     private static final long serialVersionUID = 666L;
 
-    // protected final ArrayList<ObjectPair<LocalAbstractObject,?>> objects = new ArrayList();
-    protected final ArrayList<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>();
-    
-    protected String getSaveObjectsClass () {
-        return (getObjectCount() > 0) ? objects.get(0).getClass().toString() : "LocalAbstractObject";
-    }
-    
+
+    //****************** Attributes ******************//
+
+    /** List of encapsulated objects */
+    protected final List<LocalAbstractObject> objects;
+
+
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ObjectFeatureSet.
-     * A new unique object ID is generated and the
-     * object's key is set to <tt>null</tt>.
+     * Creates a new instance of ObjectFeatureSet for the given locatorURI and encapsulated objects.
+     * @param locatorURI the locator URI for the new object
+     * @param objects the list of objects to encapsulate in this object
      */
-    protected ObjectFeatureSet() {
-        super();
+    public ObjectFeatureSet(String locatorURI, Collection<? extends LocalAbstractObject> objects) {
+        super(locatorURI);
+        this.objects = new ArrayList<LocalAbstractObject>(objects);
     }
+
     /**
      * Creates a new instance of ObjectFeatureSet from a text stream.
      * @param stream the text stream to read an object from
@@ -53,6 +57,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      *         EOFException is returned if end of the given stream is reached.
      */
     public ObjectFeatureSet(BufferedReader stream) throws IOException {
+        this.objects = new ArrayList<LocalAbstractObject>();
         readObjects(stream);
     }
 
@@ -61,7 +66,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    
+
     //****************** Attribute access ******************//
 
     /**
@@ -74,7 +79,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         // return objects.get(index).getFirst();
         return objects.get(index);
     }
-    
+
     /**
      * Returns the number of encapsulated objects.
      * @return the number of encapsulated objects
@@ -82,6 +87,15 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public int getObjectCount() {
         return objects.size();
     }
+
+    /**
+     * Returns the class of the encapsulated objects.
+     * @return the class of the encapsulated objects
+     */
+    protected String getSaveObjectsClass () {
+        return (getObjectCount() > 0) ? objects.get(0).getClass().toString() : "LocalAbstractObject";
+    }
+
 
     //****************** Text stream I/O helper method ******************//
 
@@ -130,6 +144,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
             throw new IOException("Can't create object from stream while creating FeatureSet " + this.getObjectKey() + ": " + e.toString());
         }
     }
+
 
     //****************** Text stream I/O ******************//
 
@@ -180,6 +195,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         }
     }
 
+
     //****************** Data equality ******************//
 
     /**
@@ -219,6 +235,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
             rtv += object.dataHashCode();
         return rtv;
     }
+
 
     //****************** Additional overrides ******************//
 
@@ -267,6 +284,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         return sb.toString();
     }
 
+
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
@@ -279,6 +297,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     protected ObjectFeatureSet(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         int objcount = serializator.readInt(input);
+        this.objects = new ArrayList<LocalAbstractObject>(objcount);
         for (int i = 0; i < objcount; i++) {
             objects.add(serializator.readObject(input, LocalAbstractObject.class));
         }

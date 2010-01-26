@@ -17,7 +17,6 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Logger;
 
 /**
  *
@@ -113,8 +112,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
             if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i])) {
                 try {
                     readObject(stream, uriNamesClasses[i + 1]); // Read the object, but skip it
-                } catch (IOException iOException) {
-                    Logger.getLoggerEx("messif.objects").warning(iOException.getMessage());
+                } catch (IOException e) { // Ignore the error on skipped objects
                 }
             } else if ("EdgeHistogramType".equals(uriNamesClasses[i])) {
                 edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);

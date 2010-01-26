@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
 import messif.objects.LocalAbstractObject;
@@ -42,7 +44,6 @@ import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
-import messif.utility.Logger;
 
 
 /**
@@ -64,7 +65,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Constants ******************//
 
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.algorithm");
+    protected static Logger log = Logger.getLogger("messif.algorithm");
 
     /** Maximal number of currently executed operations */
     protected static final int maximalConcurrentOperations = 1024;
@@ -390,6 +391,9 @@ public abstract class Algorithm implements Serializable {
 
     /**
      * Execute query operation on this algorithm and return the answer.
+     * This is a shortcut method for calling {@link #executeOperation(messif.operations.AbstractOperation)} and
+     * {@link QueryOperation#getAnswer()}.
+     *
      * @param <T> the type of query operation answer
      * @param operation the operation to execute on this algorithm
      * @return iterator for the answer of the executed query
@@ -398,6 +402,24 @@ public abstract class Algorithm implements Serializable {
      */
     public <T> Iterator<? extends T> getQueryAnswer(QueryOperation<? extends T> operation) throws AlgorithmMethodException, NoSuchMethodException {
         return executeOperation(operation).getAnswer();
+    }
+
+    /**
+     * Execute query operation on this algorithm and return the answer.
+     * The operation to execute is created according to the given class and arguments.
+     * This is a shortcut method for calling {@link AbstractOperation#createOperation(java.lang.Class, java.lang.Object[])} and
+     * {@link #getQueryAnswer(messif.operations.QueryOperation)}.
+     *
+     * @param <T> the type of query operation answer
+     * @param operationClass the class of the operation to execute on this algorithm
+     * @param arguments the arguments for the operation constructor
+     * @return iterator for the answer of the executed query
+     * @throws InvocationTargetException if the operation constructor has thrown an exception
+     * @throws NoSuchMethodException if the operation is unknown or unsupported by this algorithm
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     */
+    public <T> Iterator<? extends T> getQueryAnswer(Class<? extends QueryOperation<? extends T>> operationClass, Object... arguments) throws InvocationTargetException, AlgorithmMethodException, NoSuchMethodException {
+        return getQueryAnswer(AbstractOperation.createOperation(operationClass, arguments));
     }
 
     /**
@@ -551,9 +573,9 @@ public abstract class Algorithm implements Serializable {
             OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
             OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
             OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
-        } catch (ClassNotFoundException ex) {
-            log.severe(ex);
-            throw new AlgorithmMethodException(ex);
+        } catch (ClassNotFoundException e) {
+            log.log(Level.SEVERE, e.getClass().toString(), e);
+            throw new AlgorithmMethodException(e);
         }
     }
 

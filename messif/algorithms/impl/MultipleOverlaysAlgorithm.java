@@ -62,9 +62,9 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
             for (int i = 0; i < overlays.length; i++) {
                 addAlgorithm(overlays[i]);
             }
-        } catch (AlgorithmMethodException ex) {
-            log.warning(ex);
-            throw new IllegalArgumentException(ex);
+        } catch (AlgorithmMethodException e) {
+            log.log(Level.WARNING, e.getClass().toString(), e);
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -106,9 +106,9 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
             newAlgorithm.connect();
             log.info("... connected");
             overlays.put(identifier, newAlgorithm);
-        } catch (IOException ex) {
-            log.warning(ex);
-            throw new AlgorithmMethodException(ex);
+        } catch (IOException e) {
+            log.log(Level.WARNING, e.getClass().toString(), e);
+            throw new AlgorithmMethodException(e);
         }
     }
 
@@ -123,8 +123,8 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
             if (pair.getValue().getHost().equals(networkNode.getHost()) && (pair.getValue().getPort() == networkNode.getPort())) {
                 try {
                     pair.getValue().finalize();
-                } catch (Throwable ex) {
-                    log.warning(ex);
+                } catch (Throwable e) {
+                    log.log(Level.WARNING, e.getClass().toString(), e);
                 }
                 overlays.remove(pair.getKey());
                 return true;
@@ -172,12 +172,12 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
                     operation.updateFrom(abstractOperation);
                 }
             }
-        } catch (NoSuchMethodException ex) {
-            log.warning(ex);
-            throw new AlgorithmMethodException(ex);
-        } catch (ClassCastException ex) {
-            log.warning(ex);
-            throw new AlgorithmMethodException(ex);
+        } catch (NoSuchMethodException e) {
+            log.log(Level.WARNING, e.getClass().toString(), e);
+            throw new AlgorithmMethodException(e);
+        } catch (ClassCastException e) {
+            log.log(Level.WARNING, e.getClass().toString(), e);
+            throw new AlgorithmMethodException(e);
         }
     }
 

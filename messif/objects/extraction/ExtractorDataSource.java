@@ -16,6 +16,20 @@ import java.net.URL;
 import java.net.URLConnection;
 
 /**
+ * Provides a data source for {@link Extractor}s.
+ * It can be constructed either from a {@link InputStream}, {@link File} or a {@link URL}.
+ * Depending on that, the source's name is set to either <tt>null</tt>, the name of the file, or the URL.
+ * The data can be used by the extractors as either
+ * <ul>
+ * <li>{@link InputStream} - use {@link #getInputStream()} method,</li>
+ * <li>{@link BufferedReader} - use {@link #getBufferedReader()} method,</li>
+ * <li>{@code byte[]} - use {@link #getBinaryData()} method, or</li>
+ * <li>piped to an {@link OutputStream} - use {@link #pipe(java.io.OutputStream)} method.</li>
+ * </ul>
+ * <p>
+ * Note that the data can be used only as one of the aforementioned types and, once read,
+ * they are no longer available from the source.
+ * </p>
  *
  * @author xbatko
  */
@@ -78,8 +92,29 @@ public class ExtractorDataSource {
     }
 
     /**
-     * Return data from this data source as a byte buffer.
-     * <p>Note that the data source is closed after this method is used</p>.
+     * Return this data source as input stream.
+     * <p>Note that the data source is <i>not</i> closed - use {@link InputStream#close()} method instead.</p>
+     * @return
+     */
+    public InputStream getInputStream() {
+        return inputStream;
+    }
+
+    /**
+     * Return this data source as buffered reader.
+     * <p>Note that the data source is <i>not</i> closed - use {@link BufferedReader#close()} method instead.</p>
+     *
+     * @return a buffer containing the data
+     */
+    public BufferedReader getBufferedReader() {
+        if (bufferedReader == null)
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+        return bufferedReader;
+    }
+
+    /**
+     * Return this data source as a byte buffer.
+     * <p>Note that the data source is closed after this method is used.</p>
      *
      * @return a buffer containing the data
      * @throws IOException if there was a problem reading from the data source
@@ -116,19 +151,9 @@ public class ExtractorDataSource {
     }
 
     /**
-     * Return buffered reader of this data source.
-     * <p>Note that the data source is <i>not</i> closed - use {@link BufferedReader#close()} method instead</p>.
-     *
-     * @return a buffer containing the data
-     */
-    public BufferedReader getBufferedReader() {
-        if (bufferedReader == null)
-            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-        return bufferedReader;
-    }
-
-    /**
      * Output all data from this data source to the given {@code outputStream}.
+     * <p>Note that the data source is closed after this method is used.</p>
+     * 
      * @param outputStream the stream to which to write the data
      * @throws IOException if there was an error reading from this data source or writing to the output stream
      */

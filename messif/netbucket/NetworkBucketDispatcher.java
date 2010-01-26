@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.buckets.BucketStorageException;
-import messif.utility.Logger;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
@@ -25,8 +24,6 @@ import messif.network.ThreadInvokingReceiver;
 public class NetworkBucketDispatcher extends BucketDispatcher {
     /** Class id for serialization */
     private static final long serialVersionUID = 1L;
-    /** Logger */
-    private static final Logger log = Logger.getLoggerEx("messif.netbucket");
 
 
     //****************** Attributes ******************//

@@ -29,7 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import messif.utility.Logger;
+import java.util.logging.Logger;
 
 
 /**
@@ -96,7 +96,7 @@ public class MessageDispatcher implements Receiver, Serializable {
     }
 
     /** Logger */
-    protected static final Logger log = Logger.getLoggerEx("messif.network");
+    protected static final Logger log = Logger.getLogger("messif.network");
 
     /**
      * The size of the TCP connection pool.
