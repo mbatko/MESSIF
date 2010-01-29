@@ -9,6 +9,8 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -55,6 +57,20 @@ public class ObjectFloatUnitVectorL2 extends ObjectFloatUnitVector {
     @Override
     public float getMaxDistance() {
         return (float) Math.sqrt(data.length);
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectFloatUnitVector loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectFloatVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectFloatUnitVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
 }

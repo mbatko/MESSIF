@@ -1,15 +1,16 @@
-
 package messif.objects.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
+
 /**
  *
  * @author xnovak8
  */
 public abstract class ObjectFloatUnitVector extends ObjectFloatVector {
-
     /** Class serial version ID for serialization. */
     private static final long serialVersionUID = 23701L;
 
@@ -21,9 +22,7 @@ public abstract class ObjectFloatUnitVector extends ObjectFloatVector {
     }
 
     public ObjectFloatUnitVector(int dimension) {
-        this.data = new float[dimension];
-        for (; dimension > 0; dimension--)
-            this.data[dimension - 1] = (float)(getRandomNormal());
+        super(dimension, 0, 1);
     }
 
     public ObjectFloatUnitVector(float[] data) throws IllegalArgumentException {
@@ -45,6 +44,20 @@ public abstract class ObjectFloatUnitVector extends ObjectFloatVector {
             }
         }
         return true;
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectFloatUnitVector loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectFloatVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectFloatUnitVector(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
 }

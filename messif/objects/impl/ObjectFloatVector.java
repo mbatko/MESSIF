@@ -1,9 +1,3 @@
-/*
- * ObjectVector.java
- *
- * Created on 6. kveten 2004, 14:30
- */
-
 package messif.objects.impl;
 
 import java.io.BufferedReader;
@@ -14,59 +8,67 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 import messif.objects.util.AbstractObjectIterator;
 
 
 /**
- *
+ * This object uses static array of floats as its data content.
+ * No implementation of distance function is provided - see {@link ObjectFloatVectorL1}
+ * or {@link ObjectFloatVectorL2}.
+ * 
  * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
+ * @author xbatko
  */
-public abstract class ObjectFloatVector extends LocalAbstractObject {
-    
+public abstract class ObjectFloatVector extends LocalAbstractObject implements BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    //****************** Data ******************
-    
+
+    //****************** Data ******************//
+
+    /** Data array */
     protected float[] data;
-    
-    /** Returns the vector of doubles, which represents the contents of this object.
-     *  A copy is returned, so any modifications to the returned array do not affect the original object.
-     */
-    public float[] getVectorData() {
-        return this.data.clone();
-    }
-    
-    //****************** Constructors ******************
+
+
+    //****************** Constructors ******************//
 
     /**
-     * Empty constructor (protected) - subclass handles {@code data}
+     * Creates a new instance of ObjectFloatVector.
+     * @param data the data content of the new object
      */
-    protected ObjectFloatVector() {
+    public ObjectFloatVector(float[] data) {
+        this.data = data.clone();
     }
 
-    /** Creates a new instance of object */
-    public ObjectFloatVector(float[] data) {
-        this.data = new float[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
-    }
-    
-    /** Creates a new instance of randomly generated object */
-    public ObjectFloatVector(int dimension) {
+    /**
+     * Creates a new instance of ObjectFloatVector with randomly generated content data.
+     * Content will be generated using normal distribution of random numbers from interval
+     * [min;max].
+     *
+     * @param dimension number of dimensions to generate
+     * @param min lower bound of the random generated values (inclusive)
+     * @param max upper bound of the random generated values (exclusive)
+     */
+    public ObjectFloatVector(int dimension, float min, float max) {
         this.data = new float[dimension];
         for (; dimension > 0; dimension--)
-            this.data[dimension - 1] = (float)(getRandomNormal()*256);
+            this.data[dimension - 1] = (float)(min + getRandomNormal()*(max - min));
     }
-    
-    //****************** Text file store/retrieve methods ******************
-    
-    /** Creates a new instance of Object from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
-     * Throws NumberFormatException when the line read from given stream does
-     * not consist of comma-separated or space-separated numbers.
+
+
+    //****************** Text file store/retrieve methods ******************//
+
+    /**
+     * Creates a new instance of ObjectFloatVector from text stream.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
      */
-    public ObjectFloatVector(BufferedReader stream) throws IOException, NumberFormatException {
+    public ObjectFloatVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line;
         do {
@@ -102,8 +104,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         for (int i = 0; i < this.data.length; i++)
             this.data[i] = Float.parseFloat(numbers.get(i));
     }
-    
-    /** Write object to stream */
+
     public void writeData(OutputStream stream) throws IOException {
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0)
@@ -113,56 +114,47 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         
         stream.write('\n');
     }
-    
-    
-    /** toString
-     * Converts the object to a string representation.
-     * The format is the comma-separated list of coordinates enclosed in square brackets
-     * and the result of <code>super.toString()</code> is appended.
-     */
-    public String toString() {
-        StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
 
-        for (int i = 0; i < this.data.length; i++) {
-            if (i > 0) rtv.append(", ");
-            rtv.append(data[i]);
-        }
-        rtv.append("]");
 
-        return rtv.toString();
-    }
-    
-    
-    //****************** Equality comparing function ******************
-    
-    
+    //****************** Equality comparing function ******************//
+
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectFloatVector))
             return false;
         
         return Arrays.equals(((ObjectFloatVector)obj).data, data);
     }
-    
+
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
-    
-    
-    //****************** Size function ******************
-    
-    /** Returns the size of object in bytes
+
+
+    //****************** Attribute access methods ******************//
+
+    /**
+     * Returns the vector of float values, which represents the contents of this object.
+     * A copy is returned, so any modifications to the returned array do not affect the original object.
+     * @return the data contents of this object
      */
+    public float[] getVectorData() {
+        return this.data.clone();
+    }
+
     public int getSize() {
         return this.data.length * Float.SIZE / 8;
     }
     
-    /** Returns number of dimensions of this vector.
+    /**
+     * Returns the number of dimensions of this vector.
+     * @return the number of dimensions of this vector
      */
     public int getDimensionality() {
         return this.data.length;
     }
-    
-    /** Translates the current vector into a unit hypercube. This translation
+
+    /**
+     * Translates the current vector into a unit hypercube. This translation
      * requires minimum and maximum per coordinate to be passed in an array.
      * The method which provides such values is getMinMaxForEveryCoord().
      *
@@ -187,8 +179,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         
         return outVec;
     }
-    
-    /** Translates the current vector into a unit hypercube. This translation
+
+    /**
+     * Translates the current vector into a unit hypercube. This translation
      * requires minimum and maximum computed over all coordinates to be passed.
      * The method which provides such values is getMinMaxOverCoords().
      *
@@ -213,8 +206,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         
         return outVec;
     }
-    
-    /** Computes minimum and maximum values over all coordinates of the current vector.
+
+    /**
+     * Computes minimum and maximum values over all coordinates of the current vector.
      *
      * @param currRange An optional parameter containing current minimum and maximum values. If null is passed
      *                  a new range with minimum and maximum is created, otherwise the passed array is updated.
@@ -237,14 +231,15 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         }
         return range;
     }
-    
-    /** Computes minimum and maximum values over all coordinates of vectors in the collection's
+
+    /**
+     * Computes minimum and maximum values over all coordinates of vectors in the collection's
      * iterator.
      * @param iterator Iterator of a collection containing vectors to process.
      * @return Returns an array of two float values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    static public float[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
+    public static float[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
         float[] range = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
         while (iterator.hasNext()) {
             ObjectFloatVector obj = iterator.next();
@@ -252,9 +247,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         }
         return range;
     }
-    
-    
-    /** Computes minimum and maximum values over every coordinate of vectors in the collection's
+
+    /**
+     * Computes minimum and maximum values over every coordinate of vectors in the collection's
      * iterator.
      *
      * @param iterator Iterator of a collection containing vectors to process.
@@ -264,7 +259,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    static public float[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
+    public static float[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
         float[][] range = null;
         int dims = -1;
         
@@ -292,8 +287,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         }
         return range;
     }
-    
-    /****************************** Cloning *****************************/
+
+
+    //****************************** Cloning *****************************//
 
     /**
      * Creates and returns a randomly modified copy of this vector.
@@ -326,6 +322,52 @@ public abstract class ObjectFloatVector extends LocalAbstractObject {
         
         return rtv;
     }
-    
-    
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Converts the object to a string representation.
+     * The format is the comma-separated list of coordinates enclosed in square brackets
+     * and the result of <code>super.toString()</code> is appended.
+     */
+    @Override
+    public String toString() {
+        StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
+
+        for (int i = 0; i < this.data.length; i++) {
+            if (i > 0) rtv.append(", ");
+            rtv.append(data[i]);
+        }
+        rtv.append("]");
+
+        return rtv.toString();
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectFloatVector loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectFloatVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectFloatVector(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        data = serializator.readFloatArray(input);
+    }
+
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, data);
+    }
+
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return  super.getBinarySize(serializator) + serializator.getBinarySize(data);
+    }
+
 }

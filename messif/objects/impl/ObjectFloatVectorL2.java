@@ -9,6 +9,8 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -28,8 +30,8 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
     }
     
     /** Creates a new instance of randomly generated object */
-    public ObjectFloatVectorL2(int dimension) {
-        super(dimension);
+    public ObjectFloatVectorL2(int dimension, float min, float max) {
+        super(dimension, min, max);
     }
 
     /** Creates a new instance of object from stream */
@@ -51,5 +53,18 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
         }
 
         return (float)Math.sqrt(powSum);
+    }
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectFloatVectorL2 loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectFloatVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectFloatVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 }
