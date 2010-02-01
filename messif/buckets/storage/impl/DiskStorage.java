@@ -237,9 +237,15 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
         // If a file was not specified - create a new file in given directory
         if (file == null) {
             File dir = Convert.getParameterValue(parameters, "dir", File.class, null);
-            if (dir == null)
+            if (dir == null) {
                 file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX);
-            else file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX, dir);
+            } else {
+                if (! dir.exists()) {
+                    log.info("Creating dir: " + dir.toString());
+                    dir.mkdirs();
+                }
+                file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX, dir);
+            }
         }
 
         // Initialize serializator

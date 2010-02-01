@@ -192,6 +192,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param penaltyLimit absolute penalty limit for all clusters visited by the algorithm (implicitly 0.01)
      * @param maxPeersForGreatClusters Maximal number of peers to visit within clusters that are considered "great"
      * @param greatClusterPenaltyLimit all clusters with penalty under this limit are considered "great"
+     * @param maxPeersForClusters Maximal number of peers to visit within other clusters
      * @param localSearchParam local search parameter - typically approximation parameter
      * @param localSearchType type of the local search parameter
      * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
