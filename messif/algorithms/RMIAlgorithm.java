@@ -182,6 +182,7 @@ public class RMIAlgorithm extends Algorithm {
                 connect(); // Does nothing if already connected
                 out.writeUTF(methodName);
                 out.writeUnshared(methodArguments);
+                out.reset();
                 out.flush();
                 return in.readUnshared();
             } catch (IOException e) {

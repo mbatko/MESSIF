@@ -104,6 +104,7 @@ public class AlgorithmRMIServer extends Thread {
                                 } catch (RuntimeException e) {
                                     out.writeUnshared(e);
                                 }
+                                out.reset();
                                 out.flush();
                             }
                         } catch (ClosedByInterruptException e) {

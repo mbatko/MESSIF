@@ -22,12 +22,12 @@ import messif.objects.nio.BinarySerializator;
 public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** The list of supported names ******************//
 
     /** The list of the names for the encapsulated objects */
-    protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","EdgeHistogramType","ScalableColorType","RegionShapeType"};
+    protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","EdgeHistogramType","ScalableColorType","RegionShapeType","KeyWordsType"};
 
 
     //****************** Attributes ******************//
@@ -42,6 +42,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     protected ObjectIntVectorL1 scalableColor;
     /** Object for the RegionShapeType */
     protected ObjectRegionShape regionShape;
+    /** Object for the KeyWordsType */
+    protected ObjectIntSortedVectorJaccard keyWords;
 
 
     //****************** Constructors ******************//
@@ -55,14 +57,16 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @param edgeHistogram edge histogram descriptor
      * @param scalableColor scalable color descriptor
      * @param regionShape region shape descriptor
+     * @param keyWords key words descriptor
      */
-    public MetaObjectPixMacShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectIntVectorL1 scalableColor, ObjectRegionShape regionShape) {
+    public MetaObjectPixMacShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectIntVectorL1 scalableColor, ObjectRegionShape regionShape, ObjectIntSortedVectorJaccard keyWords) {
         super(locatorURI);
         this.colorLayout = colorLayout;
         this.colorStructure = colorStructure;
         this.edgeHistogram = edgeHistogram;
         this.scalableColor = scalableColor;
         this.regionShape = regionShape;
+        this.keyWords = keyWords;
     }
 
     /**
@@ -81,6 +85,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
             this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
             this.regionShape = (ObjectRegionShape)this.regionShape.clone(objectKey);
+            this.keyWords = (ObjectIntSortedVectorJaccard)this.keyWords.clone(objectKey);
         }
     }
 
@@ -97,6 +102,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         this.edgeHistogram = (ObjectVectorEdgecomp)objects.get("EdgeHistogramType");
         this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
         this.regionShape = (ObjectRegionShape)objects.get("RegionShapeType");
+        this.keyWords = (ObjectIntSortedVectorJaccard)objects.get("KeyWordsType");
     }
 
     /**
@@ -142,6 +148,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
                 scalableColor = readObject(stream, ObjectIntVectorL1.class);
             } else if ("RegionShapeType".equals(descriptorNames[i])) {
                 regionShape = readObject(stream, ObjectRegionShape.class);
+            } else if ("KeyWordsType".equals(descriptorNames[i])) {
+                keyWords = readObject(stream, ObjectIntSortedVectorJaccard.class);
             } else {
                 throw new IOException("Unknown descriptor name for MetaObjectPixMacShapeAndColor: " + descriptorNames[i]);
             }
@@ -196,6 +204,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             return scalableColor;
         else if ("RegionShapeType".equals(name))
             return regionShape;
+        else if ("KeyWordsType".equals(name))
+            return keyWords;
         else
             return null;
     }
@@ -217,6 +227,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             map.put("ScalableColorType", scalableColor);
         if (regionShape != null)
             map.put("RegionShapeType", regionShape);
+        if (regionShape != null)
+            map.put("KeyWordsType", keyWords);
         return map;
     }
 
@@ -316,6 +328,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             rtv.scalableColor = (ObjectIntVectorL1)scalableColor.clone(cloneFilterChain);
         if (regionShape != null)
             rtv.regionShape = (ObjectRegionShape)regionShape.clone(cloneFilterChain);
+        if (keyWords != null)
+            rtv.keyWords = (ObjectIntSortedVectorJaccard)keyWords.clone(cloneFilterChain);
 
         return rtv;
     }
@@ -333,6 +347,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             rtv.scalableColor = (ObjectIntVectorL1)scalableColor.cloneRandomlyModify(args);
         if (regionShape != null)
             rtv.regionShape = (ObjectRegionShape)regionShape.cloneRandomlyModify(args);
+        if (keyWords != null)
+            rtv.keyWords = (ObjectIntSortedVectorJaccard)keyWords.cloneRandomlyModify(args);
         return rtv;
     }
 
@@ -369,6 +385,11 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             regionShape.writeData(stream);
         else
             stream.write('\n');
+
+        if (keyWords != null)
+            keyWords.writeData(stream);
+        else
+            stream.write('\n');
     }
 
 
@@ -388,6 +409,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
         scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         regionShape = serializator.readObject(input, ObjectRegionShape.class);
+        keyWords = serializator.readObject(input, ObjectIntSortedVectorJaccard.class);
     }
 
     @Override
@@ -398,6 +420,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         size += serializator.write(output, edgeHistogram);
         size += serializator.write(output, scalableColor);
         size += serializator.write(output, regionShape);
+        size += serializator.write(output, keyWords);
         return size;
     }
 
@@ -409,6 +432,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         size += serializator.getBinarySize(edgeHistogram);
         size += serializator.getBinarySize(scalableColor);
         size += serializator.getBinarySize(regionShape);
+        size += serializator.getBinarySize(keyWords);
         return size;
     }
 
