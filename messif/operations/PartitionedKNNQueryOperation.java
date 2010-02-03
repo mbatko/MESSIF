@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractObject;
-import messif.utility.SortedCollection;
+import messif.objects.util.RankedSortedCollection;
 
 /**
  * This class represents a range query that distinguish the partition
@@ -37,10 +37,10 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
     //****************** Attributes ******************//
 
     /** The answer holder */
-    protected final Map<Object, SortedCollection<RankedAbstractObject>> partitionedAnswer; 
+    protected final Map<Object, RankedSortedCollection> partitionedAnswer;
 
     /** Current partition list */
-    protected SortedCollection<RankedAbstractObject> currentPartition;
+    protected RankedSortedCollection currentPartition;
 
     /** The locking flag for {@link #setCurrentPartition setCurrentPartition} */
     protected boolean isPartitionLocked = false;
@@ -62,11 +62,12 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
      * Creates a new instance of kNNQueryOperation given the query object, radius and specifying the answer type.
      * @param queryObject the query object
      * @param k the query radius
+     * @param answerType the type of objects this operation stores in its answer
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
     public PartitionedKNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
         super(queryObject, k, answerType);
-        partitionedAnswer = new HashMap<Object, SortedCollection<RankedAbstractObject>>();
+        partitionedAnswer = new HashMap<Object, RankedSortedCollection>();
     }
 
 
@@ -84,7 +85,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
         } else {
             currentPartition = partitionedAnswer.get(partitionObject);
             if (currentPartition == null) {
-                currentPartition = new SortedCollection<RankedAbstractObject>(k, k, null);
+                currentPartition = new RankedSortedCollection(k, k);
                 partitionedAnswer.put(partitionObject, currentPartition);                
             }
         }
@@ -101,9 +102,14 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
         this.isPartitionLocked = isPartitionLocked;
     }
 
+    /**
+     * Returns <tt>true</tt> if the partition is currently locked using {@link #setCurrentPartitionLock(boolean)}.
+     * @return <tt>true</tt> if the partition is currently locked
+     */
     public boolean isIsPartitionLocked() {
         return isPartitionLocked;
     }
+
 
     //****************** Answer methods ******************//
 
@@ -120,7 +126,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
             // If the last object was removed from the answer
             if (lastObject != null) {
                 // Remove the last object in the current answer from the partition information
-                for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
+                for (Map.Entry<Object, RankedSortedCollection> entry : partitionedAnswer.entrySet()) {
                     if (entry.getValue().remove(lastObject)) {
                         if (entry.getValue().isEmpty() && (entry.getValue() != currentPartition)) {
                             partitionedAnswer.remove(entry.getKey());
@@ -151,7 +157,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
      * Returns the whole answer divided by partitions.
      * @return the whole answer divided by partitions
      */
-    public Map<Object, SortedCollection<RankedAbstractObject>> getAllPartitionsAnswer() {
+    public Map<Object, RankedSortedCollection> getAllPartitionsAnswer() {
         return Collections.unmodifiableMap(partitionedAnswer);
     }
 
@@ -164,11 +170,11 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
     protected void updateFrom(RankingQueryOperation operation) {
         super.updateFrom(operation);
         if (operation instanceof PartitionedKNNQueryOperation) {
-            Map<Object, SortedCollection<RankedAbstractObject>> sourceAnswer = ((PartitionedKNNQueryOperation)operation).partitionedAnswer;
-            for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : sourceAnswer.entrySet()) {
-                SortedCollection<RankedAbstractObject> actualList = partitionedAnswer.get(entry.getKey());
+            Map<Object, RankedSortedCollection> sourceAnswer = ((PartitionedKNNQueryOperation)operation).partitionedAnswer;
+            for (Map.Entry<Object, RankedSortedCollection> entry : sourceAnswer.entrySet()) {
+                RankedSortedCollection actualList = partitionedAnswer.get(entry.getKey());
                 if (actualList == null) {
-                    actualList = new SortedCollection<RankedAbstractObject>();
+                    actualList = new RankedSortedCollection(k, k);
                     partitionedAnswer.put(entry.getKey(), actualList);
                 }
                 actualList.addAll(entry.getValue());
@@ -185,8 +191,8 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
         Iterator<RankedAbstractObject> iterator = getAnswer();
         while (iterator.hasNext())
             answerSet.add(iterator.next());
-        for (Iterator<Map.Entry<Object, SortedCollection<RankedAbstractObject>>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {            
-            Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry = itt.next();            
+        for (Iterator<Map.Entry<Object, RankedSortedCollection>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {
+            Map.Entry<Object, RankedSortedCollection> entry = itt.next();
             for (Iterator<RankedAbstractObject> it = entry.getValue().iterator(); it.hasNext();) {
                 if (! answerSet.contains(it.next())) {
                     it.remove();
@@ -200,7 +206,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
 
     /** Remove empty partitions */
     public void removeEmptyPartitions() {
-        for (Iterator<Map.Entry<Object, SortedCollection<RankedAbstractObject>>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {
+        for (Iterator<Map.Entry<Object, RankedSortedCollection>> itt = partitionedAnswer.entrySet().iterator(); itt.hasNext(); ) {
             if (itt.next().getValue().isEmpty()) {
                 itt.remove();
             }
@@ -225,8 +231,8 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
     public String toString() {
         StringBuffer buffer = new StringBuffer("Partitioned kNN query <").append(queryObject).append(',').append(k).append("> returned ").append(getAnswerCount()).append(" objects: \n");
         buffer.append("PartitionedAnswer: {");
-        for (Iterator<Map.Entry<Object, SortedCollection<RankedAbstractObject>>> it = partitionedAnswer.entrySet().iterator(); it.hasNext();) {
-            Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry = it.next();
+        for (Iterator<Map.Entry<Object, RankedSortedCollection>> it = partitionedAnswer.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<Object, RankedSortedCollection> entry = it.next();
             buffer.append(entry.getKey()).append("=").append(entry.getValue().size());//.append(entry.getValue().toString());
             if (it.hasNext()) {
                 buffer.append(", ");
@@ -234,7 +240,7 @@ public class PartitionedKNNQueryOperation extends kNNQueryOperation {
         }
         buffer.append("}\n");
         //buffer.append("AnswerObjects: \n");
-        for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
+        for (Map.Entry<Object, RankedSortedCollection> entry : partitionedAnswer.entrySet()) {
             buffer.append(entry.getKey()).append(": ");
             for (Iterator<RankedAbstractObject> it = entry.getValue().iterator(); it.hasNext(); ) {
                 buffer.append(it.next());

@@ -12,7 +12,7 @@ import java.util.Iterator;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractObject;
-import messif.utility.SortedCollection;
+import messif.objects.util.RankedSortedCollection;
 
 /**
  * This class represents a range query that distinguish the partition
@@ -40,10 +40,10 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     //****************** Attributes ******************//
 
     /** The answer holder */
-    protected final Map<Object, SortedCollection<RankedAbstractObject>> partitionedAnswer; 
+    protected final Map<Object, RankedSortedCollection> partitionedAnswer;
 
     /** Current partition list */
-    protected SortedCollection<RankedAbstractObject> currentPartition;
+    protected RankedSortedCollection currentPartition;
 
     /** The locking flag for {@link #setCurrentPartition setCurrentPartition} */
     protected boolean isPartitionLocked = false;
@@ -59,7 +59,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public PartitionedRangeQueryOperation(LocalAbstractObject queryObject, float radius) {
         super(queryObject, radius);
-        partitionedAnswer = new HashMap<Object, SortedCollection<RankedAbstractObject>>();
+        partitionedAnswer = new HashMap<Object, RankedSortedCollection>();
     }
 
 
@@ -77,7 +77,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
         } else {
             currentPartition = partitionedAnswer.get(partitionObject);
             if (currentPartition == null) {
-                currentPartition = new SortedCollection<RankedAbstractObject>();
+                currentPartition = new RankedSortedCollection();
                 partitionedAnswer.put(partitionObject, currentPartition);
             }
         }
@@ -119,7 +119,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
      * Returns the whole answer divided by partitions.
      * @return the whole answer divided by partitions
      */
-    public Map<Object, SortedCollection<RankedAbstractObject>> getAllPartitionsAnswer() {
+    public Map<Object, RankedSortedCollection> getAllPartitionsAnswer() {
         return Collections.unmodifiableMap(partitionedAnswer);
     }
 
@@ -132,11 +132,11 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     protected void updateFrom(RankingQueryOperation operation) {
         super.updateFrom(operation);
         if (operation instanceof PartitionedRangeQueryOperation) {
-            Map<Object, SortedCollection<RankedAbstractObject>> sourceAnswer = ((PartitionedRangeQueryOperation)operation).partitionedAnswer;
-            for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : sourceAnswer.entrySet()) {
-                SortedCollection<RankedAbstractObject> actualList = partitionedAnswer.get(entry.getKey());
+            Map<Object, RankedSortedCollection> sourceAnswer = ((PartitionedRangeQueryOperation)operation).partitionedAnswer;
+            for (Map.Entry<Object, RankedSortedCollection> entry : sourceAnswer.entrySet()) {
+                RankedSortedCollection actualList = partitionedAnswer.get(entry.getKey());
                 if (actualList == null) {
-                    actualList = new SortedCollection<RankedAbstractObject>();
+                    actualList = new RankedSortedCollection();
                     partitionedAnswer.put(entry.getKey(), actualList);
                 }
                 actualList.addAll(entry.getValue());
@@ -151,7 +151,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     @Override
     public String toString() {
         StringBuffer buffer = new StringBuffer("Partitioned range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects:");
-        for (Map.Entry<Object, SortedCollection<RankedAbstractObject>> entry : partitionedAnswer.entrySet()) {
+        for (Map.Entry<Object, RankedSortedCollection> entry : partitionedAnswer.entrySet()) {
             buffer.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().size());
         }
         return buffer.toString();

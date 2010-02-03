@@ -15,8 +15,8 @@ import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
+import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
-import messif.utility.SortedCollection;
 
 
 /**
@@ -40,7 +40,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     //****************** Attributes ******************//
 
     /** Set holding the answer of this query */
-    private SortedCollection<RankedAbstractObject> answer;
+    private RankedSortedCollection answer;
 
     /** Flag whether to store sub-distances for metaobjects */
     private final boolean storeMetaDistances;
@@ -88,9 +88,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         super(answerType);
         this.storeMetaDistances = storeMetaDistances;
         if (maxAnswerSize < Integer.MAX_VALUE)
-            this.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
+            this.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
         else
-            this.answer = new SortedCollection<RankedAbstractObject>(null);
+            this.answer = new RankedSortedCollection();
     }
 
 
@@ -110,9 +110,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         // Create a new collection for the answer set
         int maxAnswerSize = operation.answer.getMaximalCapacity();
         if (maxAnswerSize < Integer.MAX_VALUE)
-            operation.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
+            operation.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
         else
-            operation.answer = new SortedCollection<RankedAbstractObject>(null);
+            operation.answer = new RankedSortedCollection();
 
         return operation;
     }
@@ -137,9 +137,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
      * @throws InvocationTargetException if there was an exception during instantiation
      */
-    public void setAnswerCollection(Class <? extends SortedCollection> clazz, Object... constructorParams) throws NoSuchMethodException, InvocationTargetException {
-        @SuppressWarnings("unchecked")
-        SortedCollection<RankedAbstractObject> collection = Convert.createInstanceWithInheritableArgs(clazz, constructorParams);
+    public void setAnswerCollection(Class <? extends RankedSortedCollection> clazz, Object... constructorParams) throws NoSuchMethodException, InvocationTargetException {
+        RankedSortedCollection collection = Convert.createInstanceWithInheritableArgs(clazz, constructorParams);
         setAnswerCollection(collection);
     }
 
@@ -149,7 +148,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * of the results.
      * @param collection a new instance of answer collection
      */
-    public void setAnswerCollection(SortedCollection<RankedAbstractObject> collection) {
+    public void setAnswerCollection(RankedSortedCollection collection) {
         if (!collection.isEmpty())
             collection.clear();
         collection.addAll(answer);
@@ -212,7 +211,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws NoSuchElementException if the answer is empty
      */
     public float getAnswerDistance() throws NoSuchElementException {
-        return answer.last().getDistance();
+        return answer.getLastDistance();
     }
 
     /**
@@ -230,14 +229,11 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * If the answer has not reached the maximal size (specified in constructor) yet,
      * {@link LocalAbstractObject#MAX_DISTANCE} is returned.
      * Otherwise, the distance of the last answer's object is returned.
-     * @return the distance to the k-th nearest object in the answer list or
+     * @return the distance to the last object in the answer list or
      *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
      */
     public float getAnswerThreshold() {
-        if (answer.isFull())
-            return answer.last().getDistance();
-        else
-            return LocalAbstractObject.MAX_DISTANCE;
+        return answer.getThresholdDistance();
     }
 
     /**

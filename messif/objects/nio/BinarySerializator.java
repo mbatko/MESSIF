@@ -522,7 +522,7 @@ public abstract class BinarySerializator {
     public final BufferOutputStream write(Object object, boolean bufferDirect) throws IOException {
         // Write null as zero-sized object
         if (object == null) {
-            BufferOutputStream buf = new BufferOutputStream(4, bufferDirect);
+            BufferOutputStream buf = new BufferOutputStream(BufferOutputStream.MINIMAL_BUFFER_SIZE, bufferDirect);
             write(buf, 0);
             return buf;
         }

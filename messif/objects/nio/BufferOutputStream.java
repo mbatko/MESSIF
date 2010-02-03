@@ -28,7 +28,7 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
     //****************** Constants ******************//
 
     /** Minimal buffer size in bytes */
-    private final int MINIMAL_BUFFER_SIZE = 32;
+    public static final int MINIMAL_BUFFER_SIZE = 32;
 
 
     //****************** Attributes ******************//
@@ -185,6 +185,19 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
         } finally {
             byteBuffer.compact();
         }
+    }
+
+    /**
+     * Writes the buffered data to a byte array.
+     * Note that this <i>will consume</i> all the buffered data as with the other write methods.
+     * @return the buffered data
+     */
+    public byte[] write() {
+        byte[] ret = new byte[bufferedSize()];
+        byteBuffer.flip();
+        byteBuffer.get(ret);
+        byteBuffer.compact();
+        return ret;
     }
 
     /**

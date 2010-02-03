@@ -47,7 +47,7 @@ import messif.executor.MethodNameExecutor;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractStreamObjectIterator;
-import messif.objects.util.RankedAbstractObject;
+import messif.objects.util.RankedSortedCollection;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.objects.util.StreamsMetaObjectMapIterator;
 import messif.operations.AbstractOperation;
@@ -768,11 +768,11 @@ public class Application {
 
         try {
             // Get sorted collection class
-            Class<? extends SortedCollection> clazz = Convert.getClassForName(args[1], SortedCollection.class);
+            Class<? extends RankedSortedCollection> clazz = Convert.getClassForName(args[1], RankedSortedCollection.class);
 
             // Create new instance of sorted collection
             @SuppressWarnings("unchecked")
-            SortedCollection<RankedAbstractObject> newAnswerCollection = Convert.createInstanceWithStringArgs(Arrays.asList((Constructor<SortedCollection>[])clazz.getConstructors()), args, 2);
+            RankedSortedCollection newAnswerCollection = Convert.createInstanceWithStringArgs(Arrays.asList((Constructor<RankedSortedCollection>[])clazz.getConstructors()), args, 2);
 
             // Set the instance in the operation
             ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);

@@ -61,11 +61,21 @@ public class BufferInputStream extends InputStream implements BinaryInput {
 
     /**
      * Creates a new instance of BufferInputStream.
-     * The input operates on the the given buffer.
+     * The input operates on the given buffer.
      * @param buffer the internal buffer for this stream
      */
     public BufferInputStream(ByteBuffer buffer) {
         this.byteBuffer = buffer;
+    }
+
+    /**
+     * Creates a new instance of BufferInputStream.
+     * The input operates on a buffer that {@link ByteBuffer#wrap(byte[]) wraps}
+     * the given data array.
+     * @param array the data array for this stream
+     */
+    public BufferInputStream(byte[] array) {
+        this(ByteBuffer.wrap(array));
     }
 
 
@@ -179,7 +189,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
 
         // Requested minimal size is too big
         if (byteBuffer.remaining() + minBytes > byteBuffer.capacity())
-            throw new IOException("Buffer is too small to accomodate " + minBytes + " additional bytes");
+            throw new IOException("Buffer is too small to provide " + minBytes + " additional bytes");
 
         // Switch buffer to reading from stream
         byteBuffer.compact();
