@@ -34,7 +34,7 @@ public class RankedAbstractObject extends DistanceRankedObject<AbstractObject> i
     //****************** Clearable interface ******************//
 
     public void clearSurplusData() {
-        object.clearSurplusData();
+        getObject().clearSurplusData();
     }
 
 }

@@ -55,7 +55,7 @@ public class RankedAbstractMetaObject extends RankedAbstractObject {
 
     @Override
     public String toString() {
-        return "<" + distance + Arrays.toString(subDistances) + ": " + object + ">";
+        return "<" + getDistance() + Arrays.toString(subDistances) + ": " + getObject() + ">";
     }
 
 }

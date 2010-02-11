@@ -394,7 +394,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @param index index of the element to remove
      * @return <tt>false</tt> if the object was not removed (e.g. because there is no object with this index)
      */
-    private boolean remove(int index) {
+    protected boolean remove(int index) {
         if (index < 0 || index >= size)
             return false;
         modCount++;
