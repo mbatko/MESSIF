@@ -50,7 +50,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
 
     /**
      * Creates a new instance of Search for the specified search comparator and [from,to] bounds.
-     * @param comparator the comparator that defines the 
+     * @param comparator the comparator that is used to compare the bounds
      * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
      * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
      */
@@ -132,6 +132,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     /**
      * Returns the next sibling object of the current one.
      * No checks on boundaries are required.
+     * If there is no next object, <tt>null</tt> is returned.
      * 
      * @return the next sibling object of the current one
      * @throws BucketStorageException if there was a problem retrieving the next object from the underlying storage
@@ -141,6 +142,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     /**
      * Returns the previous sibling object of the current one.
      * No checks on boundaries are required.
+     * If there is no previous object, <tt>null</tt> is returned.
      * 
      * @return the previous sibling object of the current one
      * @throws BucketStorageException if there was a problem retrieving the previous object from the underlying storage

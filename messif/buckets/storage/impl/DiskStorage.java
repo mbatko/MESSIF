@@ -183,6 +183,8 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
 
     public void destroy() throws Throwable {
         finalize();
+        if (references <= 0)
+            file.delete();
     }
 
 

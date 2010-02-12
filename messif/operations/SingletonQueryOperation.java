@@ -124,6 +124,8 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {
+            if (object == null)
+                return false;
             answer = answerType.update(object);
             return true;
         } catch (CloneNotSupportedException e) {

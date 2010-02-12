@@ -448,6 +448,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      *  their   distance + (keywords's jaccard coeficient * weight)
      */
     public static class KeywordsJaccardSortedCollection extends DoubleSortedCollection {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
 
         /**
          * Collection of keywords of the query object
@@ -487,6 +489,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * In fact, some fixed large value is added to the original distances.
      */
     public static class KeywordsIntersectionSortedCollection extends DoubleSortedCollection {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
 
         /** Value to be added to object with empty intersection */
         protected static final float VALUE_TO_ADD = 1000f;

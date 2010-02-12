@@ -109,7 +109,7 @@ public class HttpApplication extends Application {
             httpServerContexts.put(args[1], context);
             return true;
         } catch (Exception e) {
-            out.println("Cannot add HTTP context " + args[0] + ": " + e);
+            out.println("Cannot add HTTP context " + args[1] + ": " + e);
             return false;
         }
     }
@@ -427,12 +427,13 @@ public class HttpApplication extends Application {
              * Fills the appropriate element in {@code args} array with the object(s)
              * created from the {@code inputStream}.
              * @param inputStream the input stream used to create instance(s) of {@link LocalAbstractObject}
+             * @param name the name of the object in the input stream
              * @param args the array to fill the value into
              * @throws ExtractorException if there was a problem reading or extracting objects from the stream
              * @throws IOException if there was a problem reading or extracting objects from the stream
              */
-            public void fill(InputStream inputStream, Object[] args) throws ExtractorException, IOException {
-                ExtractorDataSource dataSource = new ExtractorDataSource(inputStream, null);
+            public void fill(InputStream inputStream, String name, Object[] args) throws ExtractorException, IOException {
+                ExtractorDataSource dataSource = new ExtractorDataSource(inputStream, name);
                 if (createList) {
                     AbstractObjectList<LocalAbstractObject> list = new AbstractObjectList<LocalAbstractObject>();
                     while (true) {
@@ -600,6 +601,10 @@ public class HttpApplication extends Application {
          */
         private Extractor<?> createExtractor(String signature, Map<String, Object> namedInstances) throws IllegalArgumentException {
             try {
+                // Try to get named instance first
+                Object instance = namedInstances.get(signature);
+                if (instance != null && instance instanceof Extractor)
+                    return (Extractor)instance;
                 return Convert.createInstanceWithStringArgs(signature, Extractor.class, namedInstances);
             } catch (ClassNotFoundException e) {
                 throw new IllegalArgumentException("Cannot create " + signature + ": class not found");
@@ -622,6 +627,17 @@ public class HttpApplication extends Application {
          */
         protected Object[] getOperationArguments(HttpExchange exchange) throws IllegalArgumentException {
             Object[] args = params.clone();
+            String id = null;
+
+            // Fill params
+            Matcher matcher = paramParser.matcher(exchange.getRequestURI().getQuery());
+            while (matcher.find()) {
+                ParamFiller filler = paramFillers.get(matcher.group(1));
+                if (filler != null)
+                    filler.fill(matcher.group(2), args);
+                else if ("id".equals(matcher.group(1)))
+                    id = matcher.group(2);
+            }
 
             // Fill object
             try {
@@ -630,20 +646,12 @@ public class HttpApplication extends Application {
                     String contentEncoding = exchange.getRequestHeaders().getFirst("content-encoding");
                     if (contentEncoding != null && contentEncoding.equalsIgnoreCase("gzip"))
                         input = new GZIPInputStream(input);
-                    objectFiller.fill(input, args);
+                    objectFiller.fill(input, id, args);
                 }
             } catch (IOException e) {
                 throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
             } catch (ExtractorException e) {
                 throw new IllegalArgumentException("There was a problem extracting descriptors from the object: " + e.getMessage(), e);
-            }
-
-            // Fill params
-            Matcher matcher = paramParser.matcher(exchange.getRequestURI().getQuery());
-            while (matcher.find()) {
-                ParamFiller filler = paramFillers.get(matcher.group(1));
-                if (filler != null)
-                    filler.fill(matcher.group(2), args);
             }
 
             return args;

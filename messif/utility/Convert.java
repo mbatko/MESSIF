@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -59,30 +60,43 @@ public abstract class Convert {
      * @return the converted value
      * @throws InstantiationException if the type cannot be created from the string value
      */
-    @SuppressWarnings("unchecked")
     public static <E> E stringToType(String string, Class<E> type, Map<String, Object> namedInstances) throws InstantiationException {
         if (string.equals("null"))
             return null;
         
         // Converting string types
         if (type == String.class)
-            return (E)string; // This cast IS checked
+            return type.cast(string);
 
         // Converting class types
         if (type == Class.class) try {
-            return (E)Class.forName(string); // This cast IS checked
+            return type.cast(Class.forName(string));
         } catch (ClassNotFoundException e) {
             throw new InstantiationException(e.toString());
+        }
+
+        // Named instances of objects
+        if (namedInstances != null) {
+            Object instance = namedInstances.get(string);
+            if (instance != null) {
+                // Return named object as-is
+                if (type.isInstance(instance))
+                    return type.cast(instance);
+
+                // Try iterator
+                if (instance instanceof Iterator)
+                    return type.cast(((Iterator<?>)instance).next());
+            }
         }
 
         // Converting map types
         if (type == Map.class) {
             Map<String, Object> rtv = new HashMap<String, Object>();
             putStringIntoMap(string, rtv, String.class);
-            // Add streams parameter to a Map that contain a 'namedInstances' key but it is null
+            // Add current named instances to a Map that contain a 'namedInstances' key but it is null
             if (rtv.containsKey("namedInstances") && rtv.get("namedInstances") == null)
                 rtv.put("namedInstances", namedInstances);
-            return (E)rtv; // This cast IS checked
+            return type.cast(rtv);
         }
 
         // Converting static arrays
@@ -92,26 +106,12 @@ public abstract class Convert {
             Object array = Array.newInstance(componentType, items.length);
             for (int i = 0; i < items.length; i++)
                 Array.set(array, i, stringToType(items[i], componentType, namedInstances));
-            return (E)array; // This cast IS checked
+            return type.cast(array);
         }
 
         // Wrap primitive types, so that their 'valueOf' method can be used
         if (type.isPrimitive())
             type = wrapPrimitiveType(type);
-
-        // Named instances of objects
-        if (namedInstances != null) {
-            Object instance = namedInstances.get(string);
-            if (instance != null) {
-                // Return named object as-is
-                if (type.isInstance(instance))
-                    return (E)instance; // This cast IS checked
-
-                // Try the LocalAbstractObject iterators
-                if (type.isAssignableFrom(LocalAbstractObject.class))
-                    return (E)((AbstractStreamObjectIterator<?>)instance).next();
-            }
-        }
 
         // Try string public constructor
         if (!Modifier.isAbstract(type.getModifiers())) {
@@ -131,7 +131,7 @@ public abstract class Convert {
         try {
             Method method = type.getMethod("valueOf", String.class);
             if (Modifier.isStatic(method.getModifiers()))
-                return (E)method.invoke(null, string); // This cast IS checked
+                return type.cast(method.invoke(null, string)); // This cast IS checked
         } catch (InvocationTargetException e) {
             // This string is unconvertible, because some exception arised
             throw new InstantiationException(e.getCause().toString());
