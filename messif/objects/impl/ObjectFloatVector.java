@@ -70,12 +70,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      */
     public ObjectFloatVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectVector.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         line = line.trim();
         

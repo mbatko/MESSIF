@@ -36,6 +36,7 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.RankingQueryOperation;
+import messif.utility.reflection.Instantiators;
 
 /**
  *
@@ -241,12 +242,12 @@ public class HttpApplication extends Application {
     //****************** Standalone application's main method ******************//
 
     @Override
-    String usage() {
+    protected String usage() {
         return "<http port> " + super.usage();
     }
 
     @Override
-    boolean parseArguments(String[] args, int argIndex) {
+    protected boolean parseArguments(String[] args, int argIndex) {
         if (argIndex >= args.length)
             return false;
 
@@ -605,7 +606,7 @@ public class HttpApplication extends Application {
                 Object instance = namedInstances.get(signature);
                 if (instance != null && instance instanceof Extractor)
                     return (Extractor)instance;
-                return Convert.createInstanceWithStringArgs(signature, Extractor.class, namedInstances);
+                return Instantiators.createInstanceWithStringArgs(signature, Extractor.class, namedInstances);
             } catch (ClassNotFoundException e) {
                 throw new IllegalArgumentException("Cannot create " + signature + ": class not found");
             } catch (InvocationTargetException e) {

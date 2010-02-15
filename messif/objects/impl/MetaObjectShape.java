@@ -2,7 +2,6 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -85,14 +84,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
      */
     public MetaObjectShape(BufferedReader stream, Set<String> restrictNames) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null) {
-                throw new EOFException("EoF reached while initializing MetaObject.");
-
-            }
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
         String[] uriNamesClasses = line.split(";");

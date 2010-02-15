@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 
 /**
@@ -125,7 +125,7 @@ public class MethodNameExecutor extends MethodExecutor {
 
             // Check prototype and add method to the registry
             Class<?>[] methodArgTypes = method.getParameterTypes();
-            if (Convert.isPrototypeMatching(methodArgTypes, methodPrototype))
+            if (Instantiators.isPrototypeMatching(methodArgTypes, methodPrototype))
                 ret.put(method.getName(), method);
         }
 

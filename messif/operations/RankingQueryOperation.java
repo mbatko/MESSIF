@@ -6,7 +6,6 @@
 
 package messif.operations;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
@@ -16,7 +15,6 @@ import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
-import messif.utility.Convert;
 
 
 /**
@@ -119,28 +117,6 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
 
     //****************** Overrides for answer set ******************//
-
-    /**
-     * Returns the object the distance to which is used for the answer rank.
-     * @return the query object of this ranking query
-     */
-    public abstract LocalAbstractObject getQueryObject();
-
-    /**
-     * Set a new collection that maintains the answer list of this ranking query.
-     * Note that this method should be used only for changing the reranking/filtering
-     * of the results.
-     * A new instance of clazz is created with the specified constructor parameters.
-     *
-     * @param clazz the class for which to create a collection instance
-     * @param constructorParams the arguments for the constructor
-     * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
-     * @throws InvocationTargetException if there was an exception during instantiation
-     */
-    public void setAnswerCollection(Class <? extends RankedSortedCollection> clazz, Object... constructorParams) throws NoSuchMethodException, InvocationTargetException {
-        RankedSortedCollection collection = Convert.createInstanceWithInheritableArgs(clazz, constructorParams);
-        setAnswerCollection(collection);
-    }
 
     /**
      * Set a new collection that maintains the answer list of this ranking query.

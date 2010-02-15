@@ -8,10 +8,11 @@ import java.util.ArrayList;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
-import messif.buckets.index.ModifiableSearch;
+import messif.buckets.storage.StorageSearch;
 import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
+import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.impl.DiskStorage;
 import messif.utility.SortedArrayData;
 
@@ -208,19 +209,19 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
     //****************** Search methods ******************//
 
-    public ModifiableSearch<T> search() throws IllegalStateException {
+    public StorageSearch<T> search() throws IllegalStateException {
         return new OrderedModifiableSearch(0, 0, size() - 1, lock());
     }
 
-    public ModifiableSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
+    public StorageSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
         return search(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
-    public ModifiableSearch<T> search(K from, K to) throws IllegalStateException {
+    public StorageSearch<T> search(K from, K to) throws IllegalStateException {
         return search((K)null, from, to);
     }
 
-    public ModifiableSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
+    public StorageSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
         // Search for lower boundary key
         int fromIndex = (from == null)?0:binarySearch(from, 0, size() - 1, true);        
 
@@ -266,12 +267,12 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
+    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, key, key);
     }
 
     @SuppressWarnings("unchecked")
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
+    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         if (comparator.equals(comparator()))
             return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
         else
@@ -282,7 +283,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
     //****************** Search implementation ******************//
 
     /** Internal class that implements ordered search for this index */
-    private class OrderedModifiableSearch implements ModifiableSearch<T> {
+    private class OrderedModifiableSearch implements StorageSearch<T> {
 
         /** Minimal (inclusive) index that this iterator will access in the array */
         private final int minIndex;
@@ -332,6 +333,12 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
         public T getCurrentObject() {
             return currentObject;
+        }
+
+        public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException {
+            if (lastRet == -1)
+                throw new IllegalStateException();
+            return new LongAddress<T>(storage, index.get(lastRet).position);
         }
 
         public boolean next() throws IllegalStateException {
@@ -384,6 +391,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public OrderedModifiableSearch clone() throws CloneNotSupportedException {
             return (OrderedModifiableSearch) super.clone();
         }
@@ -393,7 +401,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
      * Internal class that implements full-scan search for this index.
      * @param <C> type of boundaries used while comparing objects
      */
-    private class FullScanModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+    private class FullScanModifiableSearch<C> extends AbstractSearch<C, T> implements StorageSearch<T> {
 
         /** Index of an element to be returned by subsequent call to next */
         private int cursor = 0;
@@ -442,6 +450,12 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
                 return null;
             }
             return getObject(get(lastRet = --cursor).position);
+        }
+
+        public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException {
+            if (lastRet == -1)
+                throw new IllegalStateException();
+            return new LongAddress<T>(storage, index.get(lastRet).position);
         }
 
         public void remove() throws IllegalStateException, BucketStorageException {

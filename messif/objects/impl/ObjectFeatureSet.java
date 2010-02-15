@@ -156,12 +156,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      */
     protected void readObjects(BufferedReader stream) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectFeatureSet.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
         String[] objTypeAndLength = line.split("[: ]+");

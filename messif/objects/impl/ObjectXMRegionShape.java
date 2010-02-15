@@ -62,12 +62,7 @@ public class ObjectXMRegionShape extends LocalAbstractObject implements BinarySe
      */
     public ObjectXMRegionShape(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectRegionShape.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         String[] numbers = line.trim().split("[, ]+");
 

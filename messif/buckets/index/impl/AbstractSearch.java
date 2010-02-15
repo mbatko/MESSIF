@@ -37,11 +37,11 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     //****************** Attributes ******************//
 
     /** Comparator used for search */
-    private final IndexComparator<? super C, ? super T> comparator;
+    protected final IndexComparator<? super C, ? super T> comparator;
     /** Lower bound on search */
-    private final C from;
+    protected final C from;
     /** Upper bound on search */
-    private final C to;
+    protected final C to;
     /** Object returned by the previous call to next/prev */
     private T currentObject = null;
 

@@ -55,6 +55,7 @@ import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
+import messif.utility.reflection.Instantiators;
 
 
 
@@ -239,7 +240,7 @@ public class Application {
         List<Constructor<Algorithm>> constructors = Algorithm.getAnnotatedConstructors(algorithmClass);
         try {
             // Create a new instance of the algorithm
-            algorithm = Convert.createInstanceWithStringArgs(constructors, args, 2, namedInstances);
+            algorithm = Instantiators.createInstanceWithStringArgs(constructors, args, 2, namedInstances);
             algorithms.add(algorithm);
             return true;
         } catch (InvocationTargetException e) {
@@ -772,7 +773,7 @@ public class Application {
 
             // Create new instance of sorted collection
             @SuppressWarnings("unchecked")
-            RankedSortedCollection newAnswerCollection = Convert.createInstanceWithStringArgs(Arrays.asList((Constructor<RankedSortedCollection>[])clazz.getConstructors()), args, 2);
+            RankedSortedCollection newAnswerCollection = Instantiators.createInstanceWithStringArgs(Arrays.asList((Constructor<RankedSortedCollection>[])clazz.getConstructors()), args, 2);
 
             // Set the instance in the operation
             ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);
@@ -998,7 +999,7 @@ public class Application {
     @ExecutableMethod(description = "get/create global statistic", arguments = { "statistic name", "statistic class" })
     public boolean statisticsGlobalGet(PrintStream out, String... args) {
         try {
-            out.println(Convert.createInstanceUsingFactoryMethod(Convert.getClassForName(args[2], Statistics.class), "getStatistics", args[1]));
+            out.println(Instantiators.createInstanceUsingFactoryMethod(Convert.getClassForName(args[2], Statistics.class), "getStatistics", args[1]));
         } catch (InvocationTargetException e) {
             out.println("Cannot get global statistics: " + e.getCause());
             return false;
@@ -1401,7 +1402,7 @@ public class Application {
     @ExecutableMethod(description = "creates a new named instance", arguments = { "instance constructor, factory method or static field signature", "name to register"})
     public boolean namedInstanceAdd(PrintStream out, String... args) {
         try {
-            Object instance = Convert.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+            Object instance = Instantiators.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
             if (namedInstances.put(args[2], instance) != null)
                 out.println("Previous named instance changed to a new one");
             return true;
@@ -1547,7 +1548,7 @@ public class Application {
      * The fifth optional argument specifies a regular expression that the message must satisfy
      * in order to be written in this file. 
      * The sixth argument specifies the message part that the regular expression
-     * is applied to - see {@link Logger.RegexpFilterAgainst} values for explanation.
+     * is applied to - see {@link Logging.RegexpFilterAgainst} values for explanation.
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the file's logging level.
      * 
@@ -2372,11 +2373,11 @@ public class Application {
 
     /**
      * Internal method called from {@link #main(java.lang.String[]) main} method
-     * to initialize this application. Basically, this method calls {@link #parseArguments(java.lang.String[])}
+     * to initialize this application. Basically, this method calls {@link #parseArguments(java.lang.String[], int)}
      * and prints a usage if <tt>false</tt> is returned.
      * @param args the command line arguments
      */
-    void startApplication(String[] args) {
+    protected void startApplication(String[] args) {
         if (!parseArguments(args, 0))
             System.err.println("Usage: " + getClass().getName() + " " + usage());
         else if (cmdSocket != null)
@@ -2387,7 +2388,7 @@ public class Application {
      * Returns the command line arguments description.
      * @return the command line arguments description
      */
-    String usage() {
+    protected String usage() {
         return "[<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]";
     }
 
@@ -2398,7 +2399,7 @@ public class Application {
      * @param argIndex the index of the argument where to start
      * @return <tt>true</tt> if the arguments were valid
      */
-    boolean parseArguments(String[] args, int argIndex) {
+    protected boolean parseArguments(String[] args, int argIndex) {
         if (argIndex >= args.length)
             return false;
 
@@ -2439,7 +2440,7 @@ public class Application {
      * @param port the TCP port to use
      * @return the opened socket or <tt>null</tt> if there was an error opening the port
      */
-    ServerSocketChannel openCmdSocket(int port) {
+    private ServerSocketChannel openCmdSocket(int port) {
         try {
             ServerSocketChannel ret = ServerSocketChannel.open();
             ret.socket().bind(new InetSocketAddress(port));
@@ -2456,7 +2457,7 @@ public class Application {
      * It waits for the next connection on {@link #cmdSocket} and then starts a new thread that
      * executes the commands given at the prompt.
      */
-    void cmdSocketLoop() {
+    private void cmdSocketLoop() {
         try {
             cmdSocket.configureBlocking(true);
             for (;;) {

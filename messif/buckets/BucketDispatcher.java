@@ -21,7 +21,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.pivotselection.AbstractPivotChooser;
-import messif.utility.Convert;
 
 
 /**
@@ -186,8 +185,19 @@ public class BucketDispatcher implements Serializable {
     /**
      * Set the class of pivot chooser that will be created whenever a bucket is created by this dispatcher.
      * @param autoPivotChooserClass the class of the pivot chooser to create
+     * @throws IllegalArgumentException if the specified class is abstract or does not have a public nullary constructor
      */
-    public void setAutoPivotChooser(Class<? extends AbstractPivotChooser> autoPivotChooserClass) {
+    public void setAutoPivotChooser(Class<? extends AbstractPivotChooser> autoPivotChooserClass) throws IllegalArgumentException {
+        // Check if a public nullary constructor exists and the class is not abstract
+        if (autoPivotChooserClass != null)
+            try {
+                if (Modifier.isAbstract(autoPivotChooserClass.getModifiers()))
+                    throw new IllegalArgumentException("Cannot set auto pivot chooser " + autoPivotChooserClass.getName() + ": the class is abstract");
+                autoPivotChooserClass.getConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("Cannot set auto pivot chooser " + autoPivotChooserClass.getName() + ": the class does not have a public nullary constructor");
+            }
+
         synchronized (createdPivotChoosers) {
             this.autoPivotChooserClass = autoPivotChooserClass;
             this.autoPivotChooserInstance = null;
@@ -237,13 +247,8 @@ public class BucketDispatcher implements Serializable {
             // Create new instance of auto pivot chooser class
             if (autoPivotChooserClass != null) {
                 try {
-                    try {
-                        // Try the pivot chooser constructor with bucket argument
-                        rtv = Convert.createInstanceWithInheritableArgs(autoPivotChooserClass, bucket);
-                    } catch (NoSuchMethodException e) {
-                        // Constructor with bucket parameter not found, try no-param constructor
-                        rtv = autoPivotChooserClass.getConstructor().newInstance();
-                    }
+                    // Constructor with bucket parameter not found, try no-param constructor
+                    rtv = autoPivotChooserClass.newInstance();
                 } catch (Exception e) {
                     log.warning("Can't create automatic pivot chooser " + autoPivotChooserClass.toString() + ": " + e.toString());
                     return null;
@@ -265,63 +270,6 @@ public class BucketDispatcher implements Serializable {
             
             return rtv;   
         }
-    }
-
-
-    //****************** Automatic filter creation ******************//
-
-    /** The class of filter that is automatically created for newly created buckets */
-    protected Class<? extends BucketFilter> autoFilterClass = null;
-
-    /** Parameters for the automatic filter constructors */
-    protected Object[] autoFilterParams = {};
-
-    /**
-     * Set a class of filter that will be instantiated whenever a bucket is created by this dispatcher.
-     * 
-     * @param autoFilterClass the class of the filter to create
-     * @param autoFilterParams the parameters for the filter's constructor
-     */
-    public void setAutoFilterClass(Class<? extends BucketFilter> autoFilterClass, Object... autoFilterParams) {
-        this.autoFilterClass = autoFilterClass;
-        this.autoFilterParams = (autoFilterParams == null)?new Object[0]:autoFilterParams;
-    }
-
-    /**
-     * Returns the class of the filter that is automatically created for new buckets.
-     * @return the class of the filter that is automatically created for new buckets
-     */
-    public Class<? extends BucketFilter> getAutoFilterClass() {
-        return autoFilterClass;
-    }
-
-    /**
-     * Returns the parameter for the constructor of the filter that is automatically created for new buckets.
-     * Modification of this array doesn't apply to current dispatcher's settings. Use {@link #setAutoFilterClass} method instead.
-     *
-     * @return the parameter for the constructor of the filter that is automatically created for new buckets
-     */
-    public Object[] getAutoFilterParams() {
-        return autoFilterParams.clone();
-    }
-
-    /**
-     * Creates a new filter for the provided bucket.
-     * The filter is only created if autoFilterClass was specified.
-     * Filter is then registered to the bucket and returned. No additional
-     * handling is done by this dispatcher, filter removal (and so on) is
-     * the responsibility of the bucket itself.
-     *
-     * @param bucket the bucket for which to create filter
-     */
-    protected void createAutoFilter(LocalBucket bucket) {
-        if (autoFilterClass != null)
-            try {
-                // Create new instance of auto filter class
-                bucket.registerFilter(Convert.createInstanceWithInheritableArgs(autoFilterClass, autoFilterParams));
-            } catch (Exception e) {
-                log.warning("Can't create automatic filter " + autoFilterClass.toString() + ": " + e.toString());
-            }
     }
 
 
@@ -522,13 +470,7 @@ public class BucketDispatcher implements Serializable {
      */
     public synchronized LocalBucket createBucket(Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity, long lowOccupation) throws BucketStorageException, IllegalArgumentException {
         // Create new bucket with specified capacity
-        LocalBucket bucket = createBucket(storageClass, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams);        
-
-        // Create automatic filter for the bucket
-        createAutoFilter(bucket);
-
-        // Add the bucket to the list of buckets
-        return addBucket(bucket);
+        return addBucket(createBucket(storageClass, capacity, softCapacity, lowOccupation, getBucketOccupationAsBytes(), storageClassParams));
     }
 
     /**

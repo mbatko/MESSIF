@@ -2,9 +2,9 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
@@ -129,37 +129,19 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * descriptor {@link LocalAbstractObject} is loaded.
      *
      * @param stream the stream from which the data are read
-     * @param descriptorNames the names of descriptors that are expected in the stream (in the given order)
+     * @param readKeyWords flag whether to read the keyWords
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectPixMacShapeAndColor(BufferedReader stream, String[] descriptorNames) throws IOException {
+    public MetaObjectPixMacShapeAndColor(BufferedReader stream, boolean readKeyWords) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            stream.mark(1024);
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing MetaObject.");
-        } while (processObjectComment(line));
-        stream.reset();
-
-        for (int i = 0; i < descriptorNames.length; i++) {
-            if ("ColorLayoutType".equals(descriptorNames[i])) {
-                colorLayout = readObject(stream, ObjectColorLayout.class);
-            } else if ("ColorStructureType".equals(descriptorNames[i])) {
-                colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            } else if ("EdgeHistogramType".equals(descriptorNames[i])) {
-                edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
-            } else if ("ScalableColorType".equals(descriptorNames[i])) {
-                scalableColor = readObject(stream, ObjectIntVectorL1.class);
-            } else if ("RegionShapeType".equals(descriptorNames[i])) {
-                regionShape = readObject(stream, ObjectRegionShape.class);
-            } else if ("KeyWordsType".equals(descriptorNames[i])) {
-                keyWords = readObject(stream, ObjectIntSortedVectorJaccard.class);
-            } else {
-                throw new IOException("Unknown descriptor name for MetaObjectPixMacShapeAndColor: " + descriptorNames[i]);
-            }
-        }
+        String line = readObjectComments(stream);
+        colorLayout = new ObjectColorLayout(new BufferedReader(new StringReader(line)));
+        colorStructure = new ObjectShortVectorL1(stream);
+        edgeHistogram = new ObjectVectorEdgecomp(stream);
+        scalableColor = new ObjectIntVectorL1(stream);
+        regionShape = new ObjectRegionShape(stream);
+        if (readKeyWords)
+            keyWords = new ObjectIntSortedVectorJaccard(stream);
     }
 
     /**
@@ -169,7 +151,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacShapeAndColor(BufferedReader stream) throws IOException {
-        this(stream, textStreamDescriptorNames);
+        this(stream, true);
     }
 
     /**

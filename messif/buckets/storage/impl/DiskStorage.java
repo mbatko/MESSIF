@@ -22,13 +22,13 @@ import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableIndex;
-import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.impl.AbstractSearch;
+import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.LongStorage;
+import messif.buckets.storage.LongStorageSearch;
 import messif.buckets.storage.ReadonlyStorageException;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
@@ -48,7 +48,7 @@ import messif.utility.Convert;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Lockable, Serializable {
+public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockable, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -705,15 +705,15 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
         return store(object) != null;
     }
 
-    public ModifiableSearch<T> search() throws IllegalStateException {
+    public LongStorageSearch<T> search() throws IllegalStateException {
         return new DiskStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
+    public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
+    public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, from, to);
     }
 
@@ -723,7 +723,7 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
      * 
      * @param <C> the type the boundaries used by the search
      */
-    private class DiskStorageSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+    private class DiskStorageSearch<C> extends AbstractSearch<C, T> implements LongStorageSearch<T> {
         /** Internal stream that reads objects in this storage one by one */
         private final BufferInputStream inputStream;
         /** Position of the last returned object - used for removal */
@@ -763,10 +763,18 @@ public class DiskStorage<T> implements LongStorage<T>, ModifiableIndex<T>, Locka
             throw new UnsupportedOperationException("This is not supported by the disk storage, use index");
         }
 
-        public void remove() throws IllegalStateException, BucketStorageException {
+        public LongAddress<T> getCurrentObjectAddress() {
+            return new LongAddress<T>(DiskStorage.this, getCurrentObjectLongAddress());
+        }
+
+        public long getCurrentObjectLongAddress() throws IllegalStateException {
             if (lastObjectPosition == -1)
-                throw new IllegalStateException("There is no object to be removed");
-            DiskStorage.this.remove(lastObjectPosition, (int)(inputStream.getPosition() - lastObjectPosition - 4));
+                throw new IllegalStateException("There is no object to get address for");
+            return lastObjectPosition;
+        }
+
+        public void remove() throws IllegalStateException, BucketStorageException {
+            DiskStorage.this.remove(getCurrentObjectLongAddress(), (int)(inputStream.getPosition() - lastObjectPosition - 4));
             lastObjectPosition = -1;
         }
 

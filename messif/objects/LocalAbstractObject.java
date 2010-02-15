@@ -6,21 +6,22 @@
 
 package messif.objects;
 
-import messif.objects.keys.AbstractObjectKey;
-import messif.netbucket.RemoteAbstractObject;
-import messif.statistics.StatisticCounter;
-import messif.statistics.Statistics;
-import messif.utility.Convert;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import messif.netbucket.RemoteAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.statistics.StatisticCounter;
+import messif.statistics.Statistics;
+import messif.utility.Convert;
+
 
 /**
  * This class is ancestor of all objects that hold some data the MESSI Framework can work with.
@@ -617,36 +618,6 @@ public abstract class LocalAbstractObject extends AbstractObject {
 
     /**
      * Creates a new LocalAbstractObject of the specified type from string.
-     * The format is "objectClass:object data", where "object data" is anything
-     * after the first colon (including colons of course). The object data is
-     * feeded through string buffer stream to the stream constructor of
-     * the object.
-     *
-     * @param objectClassAndData the string to parse the class and data from
-     * @return a new LocalAbstractObject of the specified type
-     * @throws IllegalArgumentException if there is no class (colon separated), the class is invalid, the class is not LocalAbstractObject descendant or there is no stream constructor
-     * @throws InvocationTargetException if there was an error during creating a new object instance
-     */
-    public static LocalAbstractObject valueOf(String objectClassAndData) throws IllegalArgumentException, InvocationTargetException {
-        try {
-            // Get position of a colon that separates object class from data
-            int colonPos = objectClassAndData.indexOf(':');
-            
-            return valueOf(
-                    // Get everything before the colon as the class name
-                    Convert.getClassForName(objectClassAndData.substring(0, colonPos), LocalAbstractObject.class),
-                    // Get everything after the colon as the object data
-                    objectClassAndData.substring(colonPos + 1)
-            );
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (IndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("Cannot found object class. Use format objectClass:objectData: "+objectClassAndData);
-        }
-    }
-
-    /**
-     * Creates a new LocalAbstractObject of the specified type from string.
      * The object data is feeded through string buffer stream to the stream constructor of the object.
      *
      * @param <E> the class of the object to create
@@ -656,7 +627,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @throws IllegalArgumentException if the specified class lacks a public <tt>BufferedReader</tt> constructor
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
-    public static <E extends LocalAbstractObject> E valueOf(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
+    public static <E extends LocalAbstractObject> E create(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
         return create(objectClass, new BufferedReader(new StringReader(objectData)));
     }
 
@@ -720,56 +691,36 @@ public abstract class LocalAbstractObject extends AbstractObject {
 
     /**
      * Processes the comment line of text representation of the object.
-     * The comment is of format "#typeOfComment comment value". 
+     * The comment is of format "#typeOfComment class value".
      * Recognized types of comments are: <ul>
-     *   <li>"#objectKey keyClass key value", where keyClass extends AbstractObjectKey</li>
-     *   <li>"#filter filterClass filter value", where filterClass extends </li>
+     *   <li>"#objectKey keyClass keyValue", where keyClass extends AbstractObjectKey and the comment {@link #setObjectKey(messif.objects.keys.AbstractObjectKey) sets the object key}</li>
+     *   <li>"#filter filterClass filterValue", where filterClass extends PrecomputedDistancesFilter and the comment {@link #chainFilter(messif.objects.PrecomputedDistancesFilter, boolean) adds a precomputed distances filter}</li>
      * </ul>
-     * @param line the string with the comment - should start with "#"
-     * @return <b>false</b> if <code>line<code/> does not start with "#", <b>true</b> otherwise
-     * @throws java.io.IOException if the comment type was recognized but its value is illegal
+     * @param reader the reader from which to get lines with comments
+     * @return the first line that does not have the requested format (this method never returns <tt>null</tt>)
+     * @throws EOFException if the last line was read
+     * @throws IOException if the comment type was recognized but its value is illegal
      */
-    protected boolean processObjectComment(String line) throws IOException {
-        if (! line.startsWith("#"))
-            return false;
+    protected String readObjectComments(BufferedReader reader) throws EOFException, IOException {
+        for (;;) {
+            String line = reader.readLine();
+            if (line == null)
+                throw new EOFException("EoF reached while initializing " + getClass().getName());
 
-        try {
-            String[] splitLine = line.split(" ", 3);
-            
-            if (splitLine[0].equals("#objectKey")) {
-                if (splitLine.length < 3)
-                    throw new IOException("comment must be of format '#objectKey keyClass key value': "+line);
-
-                // Get key class constructor
-                Constructor<AbstractObjectKey> keyConstructor = Convert.getClassForName(splitLine[1], AbstractObjectKey.class)
-                        .getConstructor(String.class);
-                // Create and set the key 
-                setObjectKey(keyConstructor.newInstance(splitLine[2]));
-            } else if (splitLine[0].equals("#filter")) {
-                if (splitLine.length < 3)
-                    throw new IOException("comment must be of format '#filterKey filterClass filter value': "+line);
-
-                // Get key class constructor
-                Constructor<PrecomputedDistancesFilter> keyConstructor = Convert.getClassForName(splitLine[1], PrecomputedDistancesFilter.class)
-                        .getConstructor(String.class);
-                // Create and set the key 
-                chainFilter(keyConstructor.newInstance(splitLine[2]), false);
+            try {
+                if (line.startsWith("#objectKey ")) {
+                    // Create and set the key
+                    setObjectKey(Convert.stringAndClassToType(line.substring(11), ' ', AbstractObjectKey.class));
+                } else if (line.startsWith("#filter ")) {
+                    // Create and set the filter
+                    chainFilter(Convert.stringAndClassToType(line.substring(8), ' ', PrecomputedDistancesFilter.class), false);
+                } else {
+                    return line;
+                }
+            } catch (IllegalArgumentException e) {
+                throw new IOException(e.getMessage());
             }
-            
-        } catch (ClassNotFoundException e) {
-            throw new IOException(e.toString());
-        } catch (NoSuchMethodException e) {
-            throw new IOException(e.toString());
-        } catch (IllegalAccessException e) {
-            throw new IOException(e.toString());
-        } catch (InstantiationException e) {
-            throw new IOException(e.toString());
-        } catch (InvocationTargetException e) {
-            throw new IOException(e.getCause().toString());
-        } catch (IllegalArgumentException e) {
-            throw new IOException(e.toString());
         }
-        return true;
     }
 
     /**

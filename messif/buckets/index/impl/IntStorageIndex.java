@@ -8,7 +8,10 @@ package messif.buckets.index.impl;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
+import messif.buckets.storage.IntAddress;
 import messif.buckets.storage.IntStorage;
+import messif.buckets.storage.IntStorageIndexed;
+import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 
@@ -136,11 +139,79 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
     }
 
     @Override
-    protected Lock lock() {
-        if (storage instanceof Lockable)
-            return ((Lockable)storage).lock(true);
-        else
-            return null;
+    protected IntStorageSearch<T> createOrderedSearch(int initialIndex, int minIndex, int maxIndex) {
+        return new IntStorageOrderedModifiableSearch(maxIndex, initialIndex, minIndex);
     }
 
+    @Override
+    protected <C> IntStorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
+        if (storage instanceof IntStorageIndexed)
+            return ((IntStorageIndexed<T>)storage).search(comparator, from, to);
+        else
+            return new IntStorageFullScanModifiableSearch<C>(comparator, from, to);
+    }
+
+    /**
+     * Internal class that implements ordered search for this index.
+     */
+    protected class IntStorageOrderedModifiableSearch extends OrderedModifiableSearch implements IntStorageSearch<T> {
+        /** Lock object for this search */
+        private final Lock lock;
+        /**
+         * Creates a new instance of IntStorageOrderedModifiableSearch that starts searching
+         * from the specified position and is bound by the given minimal and maximal positions.
+         *
+         * @param initialIndex the position where to start this iterator
+         * @param minIndex minimal position (inclusive) that this iterator will access
+         * @param maxIndex maximal position (inclusive) that this iterator will access
+         */
+        protected IntStorageOrderedModifiableSearch(int initialIndex, int minIndex, int maxIndex) {
+            super(initialIndex, minIndex, maxIndex);
+            this.lock = storage instanceof Lockable ? ((Lockable)storage).lock(true) : null;
+        }
+        @Override
+        protected void finalize() throws Throwable {
+            if (this.lock != null)
+                this.lock.unlock();
+            super.finalize();
+        }
+        public int getCurrentObjectIntAddress() throws IllegalStateException {
+            return index[getCurentObjectIndex()];
+        }
+        public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
+            return new IntAddress<T>(storage, index[getCurentObjectIndex()]);
+        }
+    }
+
+    /**
+     * Internal class that implements full-scan search for this index.
+     * @param <C> type of boundaries used while comparing objects
+     */
+    protected class IntStorageFullScanModifiableSearch<C> extends FullScanModifiableSearch<C> implements IntStorageSearch<T> {
+        /** Lock object for this search */
+        private final Lock lock;
+        /**
+         * Creates a new instance of IntStorageFullScanModifiableSearch for the
+         * specified search comparator and [from,to] bounds.
+         * @param comparator the comparator that defines the
+         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
+         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         */
+        protected IntStorageFullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
+            super(comparator, from, to);
+            this.lock = storage instanceof Lockable ? ((Lockable)storage).lock(true) : null;
+        }
+        @Override
+        protected void finalize() throws Throwable {
+            if (this.lock != null)
+                this.lock.unlock();
+            super.finalize();
+        }
+        public int getCurrentObjectIntAddress() throws IllegalStateException {
+            return index[getCurentObjectIndex()];
+        }
+        public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
+            return new IntAddress<T>(storage, index[getCurentObjectIndex()]);
+        }
+    }
 }

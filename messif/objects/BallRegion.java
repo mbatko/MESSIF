@@ -68,12 +68,7 @@ public class BallRegion extends LocalAbstractObject {
      */
     public BallRegion(BufferedReader stream) throws IOException, NumberFormatException, IllegalArgumentException, ClassNotFoundException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectVector.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         int pos = line.indexOf(';');
         if (pos == -1)

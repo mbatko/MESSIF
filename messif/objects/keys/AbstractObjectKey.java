@@ -6,6 +6,7 @@
 package messif.objects.keys;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -13,17 +14,58 @@ import messif.objects.nio.BinarySerializator;
 
 /**
  * This class encapsulates the standard key used by the AbstractObject - the URI locator.
- *  It is also an ancestor of all key classes to be used in the Abstact object.
+ * It is also an ancestor of all key classes to be used in the Abstact object.
  *
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
  */
 public class AbstractObjectKey implements java.io.Serializable, Comparable<AbstractObjectKey>, BinarySerializable {
-
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
-    
+
+    //************ Attributes ************//
+
     /** The URI locator */
     protected final String locatorURI;
+
+
+    //************ Constructor ************//
+
+    /** 
+     * Creates a new instance of AbstractObjectKey given the locator URI.
+     * @param locatorURI the URI locator
+     */
+    public AbstractObjectKey(String locatorURI) {
+        this.locatorURI = locatorURI;
+    }
+
+
+    //************ Factory method ************//
+
+    /**
+     * Factory method for creating object key instances of arbitrary class.
+     * The key class must contain a public constructor with single {@link String} argument.
+     *
+     * @param <T> the class of created the object key
+     * @param keyClass the class of created the object key
+     * @param keyData the data from which to create the key
+     * @return a new instance of object key
+     */
+    public static <T extends AbstractObjectKey> T create(Class<? extends T> keyClass, String keyData) {
+        try {
+            return keyClass.getConstructor(String.class).newInstance(keyData);
+        } catch (IllegalAccessException e) {
+            throw new InternalError("This should never happen: " + e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": it is an abstract class");
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": there is no constructor " + e.getMessage());
+        } catch (InvocationTargetException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": " + e.getCause(), e.getCause());
+        }
+    }
+
+
+    //************ Attribute access methods ************//
 
     /**
      * Returns the URI from this key as a string.
@@ -31,14 +73,6 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
      */
     public String getLocatorURI() {
         return locatorURI;
-    }
-    
-    /** 
-     * Creates a new instance of AbstractObjectKey given the locator URI.
-     * @param locatorURI the URI locator
-     */
-    public AbstractObjectKey(String locatorURI) {
-        this.locatorURI = locatorURI;
     }
 
     /**
@@ -48,7 +82,10 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
     public String getText() {
         return (locatorURI == null)?"":locatorURI;
     }
-    
+
+
+    //************ Comparator and equality methods ************//
+
     /**
      * Compare the keys according to their locators.
      * @param o the key to compare this key with
@@ -99,6 +136,9 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
             return ((AbstractObjectKey) obj).locatorURI == null;
         return locatorURI.equals(((AbstractObjectKey) obj).locatorURI);
     }
+
+
+    //************ String representation ************//
 
     /**
      * Returns the URI string.

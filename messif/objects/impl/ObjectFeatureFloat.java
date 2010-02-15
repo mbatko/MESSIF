@@ -1,12 +1,9 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Formatter;
 import java.util.Locale;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -55,12 +52,7 @@ public abstract class ObjectFeatureFloat extends ObjectFeature  implements Binar
     public ObjectFeatureFloat(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         super(stream);
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectVector.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         // precti normalizovany vektor
         String[] numbers = line.trim().split("[, ]+");
 

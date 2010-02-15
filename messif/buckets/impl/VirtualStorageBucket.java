@@ -20,6 +20,7 @@ import messif.buckets.storage.LongStorage;
 import messif.buckets.storage.Storage;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 /**
  * Encapsulating bucket for generic indices and storages.
@@ -113,7 +114,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
             }
             //Class<? extends Storage> storageClass = Convert.getParameterValue(parameters, "storageClass", Class.class, null);
             @SuppressWarnings("unchecked")
-            Storage<LocalAbstractObject> storage = Convert.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, parameters);
+            Storage<LocalAbstractObject> storage = Instantiators.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, parameters);
 
             // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
             return getBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage, createComparator(parameters));
@@ -163,7 +164,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
         try {
             String comparatorInstance = Convert.getParameterValue(parameters, "comparatorInstance", String.class, null);
             if (comparatorInstance != null)
-                return Convert.createInstanceWithStringArgs(comparatorInstance, IndexComparator.class, null); // This is unchecked, but it cannot be checked until two objects are compared
+                return Instantiators.createInstanceWithStringArgs(comparatorInstance, IndexComparator.class, null); // This is unchecked, but it cannot be checked until two objects are compared
             Class<? extends IndexComparator> comparatorClass = Convert.genericCastToClass(parameters.get("comparatorClass"), IndexComparator.class);
             if (comparatorClass != null)
                 return comparatorClass.newInstance(); // This is unchecked, but it cannot be checked until two objects are compared

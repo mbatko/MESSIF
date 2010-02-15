@@ -94,7 +94,7 @@ public class ExtractorDataSource {
     /**
      * Return this data source as input stream.
      * <p>Note that the data source is <i>not</i> closed - use {@link InputStream#close()} method instead.</p>
-     * @return
+     * @return this data source as input stream
      */
     public InputStream getInputStream() {
         return inputStream;

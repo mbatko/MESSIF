@@ -1,7 +1,6 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.Logger;
@@ -22,13 +21,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Binar
     }
 
     public ObjectFeature(BufferedReader stream) throws IOException, NumberFormatException {
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null) {
-                throw new EOFException ("EoF reached wehile initializing ObjectFeature!");
-            }
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         try {
             String[] params = line.trim().split("[, ]+");
             this.x = Float.parseFloat(params[0]);

@@ -150,7 +150,10 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         return 1;
     }
 
-    @Override
+    /**
+     * Returns the object the distance to which is used for the answer rank.
+     * @return the query object of this ranking query
+     */
     public LocalAbstractObject getQueryObject() {
         return queryObjectForDistances;
     }

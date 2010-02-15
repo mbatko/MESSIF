@@ -5,6 +5,8 @@
 
 package messif.buckets.index;
 
+import messif.buckets.storage.Address;
+
 /**
  * This interface represents an initialized search on an index.
  * It allows to browse the data of an index - use {@link #next()} and {@link #previous()}
@@ -20,13 +22,14 @@ package messif.buckets.index;
 public interface Search<T> extends Cloneable {
 
     /**
-     * Returns the object found by the last search. That is, returns the object
-     * found by the last call to {@link #next} or {@link #previous}. If these
-     * methods returned <tt>false</tt>, <tt>null</tt> will be returned.
+     * Returns the object found by the last search. That is, if method {@link #next}
+     * or {@link #previous} has returned <tt>true</tt>, this method returns the matching
+     * object. If <tt>false</tt> has been returned, this method throws an {@link IllegalStateException}.
      * 
      * @return the object found by the last search
+     * @throws IllegalStateException if there is no current object (next/previous method was not called or returned <tt>false</tt>)
      */
-    public T getCurrentObject();
+    public T getCurrentObject() throws IllegalStateException;
 
     /**
      * Searches for the next object (forward search) and returns <tt>false</tt>

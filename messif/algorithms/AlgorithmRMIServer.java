@@ -16,7 +16,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.utility.Clearable;
-import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 /**
  * Encapsulates an algorithm with an RMI server.
@@ -89,9 +89,16 @@ public class AlgorithmRMIServer extends Thread {
 
                             for (;;) {
                                 String methodName = in.readUTF();
-                                Object[] methodArguments = (Object[]) in.readUnshared();
+                                Object[] methodArguments;
                                 try {
-                                    Object retVal = Convert.getMethod(algorithmClass, methodName, false, methodArguments).invoke(algorithm, methodArguments);
+                                    methodArguments = (Object[]) in.readUnshared();
+                                } catch (ClassNotFoundException e) {
+                                    log.severe("Received unknown class from RMI client: " + e.getMessage());
+                                    out.writeUnshared(e);
+                                    break;
+                                }
+                                try {
+                                    Object retVal = Instantiators.getMethod(algorithmClass, methodName, false, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
                                     out.writeUnshared(retVal);
@@ -113,8 +120,6 @@ public class AlgorithmRMIServer extends Thread {
                             // Connection closed, exiting
                         } catch (IOException e) {
                             log.warning("Error communicating with RMI client: " + e);
-                        } catch (ClassNotFoundException e) {
-                            log.severe("Received unknown class from RMI client: " + e.getMessage());
                         } finally {
                             // ignore exceptions when closing
                             try {

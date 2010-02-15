@@ -56,12 +56,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
      */
     protected LocalAbstractObjectAutoImpl(BufferedReader stream) throws IOException, IllegalArgumentException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing " + getClass().getSimpleName());
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         // Read object data into specific fields
         readAttributesFromStream(line, ';', ' ', this, getDataFields());

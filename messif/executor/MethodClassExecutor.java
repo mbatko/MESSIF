@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 
 
@@ -92,7 +92,7 @@ public class MethodClassExecutor extends MethodExecutor {
             
             // Check prototype and add method to the registry
             Class<?>[] methodArgTypes = method.getParameterTypes();
-            if (Convert.isPrototypeMatching(methodArgTypes, methodPrototype, differentiateByArgNo)) {
+            if (Instantiators.isPrototypeMatching(methodArgTypes, methodPrototype, differentiateByArgNo)) {
                 // Prototypes are matching in all except the differentiate index, which must be subclass of the class specified in the prototype
                 if (methodPrototype[differentiateByArgNo].isAssignableFrom(methodArgTypes[differentiateByArgNo]) && !registeredMethods.containsKey(methodArgTypes[differentiateByArgNo]))
                     registeredMethods.put(methodArgTypes[differentiateByArgNo], method);

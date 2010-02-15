@@ -24,4 +24,10 @@ public interface Extractor<T extends LocalAbstractObject> {
      * @throws IOException if there was a problem reading data from the {@code dataSource}
      */
     public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException;
+
+    /**
+     * Returns the object class extracted by this extractor.
+     * @return the object class extracted by this extractor
+     */
+    public Class<? extends T> getExtractedClass();
 }

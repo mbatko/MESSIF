@@ -59,12 +59,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
      */
     public ObjectContourShape(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IndexOutOfBoundsException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectHomogeneousTexture.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         String[] fields = line.trim().split(";\\p{Space}*");
         

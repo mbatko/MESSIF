@@ -18,6 +18,7 @@ import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
 import messif.utility.DirectoryInputStream;
+import messif.utility.reflection.Instantiators;
 
 /**
  * This class represents an iterator on {@link LocalAbstractObject}s that are read from a file.
@@ -88,7 +89,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
 
         // Get constructor for arguments
         try {
-            this.constructor = Convert.getConstructor(objClass, true, this.constructorArgs);
+            this.constructor = Instantiators.getConstructor(objClass, true, this.constructorArgs);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Object " + objClass + " lacks proper constructor: " + e.getMessage());
         }

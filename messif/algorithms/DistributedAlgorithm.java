@@ -15,8 +15,6 @@ import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticRefCounter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -117,27 +115,6 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
 
         // Start Message dispatcher
         this.messageDisp = new MessageDispatcher(parentDispatcher, nodeID);
-    }
-
-    /**
-     * Compatibility deserialization method that reads this object having version 4.
-     * This works with the special <code>ObjectInputStreamConverter</code> class from utils.
-     * @param in the stream from which to read the serialized algorithm
-     * @throws IOException if there was an I/O error reading the stream
-     * @throws ClassNotFoundException if some of the classes stored in the stream cannot be resolved
-     */
-    private void readObjectVer4(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        int port = in.readInt();
-        int broadcastPort = in.readInt();
-
-        try {
-            // Reopen file channel (set it through reflection to overcome the "final" flag)
-            Field field = DistributedAlgorithm.class.getDeclaredField("messageDisp");
-            field.setAccessible(true);
-            field.set(this, new MessageDispatcher(port, broadcastPort));
-        } catch (Exception e) {
-            throw new IOException(e.toString());
-        }
     }
 
 

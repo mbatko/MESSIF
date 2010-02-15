@@ -9,11 +9,10 @@ import java.io.Serializable;
 import java.util.Map;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableIndex;
-import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.storage.IntAddress;
-import messif.buckets.storage.IntStorage;
+import messif.buckets.storage.IntStorageIndexed;
+import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.InvalidAddressException;
 import messif.utility.Convert;
 
@@ -25,7 +24,7 @@ import messif.utility.Convert;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Serializable {
+public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -252,15 +251,15 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
         return store(object) != null;
     }
 
-    public ModifiableSearch<T> search() throws IllegalStateException {
+    public IntStorageSearch<T> search() throws IllegalStateException {
         return new MemoryStorageSearch<Object>(null, null, null);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, key, key);
     }
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, from, to);
     }
 
@@ -270,7 +269,7 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
      * 
      * @param <C> the type the boundaries used by the search
      */
-    private class MemoryStorageSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+    private class MemoryStorageSearch<C> extends AbstractSearch<C, T> implements IntStorageSearch<T> {
         /** Current position in the storage's array */
         private int currentIndexPosition = -1;
 
@@ -306,10 +305,18 @@ public class MemoryStorage<T> implements IntStorage<T>, ModifiableIndex<T>, Seri
             return object;
         }
 
-        public void remove() throws IllegalStateException, BucketStorageException {
+        public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
+            return new IntAddress<T>(MemoryStorage.this, getCurrentObjectIntAddress());
+        }
+
+        public int getCurrentObjectIntAddress() throws IllegalStateException {
             if (currentIndexPosition < 0 || currentIndexPosition > size - 1)
-                throw new IllegalStateException("Cannot remove object before next() or previous() is called");
-            MemoryStorage.this.remove(currentIndexPosition);
+                throw new IllegalStateException("There is no current object");
+            return currentIndexPosition;
+        }
+
+        public void remove() throws IllegalStateException, BucketStorageException {
+            MemoryStorage.this.remove(getCurrentObjectIntAddress());
         }
     }
 

@@ -15,6 +15,7 @@ import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableSearch;
+import messif.buckets.storage.Address;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.operations.DeleteOperation;
@@ -28,7 +29,6 @@ import java.util.NoSuchElementException;
 import messif.buckets.Addible;
 import messif.buckets.Bucket;
 import messif.buckets.BucketDispatcher;
-import messif.buckets.BucketErrorCode;
 import messif.buckets.LocalBucket;
 import messif.buckets.Removable;
 import messif.buckets.StorageFailureException;
@@ -37,11 +37,11 @@ import messif.buckets.index.OperationIndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
-import messif.objects.util.AbstractStreamObjectIterator;
 import messif.operations.AnswerType;
 import messif.operations.BulkInsertOperation;
 import messif.operations.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 /**
  * This is a LocalBucket that allows to create buckets backed by an Algorithm.
@@ -101,6 +101,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         algorithm.destroy();
         super.destroy();
@@ -167,7 +168,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
 
         // Create new instance of algorithm
         try {
-            return Convert.createInstanceWithInheritableArgs(algClass, algParams.toArray());
+            return Instantiators.createInstanceWithInheritableArgs(algClass, algParams.toArray());
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("The class " + algClass.getName() + " does not contain constructor for given parameters " + algParams + ": " + e.getMessage());
         } catch (InvocationTargetException e) {
@@ -205,7 +206,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         // Create new instance of algorithm
         try {
             Map<String, Object> namedInstances = Convert.safeGenericCastMap(parameters.get("namedInstances"), String.class, Object.class);
-            return Convert.createInstanceWithStringArgs(
+            return Instantiators.createInstanceWithStringArgs(
                     Algorithm.getAnnotatedConstructors(algClass),
                     algParams.toArray(new String[algParams.size()]),
                     namedInstances
@@ -232,7 +233,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * the InsertOperation is executed.
      *
      * @param object The new object to be inserted
-     * @return error code - for details, see documentation of {@link BucketErrorCode}
+     * @return error code - for details, see documentation of {@link messif.buckets.BucketErrorCode}
      * @throws BucketStorageException if there was an error storing the object to the encapsulated algorithm,
      *              e.g. the encapsulated algorithm does not support InsertOperation
      */
@@ -377,12 +378,39 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             return iterator.hasPrevious()?iterator.previous():null;
         }
 
+        public Address<LocalAbstractObject> getCurrentObjectAddress() throws IllegalStateException {
+            final LocalAbstractObject object = getCurrentObject();
+            if (object == null)
+                throw new IllegalStateException();
+            return new Address<LocalAbstractObject>() {
+                private final static long serialVersionUID = 1L;
+                public LocalAbstractObject read() throws BucketStorageException {
+                    return object;
+                }
+                public void remove() throws BucketStorageException, UnsupportedOperationException {
+                    callRemove(object);
+                }
+            };
+        }
+
         public void remove() throws IllegalStateException, BucketStorageException {
-            DeleteOperation operation = new DeleteOperation(getCurrentObject());
-            if (operation.getDeletedObject() == null)
+            LocalAbstractObject object = getCurrentObject();
+            if (object == null)
                 throw new IllegalStateException("There is no object to delete yet");
+            callRemove(object);
+        }
+
+        /**
+         * Removes the given object by calling {@link DeleteOperation} on the
+         * encapsulated algorithm.
+         *
+         * @param object the object to delete
+         * @throws BucketStorageException if the algorithm does not support delete operation or there was an error deleting the object
+         */
+        private void callRemove(LocalAbstractObject object) throws BucketStorageException {
+            DeleteOperation operation;
             try {
-                algorithm.executeOperation(operation);
+                operation = algorithm.executeOperation(new DeleteOperation(object));
             } catch (NoSuchMethodException e) {
                 throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
             } catch (AlgorithmMethodException e) {

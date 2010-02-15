@@ -7,7 +7,6 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -65,12 +64,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      */
     public ObjectIntVector(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectIntVector.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         String[] numbers = line.trim().split("[, ]+");
 
