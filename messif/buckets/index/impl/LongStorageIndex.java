@@ -12,7 +12,6 @@ import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.LongStorage;
-import messif.buckets.storage.LongStorageIndexed;
 import messif.buckets.storage.LongStorageSearch;
 
 /**
@@ -145,10 +144,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
 
     @Override
     protected <C> LongStorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-        if (storage instanceof LongStorageIndexed)
-            return ((LongStorageIndexed<T>)storage).search(comparator, from, to);
-        else
-            return new LongStorageFullScanModifiableSearch<C>(comparator, from, to);
+        return new LongStorageFullScanModifiableSearch<C>(comparator, from, to);
     }
 
     /**

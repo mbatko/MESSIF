@@ -12,7 +12,6 @@ import messif.buckets.storage.Address;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 import messif.buckets.storage.Storage;
-import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.StorageSearch;
 
 /**
@@ -155,10 +154,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
 
     @Override
     protected <C> StorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-        if (storage instanceof StorageIndexed)
-            return ((StorageIndexed<T>)storage).search(comparator, from, to);
-        else
-            return new StorageFullScanModifiableSearch<C>(comparator, from, to);
+        return new StorageFullScanModifiableSearch<C>(comparator, from, to);
     }
 
     /**

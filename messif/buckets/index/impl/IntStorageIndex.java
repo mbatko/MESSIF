@@ -10,7 +10,6 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.storage.IntAddress;
 import messif.buckets.storage.IntStorage;
-import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
@@ -145,10 +144,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
 
     @Override
     protected <C> IntStorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-        if (storage instanceof IntStorageIndexed)
-            return ((IntStorageIndexed<T>)storage).search(comparator, from, to);
-        else
-            return new IntStorageFullScanModifiableSearch<C>(comparator, from, to);
+        return new IntStorageFullScanModifiableSearch<C>(comparator, from, to);
     }
 
     /**
