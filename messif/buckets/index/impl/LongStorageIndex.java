@@ -140,7 +140,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
 
     @Override
     protected LongStorageSearch<T> createOrderedSearch(int initialIndex, int minIndex, int maxIndex) {
-        return new LongStorageOrderedModifiableSearch(maxIndex, initialIndex, minIndex);
+        return new LongStorageOrderedModifiableSearch(initialIndex, minIndex, maxIndex);
     }
 
     @Override

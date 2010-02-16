@@ -150,7 +150,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
 
     @Override
     protected StorageSearch<T> createOrderedSearch(int initialIndex, int minIndex, int maxIndex) {
-        return new StorageOrderedModifiableSearch(maxIndex, initialIndex, minIndex);
+        return new StorageOrderedModifiableSearch(initialIndex, minIndex, maxIndex);
     }
 
     @Override

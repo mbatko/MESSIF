@@ -140,7 +140,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
 
     @Override
     protected IntStorageSearch<T> createOrderedSearch(int initialIndex, int minIndex, int maxIndex) {
-        return new IntStorageOrderedModifiableSearch(maxIndex, initialIndex, minIndex);
+        return new IntStorageOrderedModifiableSearch(initialIndex, minIndex, maxIndex);
     }
 
     @Override

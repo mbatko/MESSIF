@@ -63,7 +63,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         // If "from" key was not found
         if (fromIndex < 0) {
             if (from == to) // There is no object that can be accessed ("from" is the same as "to" and neither can be found)
-                return search();
+                return createOrderedSearch(0, 0, -1);
             else
                 fromIndex = -fromIndex - 1;
         }
