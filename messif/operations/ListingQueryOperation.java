@@ -123,6 +123,8 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {
+            if (object == null)
+                return false;
             return answer.add(answerType.update(object));
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
@@ -161,9 +163,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      * @param operation the source operation from which to get the update
      */
     protected void updateFrom(SingletonQueryOperation operation) {
-        Iterator<? extends AbstractObject> iter = operation.getAnswer();
-        while (iter.hasNext())
-            addToAnswer(iter.next());
+        addToAnswer(operation.getAnswerObject());
     }
 
     /**

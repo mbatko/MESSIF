@@ -232,6 +232,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+        if (object == null)
+            return null;
         float[] metaDistances = storeMetaDistances?queryObject.createMetaDistancesHolder():null;
         float distance = queryObject.getDistance(object, metaDistances, distThreshold);
         if (distance > distThreshold)
@@ -249,6 +251,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires clonning but the passed object cannot be cloned
      */
     public final RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
+        if (object == null)
+            return null;
         RankedAbstractObject rankedObject;
         try {
             // Create the ranked object encapsulation

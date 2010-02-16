@@ -136,6 +136,8 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         switch (index) {
         case 0:
             return locators;
+        case 1:
+            return queryObjectForDistances;
         default:
             throw new IndexOutOfBoundsException("GetObjectsByLocatorsOperation has only one argument");
         }
@@ -147,7 +149,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return 1;
+        return queryObjectForDistances == null ? 1 : 2;
     }
 
     /**

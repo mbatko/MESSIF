@@ -5,6 +5,7 @@
 
 package messif.operations;
 
+import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectList;
@@ -70,10 +71,19 @@ public class GetRandomObjectsQueryOperation extends ListingQueryOperation {
 
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
-        AbstractObjectList<? extends LocalAbstractObject> randomObjects = objects.getRandomObjects(count, false);
+        if (getAnswerCount() >= count)
+            return 0;
+        AbstractObjectList<? extends LocalAbstractObject> randomObjects = objects.getRandomObjects(count - getAnswerCount(), false);
         for (LocalAbstractObject obj : randomObjects)
             addToAnswer(obj);
         return randomObjects.size();
+    }
+
+    @Override
+    public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
+        if (getAnswerCount() >= count)
+            return false;
+        return super.addToAnswer(object);
     }
 
 

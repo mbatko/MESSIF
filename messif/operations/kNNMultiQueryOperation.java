@@ -5,6 +5,7 @@
 
 package messif.operations;
 
+import java.util.Collection;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 
@@ -38,7 +39,7 @@ public class kNNMultiQueryOperation extends RankingQueryOperation {
      * @param k the number of nearest neighbors to retrieve
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects"})
-    public kNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k) {
+    public kNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k) {
         this(queryObjects, k, AnswerType.REMOTE_OBJECTS);
     }
 
@@ -49,7 +50,7 @@ public class kNNMultiQueryOperation extends RankingQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type"})
-    public kNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, AnswerType answerType) {
+    public kNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType) {
         this(queryObjects, k, false, answerType);
     }
 
@@ -62,9 +63,9 @@ public class kNNMultiQueryOperation extends RankingQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type"})
-    public kNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, boolean storeMetaDistances, AnswerType answerType) {
+    public kNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storeMetaDistances, AnswerType answerType) {
         super(answerType, k, storeMetaDistances);
-        this.queryObjects = queryObjects;
+        this.queryObjects = queryObjects.toArray(new LocalAbstractObject[queryObjects.size()]);
         this.k = k;
     }
 
