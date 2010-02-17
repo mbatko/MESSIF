@@ -133,31 +133,37 @@ public class BucketDispatcher implements Serializable {
     }
 
     /**
-     * Clean up all registered buckets' internals.
-     * This method is called by bucket dispatcher when this bucket is removed
-     * or when the bucket is garbage collected.
-     *
-     * The method removes statistics for this bucket.
-     *
+     * Finalize all buckets managed by this dispatcher.
      * @throws Throwable if there was an error during releasing resources
      */
     @Override
     public void finalize() throws Throwable {
+        Throwable posponedThrowable = null;
         for (LocalBucket bucket : getAllBuckets())
-            bucket.finalize();
+            try {
+                bucket.finalize();
+            } catch (Throwable e) {
+                posponedThrowable = e;
+            }
+        if (posponedThrowable != null)
+            throw posponedThrowable;
         super.finalize();
     }
 
     /**
-     * Destroys this bucket. This means release all resources associated with this
-     * bucket (by calling {@link #finalize()}) and clean up all pending data
-     * (e.g. delete temporary files, etc.).
-     *
-     * @throws Throwable if there was an error while cleaning
+     * Destroys all buckets managed by this dispatcher.
+     * @throws Throwable if there was an error during destroying buckets
      */
     public void destroy() throws Throwable {
+        Throwable posponedThrowable = null;
         for (LocalBucket bucket : getAllBuckets())
-            bucket.destroy();
+            try {
+                bucket.destroy();
+            } catch (Throwable e) {
+                posponedThrowable = e;
+            }
+        if (posponedThrowable != null)
+            throw posponedThrowable;
     }
 
 
@@ -573,14 +579,15 @@ public class BucketDispatcher implements Serializable {
 
     /**
      * Delete the bucket with specified ID from this dispatcher.
-     * Note that objects are not deleted from the bucket, just the bucket will be no longer maintained by this dispatcher.
-     * However, statistics for the bucket are destroyed.
-     *
+     * If destroying the bucket is not requested (i.e. {@code destroyBucket == false}),
+     * the bucket will be no longer maintained by this dispatcher, but no objects
+     * are deleted from the bucket.
      * @param bucketID the ID of the bucket to delete
+     * @param destroyBucket if <tt>true</tt>, all the objects in the bucket are destroyed.
      * @return the bucket deleted
      * @throws NoSuchElementException if there is no bucket with the specified ID
      */
-    public synchronized LocalBucket removeBucket(int bucketID) throws NoSuchElementException {
+    public synchronized LocalBucket removeBucket(int bucketID, boolean destroyBucket) throws NoSuchElementException {
         LocalBucket bucket = buckets.remove(bucketID);
         if (bucket == null)
             throw new NoSuchElementException("Bucket ID " + bucketID + " doesn't exist.");
@@ -591,13 +598,27 @@ public class BucketDispatcher implements Serializable {
         // Reset bucket ID and statistics
         bucket.setBucketID(UNASSIGNED_BUCKET_ID);
         try {
-            bucket.destroy();
+            if (destroyBucket)
+                bucket.destroy();
         } catch (Throwable e) {
             // Log the exception but continue cleanly
             log.log(Level.WARNING, "Error during bucket clean-up, continuing", e);
         }
 
         return bucket;
+    }
+
+    /**
+     * Delete the bucket with specified ID from this dispatcher.
+     * Note that the bucket is {@link LocalBucket#destroy() destroyed},
+     * i.e. all objects are deleted and
+     * However, statistics for the bucket are destroyed.
+     *
+     * @param bucketID the ID of the bucket to delete
+     * @throws NoSuchElementException if there is no bucket with the specified ID
+     */
+    public void removeBucket(int bucketID) throws NoSuchElementException {
+        removeBucket(bucketID, true);
     }
 
     /**
@@ -609,13 +630,14 @@ public class BucketDispatcher implements Serializable {
      * @throws BucketStorageException if the maximal number of buckets is already allocated
      */
     public LocalBucket moveBucket(int bucketID, BucketDispatcher targetDispatcher) throws NoSuchElementException, BucketStorageException {
+        LocalBucket bucket;
         synchronized (targetDispatcher) {
             if (targetDispatcher.getBucketCount() >= targetDispatcher.maxBuckets)
                 throw new CapacityFullException();
-            LocalBucket bucket = removeBucket(bucketID);
-            targetDispatcher.addBucket(bucket); // This will synchronize also on this dispatcher, thus a deadlock can occurr if two moves are cross-executed
-            return bucket;
+            bucket = removeBucket(bucketID, false);
         }
+        targetDispatcher.addBucket(bucket); // This will synchronize also on this dispatcher, thus a deadlock can occurr if two moves are cross-executed
+        return bucket;
     }
 
 

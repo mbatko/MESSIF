@@ -87,6 +87,9 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
     public void destroy() throws Throwable {
+        this.size = 0;
+        this.deleted = 0;
+        this.items = null; // This is correct, since this storage is destroyed and no data should be added afterwards
     }
 
 

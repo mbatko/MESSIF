@@ -132,5 +132,10 @@ public final class StatisticMinMaxCounter extends Statistics<StatisticMinMaxCoun
     public void setCheckpoint() {
         countCheckpoint = count;
     }
+
+    @Override
+    protected StatisticMinMaxCounter cast() {
+        return this;
+    }
     
 }

@@ -40,6 +40,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     //****************** Statistics ******************//
 
+    // TODO: change to weakref counters
     /** Number of bucket reads statistic per bucket */
     protected static final StatisticRefCounter counterBucketRead = StatisticRefCounter.getStatistics("BucketRead");
     /** Number of object inserts statistic per bucket */
@@ -99,9 +100,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     /**
      * Finalize this bucket. All transient resources associated with this
-     * storage are released.
+     * bucket are released.
      * After this method is called, the bucket methods' behavior is unpredictable.
-     * This method is called by bucket dispatcher when finishing.
+     * This method is called by the {@link BucketDispatcher} when it is finalized.
      *
      * @throws Throwable if there was an error while cleaning
      */
@@ -112,10 +113,10 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     /**
      * Destroy this bucket. This method releases all resources (transient and persistent)
-     * associated with this bucket (e.g. the statistics are deleted).
+     * associated with this bucket (e.g. the statistics and all objects are deleted).
      * After this method is called, the bucket methods' behavior is unpredictable.
-     * This method is called by bucket dispatcher when the bucket is deleted from
-     * the dispatcher.
+     * This method is called by the {@link BucketDispatcher} when the bucket is removed
+     * from the dispatcher.
      *
      * @throws Throwable if there was an error while cleaning
      */
@@ -241,7 +242,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      */
     public Index<LocalAbstractObject> getIndex() {
         // Update statistics
-        counterBucketRead.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketRead.add(this);
         
         return getModifiableIndex();
     }
@@ -331,7 +333,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         occupation += size;
 
         // Increase statistics
-        counterBucketAddObject.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketAddObject.add(this);
 
         // Execute after add filters
         if (afterAddFilters != null)
@@ -366,7 +369,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         occupation -= size;
 
         // Update statistics
-        counterBucketDelObject.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketDelObject.add(this);
 
         // Execute after add filters
         if (afterRemoveFilters != null)
@@ -440,7 +444,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
             throw new NoSuchElementException("There is no object with ID: " + objectID);
 
         // Update statistics
-        counterBucketRead.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketRead.add(this);
 
         return search.getCurrentObject();
     }
@@ -454,7 +459,8 @@ public abstract class LocalBucket extends Bucket implements Serializable {
             throw new NoSuchElementException("There is no object with locator: " + locator);
 
         // Update statistics
-        counterBucketRead.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketRead.add(this);
 
         return search.getCurrentObject();
     }
@@ -468,14 +474,16 @@ public abstract class LocalBucket extends Bucket implements Serializable {
             throw new NoSuchElementException("There is no object with key: " + key);
 
         // Update statistics
-        counterBucketRead.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketRead.add(this);
 
         return search.getCurrentObject();
     }
 
     public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         // Update statistics
-        counterBucketRead.add(this);
+        if (StatisticRefCounter.isEnabledGlobally())
+            counterBucketRead.add(this);
 
         final ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search();
         return new AbstractObjectIterator<LocalAbstractObject>() {

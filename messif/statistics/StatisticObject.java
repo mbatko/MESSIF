@@ -90,5 +90,10 @@ public class StatisticObject extends Statistics<StatisticObject> {
     public void setCheckpoint() {
         valueCheckpoint = value;
     }
+
+    @Override
+    protected StatisticObject cast() {
+        return this;
+    }
     
 }

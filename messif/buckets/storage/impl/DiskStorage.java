@@ -167,23 +167,34 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
         this.outputStream = openOutputStream();
     }
 
-    @Override
-    public void finalize() throws Throwable {
+    /**
+     * Close the associated file channel if this storage is no longer references
+     * from any index.
+     * @return <tt>true</tt> if the file channel was closed
+     * @throws IOException if there was a problem closing the file channel
+     */
+    protected boolean closeFileChannel() throws IOException {
         if (references <= 0) {
             if (modified) {
                 flush(true);
                 writeHeader(fileChannel, startPosition, FLAG_CLOSED);
             }
             fileChannel.close();
-            super.finalize();
+            return true;
         } else {
             references--;
+            return false;
         }
     }
 
+    @Override
+    public void finalize() throws Throwable {
+        closeFileChannel();
+        super.finalize();
+    }
+
     public void destroy() throws Throwable {
-        finalize();
-        if (references <= 0)
+        if (closeFileChannel())
             file.delete();
     }
 

@@ -16,7 +16,6 @@ import messif.buckets.LocalBucket;
 import messif.buckets.OrderedLocalBucket;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableOrderedIndex;
-import messif.buckets.index.impl.LongStorageIndex;
 import messif.buckets.index.impl.LongStorageMemoryIndex;
 import messif.buckets.storage.impl.DiskStorage;
 import messif.objects.keys.AbstractObjectKey;

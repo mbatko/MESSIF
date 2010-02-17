@@ -17,6 +17,11 @@ public final class StatisticCounter extends Statistics<StatisticCounter> {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    @Override
+    protected StatisticCounter cast() {
+        return this;
+    }
+
     //****************** Counter operation ******************//
 
     protected long value;

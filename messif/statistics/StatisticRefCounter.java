@@ -318,5 +318,10 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
         for (StatisticCounter counter : values.values()) 
             valueSumCheckpoint += counter.get();
     }
+
+    @Override
+    protected StatisticRefCounter cast() {
+        return this;
+    }
     
 }

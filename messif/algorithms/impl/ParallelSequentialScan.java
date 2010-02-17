@@ -103,6 +103,13 @@ public class ParallelSequentialScan extends Algorithm {
         super.finalize();
     }
 
+    @Override
+    public void destroy() throws Throwable {
+        for (LocalBucket localBucket : buckets)
+            localBucket.finalize();
+        // Do not call super.destroy(), since algorithm needs to differentiate between finalizing and destroying
+    }
+
 
     //****************** Insert operation ******************//
 

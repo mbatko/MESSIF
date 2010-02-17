@@ -192,4 +192,9 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
         checkpointValue = deepHashCode();
     }
 
+    @Override
+    protected StatisticSimpleWeakrefCounter cast() {
+        return this;
+    }
+
 }

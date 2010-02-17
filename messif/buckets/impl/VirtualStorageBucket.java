@@ -57,7 +57,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
 
     @Override
     public void finalize() throws Throwable {
-        index.destroy();
+        index.finalize();
         super.finalize();
     }
 

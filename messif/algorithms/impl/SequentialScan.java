@@ -168,7 +168,13 @@ public class SequentialScan extends Algorithm {
         bucket.finalize();
         super.finalize();
     }
-    
+
+    @Override
+    public void destroy() throws Throwable {
+        bucket.destroy();
+        // Do not call super.destroy(), since algorithm needs to differentiate between finalizing and destroying
+    }
+
     
     /**************************************************************/
     /******* INSERT OPERATION *************************************/

@@ -13,7 +13,7 @@ import java.util.Iterator;
  *
  * @author  xbatko
  */
-public class OperationStatistics implements Serializable {
+public final class OperationStatistics implements Serializable {
 
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
@@ -172,8 +172,9 @@ public class OperationStatistics implements Serializable {
      */
     protected <T extends Statistics<T>> T registerBoundStat(String asName, Statistics<T> bindToStat) throws ClassCastException {
         // Get the new statistic from the local namespace
-        T newStat = getStatistics(asName, bindToStat.getTypedClass());
-        newStat.bindTo(bindToStat.cast());       // This cast IS checked, since stat and newStat have exactly the same class...
+        @SuppressWarnings("unchecked")
+        T newStat = getStatistics(asName, (Class<? extends T>)bindToStat.getClass());
+        newStat.bindTo(bindToStat.cast());
         return newStat;
     }
 

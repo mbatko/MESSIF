@@ -109,15 +109,12 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         return boundTo != null;
     }
 
-    @SuppressWarnings("unchecked")
-    protected Class<TSelf> getTypedClass() {
-        return (Class)getClass();
-    }
-
-    @SuppressWarnings("unchecked")
-    protected TSelf cast() {
-        return (TSelf)this;
-    }
+    /**
+     * Returns this statistics as the type provided typed argument.
+     * This is a convenience method to avoid unchecked casts.
+     * @return this statistics
+     */
+    protected abstract TSelf cast();
 
 
     //****************** Statistical data access methods ******************//

@@ -134,5 +134,10 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     public void setCheckpoint() {
         timeCheckpoint = time;
     }
+
+    @Override
+    protected StatisticTimer cast() {
+        return this;
+    }
     
 }

@@ -6,6 +6,7 @@
 
 package messif.netbucket;
 
+import java.util.NoSuchElementException;
 import messif.buckets.BucketDispatcher;
 
 /**
@@ -30,7 +31,12 @@ public class BucketRemoveRequestMessage extends BucketRequestMessage<BucketRemov
 
     @Override
     public BucketRemoveReplyMessage execute(BucketDispatcher bucketDispatcher) {
-        return new BucketRemoveReplyMessage(this, bucketDispatcher.removeBucket(bucketID) != null);
+        try {
+            bucketDispatcher.removeBucket(bucketID);
+            return new BucketRemoveReplyMessage(this,  true);
+        } catch (NoSuchElementException ignore) {
+            return new BucketRemoveReplyMessage(this, false);
+        }
     }
 
     @Override

@@ -298,4 +298,10 @@ public class StatisticSlidingAvgCounter extends Statistics<StatisticSlidingAvgCo
                 append(getName()).append(".sum: ").append(getSum()).append(", ").
                 append(getName()).append(".cnt: ").append(getCnt()).toString();
     }
+
+    @Override
+    protected StatisticSlidingAvgCounter cast() {
+        return this;
+    }
+
 }
