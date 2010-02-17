@@ -217,6 +217,7 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
      *   <li><em>maximalLength</em> - the maximal length (in bytes) of the data written to <em>file</em> by this storage</li>
      *   <li><em>oneStorage</em> - if <tt>true</tt>, the storage is created only once
      *              and this created instance is used in subsequent calls</li>
+     *   <li><em>serializator</em> - instance of the serializator that is used (overrides any cacheClasses settings)</li>
      * </ul>
      * 
      * @param <T> the class of objects that the new storage will work with
@@ -263,10 +264,14 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
 
         // Initialize serializator
         BinarySerializator serializator;
-        if (cacheClasses == null)
+        if (parameters.containsKey("serializator"))
+            serializator = (BinarySerializator)parameters.get("serializator");
+        else if (cacheClasses == null)
             serializator = new MultiClassSerializator<T>(storedObjectsClass);
         else
             serializator = new CachingSerializator<T>(storedObjectsClass, cacheClasses);
+        // Store serializator into map for further use
+        parameters.put("serializator", serializator);
 
         // Finally, create the storage
         DiskStorage<T> storage = new DiskStorage<T>(storedObjectsClass, file, readOnly, bufferSize, directBuffer, memoryMap, startPosition, maximalLength, serializator);
