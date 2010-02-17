@@ -199,8 +199,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         }
         @Override
         protected void finalize() throws Throwable {
-            if (this.lock != null)
-                this.lock.unlock();
+            close();
             super.finalize();
         }
         public int getCurrentObjectIntAddress() throws IllegalStateException {
@@ -208,6 +207,12 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         }
         public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             return new IntAddress<T>(storage, index[getCurentObjectIndex()]);
+        }
+        @Override
+        public void close() {
+            if (this.lock != null)
+                this.lock.unlock();
+            super.close();
         }
     }
 }

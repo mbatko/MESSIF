@@ -199,8 +199,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         }
         @Override
         protected void finalize() throws Throwable {
-            if (this.lock != null)
-                this.lock.unlock();
+            close();
             super.finalize();
         }
         public long getCurrentObjectLongAddress() throws IllegalStateException {
@@ -208,6 +207,12 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         }
         public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             return new LongAddress<T>(storage, index[getCurentObjectIndex()]);
+        }
+        @Override
+        public void close() {
+            if (this.lock != null)
+                this.lock.unlock();
+            super.close();
         }
     }
 }

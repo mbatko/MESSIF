@@ -321,6 +321,9 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
         public void remove() throws IllegalStateException, BucketStorageException {
             MemoryStorage.this.remove(getCurrentObjectIntAddress());
         }
+
+        public void close() {
+        }
     }
 
 }

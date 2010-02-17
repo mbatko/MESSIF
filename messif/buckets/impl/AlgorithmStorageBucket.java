@@ -378,26 +378,14 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             return iterator.hasPrevious()?iterator.previous():null;
         }
 
-        public Address<LocalAbstractObject> getCurrentObjectAddress() throws IllegalStateException {
-            final LocalAbstractObject object = getCurrentObject();
-            if (object == null)
-                throw new IllegalStateException();
-            return new Address<LocalAbstractObject>() {
-                private final static long serialVersionUID = 1L;
-                public LocalAbstractObject read() throws BucketStorageException {
-                    return object;
-                }
-                public void remove() throws BucketStorageException, UnsupportedOperationException {
-                    callRemove(object);
-                }
-            };
-        }
-
         public void remove() throws IllegalStateException, BucketStorageException {
             LocalAbstractObject object = getCurrentObject();
             if (object == null)
                 throw new IllegalStateException("There is no object to delete yet");
             callRemove(object);
+        }
+
+        public void close() {
         }
 
         /**

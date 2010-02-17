@@ -245,6 +245,9 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         public OrderedModifiableSearch clone() throws CloneNotSupportedException {
             return (OrderedModifiableSearch)super.clone();
         }
+
+        public void close() {
+        }
     }
 
     /**
@@ -304,6 +307,9 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             if (lastRet < cursor)
                 cursor--;
             lastRet = -1;
+        }
+
+        public void close() {
         }
     }
 }

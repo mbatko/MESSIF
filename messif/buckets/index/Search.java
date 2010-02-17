@@ -5,8 +5,6 @@
 
 package messif.buckets.index;
 
-import messif.buckets.storage.Address;
-
 /**
  * This interface represents an initialized search on an index.
  * It allows to browse the data of an index - use {@link #next()} and {@link #previous()}
@@ -87,4 +85,10 @@ public interface Search<T> extends Cloneable {
      */
     public Search<T> clone() throws CloneNotSupportedException;
 
+    /**
+     * Closes this search indicating that no objects will be retrieved.
+     * Note that after this method is called, the searching methods
+     * ({@link #next()}, {@link #previous()}, etc.) should <em>not</em> be called.
+     */
+    public void close();
 }

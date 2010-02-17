@@ -395,6 +395,9 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         public OrderedModifiableSearch clone() throws CloneNotSupportedException {
             return (OrderedModifiableSearch) super.clone();
         }
+
+        public void close() {
+        }
     }
 
     /**
@@ -468,6 +471,8 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
                 cursor--;
             }
             lastRet = -1;
+        }
+        public void close() {
         }
     }
     

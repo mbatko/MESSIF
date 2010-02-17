@@ -763,6 +763,12 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
         }
 
         @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
+        }
+
+        @Override
         protected T readNext() throws BucketStorageException {
             try {
                 lastObjectPosition = inputStream.getPosition();
@@ -794,5 +800,11 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
             lastObjectPosition = -1;
         }
 
+        public void close() {
+            try {
+                inputStream.close();
+            } catch (IOException ignored) {
+            }
+        }
     }
 }

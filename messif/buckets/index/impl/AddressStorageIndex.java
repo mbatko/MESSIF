@@ -206,12 +206,17 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         }
         @Override
         protected void finalize() throws Throwable {
-            if (this.lock != null)
-                this.lock.unlock();
+            close();
             super.finalize();
         }
         public Address<T> getCurrentObjectAddress() throws IllegalStateException {
             return index[getCurentObjectIndex()];
+        }
+        @Override
+        public void close() {
+            if (this.lock != null)
+                this.lock.unlock();
+            super.close();
         }
     }
 

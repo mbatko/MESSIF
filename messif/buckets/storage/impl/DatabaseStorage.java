@@ -505,7 +505,7 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
 
         @Override
         protected void finalize() throws Throwable {
-            resultSet.close();
+            close();
             super.finalize();
         }
 
@@ -557,6 +557,13 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
 
         public void remove() throws IllegalStateException, BucketStorageException {
             DatabaseStorage.this.remove(getCurrentObjectIntAddress());
+        }
+
+        public void close() {
+            try {
+                resultSet.close();
+            } catch (SQLException ignore) {
+            }
         }
     }
 
