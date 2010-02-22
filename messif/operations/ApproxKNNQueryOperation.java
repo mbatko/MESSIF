@@ -49,13 +49,13 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
     }
 
     /** Type of the local approximation parameter used. */
-    protected final LocalSearchType localSearchType;
+    protected LocalSearchType localSearchType;
 
     /**
      * Value of the local approximation parameter. 
      * Its interpretation depends on the value of {@link #localSearchType}.
      */
-    protected final int localSearchParam;
+    protected int localSearchParam;
 
     /** Radius for which the answer is guaranteed as correct.
      * It is specified in the constructor and can influence the level of approximation.
@@ -155,6 +155,22 @@ public class ApproxKNNQueryOperation extends kNNQueryOperation {
      */
     public LocalSearchType getLocalSearchType() {
         return localSearchType;
+    }
+
+    /**
+     * Setter for the local search parameter {@link #localSearchParam}
+     * @param localSearchParam new local search parameter {@link #localSearchParam}
+     */
+    public void setLocalSearchParam(int localSearchParam) {
+        this.localSearchParam = localSearchParam;
+    }
+
+    /**
+     * Setter for the type of the local search parameter {@link #localSearchType}
+     * @param localSearchType new {@link #localSearchType}
+     */
+    public void setLocalSearchType(LocalSearchType localSearchType) {
+        this.localSearchType = localSearchType;
     }
 
     /**

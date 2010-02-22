@@ -57,9 +57,9 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     /** The maximal (hard) capacity of this bucket */
     private final long capacity;
     /** The soft capacity of this bucket */
-    private final long softCapacity;
+    private long softCapacity;
     /** The minimal (hard) capacity of this bucket */
-    private final long lowOccupation;
+    private long lowOccupation;
     /** Flag if the occupation is stored as bytes or object count */
     private final boolean occupationAsBytes;
     /** Actual bucket occupation in either bytes or object count (see occupationAsBytes flag) */
@@ -157,6 +157,22 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
 
     //****************** Bucket limit methods ******************//
+
+    /**
+     * Set param "low occupeation" for thsi bucket
+     * @param lowOccupation new low occupation.
+     */
+    public void setLowOccupation(long lowOccupation) {
+        this.lowOccupation = lowOccupation;
+    }
+
+    /**
+     * Set new soft capacity for this bucket
+     * @param softCapacity new soft capacity param
+     */
+    public void setSoftCapacity(long softCapacity) {
+        this.softCapacity = softCapacity;
+    }
 
     /**
      * Returns the maximal capacity of this bucket.

@@ -229,6 +229,14 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     /**
+     * Return the instance of the algorithm encapsulated by this bucket
+     * @return the instance of the algorithm encapsulated by this bucket
+     */
+    public Algorithm getAlgorithm() {
+        return algorithm;
+    }
+
+    /**
      * Stores the specified object in the encapsulated algorithm, i.e.
      * the InsertOperation is executed.
      *
@@ -282,7 +290,29 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         }
     }
 
+    /**
+     * Removes the given object by calling {@link DeleteOperation} on the
+     * encapsulated algorithm.
+     *
+     * @param object the object to delete
+     * @throws BucketStorageException if the algorithm does not support delete operation or there was an error deleting the object
+     */
+    @Override
+    public int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
+        DeleteOperation operation;
+        try {
+            operation = algorithm.executeOperation(new DeleteOperation(object, deleteLimit));
+        } catch (NoSuchMethodException e) {
+            throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
+        } catch (AlgorithmMethodException e) {
+            throw new StorageFailureException("DeleteOperation executed on " + algorithm.getName() + " failed", e.getCause());
+        }
 
+        // Update object count
+        if (operation.wasSuccessful())
+            objectCount -= operation.getObjects().size();
+        return operation.getObjects().size();
+    }
 
     public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
         return new AlgorithmStorageSearch<Object>(null, null, null);
@@ -382,33 +412,12 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             LocalAbstractObject object = getCurrentObject();
             if (object == null)
                 throw new IllegalStateException("There is no object to delete yet");
-            callRemove(object);
+            deleteObject(object);
         }
 
         public void close() {
         }
 
-        /**
-         * Removes the given object by calling {@link DeleteOperation} on the
-         * encapsulated algorithm.
-         *
-         * @param object the object to delete
-         * @throws BucketStorageException if the algorithm does not support delete operation or there was an error deleting the object
-         */
-        private void callRemove(LocalAbstractObject object) throws BucketStorageException {
-            DeleteOperation operation;
-            try {
-                operation = algorithm.executeOperation(new DeleteOperation(object));
-            } catch (NoSuchMethodException e) {
-                throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
-            } catch (AlgorithmMethodException e) {
-                throw new StorageFailureException("DeleteOperation executed on " + algorithm.getName() + " failed", e.getCause());
-            }
-
-            // Update object count
-            if (operation.wasSuccessful())
-                objectCount -= operation.getObjects().size();
-        }
     }
 
 

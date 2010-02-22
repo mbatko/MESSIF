@@ -64,22 +64,22 @@ public class BucketDispatcher implements Serializable {
     public static final int UNASSIGNED_BUCKET_ID = 0;
 
     /** Default bucket hard capacity for newly created buckets */
-    protected final long bucketCapacity;
+    protected long bucketCapacity;
 
     /** Default bucket soft capacity for newly created buckets */
-    protected final long bucketSoftCapacity;
+    protected long bucketSoftCapacity;
 
     /** Default bucket hard low-occupation for newly created buckets */
-    protected final long bucketLowOccupation;
+    protected long bucketLowOccupation;
 
     /** Default flag whether to store occupation & capacity in bytes (<tt>true</tt>) or number of objects (<tt>false</tt>) for newly created buckets */
-    protected final boolean bucketOccupationAsBytes;
+    protected boolean bucketOccupationAsBytes;
 
     /** Default class for newly created buckets */
-    protected final Class<? extends LocalBucket> defaultBucketClass;
+    protected Class<? extends LocalBucket> defaultBucketClass;
 
     /** Default parameters for newly created buckets with default bucket class */
-    protected final Map<String, Object> defaultBucketClassParams;
+    protected Map<String, Object> defaultBucketClassParams;
 
 
     //****************** Constructors ******************//
@@ -275,6 +275,77 @@ public class BucketDispatcher implements Serializable {
             createdPivotChoosers.put(bucket, rtv);
             
             return rtv;   
+        }
+    }
+
+
+    // ******************  Parameter setters  ******************* //
+
+    /**
+     * Set bucket capacity for all new buckets.
+     * @param bucketCapacity new hard capacity.
+     */
+    public void setBucketCapacity(long bucketCapacity) {
+        this.bucketCapacity = bucketCapacity;
+    }
+
+    /**
+     * Set param "low occupeation" for all new buckets
+     * @param bucketLowOccupation new low occupation.
+     */
+    public void setBucketLowOccupation(long bucketLowOccupation) {
+        this.bucketLowOccupation = bucketLowOccupation;
+    }
+
+    /**
+     * Set param {@link #bucketOccupationAsBytes} for all new buckets.
+     * @param bucketOccupationAsBytes new value for param {@link #bucketOccupationAsBytes}.
+     */
+    public void setBucketOccupationAsBytes(boolean bucketOccupationAsBytes) {
+        this.bucketOccupationAsBytes = bucketOccupationAsBytes;
+    }
+
+    /**
+     * Set new soft capacity for all new buckets.
+     * @param bucketSoftCapacity new soft capacity param
+     */
+    public void setBucketSoftCapacity(long bucketSoftCapacity) {
+        this.bucketSoftCapacity = bucketSoftCapacity;
+    }
+
+    /**
+     * Set default class for all new buckets
+     * @param defaultBucketClass new bucket default class.
+     */
+    public void setDefaultBucketClass(Class<? extends LocalBucket> defaultBucketClass) {
+        this.defaultBucketClass = defaultBucketClass;
+    }
+
+    /**
+     * New parameters for all new default buckets
+     * @param defaultBucketClassParams new params for default buckets
+     */
+    public void setDefaultBucketClassParams(Map<String, Object> defaultBucketClassParams) {
+        this.defaultBucketClassParams = defaultBucketClassParams;
+    }
+
+    /**
+     * Set the soft capacity for all buckets registered by this dispatcher.
+     * @param bucketSoftCapacity new bucket soft capacity for the existing buckets
+     */
+    public void setAllBucketSoftCapacity(long bucketSoftCapacity) {
+        for (LocalBucket bucket : buckets.values()) {
+            bucket.setSoftCapacity(bucketSoftCapacity);
+        }
+    }
+
+    /**
+     * Set the low occupattion for all buckets registered by this dispatcher.
+     * @param bucketLowOccupation new low occupation.
+     */
+    public void setAllBucketLowOccupation(long bucketLowOccupation) {
+        for (LocalBucket bucket : buckets.values()) {
+            bucket.setLowOccupation(bucketLowOccupation);
         }
     }
 
