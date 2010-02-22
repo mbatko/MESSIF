@@ -114,7 +114,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
             }
             //Class<? extends Storage> storageClass = Convert.getParameterValue(parameters, "storageClass", Class.class, null);
             @SuppressWarnings("unchecked")
-            Storage<LocalAbstractObject> storage = Instantiators.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, parameters);
+            Storage<LocalAbstractObject> storage = Instantiators.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, (Object)parameters);
 
             // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
             return getBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage, createComparator(parameters));

@@ -23,58 +23,6 @@ import messif.utility.Convert;
 public abstract class Instantiators {
 
     /**
-     * Creates an {@link Instantiator} for the given signature.
-     * It can be a constructor, method, or field signature.
-     *
-     * @param <T> the class of instances that the instantiator will create
-     * @param signature the signature of a constructor, method, or field
-     * @param checkClass the class of instances that the instantiator will create
-     * @return a new instantiator
-     * @throws IllegalArgumentException if the instantiator cannot be created
-     */
-    public static <T> Instantiator<T> createInstantiator(String signature, Class<? extends T> checkClass) throws IllegalArgumentException {
-        // Parse arguments (enclosed in braces)
-        String[] args;
-        String callname;
-        int openParenthesisPos = signature.indexOf('(');
-        int closeParenthesisPos = signature.lastIndexOf(')');
-        if (openParenthesisPos == -1 || openParenthesisPos == closeParenthesisPos - 1) { // There are no parenthesis or they are empty
-            args = new String[0];
-            callname = signature;
-        } else if (closeParenthesisPos == -1) {
-            throw new IllegalArgumentException("Missing closing parenthesis: " + signature);
-        } else {
-            args = signature.substring(openParenthesisPos + 1, closeParenthesisPos).split("\\s*,\\s*");
-            callname = signature.substring(0, openParenthesisPos);
-        }
-
-        // Create instance
-        try {
-            // Try call name as a constructor
-            Class<? extends T> clazz = Convert.getClassForName(callname, checkClass);
-            return new ConstructorInstantiator<T>(clazz, args.length);
-        } catch (ClassNotFoundException e) {
-            // Class not found, try dot earlier
-            int dotPos = callname.lastIndexOf('.');
-            if (dotPos == -1)
-                throw new IllegalArgumentException("Cannot create instantiator for " + signature + ": " + e);
-
-            // Class without last item, which is supposed to be a factory method name or a field name
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(callname.substring(0, dotPos));
-            } catch (ClassNotFoundException ex) {
-                throw new IllegalArgumentException("Cannot create instantiator for " + signature + ": " + ex);
-            }
-            callname = callname.substring(dotPos + 1);
-
-            return (openParenthesisPos == -1) ?
-                new FieldInstantiator<T>(checkClass, clazz, callname) :
-                new FactoryMethodInstantiator<T>(checkClass, clazz, callname, args.length);
-        }
-    }
-
-    /**
      * Creates a new instance of a class using string arguments for its constructor.
      * The list of constructors of the desired class must be provided as <code>constructors</code> argument.
      * The constructors are tried one by one from this list and if the <code>arguments</code>
@@ -315,45 +263,13 @@ public abstract class Instantiators {
      * @throws ClassNotFoundException if the class in the constructor signature was not found or is not a descendant of checkClass
      */
     public static <E> E createInstanceWithStringArgs(String signature, Class<E> checkClass, Map<String, Object> namedInstances) throws InvocationTargetException, ClassNotFoundException {
-        // Parse arguments (enclosed in braces)
-        String[] args;
-        String callname;
-        int openParenthesisPos = signature.indexOf('(');
-        int closeParenthesisPos = signature.lastIndexOf(')');
-        if (openParenthesisPos == -1 || openParenthesisPos == closeParenthesisPos - 1) { // There are no parenthesis or they are empty
-            args = new String[0];
-            callname = signature;
-        } else if (closeParenthesisPos == -1) {
-            throw new IllegalArgumentException("Missing closing parenthesis: " + signature);
-        } else {
-            args = signature.substring(openParenthesisPos + 1, closeParenthesisPos).split("\\s*,\\s*");
-            callname = signature.substring(0, openParenthesisPos);
-        }
-
-        // Create instance
-        try {
-            // Try call name as a constructor
-            Class<E> clazz = Convert.getClassForName(callname, checkClass);
-            return createInstanceWithStringArgs(Arrays.asList(Convert.getConstructors(clazz)), args, namedInstances);
-        } catch (ClassNotFoundException e) {
-            // Class not found, try dot earlier
-            int dotPos = callname.lastIndexOf('.');
-            if (dotPos == -1)
-                throw e;
-
-            // Class without last item, which is supposed to be a factory method name or a field name
-            Class<?> clazz = Class.forName(callname.substring(0, dotPos));
-            callname = callname.substring(dotPos + 1);
-
-            try {
-                // We have correct class, now check if it is method or attribute
-                return (openParenthesisPos == -1)?
-                    checkClass.cast(createInstanceStaticField(clazz, callname)):
-                    createInstanceUsingFactoryMethod(clazz, callname, checkClass, args);
-            } catch (NoSuchMethodException ex) {
-                throw new InvocationTargetException(ex);
-            }
-        }
+        InstantiatorSignature instantiatorSignature = new InstantiatorSignature(signature);
+        if (instantiatorSignature.isConstructorSignature())
+            return createInstanceWithStringArgs(Arrays.asList(Convert.getConstructors(instantiatorSignature.getParsedClass(checkClass))), instantiatorSignature.getParsedArgs(), namedInstances);
+        else if (instantiatorSignature.isMethodSignature())
+            return createInstanceUsingFactoryMethod(instantiatorSignature.getParsedClass(), instantiatorSignature.getParsedName(), checkClass, namedInstances, instantiatorSignature.getParsedArgs());
+        else
+            return checkClass.cast(createInstanceStaticField(instantiatorSignature.getParsedClass(), instantiatorSignature.getParsedName()));
     }
 
     /**
@@ -370,7 +286,7 @@ public abstract class Instantiators {
      */
     public static <E> E createInstanceWithInheritableArgs(Class<E> instanceClass, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
         try {
-            return getConstructor(instanceClass, false, arguments).newInstance(arguments);
+            return getConstructor(instanceClass, false, null, arguments).newInstance(arguments);
         } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
         } catch (InstantiationException e) {
@@ -394,7 +310,7 @@ public abstract class Instantiators {
     @SuppressWarnings("unchecked")
     public static <E> E createInstanceUsingFactoryMethod(Class<E> instanceClass, String methodName, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
         try {
-            Method factoryMethod = getMethod(instanceClass, methodName, false, arguments);
+            Method factoryMethod = getMethod(instanceClass, methodName, false, null, arguments);
             if (!Modifier.isStatic(factoryMethod.getModifiers()))
                 throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to be static");
             if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
@@ -415,25 +331,28 @@ public abstract class Instantiators {
      * @param declaringClass the class where the factory method is declared
      * @param methodName the name of the factory method
      * @param instanceClass the class for which to create an instance
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the factory method
      * @return a new instance of the class
-     * @throws NoSuchMethodException if there was no factory method for the specified list of arguments
+     * @throws IllegalArgumentException if there was no factory method for the specified list of arguments or has wrong parameters
      * @throws InvocationTargetException if there was an exception during instantiation
      */
     @SuppressWarnings("unchecked")
-    public static <E> E createInstanceUsingFactoryMethod(Class<?> declaringClass, String methodName, Class<E> instanceClass, String... arguments) throws NoSuchMethodException, InvocationTargetException {
+    public static <E> E createInstanceUsingFactoryMethod(Class<?> declaringClass, String methodName, Class<E> instanceClass, Map<String, Object> namedInstances, String... arguments) throws IllegalArgumentException, InvocationTargetException {
         try {
             // Convert string arguments to object array
             Object[] args = new Object[arguments.length];
             System.arraycopy(arguments, 0, args, 0, arguments.length);
-            Method factoryMethod = getMethod(declaringClass, methodName, true, args);
+            Method factoryMethod = getMethod(declaringClass, methodName, true, namedInstances, args);
             if (!Modifier.isStatic(factoryMethod.getModifiers()))
                 throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to be static");
             if (!instanceClass.isAssignableFrom(factoryMethod.getReturnType()))
                 throw new IllegalArgumentException("Factory method " + factoryMethod + " is required to return " + instanceClass);
             return (E)factoryMethod.invoke(null, args); // This cast IS checked on the previous line
         } catch (IllegalAccessException e) {
-            throw new NoSuchMethodException(e.getMessage());
+            throw new InternalError("This should never happen since getMethod should only return public methods");
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Factory method " + e.getMessage() + " was not found");
         }
     }
 
@@ -471,14 +390,15 @@ public abstract class Instantiators {
      * @param <E> the class the constructor will create
      * @param clazz the class for which to get the constructor
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the constructor
      * @return a constructor for the specified class
      * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
      */
     @SuppressWarnings("unchecked")
-    public static <E> Constructor<E> getConstructor(Class<E> clazz, boolean convertStringArguments, Object[] arguments) throws NoSuchMethodException {
+    public static <E> Constructor<E> getConstructor(Class<E> clazz, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchMethodException {
         for (Constructor<E> constructor : (Constructor<E>[])clazz.getDeclaredConstructors()) {
-            if (isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments))
+            if (isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances))
                 return constructor;
         }
 
@@ -509,12 +429,13 @@ public abstract class Instantiators {
      * @param clazz the class for which to get the method
      * @param methodName the name of the method to get
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the method
      * @return a method of the specified class
      * @throws NoSuchMethodException if there was no method with the specified name and arguments
      */
     @SuppressWarnings("unchecked")
-    public static Method getMethod(Class<?> clazz, String methodName, boolean convertStringArguments, Object[] arguments) throws NoSuchMethodException {
+    public static Method getMethod(Class<?> clazz, String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchMethodException {
         if (clazz == null || methodName == null)
             throw new NoSuchMethodException("There is not method '" + methodName + "' that accepts " + Arrays.toString(arguments));
 
@@ -525,12 +446,12 @@ public abstract class Instantiators {
                 continue;
 
             // Check prototype
-            if (isPrototypeMatching(method.getParameterTypes(), arguments, convertStringArguments))
+            if (isPrototypeMatching(method.getParameterTypes(), arguments, convertStringArguments, namedInstances))
                 return method;
         }
 
         // Recurse to superclass
-        return getMethod(clazz.getSuperclass(), methodName, convertStringArguments, arguments);
+        return getMethod(clazz.getSuperclass(), methodName, convertStringArguments, namedInstances, arguments);
     }
 
     /**
@@ -589,8 +510,9 @@ public abstract class Instantiators {
      * @param arguments the tested arguments
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
      * @return <tt>true</tt> if the arguments are compatible with the prototype
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      */
-    public static boolean isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments) {
+    public static boolean isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments, Map<String, Object> namedInstances) {
         // Not enough arguments
         if (prototype.length != arguments.length)
             return false;
@@ -612,7 +534,7 @@ public abstract class Instantiators {
                     // Clone argument array if not clonned yet
                     if (convertedArguments == null)
                         convertedArguments = arguments.clone();
-                    convertedArguments[i] = Convert.stringToType((String)arguments[i], prototype[i]);
+                    convertedArguments[i] = Convert.stringToType((String)arguments[i], prototype[i], namedInstances);
                 } catch (InstantiationException ignore) {
                     return false;
                 }

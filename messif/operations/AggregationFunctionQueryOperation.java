@@ -101,6 +101,10 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
         return 3;
     }
 
+    /**
+     * Returns the query (meta) object of this query operation.
+     * @return the query (meta) object of this query operation
+     */
     public MetaObject getQueryObject() {
         return queryObject;
     }

@@ -89,7 +89,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
 
         // Get constructor for arguments
         try {
-            this.constructor = Instantiators.getConstructor(objClass, true, this.constructorArgs);
+            this.constructor = Instantiators.getConstructor(objClass, true, null, this.constructorArgs);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Object " + objClass + " lacks proper constructor: " + e.getMessage());
         }

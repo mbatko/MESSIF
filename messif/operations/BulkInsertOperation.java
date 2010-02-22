@@ -24,14 +24,10 @@ public class BulkInsertOperation extends AbstractOperation {
     
     /****************** Operation request attributes ******************/
     
-    /** Inserted object (accessible directly) */
+    /** List of objects to insert */
     protected final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
 
-    public AbstractObjectList<? extends LocalAbstractObject> getInsertedObjects() {
-        return insertedObjects;
-    }
-    
-    
+
     /****************** Constructors ******************/
 
     /**
@@ -72,6 +68,14 @@ public class BulkInsertOperation extends AbstractOperation {
     @AbstractOperation.OperationConstructor({"Stream to read objects to insert from, Number of objects to read"})
     public BulkInsertOperation(AbstractStreamObjectIterator<LocalAbstractObject> stream, int count) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(stream, count);
+    }
+
+    /**
+     * Returns the list of objects to insert.
+     * @return the list of objects to insert
+     */
+    public AbstractObjectList<? extends LocalAbstractObject> getInsertedObjects() {
+        return insertedObjects;
     }
 
     /**

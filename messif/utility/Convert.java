@@ -777,7 +777,7 @@ public abstract class Convert {
 
         // Try to convert the value from string (there will be a class cast exception if the value is not string)
         try {
-            return stringToType((String)value, paramClass);
+            return stringToType((String)value, paramClass, (Map<String, Object>)parameters.get("namedInstances"));
         } catch (InstantiationException e) {
             throw new ClassCastException(e.getMessage());
         }

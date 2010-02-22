@@ -9,7 +9,6 @@ package messif.operations;
 
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AggregationFunction;
 
 

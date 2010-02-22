@@ -98,7 +98,7 @@ public class AlgorithmRMIServer extends Thread {
                                     break;
                                 }
                                 try {
-                                    Object retVal = Instantiators.getMethod(algorithmClass, methodName, false, methodArguments).invoke(algorithm, methodArguments);
+                                    Object retVal = Instantiators.getMethod(algorithmClass, methodName, false, null, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
                                     out.writeUnshared(retVal);
