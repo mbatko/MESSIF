@@ -6,6 +6,7 @@
 package messif.buckets.index.impl;
 
 import java.io.Serializable;
+import java.util.List;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.storage.Address;
@@ -153,8 +154,8 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
     }
 
     @Override
-    protected <C> StorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-        return new StorageFullScanModifiableSearch<C>(comparator, from, to);
+    protected <C> StorageSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
+        return new StorageFullScanModifiableSearch<C>(comparator, keyBounds, keys);
     }
 
     /**
@@ -196,12 +197,13 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         /**
          * Creates a new instance of StorageFullScanModifiableSearch for the
          * specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that defines the
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          */
-        protected StorageFullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-            super(comparator, from, to);
+        protected StorageFullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
+            super(comparator, keyBounds, keys);
             this.lock = storage instanceof Lockable ? ((Lockable)storage).lock(true) : null;
         }
         @Override

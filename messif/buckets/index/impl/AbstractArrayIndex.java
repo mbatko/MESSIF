@@ -5,6 +5,9 @@
 
 package messif.buckets.index.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
@@ -103,7 +106,12 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return search(comparator, key, key);
+        return createFullScanSearch(comparator, false, Collections.singletonList(key));
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
+        return createFullScanSearch(comparator, false, keys);
     }
 
     @SuppressWarnings("unchecked")
@@ -111,7 +119,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         if (comparator.equals(comparator()))
             return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
         else
-            return createFullScanSearch(comparator, from, to);
+            return createFullScanSearch(comparator, true, Arrays.asList(from, to));
     }
 
     /**
@@ -129,16 +137,17 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     /**
-     * Creates a full-scan search for the specified search comparator and [from,to] bounds.
+     * Creates a full-scan search for the specified search comparator and keys.
      *
      * @param <C> the type the boundaries used by the search
-     * @param comparator the comparator that defines the
-     * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-     * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+     * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+     * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+     *          the lower and the upper bounds on the searched value
+     * @param keys list of keys to search for
      * @return a full-scan search
      */
-    protected <C> ModifiableSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-        return new FullScanModifiableSearch<C>(comparator, from, to);
+    protected <C> ModifiableSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
+        return new FullScanModifiableSearch<C>(comparator, keyBounds, keys);
     }
 
 
@@ -266,13 +275,14 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
         private int lastRet = -1;
 
         /**
-         * Creates a new instance of FullScanModifiableSearch for the specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * Creates a new instance of FullScanModifiableSearch for the specified search comparator and keys.
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          */
-        protected FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-            super(comparator, from, to);
+        protected FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
+            super(comparator, keyBounds, keys);
         }
 
         /**

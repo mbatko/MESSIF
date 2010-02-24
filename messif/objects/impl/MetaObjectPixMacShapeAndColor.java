@@ -5,8 +5,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import messif.buckets.BucketStorageException;
+import messif.buckets.index.LocalAbstractObjectOrder;
+import messif.buckets.storage.IntStorageIndexed;
+import messif.buckets.storage.IntStorageSearch;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
@@ -155,11 +161,64 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     }
 
     /**
+     * Creates a new instance of MetaObjectPixMacShapeAndColor.
+     * A keyword index is used to translate keywords to addresses.
+     *
+     * @param stream stream to read the data from
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @throws IOException if reading from the stream fails
+     */
+    public MetaObjectPixMacShapeAndColor(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
+        this(stream, false);
+        try {
+            keyWords = new ObjectIntSortedVectorJaccard(keywordsToIdentifiers(stream.readLine(), ';', keyWordIndex));
+        } catch (Exception e) {
+            throw new IOException(e.toString(), e);
+        }
+    }
+
+    /**
      * Returns list of supported visual descriptor types that this object recognizes in XML.
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
         return descriptorNames;
+    }
+
+    /**
+     * Transfors a line with keywords into array of addresses.
+     * Note that unknown keywords are added to the index.
+     *
+     * @param keyWordsLine the line that contains the keywords
+     * @param separator separates the keywords on the {@code keyWordsLine}
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @return array of translated addresses
+     * @throws BucketStorageException if there was a problem storing a new keyword
+     * @throws IllegalStateException if there was a problem reading the index
+     */
+    private static int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) throws BucketStorageException {
+        // Parse all key words from the given string (not using String.split)
+        List<String> keyWords = new ArrayList<String>();
+        int lastPos = -1;
+        int nextPos;
+        while ((nextPos = keyWordsLine.indexOf(separator, lastPos + 1)) != -1) {
+            keyWords.add(keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase());
+            lastPos = nextPos;
+        }
+        keyWords.add(keyWordsLine.substring(lastPos + 1).trim().toLowerCase());
+
+        // Search the index
+        int[] ret = new int[keyWords.size()];
+        int i;
+        IntStorageSearch<String> search = keyWordIndex.search(LocalAbstractObjectOrder.trivialObjectComparator, keyWords);
+        for (i = 0; search.next(); i++) {
+            keyWords.remove(search.getCurrentObject());
+            ret[i] = search.getCurrentObjectIntAddress();
+        }
+        for (; !keyWords.isEmpty(); i++)
+            ret[i] = keyWordIndex.store(keyWords.remove(keyWords.size() - 1)).getAddress();
+
+        return ret;
     }
 
 

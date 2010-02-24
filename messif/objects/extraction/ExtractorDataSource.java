@@ -6,6 +6,7 @@
 package messif.objects.extraction;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -33,18 +34,25 @@ import java.net.URLConnection;
  *
  * @author xbatko
  */
-public class ExtractorDataSource {
+public class ExtractorDataSource implements Closeable {
     /** Number of bytes that the {@link #getBinaryData()} method allocates */
     private static final int readStreamDataAllocation = 4096;
 
+    //****************** Attributes *************//
+
+    /** Remembered data source (can be {@link File}, {@link InputStream} or {@link URL}) */
+    private final Object dataSource;
     /** Name of the data source */
     private final String name;
     /** Input stream that provides data for this data source */
-    private final InputStream inputStream;
+    private InputStream inputStream;
     /** Number of bytes available in the input stream or zero if this is unknown in advance */
-    private final int bytesAvailable;
+    private int bytesAvailable;
     /** Internal buffered reader that access the input stream */
     private BufferedReader bufferedReader;
+
+
+    //****************** Constructors *************//
 
     /**
      * Create new instance of ExtractorDataSource using data from {@link InputStream}.
@@ -52,9 +60,9 @@ public class ExtractorDataSource {
      * @param name the name of this data source
      */
     public ExtractorDataSource(InputStream inputStream, String name) {
-        this.inputStream = inputStream;
-        this.bytesAvailable = -1;
         this.name = name;
+        this.dataSource = null;
+        openDataSource(inputStream);
     }
 
     /**
@@ -71,9 +79,9 @@ public class ExtractorDataSource {
         if (mimeTypeRegexp != null && conn.getContentType() != null && !mimeTypeRegexp.matches(conn.getContentType()))
             throw new IOException("Cannot read '" + conn.getContentType() + "' data");
 
-        this.inputStream = conn.getInputStream();
-        this.bytesAvailable = conn.getContentLength();
         this.name = url.toString();
+        this.dataSource = url;
+        openDataSource(conn);
     }
 
     /**
@@ -82,13 +90,75 @@ public class ExtractorDataSource {
      * @throws IOException if there was an error opening the file
      */
     public ExtractorDataSource(File file) throws IOException {
+        this.name = file.getPath();
+        this.dataSource = file;
+        openDataSource(file);
+    }
+
+
+    //****************** Data source open *************//
+
+    /**
+     * Open anonymous data source.
+     * This method chooses the correct {@code openDataSource(...)} method.
+     * @param dataSource the data source to use
+     * @throws IOException if there was an I/O error opening the given data source
+     */
+    private void openDataSourceAnonymous(Object dataSource) throws IOException {
+        if (dataSource instanceof InputStream) {
+            openDataSource((InputStream)dataSource);
+        } else if (dataSource instanceof File) {
+            openDataSource((File)dataSource);
+        } else if (dataSource instanceof URL) {
+            openDataSource(((URL)dataSource).openConnection());
+        } else if (dataSource instanceof URLConnection) {
+            openDataSource((URLConnection)dataSource);
+        } else {
+            throw new InternalError("Unknown data source - added constructor without modification of openDataSource method");
+        }
+    }
+
+    /**
+     * Open data source from an {@link InputStream}.
+     * @param stream the stream to use as data source
+     */
+    private void openDataSource(InputStream stream) {
+        this.inputStream = (InputStream)dataSource;
+        this.bytesAvailable = -1;
+    }
+
+    /**
+     * Open data source from a {@link File}.
+     * @param file the file to use as data source
+     * @throws IOException if there was an I/O error opening the given file
+     */
+    private void openDataSource(File file) throws IOException {
         long fileSize = file.length();
         if (fileSize >= Integer.MAX_VALUE)
             throw new IOException("Cannot load data from " + file + ": file is too big");
-
         this.inputStream = new FileInputStream(file);
         this.bytesAvailable = (int)fileSize;
-        this.name = file.getPath();
+    }
+
+    /**
+     * Open data source from a {@link URLConnection}.
+     * @param conn the URL connection to use as data source
+     * @throws IOException if there was an I/O error opening the given URL connection
+     */
+    private void openDataSource(URLConnection conn) throws IOException {
+        this.inputStream = conn.getInputStream();
+        this.bytesAvailable = conn.getContentLength();
+    }
+
+
+    //****************** Data access methods *************//
+
+    /**
+     * Returns the name of this data source.
+     * @return the name of this data source
+     */
+    public String getName() {
+        return name;
     }
 
     /**
@@ -167,12 +237,24 @@ public class ExtractorDataSource {
         inputStream.close();
     }
 
+    public void close() throws IOException {
+        inputStream.close();
+    }
+
     /**
-     * Returns the name of this data source.
-     * @return the name of this data source
+     * Reset this data source, i.e. the data will be provided from beginning.
+     * Note that reset is available only if a resetable data source was used
+     * in constructor (e.g. file or url).
+     * @throws IOException if there was an I/O error re-opening the data source
      */
-    public String getName() {
-        return name;
+    public void reset() throws IOException {
+        // Check if file name was remembered
+        if (dataSource == null)
+            throw new IOException("Cannot reset this stream, file name not provided");
+
+        // Reset current stream
+        inputStream.close();
+        openDataSourceAnonymous(dataSource);
     }
 
 }

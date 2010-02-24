@@ -13,6 +13,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import messif.buckets.BucketStorageException;
@@ -20,9 +23,8 @@ import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.impl.AbstractSearch;
-import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.IntAddress;
-import messif.buckets.storage.IntStorage;
+import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.InvalidAddressException;
 import messif.objects.LocalAbstractObject;
@@ -46,7 +48,7 @@ import messif.utility.Convert;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Serializable {
+public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -106,6 +108,8 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
     private transient Connection dbConnection;
     /** List of column convertors */
     private final ColumnConvertor<T>[] columnConvertors;
+    /** List of additional column names (same size as columnConvertors) */
+    private final String[] columnNames;
     /** Number of objects SQL command */
     private final String sizeSQL;
     /** Cached prepared statement for size SQL */
@@ -126,8 +130,6 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
     private transient PreparedStatement readStatement;
     /** Select all data SQL command */
     private final String selectSQL;
-    /** Where SQL expression for indexed columns */
-    private final String[] sqlWhereByColumn;
 
 
     //****************** Constructor ******************//
@@ -162,6 +164,7 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
         this.dbConnUrl = dbConnUrl;
         this.dbConnInfo = dbConnInfo;
         this.columnConvertors = columnConvertors;
+        this.columnNames = columnNames;
 
         // Prepare SQL commands
         StringBuilder columnList = new StringBuilder();
@@ -194,11 +197,6 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
         deleteSQL = sql.toString();
         // Delete all
         deleteAllSQL = "delete from " + tableName;
-        // ByColumn where
-        sqlWhereByColumn = new String[columnNames.length];
-        for (int i = 0; i < columnNames.length; i++)
-            sqlWhereByColumn[i] = new StringBuilder(" where ").append(columnNames[i]).
-                    append(" between ? and ? order by ").append(columnNames[i]).toString();
     }
 
     @Override
@@ -432,19 +430,29 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
         return search(null, null, null);
     }
 
-    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return search(comparator, key, key);
+    /**
+     * Returns a name of a column that is compatible with the given comparator.
+     * @param comparator the comparator for which to get column name
+     * @return a column name or <tt>null</tt>
+     */
+    private String getComparatorCompatibleColumn(IndexComparator<?, ?> comparator) {
+        for (int i = 0; i < columnConvertors.length; i++)
+            if (columnConvertors[i].isColumnCompatible(comparator))
+                return columnNames[i];
+        return null;
     }
 
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), false, Collections.singletonList(key));
+    }
+
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), false, keys);
+    }
+
+    @SuppressWarnings("unchecked")
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        try {
-            for (int i = 0; i < columnConvertors.length; i++)
-                if (columnConvertors[i].isColumnCompatible(comparator))
-                    return new DatabaseStorageSearch<C>(comparator, sqlWhereByColumn[i], from, to);
-            return new DatabaseStorageSearch<C>(comparator, null, from, to);
-        } catch (SQLException e) {
-            throw new IllegalStateException("Cannot search database: " + e.getMessage(), e);
-        }
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), true, Arrays.asList(from, to));
     }
 
     /**
@@ -453,31 +461,34 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
      * @param <C> the type the boundaries used by the search
      */
     private class DatabaseStorageSearch<C> extends AbstractSearch<C, T> implements IntStorageSearch<T> {
-        /** SQL query that provides data for this search */
-        private final String sql;
+        /** Name of the column that contains the searched keys */
+        private final String columnName;
         /** Query result set that provides data for this search */
         private ResultSet resultSet;
 
         /**
          * Creates a new instance of DatabaseStorageSearch.
          * The search uses SQL "where" clause to limit the returned data
-         * to those that have values of column {@code columnName} between {@code from} and {@code to}.
+         * to those that have values of column {@code columnName} set to given keys.
          *
-         * @param comparator the comparator that is used to compare the bounds
-         * @param whereCondition the where condition for the boundaries (use <tt>null</tt> to do full scan)
-         * @param from the lower bound on the searched values
-         * @param to the upper bound on the searched values
-         * @throws SQLException if there was an error executing the query
+         * @param comparator the comparator that is used to compare the keys
+         * @param columnName the column name that contains the keys (use <tt>null</tt> to do full scan)
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
+         * @throws IllegalStateException if there was an error executing the query
          */
-        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String whereCondition, C from, C to) throws SQLException {
+        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, boolean keyBounds, List<? extends C> keys) throws IllegalStateException {
             // Pass the comparator only if the database column is not provided (and thus the filtering must be done)
-            super(whereCondition != null ? null : comparator, from, to);
-
-            // Build SQL string
-            this.sql = (whereCondition != null) ? selectSQL + whereCondition : selectSQL;
+            super(columnName != null ? null : comparator, keyBounds, keys);
+            this.columnName = columnName;
 
             // Execute the query
-            this.resultSet = executeQuery();
+            try {
+                this.resultSet = executeQuery();
+            } catch (SQLException e) {
+                throw new IllegalStateException("Cannot search database: " + e.getMessage(), e);
+            }
         }
 
         /**
@@ -488,10 +499,22 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
         private ResultSet executeQuery() throws SQLException {
             do {
                 // Prepare the statement
-                PreparedStatement statement = getConnection().prepareStatement(sql);
-                if (statement.getParameterMetaData().getParameterCount() == 2) {
-                    statement.setObject(1, from);
-                    statement.setObject(2, to == null ? from : to);
+                PreparedStatement statement;
+                if (columnName == null) {
+                    statement = getConnection().prepareStatement(selectSQL);
+                } else if (isKeyBounds()) {
+                    statement = getConnection().prepareStatement(selectSQL + " where " + columnName + " between ? and ?");
+                    statement.setObject(1, getKey(0));
+                    statement.setObject(2, getKey(1));
+                } else {
+                    StringBuilder sql = new StringBuilder(selectSQL);
+                    sql.append(" where ").append(columnName).append(" in (");
+                    for (int i = 0; i < getKeyCount(); i++)
+                        sql.append(i == 0 ? "?" : ",?");
+                    sql.append(')');
+                    statement = getConnection().prepareStatement(sql.toString());
+                    for (int i = 0; i < getKeyCount(); i++)
+                        statement.setObject(i + 1, getKey(i));
                 }
 
                 // Execute the query
@@ -660,7 +683,7 @@ public class DatabaseStorage<T> implements IntStorage<T>, StorageIndexed<T>, Ser
         }
 
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-            return false;
+            return indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
         }
     };
 }

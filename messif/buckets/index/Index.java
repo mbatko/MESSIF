@@ -5,6 +5,8 @@
 
 package messif.buckets.index;
 
+import java.util.List;
+
 /**
  * Defines an index interface on objects.
  * 
@@ -27,22 +29,40 @@ public interface Index<T> {
     public Search<T> search() throws IllegalStateException;
 
     /**
-     * Returns a search for objects in this index that have the specified key.
+     * Returns a search for objects in this index that have any of the specified keys.
      * The equality is checked exclusively by using the specified comparator, thus
      * <code>key</code> need not necessarily be of the same class as the objects stored
      * in this index and also consistency with {@link java.lang.Object#equals equals} is not required.
-     * 
+     *
      * <p>
-     * Note that objects are <i>not</i> returned in the order defined by the comparator
+     * Note that objects are <i>not</i> necessarily returned in the order defined by the comparator
      * </p>
-     * 
-     * @param <C> the type the boundaries used by the search
-     * @param comparator compares the <code>from</code> with the stored objects
-     * @param key the key for search
+     *
+     * @param <C> the type of the key used by the search
+     * @param comparator compares the <code>key</code> with the stored objects
+     * @param key the key to search for
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
     public <C> Search<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException;
+
+    /**
+     * Returns a search for objects in this index that have any of the specified keys.
+     * The equality is checked exclusively by using the specified comparator, thus
+     * <code>key</code> need not necessarily be of the same class as the objects stored
+     * in this index and also consistency with {@link java.lang.Object#equals equals} is not required.
+     *
+     * <p>
+     * Note that objects are <i>not</i> necessarily returned in the order defined by the comparator
+     * </p>
+     *
+     * @param <C> the type of the keys used by the search
+     * @param comparator compares the <code>keys</code> with the stored objects
+     * @param keys the keys to search for (at least one key must be given)
+     * @return a search for objects in this index
+     * @throws IllegalStateException if there was an error initializing the search on this index
+     */
+    public <C> Search<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index that are within the specified key-range.

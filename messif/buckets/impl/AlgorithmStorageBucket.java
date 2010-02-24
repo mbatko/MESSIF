@@ -8,14 +8,15 @@ package messif.buckets.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableSearch;
-import messif.buckets.storage.Address;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.operations.DeleteOperation;
@@ -315,15 +316,20 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
-        return new AlgorithmStorageSearch<Object>(null, null, null);
+        return new AlgorithmStorageSearch<Object>(null, false, Collections.emptyList());
     }
 
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C key) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, key, key);
+        return new AlgorithmStorageSearch<Object>(null, false, Collections.singletonList(key));
     }
 
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, List<? extends C> keys) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, false, keys);
+    }
+
+    @SuppressWarnings("unchecked")
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, from, to);
+        return new AlgorithmStorageSearch<C>(comparator, true, Arrays.asList(from, to));
     }
 
     /**
@@ -338,16 +344,17 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * Creates a new instance of AlgorithmStorageSearch.
          * During the constructor call, a search operation is executed on
          * the encapsulated algorithm.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * @param comparator the comparator that is used to compare the keys
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
-            super(comparator, from, to);
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, boolean keyBounds, List<? extends C> keys) throws IllegalStateException {
+            super(comparator, keyBounds, keys);
 
             // Execute operation to get objects from the algorithm
-            QueryOperation<?> operation = executeOperation(createOperation(comparator, from, to));
+            QueryOperation<?> operation = executeOperation(createOperation(comparator, keys));
 
             // Read results into a list
             List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
@@ -361,17 +368,16 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         }
 
         /**
-         * Creates an operation to execute on the encapsulated algorithm for the specified comparator and boundaries.
+         * Creates an operation to execute on the encapsulated algorithm for the specified comparator and keys.
          * @param comparator the comparator to use for the query definition
-         * @param from the lower-bound key for which to create an operation
-         * @param to the upper-bound key for which to create an operation
+         * @param keys the list of keys the operation searches for
          * @return a new instance of query operation for the given key
          */
         @SuppressWarnings("unchecked")
-        protected QueryOperation<?> createOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) {
+        protected QueryOperation<?> createOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, List<? extends C> keys) {
             // Get the results from algorithm using operation
-            if (comparator != null && from != null && comparator instanceof OperationIndexComparator)
-                return ((OperationIndexComparator<C>)comparator).createIndexOperation(from, to); // This cast IS checked because the OperationIndexComparator is always a subtype
+            if (comparator != null && !keys.isEmpty() && comparator instanceof OperationIndexComparator)
+                return ((OperationIndexComparator<C>)comparator).createIndexOperation(keys); // This cast IS checked because the OperationIndexComparator is always a subtype
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }

@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
@@ -85,9 +88,6 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         storage = null;
     }
 
-    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
-    }
 
     // ******************     Comparator methods      ****************** //
 
@@ -268,7 +268,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
     }
 
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return search(comparator, key, key);
+        return search(comparator, Collections.singletonList(key));
     }
 
     @SuppressWarnings("unchecked")
@@ -276,7 +276,11 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         if (comparator.equals(comparator()))
             return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
         else
-            return new FullScanModifiableSearch<C>(comparator, from, to, lock());
+            return new FullScanModifiableSearch<C>(comparator, lock(), true, Arrays.asList(from, to));
+    }
+
+    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
+        return new FullScanModifiableSearch<C>(comparator, lock(), false, keys);
     }
 
 
@@ -420,14 +424,15 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
         /**
          * Creates a new instance of FullScanModifiableSearch for the specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
          * @param searchLock the lock object for the search - its {@link Lock#unlock()}
          *          method is called when this search is finalized
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          */
-        public FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, C from, C to, Lock searchLock) {
-            super(comparator, from, to);
+        public FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, Lock searchLock, boolean keyBounds, List<? extends C> keys) {
+            super(comparator, keyBounds, keys);
             this.searchLock = searchLock;
         }
 

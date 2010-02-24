@@ -16,6 +16,9 @@ import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,13 +26,13 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
-import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.Lock;
 import messif.buckets.storage.Lockable;
 import messif.buckets.storage.LongAddress;
-import messif.buckets.storage.LongStorage;
+import messif.buckets.storage.LongStorageIndexed;
 import messif.buckets.storage.LongStorageSearch;
 import messif.buckets.storage.ReadonlyStorageException;
+import messif.buckets.storage.StorageSearch;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
 import messif.objects.nio.FileChannelOutputStream;
@@ -48,7 +51,7 @@ import messif.utility.Convert;
  * @param <T> the class of objects stored in this storage
  * @author xbatko
  */
-public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockable, Serializable {
+public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -722,15 +725,20 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
     }
 
     public LongStorageSearch<T> search() throws IllegalStateException {
-        return new DiskStorageSearch<Object>(null, null, null);
+        return new DiskStorageSearch<Object>(null, false, Collections.emptyList());
+    }
+
+    public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
+        return new DiskStorageSearch<C>(comparator, false, keys);
     }
 
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, key, key);
+        return new DiskStorageSearch<C>(comparator, false, Collections.singletonList(key));
     }
 
+    @SuppressWarnings("unchecked")
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, from, to);
+        return new DiskStorageSearch<C>(comparator, true, Arrays.asList(from, to));
     }
 
     /**
@@ -746,14 +754,20 @@ public class DiskStorage<T> implements LongStorage<T>, StorageIndexed<T>, Lockab
         private long lastObjectPosition = -1;
 
         /**
-         * Creates a new instance of DiskStorageSearch for the specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * Creates a new instance of DiskStorageSearch for the specified search comparator and keys.
+         * If {@code keyBounds} is <tt>false</tt>, this search will look for any object
+         * that equals (according to the given comparator) to any of the keys.
+         * Otherwise, the objects that are within interval <code>[keys[0]; keys[1]]</code>
+         * are returned.
+         *
+         * @param comparator the comparator that is used to compare the keys
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          * @throws IllegalStateException if there was a problem initializing disk storage
          */
-        public DiskStorageSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-            super(comparator, from, to);
+        private DiskStorageSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) throws IllegalStateException {
+            super(comparator, keyBounds, keys);
             try {
                 flush(false);
                 this.inputStream = openInputStream(fileChannel);

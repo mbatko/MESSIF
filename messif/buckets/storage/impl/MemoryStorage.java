@@ -6,6 +6,9 @@
 package messif.buckets.storage.impl;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
@@ -255,15 +258,20 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
     public IntStorageSearch<T> search() throws IllegalStateException {
-        return new MemoryStorageSearch<Object>(null, null, null);
+        return new MemoryStorageSearch<Object>(null, false, Collections.emptyList());
     }
 
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new MemoryStorageSearch<C>(comparator, key, key);
+        return new MemoryStorageSearch<C>(comparator, false, Collections.singletonList(key));
     }
 
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
+        return new MemoryStorageSearch<C>(comparator, false, keys);
+    }
+
+    @SuppressWarnings("unchecked")
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return new MemoryStorageSearch<C>(comparator, from, to);
+        return new MemoryStorageSearch<C>(comparator, true, Arrays.asList(from, to));
     }
 
     /**
@@ -278,32 +286,40 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
 
         /**
          * Creates a new instance of the IndexedMemoryStorageSearch.
-         * @param comparator the comparator that defines the 
-         * @param from the lower bound on returned objects, i.e. objects greater or equal are returned
-         * @param to the upper bound on returned objects, i.e. objects smaller or equal are returned
+         * If {@code keyBounds} is <tt>false</tt>, this search will look for any object
+         * that equals (according to the given comparator) to any of the keys.
+         * Otherwise, the objects that are within interval <code>[keys[0]; keys[1]]</code>
+         * are returned.
+         *
+         * @param comparator the comparator that is used to compare the keys
+         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
+         *          the lower and the upper bounds on the searched value
+         * @param keys list of keys to search for
          */
-        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, C from, C to) {
-            super(comparator, from, to);
+        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
+            super(comparator, keyBounds, keys);
         }
 
         @Override
         protected T readNext() throws BucketStorageException {
-            T object = null;
-
-            // Advance position (and skip null objects, since they are deleted)
-            while (object == null && currentIndexPosition < size - 1)
+            T object;
+            do {
+                if (currentIndexPosition >= size - 1)
+                    return null;
                 object = read(++currentIndexPosition);
+            } while (object == null); // skip null objects, since they are deleted
 
             return object;
         }
 
         @Override
         protected T readPrevious() throws BucketStorageException {
-            T object = null;
-
-            // Advance position (and skip null objects, since they are deleted)
-            while (object == null && currentIndexPosition > 0)
+            T object;
+            do {
+                if (currentIndexPosition <= 0)
+                    return null;
                 object = read(--currentIndexPosition);
+            } while (object == null); // skip null objects, since they are deleted
 
             return object;
         }

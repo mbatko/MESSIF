@@ -6,6 +6,8 @@
 package messif.buckets.index;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.List;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
@@ -13,6 +15,7 @@ import messif.operations.AnswerType;
 import messif.operations.GetAllObjectsQueryOperation;
 import messif.operations.GetObjectByLocatorOperation;
 import messif.operations.GetObjectQueryOperation;
+import messif.operations.GetObjectsByLocatorsOperation;
 import messif.operations.QueryOperation;
 
 /**
@@ -73,9 +76,9 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object;
         }
 
-        public QueryOperation<?> createIndexOperation(UniqueID from, UniqueID to) {
-            if (to == null || from.equals(to))
-                return new GetObjectQueryOperation(from, AnswerType.ORIGINAL_OBJECTS);
+        public QueryOperation<?> createIndexOperation(List<? extends UniqueID> ids) {
+            if (ids.size() == 1)
+                return new GetObjectQueryOperation(ids.get(0), AnswerType.ORIGINAL_OBJECTS);
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
@@ -108,11 +111,11 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object.getLocatorURI();
         }
 
-        public QueryOperation<?> createIndexOperation(String from, String to) {
-            if (to == null || from.equals(to))
-                return new GetObjectByLocatorOperation(from, AnswerType.ORIGINAL_OBJECTS);
+        public QueryOperation<?> createIndexOperation(List<? extends String> locators) {
+            if (locators.size() == 1)
+                return new GetObjectByLocatorOperation(locators.get(0), AnswerType.ORIGINAL_OBJECTS);
             else
-                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
+                return new GetObjectsByLocatorsOperation(new HashSet<String>(locators), null, AnswerType.ORIGINAL_OBJECTS);
         }
 
         @Override
@@ -154,6 +157,25 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     };
 
+    /** */
+    public static IndexComparator<Comparable, Object> trivialObjectComparator = new IndexComparator<Comparable, Object>() {
+        private static final long serialVersionUID = 25105L;
+
+        @SuppressWarnings("unchecked")
+        public int indexCompare(Comparable k, Object o) {
+            return k.compareTo(o);
+        }
+
+        public Comparable extractKey(Object object) {
+            return (Comparable)object;
+        }
+
+        @SuppressWarnings("unchecked")
+        public int compare(Comparable o1, Comparable o2) {
+            return o1.compareTo(o2);
+        }
+
+    };
 
     //****************** Search wrappers ******************//
 
