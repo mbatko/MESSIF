@@ -128,6 +128,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     private final String readSQL;
     /** Cached prepared statement for read SQL */
     private transient PreparedStatement readStatement;
+    /** Read single object (by data) SQL command */
+    private final String readByDataSQL;
+    /** Cached prepared statement for readByData SQL */
+    private transient PreparedStatement readByDataStatement;
     /** Select all data SQL command */
     private final String selectSQL;
 
@@ -188,6 +192,11 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         sql = new StringBuilder("select ").append(primaryKeyColumn).append(',').append(columnList);
         sql.append(" from ").append(tableName);
         selectSQL = sql.toString();
+        // Read by data
+        StringBuilder sqlByData = new StringBuilder(sql);
+        for (int i = 0; i < columnNames.length; i++)
+            sqlByData.append(i == 0 ? " where " : " and ").append(columnNames[i]).append(" = ?");
+        readByDataSQL = sqlByData.toString();
         // Read
         sql.append(" where ").append(primaryKeyColumn).append(" = ?");
         readSQL = sql.toString();
@@ -384,7 +393,17 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             insertStatement = execute(insertStatement, insertSQL, null, object);
             ResultSet generatedKeys = insertStatement.getGeneratedKeys();
             try {
-                if (!generatedKeys.next() || generatedKeys.getMetaData().getColumnCount() == 0)
+                if (generatedKeys.next() && generatedKeys.getMetaData().getColumnCount() > 0)
+                    return new IntAddress<T>(this, generatedKeys.getInt(1));
+            } finally {
+                generatedKeys.close();
+            }
+
+            // Generated keys failed, do full by-object select
+            readByDataStatement = execute(readByDataStatement, readByDataSQL, null, object);
+            generatedKeys = readByDataStatement.getResultSet();
+            try {
+                if (!generatedKeys.next())
                     throw new StorageFailureException("No generated column was found", null);
                 return new IntAddress<T>(this, generatedKeys.getInt(1));
             } finally {

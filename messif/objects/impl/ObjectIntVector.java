@@ -65,8 +65,14 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     public ObjectIntVector(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
-        
-        String[] numbers = line.trim().split("[, ]+");
+        line = line.trim();
+
+        String[] numbers;
+        if ("".equals(line)) {
+            numbers = new String[0];
+        } else {
+            numbers = line.split("[, ]+");
+        }
 
         this.data = new int[numbers.length];
         

@@ -98,7 +98,7 @@ public abstract class Convert {
 
         // Converting static arrays
         if (type.isArray()) {
-            String[] items = string.split("\\p{Space}*,\\p{Space}*");
+            String[] items = string.split("\\p{Space}*[|,]\\p{Space}*");
             Class<?> componentType = type.getComponentType();
             Object array = Array.newInstance(componentType, items.length);
             for (int i = 0; i < items.length; i++)
@@ -243,7 +243,7 @@ public abstract class Convert {
      * @throws InstantiationException if the conversion of a value has failed
      */
     public static <E> void putStringIntoMap(String string, Map<? super String, ? super E> map, Class<E> valueType) throws InstantiationException {
-        Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*(,|$)").matcher(string);
+        Matcher m = Pattern.compile("\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*=\\p{Space}*(\"([^\"]*)\"|[^=]*?)\\p{Space}*([;,]|$)").matcher(string);
         while (m.find())
             map.put(
                 (m.group(2) == null)?m.group(1):m.group(2), // Key

@@ -507,7 +507,11 @@ public class Application {
                         )
                 );
             } catch (Exception e) {
-                out.println(e.toString());
+                if (e instanceof InvocationTargetException) {
+                    out.println(e.getCause().toString());
+                } else {
+                    out.println(e.toString());
+                }
                 out.println("---------------- Operation parameters ----------------");
                 out.println(AbstractOperation.getConstructorDescription(operationClass));
                 return false;
@@ -1164,6 +1168,7 @@ public class Application {
                 new StreamGenericAbstractObjectIterator<LocalAbstractObject>(
                     Convert.getClassForName(args[2], LocalAbstractObject.class),
                     args[1],
+                    namedInstances,
                     additionalArgs
                 )
             ) != null)

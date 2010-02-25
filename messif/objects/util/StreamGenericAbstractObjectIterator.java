@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
@@ -77,11 +78,12 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      *
      * @param objClass the class used to create the instances of objects in this stream
      * @param stream stream from which objects are read and instantiated
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IllegalStateException if there was an error reading from the stream
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
         this.stream = stream;
 
         // Read constructor arguments
@@ -89,7 +91,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
 
         // Get constructor for arguments
         try {
-            this.constructor = Instantiators.getConstructor(objClass, true, null, this.constructorArgs);
+            this.constructor = Instantiators.getConstructor(objClass, true, namedInstances, this.constructorArgs);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Object " + objClass + " lacks proper constructor: " + e.getMessage());
         }
@@ -107,12 +109,13 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @param fileName the path to a file from which objects are read;
      *          if it is a directory, all files that match the glob pattern are loaded
      *          (see {@link DirectoryInputStream#open(java.lang.String) DirectoryInputStream} for more informations)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param constructorArgs additional constructor arguments
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IOException if there was an error opening the file
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Collection<?> constructorArgs) throws IllegalArgumentException, IOException {
-        this(objClass, new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName))), constructorArgs);
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IOException {
+        this(objClass, new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName))), namedInstances, constructorArgs);
 
         // Set file name to provided value - it is used in reset functionality
         if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
@@ -132,7 +135,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IOException if there was an error opening the file
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName) throws IllegalArgumentException, IOException {
-        this(objClass, fileName, null);
+        this(objClass, fileName, null, null);
     }
 
     /**
@@ -144,7 +147,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
-        this(objClass, stream, null);
+        this(objClass, stream, null, null);
     }
 
 

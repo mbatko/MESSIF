@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
@@ -136,9 +137,10 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      *
      * @param stream the stream from which the data are read
      * @param readKeyWords flag whether to read the keyWords
+     * @param dummy not-used dummy parameter to differentiate the number of params for different constructors
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectPixMacShapeAndColor(BufferedReader stream, boolean readKeyWords) throws IOException {
+    public MetaObjectPixMacShapeAndColor(BufferedReader stream, boolean readKeyWords, boolean dummy) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
         colorLayout = new ObjectColorLayout(new BufferedReader(new StringReader(line)));
@@ -157,7 +159,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacShapeAndColor(BufferedReader stream) throws IOException {
-        this(stream, true);
+        this(stream, true, true);
     }
 
     /**
@@ -169,7 +171,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacShapeAndColor(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
-        this(stream, false);
+        this(stream, false, true);
         try {
             keyWords = new ObjectIntSortedVectorJaccard(keywordsToIdentifiers(stream.readLine(), ';', keyWordIndex));
         } catch (Exception e) {
@@ -196,27 +198,39 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws BucketStorageException if there was a problem storing a new keyword
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private static int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) throws BucketStorageException {
+    private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) {
         // Parse all key words from the given string (not using String.split)
-        List<String> keyWords = new ArrayList<String>();
+        List<String> processedKeyWords = new ArrayList<String>();
         int lastPos = -1;
         int nextPos;
         while ((nextPos = keyWordsLine.indexOf(separator, lastPos + 1)) != -1) {
-            keyWords.add(keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase());
+            processedKeyWords.add(keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase());
             lastPos = nextPos;
         }
-        keyWords.add(keyWordsLine.substring(lastPos + 1).trim().toLowerCase());
+        processedKeyWords.add(keyWordsLine.substring(lastPos + 1).trim().toLowerCase());
 
         // Search the index
-        int[] ret = new int[keyWords.size()];
+        int[] ret = new int[processedKeyWords.size()];
         int i;
-        IntStorageSearch<String> search = keyWordIndex.search(LocalAbstractObjectOrder.trivialObjectComparator, keyWords);
+        IntStorageSearch<String> search = keyWordIndex.search(LocalAbstractObjectOrder.trivialObjectComparator, processedKeyWords);
         for (i = 0; search.next(); i++) {
-            keyWords.remove(search.getCurrentObject());
+            processedKeyWords.remove(search.getCurrentObject());
             ret[i] = search.getCurrentObjectIntAddress();
         }
-        for (; !keyWords.isEmpty(); i++)
-            ret[i] = keyWordIndex.store(keyWords.remove(keyWords.size() - 1)).getAddress();
+        for (; !processedKeyWords.isEmpty(); i++) {
+            String keyWord = processedKeyWords.remove(processedKeyWords.size() - 1);
+            try {
+                ret[i] = keyWordIndex.store(keyWord).getAddress();
+            } catch (BucketStorageException e) {
+                Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).warning("Cannot insert '" + keyWord + "' for object '" + getLocatorURI() + "': " + e.toString());
+                i--;
+            }
+        }
+        if (i != ret.length) {
+            int[] saved = ret;
+            ret = new int[i];
+            System.arraycopy(saved, 0, ret, 0, i);
+        }
 
         return ret;
     }
