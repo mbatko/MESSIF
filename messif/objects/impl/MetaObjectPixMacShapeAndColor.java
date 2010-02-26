@@ -196,7 +196,6 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @param separator separates the keywords on the {@code keyWordsLine}
      * @param keyWordIndex the index for translating keywords to addresses
      * @return array of translated addresses
-     * @throws BucketStorageException if there was a problem storing a new keyword
      * @throws IllegalStateException if there was a problem reading the index
      */
     private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) {
@@ -270,6 +269,14 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             return keyWords;
         else
             return null;
+    }
+
+    /**
+     * Returns the object that encapsulates the keywords for this metaobject.
+     * @return the object that encapsulates the keywords
+     */
+    public ObjectIntSortedVectorJaccard getKeyWords() {
+        return keyWords;
     }
 
     /**

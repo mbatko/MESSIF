@@ -229,6 +229,13 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
         return last;
     }
 
+    /**
+     * Removes and returns the last element of this collection according to the order
+     * specified by the comparator.
+     * @return the last element in this collection
+     * @throws NoSuchElementException if the collection is empty
+     * @deprecated Use {@link #removeLast() removeLast()} method instead
+     */
     @Deprecated
     public T popLast() throws NoSuchElementException {
         return removeLast();
@@ -436,9 +443,14 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      */
     public boolean removeAll(Collection<?> c) {
         boolean ret = false;
-        for (Object item : c)
-            if (remove(item))
+        Iterator<T> iterator = iterator();
+        while (iterator.hasNext()) {
+            if (c.contains(iterator.next())) {
                 ret = true;
+                iterator.remove();
+            }
+        }
+
         return ret;
     }
 
@@ -516,13 +528,40 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @return an iterator over the elements in this collection
      */
     public Iterator<T> iterator() {
-        return new Itr();
+        return new Itr(0, size);
+    }
+
+    /**
+     * Returns an iterator over the elements in this collection skipping the first
+     * {@code skip} items and returning only {@code count} elements. If {@code count}
+     * is less than or equal to zero, all objects from the collection (except for
+     * {@code skip}) are returned. Note that
+     * Their order is defined by the comparator.
+     *
+     * @param skip number of items to skip
+     * @param count number of items to iterate (maximally, can be less)
+     * @return an iterator over the elements in this collection
+     */
+    public Iterator<T> iterator(int skip, int count) {
+        if (skip < 0)
+            throw new IllegalArgumentException("Skip argument cannot be negative");
+        int iteratorSize;
+        if (count <= 0)
+            iteratorSize = size;
+        else if (skip + count > size)
+            iteratorSize = size;
+        else
+            iteratorSize = count + skip;
+        return new Itr(skip, iteratorSize);
     }
 
     /** Internal class that implements iterator for this collection */
     private class Itr implements Iterator<T> {
 	/** Index of an element to be returned by subsequent call to next */
-	private int cursor = 0;
+	private int cursor;
+
+	/** Index of the last element to return plus one */
+	private final int iteratorSize;
 
 	/**
 	 * Index of element returned by most recent call to next or
@@ -538,8 +577,18 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 	 */
 	private int expectedModCount = modCount;
 
+        /**
+         * Creates a new iterator instance.
+         * @param cursor the index of initial item where the iteration starts
+         * @param iteratorSize index of the last element to return plus one
+         */
+        private Itr(int cursor, int iteratorSize) {
+            this.cursor = cursor;
+            this.iteratorSize = iteratorSize;
+        }
+
 	public boolean hasNext() {
-            return cursor < size;
+            return cursor < iteratorSize;
 	}
 
 	public T next() {
