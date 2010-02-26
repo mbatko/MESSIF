@@ -175,7 +175,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         try {
             keyWords = new ObjectIntSortedVectorJaccard(keywordsToIdentifiers(stream.readLine(), ';', keyWordIndex));
         } catch (Exception e) {
-            throw new IOException(e.toString(), e);
+            Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
+            keyWords = new ObjectIntSortedVectorJaccard(new int[0]);
         }
     }
 
