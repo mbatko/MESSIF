@@ -7,7 +7,7 @@ package messif.buckets.index;
 
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Collection;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
@@ -76,9 +76,9 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object;
         }
 
-        public QueryOperation<?> createIndexOperation(List<? extends UniqueID> ids) {
+        public QueryOperation<?> createIndexOperation(Collection<? extends UniqueID> ids) {
             if (ids.size() == 1)
-                return new GetObjectQueryOperation(ids.get(0), AnswerType.ORIGINAL_OBJECTS);
+                return new GetObjectQueryOperation(ids.iterator().next(), AnswerType.ORIGINAL_OBJECTS);
             else
                 return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
         }
@@ -111,9 +111,9 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
             return object.getLocatorURI();
         }
 
-        public QueryOperation<?> createIndexOperation(List<? extends String> locators) {
+        public QueryOperation<?> createIndexOperation(Collection<? extends String> locators) {
             if (locators.size() == 1)
-                return new GetObjectByLocatorOperation(locators.get(0), AnswerType.ORIGINAL_OBJECTS);
+                return new GetObjectByLocatorOperation(locators.iterator().next(), AnswerType.ORIGINAL_OBJECTS);
             else
                 return new GetObjectsByLocatorsOperation(new HashSet<String>(locators), null, AnswerType.ORIGINAL_OBJECTS);
         }

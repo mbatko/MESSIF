@@ -150,9 +150,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws NoSuchElementException if this iterator has no objects left
      */
     public E getRandomObject() throws NoSuchElementException {
-        if (!hasNext())
-             throw new NoSuchElementException("Iterator has no objects left");
-        return AbstractObjectList.randomList(1, false, this).get(0);
+        return getRandomObjects(1, false).get(0);
     }
 
     /**

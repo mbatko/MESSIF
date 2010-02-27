@@ -5,7 +5,7 @@
 
 package messif.buckets.storage;
 
-import java.util.List;
+import java.util.Collection;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableIndex;
 
@@ -16,8 +16,12 @@ import messif.buckets.index.ModifiableIndex;
  * @author xbatko
  */
 public interface StorageIndexed<T> extends ModifiableIndex<T>, Storage<T> {
+    @Override
     public StorageSearch<T> search() throws IllegalStateException;
+    @Override
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException;
-    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException;
+    @Override
+    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException;
+    @Override
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException;
 }

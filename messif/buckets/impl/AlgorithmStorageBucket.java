@@ -12,6 +12,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
@@ -22,11 +27,6 @@ import messif.objects.LocalAbstractObject;
 import messif.operations.DeleteOperation;
 import messif.operations.InsertOperation;
 import messif.operations.QueryOperation;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import messif.buckets.Addible;
 import messif.buckets.Bucket;
 import messif.buckets.BucketDispatcher;
@@ -316,20 +316,19 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
-        return new AlgorithmStorageSearch<Object>(null, false, Collections.emptyList());
+        return new AlgorithmStorageSearch<Object>(null, Collections.emptyList());
     }
 
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C key) throws IllegalStateException {
-        return new AlgorithmStorageSearch<Object>(null, false, Collections.singletonList(key));
+        return new AlgorithmStorageSearch<Object>(null, Collections.singletonList(key));
     }
 
-    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, List<? extends C> keys) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, false, keys);
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, keys);
     }
 
-    @SuppressWarnings("unchecked")
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
-        return new AlgorithmStorageSearch<C>(comparator, true, Arrays.asList(from, to));
+        return new AlgorithmStorageSearch<C>(comparator, from, to);
     }
 
     /**
@@ -345,26 +344,24 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * During the constructor call, a search operation is executed on
          * the encapsulated algorithm.
          * @param comparator the comparator that is used to compare the keys
-         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-         *          the lower and the upper bounds on the searched value
          * @param keys list of keys to search for
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, boolean keyBounds, List<? extends C> keys) throws IllegalStateException {
-            super(comparator, keyBounds, keys);
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
+            super(comparator, keys);
+            this.iterator = executeAlgorithmOperation(comparator, keys);
+        }
 
-            // Execute operation to get objects from the algorithm
-            QueryOperation<?> operation = executeOperation(createOperation(comparator, keys));
-
-            // Read results into a list
-            List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
-            Iterator<AbstractObject> answer = operation.getAnswerObjects();
-            while (answer.hasNext()) {
-                LocalAbstractObject object = answer.next().getLocalAbstractObject();
-                list.add(object);
-            }
-
-            this.iterator = list.listIterator();
+        /**
+         * Creates a new instance of AlgorithmStorageSearch for the specified search comparator and [from,to] bounds.
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param fromKey the lower bound on the searched keys
+         * @param toKey the upper bound on the searched keys
+         */
+        @SuppressWarnings("unchecked")
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C fromKey, C toKey) {
+            super(comparator, fromKey, toKey);
+            this.iterator = executeAlgorithmOperation(comparator, Arrays.asList(fromKey, toKey));
         }
 
         /**
@@ -374,12 +371,26 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @return a new instance of query operation for the given key
          */
         @SuppressWarnings("unchecked")
-        protected QueryOperation<?> createOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, List<? extends C> keys) {
-            // Get the results from algorithm using operation
+        protected ListIterator<LocalAbstractObject> executeAlgorithmOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) {
+            // Prepare operation for the given comparator
+            QueryOperation<?> operation;
             if (comparator != null && !keys.isEmpty() && comparator instanceof OperationIndexComparator)
-                return ((OperationIndexComparator<C>)comparator).createIndexOperation(keys); // This cast IS checked because the OperationIndexComparator is always a subtype
+                operation = ((OperationIndexComparator<C>)comparator).createIndexOperation(keys); // This cast IS checked because the OperationIndexComparator is always a subtype
             else
-                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
+                operation = new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
+
+            // Execute operation to get objects from the algorithm
+            operation = executeOperation(operation);
+
+            // Read results into a list
+            List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
+            Iterator<AbstractObject> answer = operation.getAnswerObjects();
+            while (answer.hasNext()) {
+                LocalAbstractObject object = answer.next().getLocalAbstractObject();
+                list.add(object);
+            }
+
+            return list.listIterator();
         }
 
         /**

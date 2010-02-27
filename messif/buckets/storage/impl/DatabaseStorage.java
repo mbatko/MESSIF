@@ -13,9 +13,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import messif.buckets.BucketStorageException;
@@ -462,16 +461,16 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), false, Collections.singletonList(key));
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), Collections.singletonList(key));
     }
 
-    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
-        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), false, keys);
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), keys);
     }
 
     @SuppressWarnings("unchecked")
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), true, Arrays.asList(from, to));
+        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), from, to);
     }
 
     /**
@@ -492,14 +491,36 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
          *
          * @param comparator the comparator that is used to compare the keys
          * @param columnName the column name that contains the keys (use <tt>null</tt> to do full scan)
-         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-         *          the lower and the upper bounds on the searched value
          * @param keys list of keys to search for
          * @throws IllegalStateException if there was an error executing the query
          */
-        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, boolean keyBounds, List<? extends C> keys) throws IllegalStateException {
+        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, Collection<? extends C> keys) throws IllegalStateException {
             // Pass the comparator only if the database column is not provided (and thus the filtering must be done)
-            super(columnName != null ? null : comparator, keyBounds, keys);
+            super(columnName != null ? null : comparator, keys);
+            this.columnName = columnName;
+
+            // Execute the query
+            try {
+                this.resultSet = executeQuery();
+            } catch (SQLException e) {
+                throw new IllegalStateException("Cannot search database: " + e.getMessage(), e);
+            }
+        }
+
+        /**
+         * Creates a new instance of DatabaseStorageSearch.
+         * The search uses SQL "where" clause to limit the returned data
+         * to those that have values of column {@code columnName} set to given keys.
+         *
+         * @param comparator the comparator that is used to compare the keys
+         * @param columnName the column name that contains the keys (use <tt>null</tt> to do full scan)
+         * @param fromKey the lower bound on the searched keys
+         * @param toKey the upper bound on the searched keys
+         * @throws IllegalStateException if there was an error executing the query
+         */
+        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, C fromKey, C toKey) throws IllegalStateException {
+            // Pass the comparator only if the database column is not provided (and thus the filtering must be done)
+            super(columnName != null ? null : comparator, fromKey, toKey);
             this.columnName = columnName;
 
             // Execute the query

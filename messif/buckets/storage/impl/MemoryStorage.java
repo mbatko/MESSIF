@@ -6,9 +6,8 @@
 package messif.buckets.storage.impl;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
@@ -258,20 +257,19 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
     public IntStorageSearch<T> search() throws IllegalStateException {
-        return new MemoryStorageSearch<Object>(null, false, Collections.emptyList());
+        return new MemoryStorageSearch<Object>(null, Collections.emptyList());
     }
 
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new MemoryStorageSearch<C>(comparator, false, Collections.singletonList(key));
+        return new MemoryStorageSearch<C>(comparator, Collections.singletonList(key));
     }
 
-    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
-        return new MemoryStorageSearch<C>(comparator, false, keys);
+    public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new MemoryStorageSearch<C>(comparator, keys);
     }
 
-    @SuppressWarnings("unchecked")
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return new MemoryStorageSearch<C>(comparator, true, Arrays.asList(from, to));
+        return new MemoryStorageSearch<C>(comparator, from, to);
     }
 
     /**
@@ -292,12 +290,20 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
          * are returned.
          *
          * @param comparator the comparator that is used to compare the keys
-         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-         *          the lower and the upper bounds on the searched value
          * @param keys list of keys to search for
          */
-        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
-            super(comparator, keyBounds, keys);
+        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
+            super(comparator, keys);
+        }
+
+        /**
+         * Creates a new instance of MemoryStorageSearch for the specified search comparator and [from,to] bounds.
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param fromKey the lower bound on the searched keys
+         * @param toKey the upper bound on the searched keys
+         */
+        private MemoryStorageSearch(IndexComparator<? super C, ? super T> comparator, C fromKey, C toKey) {
+            super(comparator, fromKey, toKey);
         }
 
         @Override

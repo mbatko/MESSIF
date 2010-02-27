@@ -3,7 +3,7 @@
  * 
  */
 
-package messif.buckets.storage;
+package messif.buckets.index;
 
 /**
  * Interface for objects that supports object-locking.

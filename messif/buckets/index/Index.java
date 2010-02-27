@@ -5,7 +5,7 @@
 
 package messif.buckets.index;
 
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Defines an index interface on objects.
@@ -62,7 +62,7 @@ public interface Index<T> {
      * @return a search for objects in this index
      * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    public <C> Search<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException;
+    public <C> Search<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException;
 
     /**
      * Returns a search for objects in this index that are within the specified key-range.

@@ -5,7 +5,7 @@
 
 package messif.buckets.index;
 
-import java.util.List;
+import java.util.Collection;
 import messif.objects.LocalAbstractObject;
 import messif.operations.QueryOperation;
 
@@ -33,5 +33,5 @@ public interface OperationIndexComparator<K> extends IndexComparator<K, LocalAbs
      * @param keys the list of keys the operation searches for
      * @return a new instance of query operation for the given keys
      */
-    public QueryOperation<?> createIndexOperation(List<? extends K> keys);
+    public QueryOperation<?> createIndexOperation(Collection<? extends K> keys);
 }

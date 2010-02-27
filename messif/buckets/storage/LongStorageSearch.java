@@ -30,5 +30,6 @@ public interface LongStorageSearch<T> extends StorageSearch<T> {
      */
     public long getCurrentObjectLongAddress() throws IllegalStateException;
 
+    @Override
     public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException;
 }

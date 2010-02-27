@@ -6,7 +6,7 @@
 package messif.buckets.index.impl;
 
 import java.util.Comparator;
-import java.util.List;
+import java.util.Collection;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.Index;
 import messif.buckets.index.IndexComparator;
@@ -40,7 +40,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     /** Comparator used for search */
     private final IndexComparator<? super C, ? super T> comparator;
     /** Keys to search */
-    private final List<? extends C> keys;
+    private final Object[] keys;
     /** Flag whether the specified keys are bounds or not */
     private final boolean keyBounds;
     /** Object returned by the previous call to next/prev */
@@ -51,22 +51,31 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
 
     /**
      * Creates a new instance of Search for the specified search comparator and keys to search.
-     * If {@code keyBounds} is <tt>false</tt>, this search will look for any object
-     * that equals (according to the given comparator) to any of the keys.
-     * Otherwise, the objects that are within interval <code>[keys[0]; keys[1]]</code>
-     * are returned.
+     * Any object the key of which is equal (according to the given comparator) to any of the keys
+     * is returned.
      *
      * @param comparator the comparator that is used to compare the keys
-     * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-     *          the lower and the upper bounds on the searched value
      * @param keys list of keys to search for
      */
-    protected AbstractSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
-        if (keyBounds && keys.size() != 2)
-            throw new IllegalArgumentException("Key bounds were specified but number of keys is not two");
+    protected AbstractSearch(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
         this.comparator = comparator;
-        this.keys = keys;
-        this.keyBounds = keyBounds;
+        this.keys = keys == null ? new Object[0] : keys.toArray();
+        keyBounds = false;
+    }
+
+    /**
+     * Creates a new instance of Search for the specified search comparator and lower and upper key bounds.
+     * Any object the key of which is within interval <code>[fromKey, toKey]</code>
+     * is returned.
+     *
+     * @param comparator the comparator that is used to compare the keys
+     * @param fromKey the lower bound on the searched object keys (inclusive)
+     * @param toKey the upper bound on the searched object keys (inclusive)
+     */
+    protected AbstractSearch(IndexComparator<? super C, ? super T> comparator, C fromKey, C toKey) {
+        this.comparator = comparator;
+        this.keys = new Object[] { fromKey, toKey };
+        keyBounds = true;
     }
 
 
@@ -95,17 +104,19 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
      * @return the number of keys
      */
     protected int getKeyCount() {
-        return keys.size();
+        return keys.length;
     }
 
     /**
      * Returns the key with specified index.
-     * The index must be greater or equal to 0 and less than {@link #getKeyCount()}.
+     * The index must be greater than or equal to 0 and less than {@link #getKeyCount()}.
      * @param index the index of the key to return
      * @return a searched key
+     * @throws IndexOutOfBoundsException if the specified index is less than zero or bigger than or equal to {@link #getKeyCount()}
      */
-    protected C getKey(int index) {
-        return keys.get(index);
+    @SuppressWarnings("unchecked")
+    protected C getKey(int index) throws IndexOutOfBoundsException {
+        return (C)keys[index];
     }
 
     public T getCurrentObject() {
@@ -159,22 +170,22 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
      */
     protected boolean checkKeys(T object) {
         // No boundaries checks if comparator is null
-        if (comparator == null || keys.isEmpty())
+        if (comparator == null || keys.length == 0)
             return true;
 
         // If there is only one key, we do just equality test
         if (keyBounds) {
             // Do boundary check
-            C from = keys.get(0);
+            C from = getKey(0);
             if (from != null && comparator.indexCompare(from, object) > 0) // from > object
                 return false;
-            C to = keys.get(1);
+            C to = getKey(1);
             if (to != null && comparator.indexCompare(to, object) < 0) // to < object
                 return false;
             return true;
         } else {
-            for (C key : keys)
-                if (comparator.indexCompare(key, object) == 0)
+            for (int i = 0; i < getKeyCount(); i++)
+                if (comparator.indexCompare(getKey(i), object) == 0)
                     return true;
             return false;
         }

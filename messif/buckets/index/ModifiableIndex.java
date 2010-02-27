@@ -5,7 +5,7 @@
 
 package messif.buckets.index;
 
-import java.util.List;
+import java.util.Collection;
 import messif.buckets.Addible;
 
 /**
@@ -18,12 +18,16 @@ import messif.buckets.Addible;
  */
 public interface ModifiableIndex<T> extends Index<T>, Addible<T> {
 
+    @Override
     public ModifiableSearch<T> search() throws IllegalStateException;
 
+    @Override
     public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException;
 
-    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException;
+    @Override
+    public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException;
 
+    @Override
     public <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException;
 
     /**

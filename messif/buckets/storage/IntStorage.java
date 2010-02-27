@@ -18,14 +18,7 @@ import messif.buckets.BucketStorageException;
  */
 public interface IntStorage<T> extends Storage<T> {
 
-    /**
-     * Stores an object in this storage.
-     * The address returned by this call can be used to retrieve or remove the object.
-     * 
-     * @param object the object to store
-     * @return the address where the object has been stored
-     * @throws BucketStorageException if there was an error writing the data
-     */
+    @Override
     public IntAddress<T> store(T object) throws BucketStorageException;
 
     /**

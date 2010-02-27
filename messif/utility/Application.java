@@ -1896,7 +1896,7 @@ public class Application {
     /****************** Control file command functions ******************/
 
     /** Pattern that match variables in control files */
-    private static final Pattern variablePattern = Pattern.compile("<([^>]+?)(?::([^>]+))?>", Pattern.MULTILINE);
+    private static final Pattern variablePattern = Pattern.compile("(?:<|\\$\\{)([^>}]+?)(?::-?([^>}]+))?(?:>|\\})", Pattern.MULTILINE);
 
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).

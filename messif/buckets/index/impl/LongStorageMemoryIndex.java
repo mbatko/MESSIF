@@ -5,16 +5,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.storage.StorageSearch;
 import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
-import messif.buckets.storage.Lock;
-import messif.buckets.storage.Lockable;
+import messif.buckets.index.Lock;
+import messif.buckets.index.Lockable;
 import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.impl.DiskStorage;
 import messif.utility.SortedArrayData;
@@ -267,6 +266,10 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
     }
 
+    public StorageSearch<T> search(Collection<? extends K> keys) throws IllegalStateException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, Collections.singletonList(key));
     }
@@ -276,11 +279,11 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         if (comparator.equals(comparator()))
             return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
         else
-            return new FullScanModifiableSearch<C>(comparator, lock(), true, Arrays.asList(from, to));
+            return new FullScanModifiableSearch<C>(lock(), comparator, from, to);
     }
 
-    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
-        return new FullScanModifiableSearch<C>(comparator, lock(), false, keys);
+    public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new FullScanModifiableSearch<C>(lock(), comparator, keys);
     }
 
 
@@ -424,23 +427,32 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
         /**
          * Creates a new instance of FullScanModifiableSearch for the specified search comparator and [from,to] bounds.
-         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
          * @param searchLock the lock object for the search - its {@link Lock#unlock()}
          *          method is called when this search is finalized
-         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-         *          the lower and the upper bounds on the searched value
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
          * @param keys list of keys to search for
          */
-        public FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, Lock searchLock, boolean keyBounds, List<? extends C> keys) {
-            super(comparator, keyBounds, keys);
+        public FullScanModifiableSearch(Lock searchLock, IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
+            super(comparator, keys);
+            this.searchLock = searchLock;
+        }
+
+        /**
+         * Creates a new instance of FullScanModifiableSearch for the specified search comparator and [from,to] bounds.
+         * @param searchLock the lock object for the search - its {@link Lock#unlock()}
+         *          method is called when this search is finalized
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param fromKey the lower bound on the searched keys
+         * @param toKey the upper bound on the searched keys
+         */
+        public FullScanModifiableSearch(Lock searchLock, IndexComparator<? super C, ? super T> comparator, C fromKey, C toKey) {
+            super(comparator, fromKey, toKey);
             this.searchLock = searchLock;
         }
 
         @Override
         protected void finalize() throws Throwable {
-            if (searchLock != null) {
-                searchLock.unlock();
-            }
+            close();
             super.finalize();
         }
 
@@ -478,6 +490,8 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             lastRet = -1;
         }
         public void close() {
+            if (searchLock != null)
+                searchLock.unlock();
         }
     }
     

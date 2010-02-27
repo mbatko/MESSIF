@@ -5,11 +5,11 @@
 
 package messif.buckets.index.impl;
 
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
+import messif.buckets.index.Lock;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.ModifiableSearch;
 import messif.utility.SortedArrayData;
@@ -39,6 +39,14 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      */
     protected abstract boolean remove(int index);
 
+    /**
+     * Locks this index for searching and returns a lock object if it is supported.
+     * A <tt>null</tt> is returned otherwise.
+     * The called must call the {@link Lock#unlock()} method if this method has returned non-null.
+     * @return a lock on this index or <tt>null</tt>
+     */
+    protected abstract Lock acquireSearchLock();
+
     @Override
     public void finalize() throws Throwable {
         super.finalize();
@@ -48,7 +56,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     //****************** Search methods ******************//
 
     public final ModifiableSearch<T> search() throws IllegalStateException {
-        return createOrderedSearch(0, 0, size() - 1);
+        return search((IndexComparator<Object, Object>)null, null, null);
     }
 
     public final ModifiableSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
@@ -56,217 +64,71 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     public final ModifiableSearch<T> search(K from, K to) throws IllegalStateException {
-        return search((K)null, from, to);
+        return search(comparator(), from, to);
     }
 
     public final ModifiableSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
-        // Search for lower boundary key
-        int fromIndex = (from == null)?0:binarySearch(from, 0, size() - 1, true);        
+        return search(comparator(), startKey, from, to);
+    }
 
-        // If "from" key was not found
-        if (fromIndex < 0) {
-            if (from == to) // There is no object that can be accessed ("from" is the same as "to" and neither can be found)
-                return createOrderedSearch(0, 0, -1);
-            else
-                fromIndex = -fromIndex - 1;
-        }
-        
-        // Search for upper boundary key
-        int toIndex;
-        if (to == null)
-            toIndex = size() - 1;
-        else if (to == from)
-            toIndex = fromIndex;
-        else
-            toIndex = binarySearch(to, fromIndex, size() - 1, true);
-        // If "to" is not found, high limit is the index by one lower
-        if (toIndex < 0)
-            toIndex = -toIndex - 2;
-
-        // Search for starting key
-        int startIndex;
-        if (startKey == null || startKey == from)
-            startIndex = fromIndex;
-        else if (startKey == to)
-            startIndex = toIndex;
-        else
-            startIndex = binarySearch(startKey, fromIndex, toIndex, false);
-
-        // Expand lower boundary backwards for all items on which the comparator returns zero
-        if (from != null)
-            while (fromIndex > 0 && comparator().indexCompare(from, get(fromIndex - 1)) == 0)
-                fromIndex--;
-
-        // Expand upper boundary forward for all items on which the comparator returns zero
-        if (to != null)
-            while ((toIndex < size() - 1) && comparator().indexCompare(to, get(toIndex + 1)) == 0)
-                toIndex++;
-
-        return createOrderedSearch(startIndex, fromIndex, toIndex);
+    public final ModifiableSearch<T> search(Collection<? extends K> keys) throws IllegalStateException {
+        return search(comparator(), keys);
     }
 
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return createFullScanSearch(comparator, false, Collections.singletonList(key));
+        return search(comparator, Collections.singletonList(key));
     }
 
-    @SuppressWarnings("unchecked")
-    public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, List<? extends C> keys) throws IllegalStateException {
-        return createFullScanSearch(comparator, false, keys);
-    }
-
-    @SuppressWarnings("unchecked")
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        if (comparator.equals(comparator()))
-            return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
-        else
-            return createFullScanSearch(comparator, true, Arrays.asList(from, to));
+        return search(comparator, null, from, to);
+    }
+
+    public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new ArrayIndexModifiableSearch<C>(acquireSearchLock(), comparator, keys);
     }
 
     /**
-     * Creates a search that uses order of this index.
-     * The search starts searching from the specified index position and is
-     * bound by the given minimal and maximal positions.
+     * Returns a search for objects in this index that are within the specified key-range.
+     * The key boundaries <code>[from, to]</code> need not necessarily be of the same
+     * class as the objects stored in this index, however, the comparator must be
+     * able to compare the boundaries and the internal objects.
+     * The search begins on object that has key {@code start}.
      *
-     * @param initialIndex the position where to start this iterator
-     * @param minIndex minimal position (inclusive) that this iterator will access
-     * @param maxIndex maximal position (inclusive) that this iterator will access
-     * @return a search that uses order of this index
-     */
-    protected ModifiableSearch<T> createOrderedSearch(int initialIndex, int minIndex, int maxIndex) {
-        return new OrderedModifiableSearch(initialIndex, minIndex, maxIndex);
-    }
-
-    /**
-     * Creates a full-scan search for the specified search comparator and keys.
+     * <p>
+     * Note that objects are <i>not</i> returned in the order defined by the comparator
+     * </p>
      *
      * @param <C> the type the boundaries used by the search
-     * @param comparator the comparator that compares the <code>keys</code> with the stored objects
-     * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-     *          the lower and the upper bounds on the searched value
-     * @param keys list of keys to search for
-     * @return a full-scan search
+     * @param comparator compares the boundaries <code>[from, to]</code> with the stored objects
+     * @param start the key of object where the search should start (if <tt>null</tt>, start searches from the {@code from} key)
+     * @param from the lower bound on the searched objects, i.e. objects greater or equal are returned
+     * @param to the upper bound on the searched objects, i.e. objects smaller or equal are returned
+     * @return a search for objects in this index
+     * @throws IllegalStateException if there was an error initializing the search on this index
      */
-    protected <C> ModifiableSearch<T> createFullScanSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
-        return new FullScanModifiableSearch<C>(comparator, keyBounds, keys);
+    public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, K start, C from, C to) throws IllegalStateException {
+        return new ArrayIndexModifiableSearch<C>(acquireSearchLock(), comparator, start, from, to);
     }
 
 
     //****************** Search implementation ******************//
 
     /**
-     * Internal class that implements ordered search for this index.
-     */
-    protected class OrderedModifiableSearch implements ModifiableSearch<T> {
-        /** Minimal (inclusive) index that this iterator will access in the array */
-        private final int minIndex;
-
-        /** Maximal (inclusive) index that this iterator will access in the array */
-        private int maxIndex;
-
-        /** Index of an element to be returned by subsequent call to next */
-        private int cursor = 0;
-
-        /**
-         * Index of element returned by most recent call to next or
-         * previous. It is reset to -1 if this element is deleted by a call
-         * to remove.
-         */
-        private int lastRet = -1;
-
-        /** Object found by the last search */
-        private T currentObject;
-
-        /**
-         * Creates a new instance of OrderedModifiableSearch that starts searching
-         * from the specified position and is bound by the given minimal and maximal positions.
-         * 
-         * @param initialIndex the position where to start this iterator
-         * @param minIndex minimal position (inclusive) that this iterator will access
-         * @param maxIndex maximal position (inclusive) that this iterator will access
-         */
-        protected OrderedModifiableSearch(int initialIndex, int minIndex, int maxIndex) {
-            this.cursor = initialIndex;
-            this.minIndex = minIndex;
-            this.maxIndex = maxIndex;
-        }
-
-        public T getCurrentObject() {
-            return currentObject;
-        }
-
-        /**
-         * Returns the index of the element returned by most recent call to next or
-         * previous. If this element is deleted by a call to remove or neither next nor
-         * previous methods were called, -1 is returned.
-         * @return the index of the current object in the index
-         */
-        protected int getCurentObjectIndex() {
-            return lastRet;
-        }
-
-        public boolean next() throws IllegalStateException {
-            if (cursor > maxIndex)
-                return false;
-            currentObject = get(cursor);
-            lastRet = cursor++;
-            return true;
-        }
-
-        public boolean previous() throws IllegalStateException {
-            if (cursor <= minIndex)
-                return false;
-            currentObject = get(cursor - 1);
-            lastRet = --cursor;
-            return true;
-        }
-
-        public boolean skip(int count) throws IllegalStateException {
-            if (count < 0 && cursor + count >= minIndex) {
-                cursor += count + 1;
-                currentObject = get(cursor - 1);
-                lastRet = --cursor;
-                return true;
-            }
-
-            if (count > 0 && cursor + count - 1 <= maxIndex) {
-                cursor += count - 1;
-                currentObject = get(cursor);
-                lastRet = cursor++;
-                return true;
-            }
-
-            return false;
-        }
-
-        public void remove() throws IllegalStateException {
-            if (lastRet == -1)
-                throw new IllegalStateException();
-
-            AbstractArrayIndex.this.remove(lastRet);
-            if (lastRet < cursor)
-                cursor--;
-            maxIndex--;
-            lastRet = -1;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public OrderedModifiableSearch clone() throws CloneNotSupportedException {
-            return (OrderedModifiableSearch)super.clone();
-        }
-
-        public void close() {
-        }
-    }
-
-    /**
      * Internal class that implements full-scan search for this index.
      * @param <C> type of boundaries used while comparing objects
      */
-    protected class FullScanModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
-        /** Index of an element to be returned by subsequent call to next */
-        private int cursor = 0;
+    protected class ArrayIndexModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
 
+        //****************** Attributes ******************//
+
+        /** Lock object for this search */
+        private final Lock lock;
+        /** Minimal (inclusive) index that this search can access in the index array */
+        private int minIndex;
+        /** Maximal (inclusive) index that this search can access in the index array */
+        private int maxIndex;
+        /** Index of an element to be returned by subsequent call to next */
+        private int cursor;
         /**
          * Index of element returned by most recent call to next or
          * previous. It is reset to -1 if this element is deleted by a call
@@ -274,16 +136,119 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
          */
         private int lastRet = -1;
 
+
+        //****************** Constructor ******************//
+
         /**
-         * Creates a new instance of FullScanModifiableSearch for the specified search comparator and keys.
-         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
-         * @param keyBounds if <tt>true</tt>, the {@code keys} must have exactly two values that represent
-         *          the lower and the upper bounds on the searched value
+         * Creates a new instance of ArrayIndexModifiableSearch for the specified search comparator and keys to search.
+         * Any object the key of which is equal (according to the given comparator) to any of the keys
+         * is returned.
+         * <p>
+         * Note that the indexed data are used if the given comparator is compatible with the index comparator.
+         * </p>
+         *
+         * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
+         * @param comparator the comparator that is used to compare the keys
          * @param keys list of keys to search for
          */
-        protected FullScanModifiableSearch(IndexComparator<? super C, ? super T> comparator, boolean keyBounds, List<? extends C> keys) {
-            super(comparator, keyBounds, keys);
+        @SuppressWarnings("unchecked")
+        protected ArrayIndexModifiableSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
+            super(comparator, keys);
+            this.lock = lock;
+            if (comparator != null && comparator.equals(comparator()))
+                initializeIndexes((K)getKey(0), (K)getKey(getKeyCount() - 1)); // This IS checked by the comparator
+            else
+                maxIndex = size() - 1;
+            cursor = minIndex;
         }
+
+        /**
+         * Creates a new instance of Search for the specified search comparator and lower and upper key bounds.
+         * Any object the key of which is within interval <code>[fromKey, toKey]</code>
+         * is returned.
+         * <p>
+         * Note that the indexed data are used if the given comparator is compatible with the index comparator.
+         * </p>
+         *
+         * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
+         * @param comparator the comparator that is used to compare the keys
+         * @param startKey the key of object where the search should start (if <tt>null</tt>, start searches from the {@code from} key)
+         * @param fromKey the lower bound on the searched object keys (inclusive)
+         * @param toKey the upper bound on the searched object keys (inclusive)
+         */
+        @SuppressWarnings("unchecked")
+        protected ArrayIndexModifiableSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, K startKey, C fromKey, C toKey) {
+            super(comparator == null || comparator.equals(comparator()) ? null : comparator, fromKey, toKey);
+            this.lock = lock;
+            if (comparator != null && comparator.equals(comparator()))
+                initializeIndexes((K)fromKey, (K)toKey); // This IS checked by the comparator
+            else
+                maxIndex = size() - 1;
+
+            // Search for starting key
+            if (startKey == null || startKey == fromKey)
+                cursor = minIndex;
+            else if (startKey == toKey)
+                cursor = maxIndex;
+            else
+                cursor = binarySearch(startKey, minIndex, maxIndex, false);
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
+        }
+
+        /**
+         * Initialize minimal and maximal indexes by searching for the {@code fromKey}
+         * and {@code toKey} using the binary search. Note that this method is only
+         * used if the comparator is compatible with the order of the index. Otherwise
+         * the binary search cannot be used.
+         * @param fromKey the key of the lower boundary
+         * @param toKey the key of the upper boundary
+         */
+        private void initializeIndexes(K fromKey, K toKey) {
+            // Search for lower boundary key
+            minIndex = (fromKey == null) ? 0 : binarySearch(fromKey, 0, size() - 1, true);
+
+            // If "fromKey" key was not found
+            if (minIndex < 0) {
+                if (fromKey == toKey) {// There is no object that can be accessed ("from" is the same as "to" and neither can be found)
+                    minIndex = 0;
+                    maxIndex = -1;
+                    return;
+                } else {
+                    minIndex = -minIndex - 1;
+                }
+            }
+
+            // Search for upper boundary key
+            if (toKey == null)
+                maxIndex = size() - 1;
+            else if (toKey == fromKey)
+                maxIndex = minIndex;
+            else
+                maxIndex = binarySearch(toKey, minIndex, size() - 1, true);
+            // If "toKey" is not found, high limit is the index by one lower
+            if (maxIndex < 0)
+                maxIndex = -maxIndex - 2;
+
+            IndexComparator<K, T> comparator = comparator();
+
+            // Expand lower boundary backwards for all items on which the comparator returns zero
+            if (fromKey != null)
+                while (minIndex > 0 && comparator.indexCompare(fromKey, get(minIndex - 1)) == 0)
+                    minIndex--;
+
+            // Expand upper boundary forward for all items on which the comparator returns zero
+            if (toKey != null)
+                while ((maxIndex < size() - 1) && comparator.indexCompare(toKey, get(maxIndex + 1)) == 0)
+                    maxIndex++;
+        }
+
+
+        //****************** Search interface implementations ******************//
 
         /**
          * Returns the index of the element returned by most recent call to next or
@@ -297,16 +262,38 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
         @Override
         protected T readNext() throws BucketStorageException {
-            if (cursor >= size())
+            if (cursor > maxIndex)
                 return null;
-            return get(lastRet = cursor++);
+            lastRet = cursor++;
+            return get(lastRet);
         }
 
         @Override
         protected T readPrevious() throws BucketStorageException {
-            if (cursor <= 0)
+            if (cursor <= minIndex)
                 return null;
-            return get(lastRet = --cursor);
+            lastRet = --cursor;
+            return get(lastRet);
+        }
+
+        @Override
+        public boolean skip(int count) throws IllegalStateException {
+            // If there is a comparator defined, we must check keys
+            if (getComparator() != null)
+                return super.skip(count);
+
+            // No comparator, we can seek faster
+            if (count < 0 && cursor + count >= minIndex) { // Skip backwards
+                cursor += count + 1;
+                return previous();
+            }
+
+            if (count > 0 && cursor + count - 1 <= maxIndex) { // Skip forward
+                cursor += count - 1;
+                return next();
+            }
+
+            return false;
         }
 
         public void remove() throws IllegalStateException, BucketStorageException {
@@ -316,10 +303,13 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             AbstractArrayIndex.this.remove(lastRet);
             if (lastRet < cursor)
                 cursor--;
+            maxIndex--;
             lastRet = -1;
         }
 
         public void close() {
+            if (lock != null)
+                lock.unlock();
         }
     }
 }

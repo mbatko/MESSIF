@@ -3,7 +3,7 @@
  * 
  */
 
-package messif.buckets.storage;
+package messif.buckets.index;
 
 /**
  * An acquired object-lock.
