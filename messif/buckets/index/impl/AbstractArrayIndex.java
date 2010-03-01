@@ -64,50 +64,35 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     public final ModifiableSearch<T> search(K from, K to) throws IllegalStateException {
-        return search(comparator(), from, to);
+        return search((K)null, from, to);
     }
 
     public final ModifiableSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
-        return search(comparator(), startKey, from, to);
+        return new IndexedBoundedSearch(acquireSearchLock(), startKey, from, to);
     }
 
     public final ModifiableSearch<T> search(Collection<? extends K> keys) throws IllegalStateException {
-        return search(comparator(), keys);
+        return new IndexedKeySearch(acquireSearchLock(), keys);
     }
 
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, Collections.singletonList(key));
     }
 
+    @SuppressWarnings("unchecked")
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return search(comparator, null, from, to);
+        if (comparator != null && comparator.equals(comparator()))
+            return new IndexedBoundedSearch(acquireSearchLock(), null, (K)from, (K)to); // This cast IS checked by the comparator
+        else
+            return new FullScanSearch<C>(acquireSearchLock(), comparator, from, to);
     }
 
+    @SuppressWarnings("unchecked")
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
-        return new ArrayIndexModifiableSearch<C>(acquireSearchLock(), comparator, keys);
-    }
-
-    /**
-     * Returns a search for objects in this index that are within the specified key-range.
-     * The key boundaries <code>[from, to]</code> need not necessarily be of the same
-     * class as the objects stored in this index, however, the comparator must be
-     * able to compare the boundaries and the internal objects.
-     * The search begins on object that has key {@code start}.
-     *
-     * <p>
-     * Note that objects are <i>not</i> returned in the order defined by the comparator
-     * </p>
-     *
-     * @param <C> the type the boundaries used by the search
-     * @param comparator compares the boundaries <code>[from, to]</code> with the stored objects
-     * @param start the key of object where the search should start (if <tt>null</tt>, start searches from the {@code from} key)
-     * @param from the lower bound on the searched objects, i.e. objects greater or equal are returned
-     * @param to the upper bound on the searched objects, i.e. objects smaller or equal are returned
-     * @return a search for objects in this index
-     * @throws IllegalStateException if there was an error initializing the search on this index
-     */
-    public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, K start, C from, C to) throws IllegalStateException {
-        return new ArrayIndexModifiableSearch<C>(acquireSearchLock(), comparator, start, from, to);
+        if (comparator != null && comparator.equals(comparator()))
+            return new IndexedKeySearch(acquireSearchLock(), (Collection)keys); // This cast IS checked by the comparator
+        else
+            return new FullScanSearch<C>(acquireSearchLock(), comparator, keys);
     }
 
 
@@ -117,24 +102,24 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
      * Internal class that implements full-scan search for this index.
      * @param <C> type of boundaries used while comparing objects
      */
-    protected class ArrayIndexModifiableSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
+    private class FullScanSearch<C> extends AbstractSearch<C, T> implements ModifiableSearch<T> {
 
         //****************** Attributes ******************//
 
         /** Lock object for this search */
         private final Lock lock;
         /** Minimal (inclusive) index that this search can access in the index array */
-        private int minIndex;
+        protected int minIndex = 0;
         /** Maximal (inclusive) index that this search can access in the index array */
-        private int maxIndex;
+        protected int maxIndex = size() - 1;
         /** Index of an element to be returned by subsequent call to next */
-        private int cursor;
+        protected int cursor = minIndex;
         /**
          * Index of element returned by most recent call to next or
          * previous. It is reset to -1 if this element is deleted by a call
          * to remove.
          */
-        private int lastRet = -1;
+        protected int lastRet = -1;
 
 
         //****************** Constructor ******************//
@@ -143,108 +128,37 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
          * Creates a new instance of ArrayIndexModifiableSearch for the specified search comparator and keys to search.
          * Any object the key of which is equal (according to the given comparator) to any of the keys
          * is returned.
-         * <p>
-         * Note that the indexed data are used if the given comparator is compatible with the index comparator.
-         * </p>
          *
          * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
          * @param comparator the comparator that is used to compare the keys
          * @param keys list of keys to search for
          */
         @SuppressWarnings("unchecked")
-        protected ArrayIndexModifiableSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
+        protected FullScanSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) {
             super(comparator, keys);
             this.lock = lock;
-            if (comparator != null && comparator.equals(comparator()))
-                initializeIndexes((K)getKey(0), (K)getKey(getKeyCount() - 1)); // This IS checked by the comparator
-            else
-                maxIndex = size() - 1;
-            cursor = minIndex;
         }
 
         /**
          * Creates a new instance of Search for the specified search comparator and lower and upper key bounds.
          * Any object the key of which is within interval <code>[fromKey, toKey]</code>
          * is returned.
-         * <p>
-         * Note that the indexed data are used if the given comparator is compatible with the index comparator.
-         * </p>
          *
          * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
          * @param comparator the comparator that is used to compare the keys
-         * @param startKey the key of object where the search should start (if <tt>null</tt>, start searches from the {@code from} key)
          * @param fromKey the lower bound on the searched object keys (inclusive)
          * @param toKey the upper bound on the searched object keys (inclusive)
          */
         @SuppressWarnings("unchecked")
-        protected ArrayIndexModifiableSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, K startKey, C fromKey, C toKey) {
-            super(comparator == null || comparator.equals(comparator()) ? null : comparator, fromKey, toKey);
+        protected FullScanSearch(Lock lock, IndexComparator<? super C, ? super T> comparator, C fromKey, C toKey) {
+            super(comparator, fromKey, toKey);
             this.lock = lock;
-            if (comparator != null && comparator.equals(comparator()))
-                initializeIndexes((K)fromKey, (K)toKey); // This IS checked by the comparator
-            else
-                maxIndex = size() - 1;
-
-            // Search for starting key
-            if (startKey == null || startKey == fromKey)
-                cursor = minIndex;
-            else if (startKey == toKey)
-                cursor = maxIndex;
-            else
-                cursor = binarySearch(startKey, minIndex, maxIndex, false);
         }
 
         @Override
         protected void finalize() throws Throwable {
             close();
             super.finalize();
-        }
-
-        /**
-         * Initialize minimal and maximal indexes by searching for the {@code fromKey}
-         * and {@code toKey} using the binary search. Note that this method is only
-         * used if the comparator is compatible with the order of the index. Otherwise
-         * the binary search cannot be used.
-         * @param fromKey the key of the lower boundary
-         * @param toKey the key of the upper boundary
-         */
-        private void initializeIndexes(K fromKey, K toKey) {
-            // Search for lower boundary key
-            minIndex = (fromKey == null) ? 0 : binarySearch(fromKey, 0, size() - 1, true);
-
-            // If "fromKey" key was not found
-            if (minIndex < 0) {
-                if (fromKey == toKey) {// There is no object that can be accessed ("from" is the same as "to" and neither can be found)
-                    minIndex = 0;
-                    maxIndex = -1;
-                    return;
-                } else {
-                    minIndex = -minIndex - 1;
-                }
-            }
-
-            // Search for upper boundary key
-            if (toKey == null)
-                maxIndex = size() - 1;
-            else if (toKey == fromKey)
-                maxIndex = minIndex;
-            else
-                maxIndex = binarySearch(toKey, minIndex, size() - 1, true);
-            // If "toKey" is not found, high limit is the index by one lower
-            if (maxIndex < 0)
-                maxIndex = -maxIndex - 2;
-
-            IndexComparator<K, T> comparator = comparator();
-
-            // Expand lower boundary backwards for all items on which the comparator returns zero
-            if (fromKey != null)
-                while (minIndex > 0 && comparator.indexCompare(fromKey, get(minIndex - 1)) == 0)
-                    minIndex--;
-
-            // Expand upper boundary forward for all items on which the comparator returns zero
-            if (toKey != null)
-                while ((maxIndex < size() - 1) && comparator.indexCompare(toKey, get(maxIndex + 1)) == 0)
-                    maxIndex++;
         }
 
 
@@ -311,5 +225,130 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             if (lock != null)
                 lock.unlock();
         }
+    }
+
+    /**
+     * Internal class that extends the search by using the index.
+     */
+    private class IndexedBoundedSearch extends FullScanSearch<K> {
+        /**
+         * Creates a new instance of ArrayIndexBoundModifiableSearch.
+         * This search returns any object the key of which is within interval
+         * <code>[fromKey, toKey]</code>.
+         * <p>
+         * The indexed binary search is used to locate the startKey, fromKey and toKey values
+         * and no comparator is used during the search afterwards.
+         * </p>
+         *
+         * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
+         * @param startKey the key of object where the search should start (if <tt>null</tt>, start searches from the {@code from} key)
+         * @param fromKey the lower bound on the searched object keys (inclusive)
+         * @param toKey the upper bound on the searched object keys (inclusive)
+         */
+        protected IndexedBoundedSearch(Lock lock, K startKey, K fromKey, K toKey) {
+            super(lock, null, fromKey, toKey);
+
+            // Search for lower boundary key
+            minIndex = (fromKey == null) ? 0 : binarySearch(fromKey, 0, size() - 1, true);
+
+            // If "fromKey" key was not found
+            if (minIndex < 0) {
+                if (fromKey == toKey) {// There is no object that can be accessed ("from" is the same as "to" and neither can be found)
+                    minIndex = 0;
+                    maxIndex = -1;
+                    return;
+                } else {
+                    minIndex = -minIndex - 1;
+                }
+            }
+
+            // Search for upper boundary key
+            if (toKey == null)
+                maxIndex = size() - 1;
+            else if (toKey == fromKey)
+                maxIndex = minIndex;
+            else
+                maxIndex = binarySearch(toKey, minIndex, size() - 1, true);
+            // If "toKey" is not found, high limit is the index by one lower
+            if (maxIndex < 0)
+                maxIndex = -maxIndex - 2;
+
+            IndexComparator<K, T> comparator = comparator();
+
+            // Expand lower boundary backwards for all items on which the comparator returns zero
+            if (fromKey != null)
+                while (minIndex > 0 && comparator.indexCompare(fromKey, get(minIndex - 1)) == 0)
+                    minIndex--;
+
+            // Expand upper boundary forward for all items on which the comparator returns zero
+            if (toKey != null)
+                while ((maxIndex < size() - 1) && comparator.indexCompare(toKey, get(maxIndex + 1)) == 0)
+                    maxIndex++;
+
+            // Search for starting key
+            if (startKey == null || startKey == fromKey)
+                cursor = minIndex;
+            else if (startKey == toKey)
+                cursor = maxIndex;
+            else
+                cursor = binarySearch(startKey, minIndex, maxIndex, false);
+        }
+    }
+
+    /**
+     * Internal class that extends the search by using the index.
+     */
+    private class IndexedKeySearch extends FullScanSearch<K> {
+        /** Index of the key that was last searched */
+        protected int currentKey;
+
+        /**
+         * Creates a new instance of ArrayIndexKeyModifiableSearch.
+         * This search returns any object the key of which is any of the given {@code keys}.
+         * <p>
+         * The indexed binary search is used to locate the keys.
+         * Note that only one object is returned for each key.
+         * </p>
+         *
+         * @param lock the search lock on the index (if not supported <tt>null</tt> can be provided)
+         * @param keys list of keys to search for
+         */
+        protected IndexedKeySearch(Lock lock, Collection<? extends K> keys) {
+            super(lock, null, keys);
+        }
+
+        @Override
+        protected T readNext() throws BucketStorageException {
+            if (currentKey >= getKeyCount())
+                return null;
+            int newPos = binarySearch(getKey(currentKey++), 0, size() - 1, true);
+            cursor = (newPos < 0) ? maxIndex : newPos;
+            return super.readNext();
+        }
+
+        @Override
+        protected T readPrevious() throws BucketStorageException {
+            if (currentKey <= 0)
+                return null;
+            int newPos = binarySearch(getKey(--currentKey), 0, size() - 1, true);
+            cursor = (newPos < 0) ? minIndex : newPos;
+            return super.readNext();
+        }
+
+        @Override
+        public boolean skip(int count) throws IllegalStateException {
+            if (count < 0) {
+                if (currentKey + count < 0)
+                    return false;
+                currentKey += count + 1;
+                return previous();
+            } else {
+                if (currentKey + count >= getKeyCount())
+                    return false;
+                currentKey += count - 1;
+                return next();
+            }
+        }
+
     }
 }
