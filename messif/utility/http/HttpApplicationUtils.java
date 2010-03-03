@@ -76,8 +76,12 @@ public abstract class HttpApplicationUtils {
      * <p>
      * The following classes are supported:
      * <ul>
-     * <li>{@link RankingQueryOperation} - the {@link OperationProcessorResponse} is created</li>
-     * <li>{@link AbstractOperation} - the {@link OperationHandler} is created</li>
+     * <li>quoted text - the {@link ParameterProcessor} is created</li>
+     * <li>{@link LocalAbstractObject} - the {@link ExtractionProcessor} is created</li>
+     * <li>{@link AbstractObjectList} - the {@link ExtractionListProcessor} is created</li>
+     * <li>{@link AbstractOperation} - the {@link OperationProcessor} is created</li>
+     * <li>text containing parenthesis - the {@link InstantiatorProcessor} is created</li>
+     * <li>otherwise - the {@link ValueProcessor} is created</li>
      * </ul>
      * </p>
      *

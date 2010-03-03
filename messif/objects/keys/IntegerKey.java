@@ -2,6 +2,7 @@
 package messif.objects.keys;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -60,17 +61,13 @@ public class IntegerKey extends AbstractObjectKey {
         }
     }
     
-    /**
-     * Returns the string representation of this key (the key and the locator).
-     * @return the string representation of this key 
-     */
     @Override
-    public String getText() {
-        StringBuffer buf = new StringBuffer(Integer.toString(key));
-        buf.append(' ').append(locatorURI);
-        return buf.toString();
+    protected void writeData(OutputStream stream) throws IOException {
+        stream.write(Integer.toString(key).getBytes());
+        stream.write(' ');
+        super.writeData(stream);
     }
-        
+
     /**
      * Compare the keys according to the integer key
      * @param o the key to compare this key with
@@ -111,10 +108,9 @@ public class IntegerKey extends AbstractObjectKey {
         return (key == ((IntegerKey) obj).key);
     }
     
-    /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(getLocatorURI()).toString();
     }
 
 

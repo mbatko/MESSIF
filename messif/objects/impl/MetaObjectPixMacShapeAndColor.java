@@ -93,12 +93,12 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     public MetaObjectPixMacShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
         if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
-            this.regionShape = (ObjectRegionShape)this.regionShape.clone(objectKey);
-            this.keyWords = (ObjectIntSortedVectorJaccard)this.keyWords.clone(objectKey);
+            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
+            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
+            this.regionShape = (ObjectRegionShape)this.regionShape.clone(getObjectKey());
+            this.keyWords = (ObjectIntSortedVectorJaccard)this.keyWords.clone(getObjectKey());
         }
     }
 

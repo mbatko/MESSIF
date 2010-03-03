@@ -6,6 +6,7 @@
 package messif.objects.keys;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -17,6 +18,7 @@ import messif.objects.nio.BinarySerializator;
  * It is also an ancestor of all key classes to be used in the Abstact object.
  *
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
+ * @author xbatko
  */
 public class AbstractObjectKey implements java.io.Serializable, Comparable<AbstractObjectKey>, BinarySerializable {
     /** Class serial id for serialization. */
@@ -25,7 +27,7 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
     //************ Attributes ************//
 
     /** The URI locator */
-    protected final String locatorURI;
+    private final String locatorURI;
 
 
     //************ Constructor ************//
@@ -75,12 +77,36 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
         return locatorURI;
     }
 
+
+    //****************** Serialization ******************//
+
     /**
-     * Returns the string representation of this key (the locator).
-     * @return the string representation of this key (the locator)
+     * Writes this object key into the output text stream.
+     * The key is written using the following format:
+     * <pre>#objectKey keyClass key value</pre>
+     *
+     * @param stream the stream to write the key to
+     * @throws IOException if any problem occures during comment writing
      */
-    public String getText() {
-        return (locatorURI == null)?"":locatorURI;
+    public final void write(OutputStream stream) throws IOException {
+        stream.write("#objectKey ".getBytes());
+        stream.write(getClass().getName().getBytes());
+        stream.write(' ');
+        writeData(stream);
+        stream.write('\n');
+    }
+
+    /**
+     * Store this key's data to a text stream.
+     * This method should have the opposite deserialization in constructor.
+     * Note that this method should <em>not</em> write a line separator (\n).
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected void writeData(OutputStream stream) throws IOException {
+        if (locatorURI != null)
+            stream.write(locatorURI.getBytes());
     }
 
 

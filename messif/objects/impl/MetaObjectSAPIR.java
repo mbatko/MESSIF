@@ -8,9 +8,7 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -22,8 +20,6 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Stack;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParserFactory;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
@@ -32,7 +28,6 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import org.xml.sax.Attributes;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -40,7 +35,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  * @author xbatko
  */
-public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
+public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
@@ -82,12 +77,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
         if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
-            this.homogeneousTexture = (ObjectHomogeneousTexture)this.homogeneousTexture.clone(objectKey);
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
-            this.location = (ObjectGPSCoordinate)this.location.clone(objectKey);
+            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
+            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
+            this.homogeneousTexture = (ObjectHomogeneousTexture)this.homogeneousTexture.clone(getObjectKey());
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
+            this.location = (ObjectGPSCoordinate)this.location.clone(getObjectKey());
         }
     }
 
@@ -114,8 +109,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
-                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
         }
 
         for (; i < uriNamesClasses.length; i += 2) {
@@ -335,34 +330,6 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     }
 
     /****************** XML parsing ******************/
-
-    /** Factory method that creates MetaObjects from SAPIR XML files */
-    public static MetaObjectSAPIR create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed URI */
-    public static MetaObjectSAPIR create(String uri) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(uri, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
-    public static MetaObjectSAPIR create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputSource */
-    public static MetaObjectSAPIR create(InputSource is) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
 
     public String getObjectsXML() {
         StringBuffer rtv = new StringBuffer();

@@ -43,8 +43,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     
     /** Creates a new instance of object */
     public ObjectByteVector(byte[] data) {
-        this.data = new byte[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
+        this.data = data.clone();
     }
     
     /** Creates a new instance of randomly generated object */

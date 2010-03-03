@@ -72,11 +72,11 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     public MetaObjectShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
         if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
-            this.regionShape = (ObjectRegionShape)this.regionShape.clone(objectKey);
+            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
+            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
+            this.regionShape = (ObjectRegionShape)this.regionShape.clone(getObjectKey());
         }
     }
 
@@ -112,8 +112,8 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0)) {
-                this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0)) {
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
             }
         }
 

@@ -22,11 +22,7 @@ import messif.utility.Convert;
 
 /**
  * Represents a collection of LocalAbstractObjects encapsulated as one object.
- * <p>
  * All the encapsulated objects share the same locator URI.
- * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes.
- * </p>
  *
  * @author xbatko
  */
@@ -89,13 +85,13 @@ public abstract class MetaObject extends LocalAbstractObject {
             }
 
             @Override
-            public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-               return clone(false);
+            protected void writeData(OutputStream stream) throws IOException {
+                throw new UnsupportedOperationException("This object cannot be stored into text file");
             }
 
             @Override
-            protected void writeData(OutputStream stream) throws IOException {
-                throw new UnsupportedOperationException("This object cannot be stored into text file");
+            protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+                return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
             }
         };
     }
@@ -266,8 +262,10 @@ public abstract class MetaObject extends LocalAbstractObject {
 
     /**
      * The actual implementation of the metric function.
-     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
-     * The array <code>metaDistances</code> is ignored.
+     * If {@code metaDistances} parameter is not <tt>null</tt>, it should be filled
+     * with the distances to the respective encapsulated objects (method
+     * {@link #fillMetaDistances(messif.objects.MetaObject, float, float[]) fillMetaDistances}
+     * can be used).
      *
      * @param obj the object to compute distance to
      * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
@@ -276,9 +274,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see LocalAbstractObject#getDistance
      */
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
-        return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
-    }
+    protected abstract float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold);
 
     /**
      * Returns the array that can hold distances to the respective encapsulated objects.
@@ -291,6 +287,56 @@ public abstract class MetaObject extends LocalAbstractObject {
         return new float[getObjectCount()];
     }
 
+    /**
+     * Convenience method that fills the given {@code metaDistances} array with distances.
+     * Every item of the array is filled with the distance between
+     * the encapsulated object stored in this metaobject under the name given in the
+     * respective item of {@code objectNames} and the encapsulated object stored
+     * in {@code obj} metaobject under the same name. If any of the two objects
+     * are <tt>null</tt>, the value of {@code unknownDistance} parameter is filled.
+     *
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param objectNames the list of names of encapsulated objects to retrieve
+     *          from this and {@code obj} (must have the same number of items as {@code metaDistances}
+     * @param unknownDistance the distance to fill if either this or obj's encapsulated object is <tt>null</tt>
+     * @return the number of computed distances (i.e. the number of distTreshold items minus
+     *          the number of <tt>null</tt> objects)
+     * @see LocalAbstractObject#getDistance
+     */
+    protected final int fillMetaDistances(MetaObject obj, float distThreshold, float[] metaDistances, String[] objectNames, float unknownDistance) {
+        int count = 0;
+        for (int i = 0; i < metaDistances.length; i++) {
+            LocalAbstractObject obj1 = getObject(objectNames[i]);
+            LocalAbstractObject obj2 = obj.getObject(objectNames[i]);
+            if (obj1 == null || obj2 == null) {
+                metaDistances[i] = unknownDistance;
+            } else {
+                count++;
+                metaDistances[i] = obj1.getDistanceImpl(obj2, distThreshold);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Convenience method that fills the given {@code metaDistances} array with distances.
+     * Every item of the array is filled with the distance between
+     * all the encapsulated objects stored in this metaobject and the respective
+     * (using the same name) encapsulated object in {@code obj}. If any of the two objects
+     * are <tt>null</tt>, the value of {@link #UNKNOWN_DISTANCE} is filled.
+     *
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @return the number of computed distances (i.e. the number of distTreshold items minus
+     *          the number of <tt>null</tt> objects)
+     * @see LocalAbstractObject#getDistance
+     */
+    protected final int fillMetaDistances(MetaObject obj, float distThreshold, float[] metaDistances) {
+        return fillMetaDistances(obj, distThreshold, metaDistances, getObjectNames().toArray(new String[getObjectCount()]), UNKNOWN_DISTANCE);
+    }
 
     //****************** Additional overrides ******************//
 

@@ -60,8 +60,8 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
     public MetaObjectShape(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
         if (cloneObjects) {
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
-            this.regionShape = (ObjectRegionShape)this.regionShape.clone(objectKey);
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
+            this.regionShape = (ObjectRegionShape)this.regionShape.clone(getObjectKey());
         }
     }
 
@@ -94,8 +94,8 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0)) {
-                this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0)) {
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
             }
         }
 

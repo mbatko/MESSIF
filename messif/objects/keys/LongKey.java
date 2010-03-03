@@ -2,6 +2,7 @@
 package messif.objects.keys;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -74,15 +75,11 @@ public class LongKey extends AbstractObjectKey {
         }
     }
     
-    /**
-     * Returns the string representation of this key (the key and the locator).
-     * @return the string representation of this key 
-     */
     @Override
-    public String getText() {
-        StringBuffer buf = new StringBuffer(Long.toString(key));
-        buf.append(' ').append(locatorURI);
-        return buf.toString();
+    protected void writeData(OutputStream stream) throws IOException {
+        stream.write(Long.toString(key).getBytes());
+        stream.write(' ');
+        super.writeData(stream);
     }
         
     /**
@@ -128,7 +125,7 @@ public class LongKey extends AbstractObjectKey {
     /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(getLocatorURI()).toString();
     }
 
 

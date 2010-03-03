@@ -38,7 +38,7 @@ import messif.utility.Convert;
  * sets it to <tt>null</tt>.
  *
  * @see AbstractObject
- * @see messif.netbucket.RemoteAbstractObject
+ * @see RemoteAbstractObject
  *
  * @author  xbatko
  */
@@ -108,7 +108,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * Thus, this method returns this object itself.
      * @return this abstract object as local object
      */
-    public LocalAbstractObject getLocalAbstractObject() {
+    public final LocalAbstractObject getLocalAbstractObject() {
         return this;
     }
 
@@ -120,18 +120,10 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * For LocalAbstractObject create new object.
      * @return new RemoteAbstractObject containing URI locator of this object.
      */
-    public RemoteAbstractObject getRemoteAbstractObject() {
+    @Override
+    public final RemoteAbstractObject getRemoteAbstractObject() {
         return new RemoteAbstractObject(this);
     }
-
-
-    //****************** Size function ******************//
-
-    /**
-     * Returns the size of this object in bytes.
-     * @return the size of this object in bytes
-     */
-    public abstract int getSize();
 
 
     //****************** Unused/undefined, min, max distances ******************//
@@ -360,7 +352,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter of specified class from this object's filter chain
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
-    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
+    public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
         return getDistanceFilter(filterClass, true);
     }
 
@@ -376,7 +368,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter of specified class from this object's filter chain
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
-    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
+    public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
         for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
             Class<?> currentFilterClass = currentFilter.getClass();
             if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
@@ -392,7 +384,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter at specified position in this filter's chain
      * @throws IndexOutOfBoundsException if the specified position is too big
      */
-    public PrecomputedDistancesFilter getDistanceFilter(int position) throws IndexOutOfBoundsException {
+    public final PrecomputedDistancesFilter getDistanceFilter(int position) throws IndexOutOfBoundsException {
         // Fill iteration variable
         PrecomputedDistancesFilter currentFilter = distanceFilter;
         while (currentFilter != null) {
@@ -449,7 +441,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @param filter the concrete instance of filter to delete from this object's filter chain
      * @return <tt>true</tt> if the filter was unchained (deleted). If the given filter was not found, <tt>false</tt> is returned.
      */
-    public boolean unchainFilter(PrecomputedDistancesFilter filter) {
+    public final boolean unchainFilter(PrecomputedDistancesFilter filter) {
         if (distanceFilter == null)
             return false;
         
@@ -520,72 +512,6 @@ public abstract class LocalAbstractObject extends AbstractObject {
      */
     protected static char getRandomChar() {
         return (char)('a' + (int)(Math.random()*('z' - 'a')));
-    }
-
-
-    //****************** Equality driven by object data ******************//
-
-    /** 
-     * Indicates whether some other object has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object is the same as the obj
-     *          argument; <code>false</code> otherwise.
-     */
-    public abstract boolean dataEquals(Object obj);
-
-    /**
-     * Returns a hash code value for the data of this object.
-     * @return a hash code value for the data of this object
-     */
-    public abstract int dataHashCode();
-
-    /**
-     * A wrapper class that allows to hash/equal abstract objects
-     * using their data and not ID. Especially, standard hashing
-     * structures (HashMap, etc.) can be used on wrapped object.
-     */
-    public static class DataEqualObject {
-        /** Encapsulated object */
-        protected final LocalAbstractObject object;
-
-        /**
-         * Creates a new instance of DataEqualObject wrapper over the specified LocalAbstractObject.
-         * @param object the encapsulated object
-         */
-        public DataEqualObject(LocalAbstractObject object) {
-            this.object = object;
-        }
-
-        /**
-         * Returns the encapsulated object.
-         * @return the encapsulated object
-         */
-        public LocalAbstractObject get() {
-            return object;
-        }
-
-        /**
-         * Returns a hash code value for the object data.
-         * @return a hash code value for the data of this object
-         */
-        @Override
-        public int hashCode() {
-            return object.dataHashCode();
-        }
-
-        /** 
-         * Indicates whether some other object has the same data as this one.
-         * @param   obj   the reference object with which to compare.
-         * @return  <code>true</code> if this object is the same as the obj
-         *          argument; <code>false</code> otherwise.
-         */
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof DataEqualObject)
-                return object.dataEquals(((DataEqualObject)obj).object);
-            else
-                return object.dataEquals(obj);
-        }
     }
 
 
@@ -684,7 +610,81 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a randomly modified clone of this instance
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
-    public abstract LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException;
+    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+        throw new CloneNotSupportedException("Object " + getClass() + " have no random modification implemented");
+    }
+
+
+    //****************** Data methods ******************//
+
+    /**
+     * Returns the size of this object in bytes.
+     * @return the size of this object in bytes
+     */
+    public abstract int getSize();
+
+    /**
+     * Indicates whether some other object has the same data as this one.
+     * @param   obj   the reference object with which to compare.
+     * @return  <code>true</code> if this object is the same as the obj
+     *          argument; <code>false</code> otherwise.
+     */
+    public abstract boolean dataEquals(Object obj);
+
+    /**
+     * Returns a hash code value for the data of this object.
+     * @return a hash code value for the data of this object
+     */
+    public abstract int dataHashCode();
+
+    /**
+     * A wrapper class that allows to hash/equal abstract objects
+     * using their data and not ID. Especially, standard hashing
+     * structures (HashMap, etc.) can be used on wrapped object.
+     */
+    public static class DataEqualObject {
+        /** Encapsulated object */
+        protected final LocalAbstractObject object;
+
+        /**
+         * Creates a new instance of DataEqualObject wrapper over the specified LocalAbstractObject.
+         * @param object the encapsulated object
+         */
+        public DataEqualObject(LocalAbstractObject object) {
+            this.object = object;
+        }
+
+        /**
+         * Returns the encapsulated object.
+         * @return the encapsulated object
+         */
+        public LocalAbstractObject get() {
+            return object;
+        }
+
+        /**
+         * Returns a hash code value for the object data.
+         * @return a hash code value for the data of this object
+         */
+        @Override
+        public int hashCode() {
+            return object.dataHashCode();
+        }
+
+        /**
+         * Indicates whether some other object has the same data as this one.
+         * @param   obj   the reference object with which to compare.
+         * @return  <code>true</code> if this object is the same as the obj
+         *          argument; <code>false</code> otherwise.
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof DataEqualObject)
+                return object.dataEquals(((DataEqualObject)obj).object);
+            else
+                return object.dataEquals(obj);
+        }
+    }
 
 
     //****************** Serialization ******************//
@@ -752,28 +752,14 @@ public abstract class LocalAbstractObject extends AbstractObject {
      */
     public final void write(OutputStream stream, boolean writeComments) throws IOException {
         if (writeComments) {
-            // write the key as a comment
-            if (objectKey != null) {
-                stream.write("#objectKey ".getBytes());
-                stream.write(objectKey.getClass().getName().getBytes());
-                stream.write(' ');
-                stream.write(objectKey.getText().getBytes());
-                stream.write('\n');
-            }
+            // Write object key
+            AbstractObjectKey key = getObjectKey();
+            if (key != null)
+                key.write(stream);
 
-            // write the filters as comments
-            PrecomputedDistancesFilter filter = this.distanceFilter;
-            while (filter != null) {
-                try {
-                    String filterText = filter.getText();
-                    stream.write("#filter ".getBytes());
-                    stream.write(filter.getClass().getName().getBytes());
-                    stream.write(' ');
-                    stream.write(filterText.getBytes());
-                    stream.write('\n');
-                } catch (UnsupportedOperationException ignore) { }
-                filter = filter.getNextFilter();
-            }
+            // Write object distance filters
+            if (distanceFilter != null)
+                distanceFilter.write(stream);
         }
         writeData(stream);
     }

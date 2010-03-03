@@ -2,6 +2,7 @@
 package messif.objects.keys;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -59,18 +60,14 @@ public class DoubleKey extends AbstractObjectKey {
             throw new IllegalArgumentException("string must be of format 'doubleKey locatorUri': "+keyString);
         }
     }
-    
-    /**
-     * Returns the string representation of this key (the key and the locator).
-     * @return the string representation of this key 
-     */
+
     @Override
-    public String getText() {
-        StringBuffer buf = new StringBuffer(Double.toString(key));
-        buf.append(' ').append(locatorURI);
-        return buf.toString();
+    protected void writeData(OutputStream stream) throws IOException {
+        stream.write(Double.toString(key).getBytes());
+        stream.write(' ');
+        super.writeData(stream);
     }
-        
+
     /**
      * Compare the keys according to the double key
      * @param o the key to compare this key with
@@ -111,10 +108,9 @@ public class DoubleKey extends AbstractObjectKey {
         return (key == ((DoubleKey) obj).key);
     }
     
-    /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(getLocatorURI()).toString();
     }
 
 

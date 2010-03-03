@@ -31,6 +31,8 @@ import messif.objects.nio.BinarySerializator;
 /**
  * Implementation of {@link MetaObject} that stores encapsulated objects
  * in a hash table.
+ * The metric distance function for this object is the absolute value of the
+ * differences of locatorURI hashcodes.
  * 
  * @author xbatko
  */
@@ -62,7 +64,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         if (cloneObjects) {
             this.objects = new TreeMap<String, LocalAbstractObject>();
             for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
-                this.objects.put(entry.getKey(), (LocalAbstractObject)entry.getValue().clone(objectKey));
+                this.objects.put(entry.getKey(), (LocalAbstractObject)entry.getValue().clone(getObjectKey()));
         } else {
             this.objects = new TreeMap<String, LocalAbstractObject>(objects);
         }
@@ -191,8 +193,8 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
-                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((this.getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
         }
 
         // Read objects and add them to the collection
@@ -200,7 +202,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
             try {
                 LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
                 if (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1])) {
-                    object.setObjectKey(this.objectKey);
+                    object.setObjectKey(this.getObjectKey());
                     objects.put(uriNamesClasses[i - 1], object);
                 }
             } catch (IOException e) {
@@ -250,6 +252,22 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
         return objects;
+    }
+
+    /**
+     * The actual implementation of the metric function.
+     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * The array <code>metaDistances</code> is ignored.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    @Override
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
     }
 
 

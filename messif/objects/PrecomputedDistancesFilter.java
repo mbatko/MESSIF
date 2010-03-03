@@ -6,6 +6,7 @@
 package messif.objects;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -35,13 +36,19 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /****************** Statistics ******************/
+    //****************** Statistics ******************//
 
     /** Global counter for saving distance computations by using precomputed */
     protected static StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
 
 
-    /****************** Constructor ******************/
+    //****************** Attributes ******************//
+
+    /** The next filter in this chain */
+    PrecomputedDistancesFilter nextFilter;
+
+
+    //****************** Constructor ******************//
 
     /**
      * Creates a new instance of PrecomputedDistancesFilter.
@@ -50,10 +57,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     }
 
 
-    /****************** Filter chaining ******************/
-
-    /** The next filter in this chain */
-    PrecomputedDistancesFilter nextFilter = null;
+    //****************** Filter chaining ******************//
 
     /**
      * Returns the next filter in this filter's chain.
@@ -91,7 +95,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     }
 
 
-    /****************** Filtering methods ******************/
+    //****************** Filtering methods ******************//
 
     /**
      * Returns the precomputed distance to an object.
@@ -187,16 +191,51 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     protected abstract boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius);
 
 
-    /****************** Write *********************/
+    //****************** Serialization ******************//
 
     /**
-     * Return the string value of this filter.
-     * @return the string value of this filter
+     * Writes this distances filter into the output text stream.
+     * The key is written using the following format:
+     * <pre>#filter filterClass filter value</pre>
+     *
+     * @param stream the stream to write the key to
+     * @throws IOException if any problem occures during comment writing
      */
-    public abstract String getText();
+    public final void write(OutputStream stream) throws IOException {
+        if (isDataWritable()) {
+            stream.write("#filter ".getBytes());
+            stream.write(getClass().getName().getBytes());
+            stream.write(' ');
+            writeData(stream);
+            stream.write('\n');
+        }
+
+        // Write the whole chain
+        if (nextFilter != null)
+            nextFilter.write(stream);
+    }
+
+    /**
+     * Store this filter's data to a text stream.
+     * This method should have the opposite deserialization in constructor.
+     * Note that this method should <em>not</em> write a line separator (\n).
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected abstract void writeData(OutputStream stream) throws IOException;
+
+    /**
+     * Returns whether this filter's data can be written to a text stream.
+     * Note that the method {@link #writeData(java.io.OutputStream)} should
+     * provide a valid writing implementation.
+     * 
+     * @return <tt>true</tt> if this filter can be written to a text stream
+     */
+    protected abstract boolean isDataWritable();
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object.

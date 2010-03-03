@@ -43,8 +43,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     
     /** Creates a new instance of object */
     public ObjectIntVector(int[] data) {
-        this.data = new int[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
+        this.data = data.clone();
     }
     
     /** Creates a new instance of randomly generated object */
@@ -65,14 +64,8 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     public ObjectIntVector(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
-        line = line.trim();
-
-        String[] numbers;
-        if ("".equals(line)) {
-            numbers = new String[0];
-        } else {
-            numbers = line.split("[, ]+");
-        }
+        
+        String[] numbers = line.trim().split("[, ]+");
 
         this.data = new int[numbers.length];
         

@@ -43,8 +43,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
     
     /** Creates a new instance of object */
     public ObjectShortVector(short[] data) {
-        this.data = new short[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
+        this.data = data.clone();
     }
     
     /** Creates a new instance of randomly generated object */

@@ -21,7 +21,7 @@ import messif.utility.Clearable;
  * This is the top-most class of the object hierarchy.
  *
  * @see LocalAbstractObject
- * @see messif.netbucket.RemoteAbstractObject
+ * @see RemoteAbstractObject
  *
  * @author  xbatko
  */
@@ -33,7 +33,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     //****************** Attributes ******************//
 
     /** The key of this object - it must contain the URI. */
-    protected AbstractObjectKey objectKey;
+    private AbstractObjectKey objectKey;
 
 
     //****************** Constructors ******************//
@@ -184,7 +184,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @return a clone of this instance
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
-    public AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
+    public final AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
         AbstractObject rtv = clone();
         rtv.objectKey = objectKey;
         return rtv;
