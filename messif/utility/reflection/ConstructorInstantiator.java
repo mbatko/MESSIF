@@ -71,6 +71,18 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
     }
 
     /**
+     * Creates a new instance of ConstructorInstantiator for creating instances of
+     * {@code objectClass} that accepts the given arguments.
+     *
+     * @param objectClass the class the instances of which will be created
+     * @param arguments the arguments for the constructor
+     * @throws IllegalArgumentException if the provided class does not have a proper constructor
+     */
+    public ConstructorInstantiator(Class<? extends T> objectClass, Object... arguments) throws IllegalArgumentException {
+        this(getConstructor(objectClass, arguments));
+    }
+
+    /**
      * Retrieves a public constructor with the given prototype from the given class.
      * @param <T> the class in which to search for the constructor
      * @param constructorClass the class in which to search for the constructor
@@ -101,6 +113,27 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
             if (constructors[i].getParameterTypes().length == argumentCount)
                 return constructors[i];
         throw new IllegalArgumentException("There is no constructor " + constructorClass.getName() + "(...) with " + argumentCount + " arguments");
+    }
+
+    /**
+     * Retrieves a public constructor for the specified class that accepts the specified arguments.
+     * The <code>constructorClass</code>'s public constructors are searched for the one that
+     * accepts the arguments.
+     *
+     * @param <T> the class the constructor will create
+     * @param constructorClass the class for which to get the constructor
+     * @param arguments the arguments for the constructor
+     * @return a constructor for the specified class
+     * @throws IllegalArgumentException if there was no constructor for the specified list of arguments
+     */
+    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, Object[] arguments) throws IllegalArgumentException {
+        @SuppressWarnings("unchecked")
+        Constructor<T>[] constructors = (Constructor<T>[])constructorClass.getConstructors();
+        for (int i = 0; i < constructors.length; i++) {
+            if (Instantiators.isPrototypeMatching(constructors[i].getParameterTypes(), arguments, false, null))
+                return constructors[i];
+        }
+        throw new IllegalArgumentException("There is no constructor " + constructorClass.getName() + "(...) with " + arguments.length + " arguments");
     }
 
 

@@ -36,8 +36,11 @@ public class ParameterProcessor<T> implements HttpApplicationProcessor<T> {
     }
 
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
+        String parameter = httpParams.get(parameterName);
+        if (parameter == null)
+            throw new IllegalArgumentException("Parameter '" + parameterName + "' was not specified");
         try {
-            return Convert.stringToType(httpParams.get(parameterName), parameterClass, namedInstances);
+            return Convert.stringToType(parameter, parameterClass, namedInstances);
         } catch (InstantiationException e) {
             throw new IllegalArgumentException(e.getMessage(), e.getCause());
         }

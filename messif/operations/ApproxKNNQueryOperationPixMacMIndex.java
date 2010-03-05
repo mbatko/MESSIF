@@ -15,12 +15,14 @@ import messif.operations.ApproxKNNQueryOperation.LocalSearchType;
  *
  * @author xbatko
  */
+@AbstractOperation.OperationName("Approximate kNN Query parametrized for Metric Index using PixMac text data")
 public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperationMIndex {
     private static final long serialVersionUID = 1L;
 
     private final KeywordsJaccardSortedCollection answerCollection;
     private final int from;
 
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return", "Addition to k", "Text similarity weight", "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationPixMacMIndex(MetaObjectPixMacShapeAndColor queryObject, int k, int from, int kincrease, float keywordsWeight, int localSearchParam, LocalSearchType localSearchType) {
         super(queryObject, k, localSearchParam, localSearchType);
         if (from < 0 || from >= k)

@@ -17,6 +17,7 @@ import java.io.IOException;
  * If the processor throws an exception, it is captured and returned as
  * text response too.
  *
+ * @param <T> the class of the value returned by the encapsulated processor
  * @author xbatko
  */
 public class SimpleHandler<T> implements HttpHandler {
@@ -61,18 +62,37 @@ public class SimpleHandler<T> implements HttpHandler {
         exchange.close();
     }
 
+    /**
+     * Converts a value returned by the {@link #processor} to {@link HttpApplicationResponse}.
+     * @param value the value to convert
+     * @return the converted response
+     */
     protected HttpApplicationResponse toResponse(T value) {
         return asXml ? new SimpleTextResponse(value) : new SimpleXmlResponse(value);
     }
 
+    /**
+     * Converts an exception thrown by the {@link #processor} to {@link HttpApplicationResponse}.
+     * @param exception the exception to convert
+     * @return the converted response
+     */
     protected HttpApplicationResponse toResponse(Exception exception) {
         return asXml ? new SimpleTextResponse(exception) : new SimpleXmlResponse(exception);
     }
 
+    /**
+     * Returns the processor that actually handles the request.
+     * @return the encapsulated processor
+     */
     public HttpApplicationProcessor<? extends T> getProcessor() {
         return processor;
     }
 
+    /**
+     * Returns whether the response is XML or plain text.
+     * @return <tt>true</tt> if this handler returns XML response, otherwise
+     *          this handler's response is a plain text
+     */
     public boolean isAsXml() {
         return asXml;
     }

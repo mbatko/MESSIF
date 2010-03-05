@@ -2383,10 +2383,12 @@ public class Application {
      * @param args the command line arguments
      */
     protected void startApplication(String[] args) {
-        if (!parseArguments(args, 0))
+        if (!parseArguments(args, 0)) {
             System.err.println("Usage: " + getClass().getName() + " " + usage());
-        else if (cmdSocket != null)
+            System.exit(1);
+        } else if (cmdSocket != null) {
             cmdSocketLoop();
+        }
     }
 
     /**

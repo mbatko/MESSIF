@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import messif.objects.LocalAbstractObject;
@@ -122,15 +123,30 @@ public abstract class Extractors {
      * constructor that takes {@link BufferedReader} as argument.
      * @param <T> the class of object that is created by the extractor
      * @param objectClass the class of object that is created by the extractor
+     * @param additionalArguments additional arguments for the constructor
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass) throws IllegalArgumentException {
-        final Instantiator<? extends T> instantiator = new ConstructorInstantiator<T>(objectClass, BufferedReader.class);
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object... additionalArguments) throws IllegalArgumentException {
+        // Prepare instantiator and argument array
+        final Instantiator<? extends T> instantiator;
+        final Object[] arguments;
+        if (additionalArguments == null || additionalArguments.length == 0) {
+            instantiator = new ConstructorInstantiator<T>(objectClass, BufferedReader.class);
+            arguments = new Object[1];
+        } else {
+            arguments = new Object[1 + additionalArguments.length];
+            arguments[0] = new BufferedReader(new StringReader(""));
+            System.arraycopy(additionalArguments, 0, arguments, 1, additionalArguments.length);
+            instantiator = new ConstructorInstantiator<T>(objectClass, arguments);
+        }
+
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
-                    return instantiator.instantiate(dataSource.getBufferedReader());
+                    Object[] args = arguments.clone();
+                    args[0] = dataSource.getBufferedReader();
+                    return instantiator.instantiate(args);
                 } catch (InvocationTargetException e) {
                     if (e.getCause() instanceof IOException)
                         throw (IOException)e.getCause();

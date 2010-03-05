@@ -61,7 +61,7 @@ public class ExtractorDataSource implements Closeable {
      */
     public ExtractorDataSource(InputStream inputStream, String name) {
         this.name = name;
-        this.dataSource = null;
+        this.dataSource = inputStream;
         openDataSource(inputStream);
     }
 
@@ -123,7 +123,7 @@ public class ExtractorDataSource implements Closeable {
      * @param stream the stream to use as data source
      */
     private void openDataSource(InputStream stream) {
-        this.inputStream = (InputStream)dataSource;
+        this.inputStream = stream;
         this.bytesAvailable = -1;
     }
 
