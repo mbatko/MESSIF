@@ -136,22 +136,18 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return RankedAbstractObject.class;
     }
 
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
     @Override
     public int getAnswerCount() {
         return answer.size();
     }
     
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
     @Override
     public Iterator<RankedAbstractObject> getAnswer() {
         return answer.iterator();
+    }
+
+    public Iterator<RankedAbstractObject> getAnswer(int skip, int count) {
+        return answer.iterator(skip, count);
     }
 
     @Override

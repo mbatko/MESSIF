@@ -7,8 +7,9 @@
 package messif.operations;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import messif.objects.AbstractObject;
 import messif.objects.util.RankedAbstractObject;
 
@@ -26,7 +27,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     //****************** Attributes ******************//
 
     /** List holding the answer of this query */
-    private Collection<AbstractObject> answer;
+    private List<AbstractObject> answer;
 
 
     //****************** Constructors ******************//
@@ -54,7 +55,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      * @param answerType the type of objects this operation stores in its answer
      * @param answer the collection used for storing the answer
      */
-    protected ListingQueryOperation(AnswerType answerType, Collection<AbstractObject> answer) {
+    protected ListingQueryOperation(AnswerType answerType, List<AbstractObject> answer) {
         super(answerType);
         this.answer = answer;
     }
@@ -104,6 +105,25 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     @Override
     public Iterator<AbstractObject> getAnswer() {
         return answer.iterator();
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswer(int skip, final int count) {
+        final ListIterator<AbstractObject> listIterator = answer.listIterator(skip);
+        return new Iterator<AbstractObject>() {
+            private int returnedCount = 0;
+            public boolean hasNext() {
+                return returnedCount < count && listIterator.hasNext();
+            }
+            public AbstractObject next() {
+                AbstractObject ret = listIterator.next();
+                returnedCount++;
+                return ret;
+            }
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported");
+            }
+        };
     }
 
     @Override

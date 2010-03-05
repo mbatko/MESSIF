@@ -535,8 +535,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Returns an iterator over the elements in this collection skipping the first
      * {@code skip} items and returning only {@code count} elements. If {@code count}
      * is less than or equal to zero, all objects from the collection (except for
-     * {@code skip}) are returned. Note that
-     * Their order is defined by the comparator.
+     * {@code skip}) are returned. Note that their order is defined by the comparator.
      *
      * @param skip number of items to skip
      * @param count number of items to iterate (maximally, can be less)

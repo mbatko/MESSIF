@@ -7,9 +7,8 @@
 package messif.operations;
 
 import messif.objects.AbstractObject;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
+import java.util.NoSuchElementException;
 
 
 /**
@@ -91,12 +90,26 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      */
     @Override
     public Iterator<AbstractObject> getAnswer() {
-        List<AbstractObject> list;
-        if (answer == null)
-            list = Collections.emptyList();
-        else
-            list = Collections.singletonList(answer);
-        return list.iterator();
+        return getAnswer(0, 1);
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswer(final int skip, int count) {
+        return new Iterator<AbstractObject>() {
+            private boolean hasNext = answer != null && skip == 0;
+            public boolean hasNext() {
+                return hasNext;
+            }
+            public AbstractObject next() {
+                if (!hasNext)
+                    throw new NoSuchElementException();
+                hasNext = false;
+                return answer;
+            }
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported");
+            }
+        };
     }
 
     @Override

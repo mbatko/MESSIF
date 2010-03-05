@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +131,22 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     }
 
     /**
+     * Creates a new instance of MetaObjectPixMacShapeAndColor from the given {@link MetaObject}
+     * and given set of keywords. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @param keyWords the keywords to set for the new object
+     */
+    public MetaObjectPixMacShapeAndColor(MetaObject object, IntStorageIndexed<String> keyWordIndex, String... keyWords) {
+        this(object);
+        if (keyWords != null)
+            this.keyWords = new ObjectIntSortedVectorJaccard(
+                    keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex)
+            );
+    }
+
+    /**
      * Creates a new instance of MetaObjectPixMacShapeAndColor from the given text stream.
      * The stream may contain the '#...' lines with object key and/or precomputed distances
      * and a mandatory line for each descriptor name, from which the respective
@@ -209,6 +226,21 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         }
         processedKeyWords.add(keyWordsLine.substring(lastPos + 1).trim().toLowerCase());
 
+        return keywordsToIdentifiers(processedKeyWords, keyWordIndex);
+    }
+
+    /**
+     * Transfors a list of keywords into array of addresses.
+     * Note that unknown keywords are added to the index.
+     * All items from the list are removed during the process, so
+     * do not pass an unmodifiable list!
+     *
+     * @param processedKeyWords the list of keywords to transform
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @return array of translated addresses
+     * @throws IllegalStateException if there was a problem reading the index
+     */
+    private int[] keywordsToIdentifiers(List<String> processedKeyWords, IntStorageIndexed<String> keyWordIndex) {
         // Search the index
         int[] ret = new int[processedKeyWords.size()];
         int i;
@@ -296,7 +328,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             map.put("ScalableColorType", scalableColor);
         if (regionShape != null)
             map.put("RegionShapeType", regionShape);
-        if (regionShape != null)
+        if (keyWords != null)
             map.put("KeyWordsType", keyWords);
         return map;
     }
