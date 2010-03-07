@@ -178,7 +178,8 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        answer.clearSurplusData();
+        if (answer != null)
+            answer.clearSurplusData();
     }
 
 }

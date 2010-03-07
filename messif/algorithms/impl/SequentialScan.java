@@ -5,6 +5,7 @@
 package messif.algorithms.impl;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import messif.algorithms.Algorithm;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketErrorCode;
@@ -18,6 +19,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.PrecomputedDistancesFixedArrayFilter;
 import messif.operations.ApproxKNNQueryOperation;
 import messif.operations.BulkInsertOperation;
+import messif.operations.DeleteByLocatorOperation;
 import messif.operations.DeleteOperation;
 import messif.operations.IncrementalNNQueryOperation;
 import messif.operations.InsertOperation;
@@ -218,12 +220,37 @@ public class SequentialScan extends Algorithm {
     
     /**
      * Deletes an object.
-     * 
+     *
      * @param operation The operation which specifies the object to be deleted.
      * @throws BucketStorageException if the low occupation limit is reached when deleting object
      */
     public void delete(DeleteOperation operation) throws BucketStorageException {
         int deleted = bucket.deleteObject(operation.getDeletedObject(), operation.getDeleteLimit());
+        if (deleted > 0)
+            operation.endOperation();
+        else
+            operation.endOperation(BucketErrorCode.OBJECT_NOT_FOUND);
+    }
+
+    /**
+     * Deletes objects by locators.
+     *
+     * @param operation the operation which specifies the locators of objects to be deleted
+     * @throws BucketStorageException if the low occupation limit is reached when deleting object
+     */
+    public void delete(DeleteByLocatorOperation operation) throws BucketStorageException {
+        int deleted = 0;
+        AbstractObjectIterator<LocalAbstractObject> bucketIterator = bucket.getAllObjects();
+        try {
+            while (!operation.isLimitReached()) {
+                LocalAbstractObject obj = bucketIterator.getObjectByAnyLocator(operation.getLocators(), false); // Throws exception that exits the cycle
+                bucketIterator.remove();
+                operation.addDeletedObject(obj);
+                deleted++;
+            }
+        } catch (NoSuchElementException ignore) {
+        }
+
         if (deleted > 0)
             operation.endOperation();
         else

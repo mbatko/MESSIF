@@ -22,23 +22,19 @@ import messif.objects.LocalAbstractObject;
  */
 @AbstractOperation.OperationName("Delete")
 public class DeleteOperation extends AbstractOperation {
-    
     /** Class serial id for serialization */
     private static final long serialVersionUID = 2L;
-    
-    //****************** Operation request attributes ******************//
-    
+
+    //****************** Attributes ******************//
+
     /** Object to match the data against */
-    protected final LocalAbstractObject deletedObject;
+    private final LocalAbstractObject deletedObject;
 
     /** Maximal number of deleted objects, zero means unlimited */
-    protected final int deleteLimit;
-
-
-    //****************** Operation response attributes ******************//
+    private final int deleteLimit;
 
     /** List of all actually deleted objects */
-    protected final List<LocalAbstractObject> objects;
+    private final List<LocalAbstractObject> objects;
 
 
     //****************** Constructors ******************//
@@ -63,6 +59,7 @@ public class DeleteOperation extends AbstractOperation {
     public DeleteOperation(LocalAbstractObject deletedObject) {
         this(deletedObject, 0);
     }
+
 
     //****************** Attribute access ******************//
 
@@ -92,47 +89,6 @@ public class DeleteOperation extends AbstractOperation {
     }
 
     /**
-     * Returns argument that was passed while constructing instance.
-     * If the argument is not stored within operation, <tt>null</tt> is returned.
-     * @param index index of an argument passed to constructor
-     * @return argument that was passed while constructing instance
-     * @throws IndexOutOfBoundsException if index parameter is out of range
-     */
-    @Override
-    public Object getArgument(int index) throws IndexOutOfBoundsException {
-        if (index != 0)
-            throw new IndexOutOfBoundsException("Delete operation has only one argument");
-        return deletedObject;
-    }
-
-    /**
-     * Returns number of arguments that were passed while constructing this instance.
-     * @return number of arguments that were passed while constructing this instance
-     */
-    @Override
-    public int getArgumentCount() {
-        return 1;
-    }
-
-
-    //****************** Implementation of abstract methods ******************//
-
-    /**
-     * Returns <tt>true</tt> if this operation was successfuly completed.
-     * @return <tt>true</tt> if this operation was successfuly completed
-     */
-    public boolean wasSuccessful() {
-        return errValue.equals(BucketErrorCode.OBJECT_DELETED);
-    }
-
-    /**
-     * End operation successfully.
-     */
-    public void endOperation() {
-        this.errValue = BucketErrorCode.OBJECT_DELETED;
-    }
-
-    /**
      * Mark the specified object as deleted by this operation.
      * @param deletedObject the object that was deleted
      */
@@ -140,10 +96,34 @@ public class DeleteOperation extends AbstractOperation {
         objects.add(deletedObject);
     }
 
-    /**
-     * Update the operation result.
-     * @param operation foreign operation from which to update this one
-     */
+    @Override
+    public Object getArgument(int index) throws IndexOutOfBoundsException {
+        switch (index) {
+            case 0:
+                return getDeletedObject();
+            case 1:
+                return getDeleteLimit();
+            default:
+                throw new IndexOutOfBoundsException("Delete operation has only two arguments");
+        }
+    }
+
+    @Override
+    public int getArgumentCount() {
+        return 2;
+    }
+
+
+    //****************** Implementation of abstract methods ******************//
+
+    public boolean wasSuccessful() {
+        return errValue.equals(BucketErrorCode.OBJECT_DELETED);
+    }
+
+    public void endOperation() {
+        this.errValue = BucketErrorCode.OBJECT_DELETED;
+    }
+
     @Override
     public void updateFrom(AbstractOperation operation) {
         DeleteOperation castOperation = (DeleteOperation)operation;
@@ -153,12 +133,6 @@ public class DeleteOperation extends AbstractOperation {
         super.updateFrom(operation);
     }    
 
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
@@ -170,22 +144,12 @@ public class DeleteOperation extends AbstractOperation {
 
     //****************** Equality driven by operation data ******************//
 
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
     @Override
     protected boolean dataEqualsImpl(AbstractOperation obj) {
         // The argument obj is always DeleteOperation or its descendant, because it has only abstract ancestors
         return deletedObject.dataEquals(((DeleteOperation)obj).deletedObject);
     }
 
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
     @Override
     public int dataHashCode() {
         return deletedObject.dataHashCode();

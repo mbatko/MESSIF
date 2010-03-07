@@ -10,13 +10,13 @@ import com.sun.net.httpserver.HttpHandler;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.operations.AbstractOperation;
-import messif.operations.RankingQueryOperation;
 
 /**
  * Utility methods for this package.
@@ -42,6 +42,7 @@ public abstract class HttpApplicationUtils {
      * </ul>
      * </p>
      *
+     * @param log the logger to use for logging errors (if <tt>null</tt> is passed, no logging is done)
      * @param algorithm the algorithm on which the new handler operates
      * @param args arguments for the handler
      * @param offset the index into {@code args} where the first argument is
@@ -52,15 +53,15 @@ public abstract class HttpApplicationUtils {
      * @throws IllegalArgumentException if there was a problem creating the handler
      */
     @SuppressWarnings("unchecked")
-    public static HttpHandler createHandler(Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
+    public static HttpHandler createHandler(Logger log, Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
         try {
             Class<?> handlerClass = Class.forName(args[offset]);
             offset++;
             length--;
             if (AbstractOperation.class.isAssignableFrom(handlerClass))
-                return new OperationHandler(algorithm, handlerClass, args, offset, length, namedInstances); // This IS checked on previous line
+                return new OperationHandler(log, algorithm, handlerClass, args, offset, length, namedInstances); // This IS checked on previous line
             else
-                return new SimpleHandler<Object>(true, createProcessor(handlerClass, algorithm, args, offset, length, namedInstances));
+                return new SimpleHandler<Object>(log, true, createProcessor(handlerClass, algorithm, args, offset, length, namedInstances));
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("Unknown class: " + e.getMessage());
         }
@@ -106,8 +107,6 @@ public abstract class HttpApplicationUtils {
             return new ExtractionListProcessor(args[offset], processorClass, namedInstances);
         else if (AbstractOperation.class.isAssignableFrom(processorClass))
             return new OperationProcessor(algorithm, processorClass, args, offset, length, namedInstances);
-        else if (args[offset].indexOf('(') != -1)
-            return new InstantiatorProcessor<T>(algorithm, args[offset], processorClass, namedInstances);
         else
             return new ValueProcessor<T>(args[offset], processorClass, namedInstances);
     }

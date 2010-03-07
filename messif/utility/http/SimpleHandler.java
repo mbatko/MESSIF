@@ -8,6 +8,8 @@ package messif.utility.http;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Encapsulates a given {@link HttpApplicationProcessor} and returns its
@@ -25,16 +27,20 @@ public class SimpleHandler<T> implements HttpHandler {
     private final boolean asXml;
     /** Processor that actually handles the request */
     private final HttpApplicationProcessor<? extends T> processor;
+    /** Logger */
+    private final Logger log;
 
     /**
      * Creates a new instance of SimpleResponseProcessor with the given
      * processor to encapsulate.
+     * @param log the logger to use for logging errors (if <tt>null</tt> is passed, no logging is done)
      * @param asXml type of simple response to return - text (<tt>false</tt>) or XML (<tt>true</tt>)
      * @param processor the processor that will actually handle the requests
      */
-    public SimpleHandler(boolean asXml, HttpApplicationProcessor<? extends T> processor) {
-        this.processor = processor;
+    public SimpleHandler(Logger log, boolean asXml, HttpApplicationProcessor<? extends T> processor) {
+        this.log = log;
         this.asXml = asXml;
+        this.processor = processor;
     }
 
     /**
@@ -52,6 +58,8 @@ public class SimpleHandler<T> implements HttpHandler {
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
+            if (log != null)
+                log.log(Level.WARNING, "Error processing " + exchange.getRequestURI() + ": " + e);
             response = toResponse(e);
         }
 
@@ -68,7 +76,7 @@ public class SimpleHandler<T> implements HttpHandler {
      * @return the converted response
      */
     protected HttpApplicationResponse toResponse(T value) {
-        return asXml ? new SimpleTextResponse(value) : new SimpleXmlResponse(value);
+        return asXml ? new SimpleXmlResponse(value) : new SimpleTextResponse(value);
     }
 
     /**
@@ -77,7 +85,7 @@ public class SimpleHandler<T> implements HttpHandler {
      * @return the converted response
      */
     protected HttpApplicationResponse toResponse(Exception exception) {
-        return asXml ? new SimpleTextResponse(exception) : new SimpleXmlResponse(exception);
+        return asXml ? new SimpleXmlResponse(exception) : new SimpleTextResponse(exception);
     }
 
     /**

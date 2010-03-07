@@ -2385,7 +2385,6 @@ public class Application {
     protected void startApplication(String[] args) {
         if (!parseArguments(args, 0)) {
             System.err.println("Usage: " + getClass().getName() + " " + usage());
-            System.exit(1);
         } else if (cmdSocket != null) {
             cmdSocketLoop();
         }

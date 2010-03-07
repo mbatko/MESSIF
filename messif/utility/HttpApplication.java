@@ -84,7 +84,7 @@ public class HttpApplication extends Application {
         try {
             HttpContext context = httpServer.createContext(
                     args[1],
-                    HttpApplicationUtils.createHandler(algorithm, args, 2, args.length - 2, namedInstances)
+                    HttpApplicationUtils.createHandler(log, algorithm, args, 2, args.length - 2, namedInstances)
             );
             httpServerContexts.put(args[1], context);
             return true;

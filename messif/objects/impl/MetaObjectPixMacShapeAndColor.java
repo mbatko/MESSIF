@@ -153,11 +153,12 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * descriptor {@link LocalAbstractObject} is loaded.
      *
      * @param stream the stream from which the data are read
-     * @param readKeyWords flag whether to read the keyWords
-     * @param dummy not-used dummy parameter to differentiate the number of params for different constructors
+     * @param haveKeyWords flag whether the data contains keyWords
+     * @param readKeyWords flag whether to read the keyWords (<tt>true</tt>) or
+     *          skip the keywords line (<tt>false</tt>)
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectPixMacShapeAndColor(BufferedReader stream, boolean readKeyWords, boolean dummy) throws IOException {
+    public MetaObjectPixMacShapeAndColor(BufferedReader stream, boolean haveKeyWords, boolean readKeyWords) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
         colorLayout = new ObjectColorLayout(new BufferedReader(new StringReader(line)));
@@ -165,8 +166,12 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         edgeHistogram = new ObjectVectorEdgecomp(stream);
         scalableColor = new ObjectIntVectorL1(stream);
         regionShape = new ObjectRegionShape(stream);
-        if (readKeyWords)
-            keyWords = new ObjectIntSortedVectorJaccard(stream);
+        if (haveKeyWords) {
+            if (readKeyWords)
+                keyWords = new ObjectIntSortedVectorJaccard(stream);
+            else
+                stream.readLine(); // Skip the line with keywords
+        }
     }
 
     /**
@@ -176,7 +181,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacShapeAndColor(BufferedReader stream) throws IOException {
-        this(stream, true, true);
+        this(stream, true, false);
     }
 
     /**
@@ -188,7 +193,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacShapeAndColor(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
-        this(stream, false, true);
+        this(stream, false, false);
         try {
             keyWords = new ObjectIntSortedVectorJaccard(keywordsToIdentifiers(stream.readLine(), ';', keyWordIndex));
         } catch (Exception e) {

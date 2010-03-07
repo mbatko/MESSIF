@@ -5,6 +5,7 @@
 package messif.algorithms.impl;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import messif.algorithms.Algorithm;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketErrorCode;
@@ -12,7 +13,9 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectIterator;
 import messif.operations.BulkInsertOperation;
+import messif.operations.DeleteByLocatorOperation;
 import messif.operations.DeleteOperation;
 import messif.operations.InsertOperation;
 import messif.operations.QueryOperation;
@@ -54,7 +57,7 @@ public class ParallelSequentialScan extends Algorithm {
      */
     @Algorithm.AlgorithmConstructor(description = "Parallel SequantialScan Access Structure", arguments = {"parallelization", "bucket class", "bucket class params"})
     public ParallelSequentialScan(int parallelization, Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams) throws IllegalArgumentException {
-        super("SequantialScan");
+        super("ParallelSequentialScan");
 
         // Check the parallelization parameter
         if (parallelization < 1)
@@ -156,10 +159,37 @@ public class ParallelSequentialScan extends Algorithm {
      */
     public void delete(DeleteOperation operation) throws BucketStorageException {
         int deleted = 0;
+        int limit = operation.getDeleteLimit();
         for (LocalBucket bucket : buckets) {
-            deleted += bucket.deleteObject(operation.getDeletedObject(), operation.getDeleteLimit() - deleted);
-            if (deleted >= operation.getDeleteLimit())
+            deleted += bucket.deleteObject(operation.getDeletedObject(), limit == 0 ? 0 : limit - deleted);
+            if (limit > 0 && deleted >= limit)
                 break;
+        }
+        if (deleted > 0)
+            operation.endOperation();
+        else
+            operation.endOperation(BucketErrorCode.OBJECT_NOT_FOUND);
+    }
+
+    /**
+     * Deletes objects by locators.
+     *
+     * @param operation the delete operation which specifies the locators of objects to be deleted
+     * @throws BucketStorageException if the low occupation limit is reached when deleting object
+     */
+    public void delete(DeleteByLocatorOperation operation) throws BucketStorageException {
+        int deleted = 0;
+        for (LocalBucket bucket : buckets) {
+            try {
+                AbstractObjectIterator<LocalAbstractObject> bucketIterator = bucket.getAllObjects();
+                while (!operation.isLimitReached()) {
+                    LocalAbstractObject obj = bucketIterator.getObjectByAnyLocator(operation.getLocators(), false); // Throws exception that exits the cycle
+                    bucketIterator.remove();
+                    operation.addDeletedObject(obj);
+                    deleted++;
+                }
+            } catch (NoSuchElementException ignore) {
+            }
         }
         if (deleted > 0)
             operation.endOperation();
