@@ -12,7 +12,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -197,6 +199,42 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
             return location;
         else
             return null;
+    }
+
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(6);
+        if (colorLayout != null)
+            objects.add(colorLayout);
+        if (colorStructure != null)
+            objects.add(colorStructure);
+        if (edgeHistogram != null)
+            objects.add(edgeHistogram);
+        if (homogeneousTexture != null)
+            objects.add(homogeneousTexture);
+        if (scalableColor != null)
+            objects.add(scalableColor);
+        if (location != null)
+            objects.add(location);
+        return objects;
+    }
+
+    @Override
+    public Collection<String> getObjectNames() {
+        Collection<String> names = new ArrayList<String>(6);
+        if (colorLayout != null)
+            names.add(descriptorNames[0]);
+        if (colorStructure != null)
+            names.add(descriptorNames[1]);
+        if (edgeHistogram != null)
+            names.add(descriptorNames[2]);
+        if (homogeneousTexture != null)
+            names.add(descriptorNames[3]);
+        if (scalableColor != null)
+            names.add(descriptorNames[4]);
+        if (location != null)
+            names.add(descriptorNames[5]);
+        return names;
     }
 
     /**

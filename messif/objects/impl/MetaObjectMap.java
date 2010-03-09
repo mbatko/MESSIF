@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -247,11 +248,31 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     /**
      * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * Note that the collection can contain <tt>null</tt> values.
-     * @return a map all the encapsulated objects
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
      */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
         return objects;
+    }
+
+    @Override
+    public LocalAbstractObject getObject(String name) {
+        return objects.get(name);
+    }
+
+    @Override
+    public Collection<String> getObjectNames() {
+        return Collections.unmodifiableCollection(objects.keySet());
+    }
+
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        return Collections.unmodifiableCollection(objects.values());
+    }
+
+    @Override
+    public int getObjectCount() {
+        return objects.size();
     }
 
     /**

@@ -7,7 +7,7 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -221,6 +221,9 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @throws IllegalStateException if there was a problem reading the index
      */
     private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) {
+        if (keyWordsLine == null || keyWordsLine.trim().length() == 0)
+            return new int[0];
+
         // Parse all key words from the given string (not using String.split)
         List<String> processedKeyWords = new ArrayList<String>();
         int lastPos = -1;
@@ -308,34 +311,22 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             return null;
     }
 
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        return Arrays.asList((LocalAbstractObject)colorLayout, colorStructure, edgeHistogram, scalableColor, regionShape, keyWords);
+    }
+
+    @Override
+    public Collection<String> getObjectNames() {
+        return Arrays.asList(descriptorNames);
+    }
+
     /**
      * Returns the object that encapsulates the keywords for this metaobject.
      * @return the object that encapsulates the keywords
      */
     public ObjectIntSortedVectorJaccard getKeyWords() {
         return keyWords;
-    }
-
-    /**
-     * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
-     */
-    public Map<String, LocalAbstractObject> getObjectMap() {
-        Map<String, LocalAbstractObject> map = new HashMap<String, LocalAbstractObject>(6);
-        if (colorLayout != null)
-            map.put("ColorLayoutType", colorLayout);
-        if (colorStructure != null)
-            map.put("ColorStructureType", colorStructure);
-        if (edgeHistogram != null)
-            map.put("EdgeHistogramType", edgeHistogram);
-        if (scalableColor != null)
-            map.put("ScalableColorType", scalableColor);
-        if (regionShape != null)
-            map.put("RegionShapeType", regionShape);
-        if (keyWords != null)
-            map.put("KeyWordsType", keyWords);
-        return map;
     }
 
 

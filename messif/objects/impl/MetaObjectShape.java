@@ -5,7 +5,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -171,18 +171,14 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
             return null;
     }
 
-    /**
-     * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
-     */
-    public Map<String, LocalAbstractObject> getObjectMap() {
-        Map<String, LocalAbstractObject> map = new HashMap<String, LocalAbstractObject>(6);
-        if (edgeHistogram != null)
-            map.put("EdgeHistogramType", edgeHistogram);
-        if (regionShape != null)
-            map.put("RegionShapeType", regionShape);
-        return map;
+    @Override
+    public Collection<String> getObjectNames() {
+        return Arrays.asList(descriptorNames);
+    }
+
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        return Arrays.asList((LocalAbstractObject)edgeHistogram, regionShape);
     }
 
 

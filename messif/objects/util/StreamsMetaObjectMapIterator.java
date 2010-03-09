@@ -147,7 +147,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
     protected void setNextObject() throws IllegalStateException, IOException {
         // call "next" on all subObjectIterators that were used to construct meta object last time
         if (gapAppeared) {
-            for (String name : nextObject.getObjectMap().keySet()) {
+            for (String name : nextObject.getObjectNames()) {
                 StreamGenericAbstractObjectIterator iterator = subObjectIterators.get(name);
                 if (iterator.hasNext())
                     iterator.next();

@@ -12,10 +12,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
@@ -80,11 +81,6 @@ public abstract class MetaObject extends LocalAbstractObject {
             private static final long serialVersionUID = 1L;
 
             @Override
-            public Map<String, LocalAbstractObject> getObjectMap() {
-                return Collections.emptyMap();
-            }
-
-            @Override
             protected void writeData(OutputStream stream) throws IOException {
                 throw new UnsupportedOperationException("This object cannot be stored into text file");
             }
@@ -93,6 +89,26 @@ public abstract class MetaObject extends LocalAbstractObject {
             protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
                 return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
             }
+
+            @Override
+            public LocalAbstractObject getObject(String name) {
+                return null;
+            }
+
+            @Override
+            public Collection<String> getObjectNames() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public Collection<LocalAbstractObject> getObjects() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public int getObjectCount() {
+                return 0;
+            }
         };
     }
 
@@ -100,11 +116,16 @@ public abstract class MetaObject extends LocalAbstractObject {
     //****************** Attribute access ******************//
 
     /**
-     * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     * Returns the number of encapsulated objects.
+     * @return the number of encapsulated objects
      */
-    public abstract Map<String, LocalAbstractObject> getObjectMap();
+    public abstract int getObjectCount();
+
+    /**
+     * Returns a set of symbolic names of the encapsulated objects.
+     * @return a set of symbolic names of the encapsulated objects
+     */
+    public abstract Collection<String> getObjectNames();
 
     /**
      * Returns the encapsulated object for given symbolic name.
@@ -112,25 +133,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param name the symbolic name of the object to return
      * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
      */
-    public LocalAbstractObject getObject(String name) {
-        return getObjectMap().get(name);
-    }
-
-    /**
-     * Returns a set of symbolic names of the encapsulated objects.
-     * @return a set of symbolic names of the encapsulated objects
-     */
-    public Collection<String> getObjectNames() {
-        return getObjectMap().keySet();
-    }
-
-    /**
-     * Returns a collection of all the encapsulated objects.
-     * @return a collection of all the encapsulated objects
-     */
-    public Collection<LocalAbstractObject> getObjects() {
-        return getObjectMap().values();
-    }
+    public abstract LocalAbstractObject getObject(String name);
 
     /**
      * Returns <tt>true</tt> if there is an encapsulated object for given symbolic name.
@@ -142,11 +145,26 @@ public abstract class MetaObject extends LocalAbstractObject {
     }
 
     /**
-     * Returns the number of encapsulated objects.
-     * @return the number of encapsulated objects
+     * Returns a collection of all the encapsulated objects.
+     * @return a collection of all the encapsulated objects
      */
-    public int getObjectCount() {
-        return getObjectMap().size();
+    public Collection<LocalAbstractObject> getObjects() {
+        Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(getObjectCount());
+        for (String string : getObjectNames()) {
+            objects.add(getObject(string));
+        }
+        return objects;
+    }
+
+    /**
+     * Returns a collection of all the encapsulated objects associated with their symbolic names.
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     */
+    public Map<String, LocalAbstractObject> getObjectMap() {
+        Map<String, LocalAbstractObject> ret = new HashMap<String, LocalAbstractObject>(getObjectCount());
+        for (String name : getObjectNames())
+            ret.put(name, getObject(name));
+        return ret;
     }
 
 
@@ -213,12 +231,10 @@ public abstract class MetaObject extends LocalAbstractObject {
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof MetaObject))
             return false;
-        Map<String, LocalAbstractObject> otherObjects = ((MetaObject)obj).getObjectMap();
-
-        // Compare the data of the respective objects (name-compatible)
-        for (Entry<String, LocalAbstractObject> entry : getObjectMap().entrySet()) {
-            LocalAbstractObject o1 = entry.getValue();
-            LocalAbstractObject o2 = otherObjects.get(entry.getKey());
+        MetaObject otherObj = (MetaObject)obj;
+        for (String name : getObjectNames()) {
+            LocalAbstractObject o1 = getObject(name);
+            LocalAbstractObject o2 = otherObj.getObject(name);
             if (o1 == null || o2 == null) {
                 if (o1 != null || o2 != null)
                     return false;

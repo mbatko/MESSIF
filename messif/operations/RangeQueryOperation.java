@@ -6,7 +6,6 @@
 
 package messif.operations;
 
-import messif.netbucket.RemoteAbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
@@ -36,7 +35,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of RangeQueryOperation for a given query object and radius.
-     * Reduced objects ({@link messif.netbucket.RemoteAbstractObject}) will be used.
+     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      */
@@ -47,18 +46,41 @@ public class RangeQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of RangeQueryOperation for a given query object and radius.
+     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     */
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, boolean storeMetaDistances) {
+        this(queryObject, radius, AnswerType.REMOTE_OBJECTS, Integer.MAX_VALUE, storeMetaDistances);
+    }
+
+    /**
+     * Creates a new instance of RangeQueryOperation for a given query object and radius.
      * @param queryObject the query object
      * @param radius the query radius
      * @param answerType the type of objects this operation stores in its answer
      */
-    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType) {
         this(queryObject, radius, answerType, Integer.MAX_VALUE);
     }
 
     /**
+     * Creates a new instance of RangeQueryOperation for a given query object and radius.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param answerType the type of objects this operation stores in its answer
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     */
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, boolean storeMetaDistances) {
+        this(queryObject, radius, answerType, Integer.MAX_VALUE, storeMetaDistances);
+    }
+
+    /**
      * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
-     * Reduced objects ({@link messif.netbucket.RemoteAbstractObject}) will be used.
+     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      * @param maxAnswerSize sets the maximal answer size
@@ -77,7 +99,21 @@ public class RangeQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize) {
-        super(answerType, maxAnswerSize);
+        this(queryObject, radius, answerType, maxAnswerSize, false);
+    }
+
+    /**
+     * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize sets the maximal answer size
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size", "Store the meta-object subdistances?"})
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) {
+        super(answerType, maxAnswerSize, storeMetaDistances);
         this.queryObject = queryObject;
         this.radius = radius;
     }
