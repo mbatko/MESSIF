@@ -545,7 +545,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         /**
          * Collection of keywords of the query object
          */
-        private final ObjectIntSortedVectorJaccard queryKeywords;
+        protected final ObjectIntSortedVectorJaccard queryKeywords;
 
         /**
          * Words' Jaccard coefficient weight
@@ -571,6 +571,34 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         protected float getNewDistance(RankedAbstractObject origObject) {
             return origObject.getDistance() + keywordsWeight *
                     queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject.getObject()).keyWords);
+        }
+    }
+
+    /**
+     * This collection sorts the MetaObjectPixMacShapeAndColor data according to
+     *  their   distance + ((keywords's jaccard coeficient^2) * weight)
+     */
+    public static class KeywordsJaccardPowerSortedCollection extends KeywordsJaccardSortedCollection {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 31001L;
+
+        /**
+         * Creates new sorted collection sorted according to pixmac shape+color distance + ((keywords's jaccard coeficient^2) weighted)
+         *
+         * @param initialCapacity capacity of the collection to allocate initially
+         * @param maximalCapacity max capacity of the collection
+         * @param querykeyWords collection of keywords of the query object
+         * @param keywordsWeight weight for the words jaccard coefficient
+         * @throws IllegalArgumentException
+         */
+        public KeywordsJaccardPowerSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntSortedVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
+            super(initialCapacity, maximalCapacity, querykeyWords, keywordsWeight);
+        }
+
+        @Override
+        protected float getNewDistance(RankedAbstractObject origObject) {
+            float keywordsDistance = queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject.getObject()).keyWords);
+            return origObject.getDistance() + keywordsWeight * (keywordsDistance * keywordsDistance);
         }
     }
 

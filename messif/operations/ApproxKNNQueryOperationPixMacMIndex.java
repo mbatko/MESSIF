@@ -7,7 +7,7 @@ package messif.operations;
 
 import java.util.Iterator;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor;
-import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardSortedCollection;
+import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardPowerSortedCollection;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.ApproxKNNQueryOperation.LocalSearchType;
 
@@ -44,7 +44,7 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
             throw new IllegalArgumentException("From parameter cannot be negative and must be smaller than k");
         this.from = from;
         if (queryObject.getKeyWords() != null) {
-            setAnswerCollection(new KeywordsJaccardSortedCollection(
+            setAnswerCollection(new KeywordsJaccardPowerSortedCollection( //new KeywordsJaccardSortedCollection(
                     k, k + kincrease, queryObject.getKeyWords(), keywordsWeight
             ));
         }
