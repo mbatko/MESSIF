@@ -60,12 +60,10 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      */
     @Override
     public final boolean equals(Object obj) {
-        try {
-            UniqueID castObj = (UniqueID)obj;
-            return this.leastSigBits == castObj.leastSigBits && this.mostSigBits == castObj.mostSigBits;
-        } catch (ClassCastException e) {
+        if (!(obj instanceof UniqueID))
             return false;
-        }
+        UniqueID castObj = (UniqueID)obj;
+        return this.leastSigBits == castObj.leastSigBits && this.mostSigBits == castObj.mostSigBits;
     }
 
     /**

@@ -64,7 +64,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @return a hash code value for this operation
      */
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return operID.hashCode();
     }
 
@@ -79,7 +79,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      *          argument; <code>false</code> otherwise
      */
     @Override
-    public boolean equals(Object obj) {
+    public final boolean equals(Object obj) {
         if (!getClass().isInstance(obj))
             return false;
         return operID.equals(((AbstractOperation)obj).operID);

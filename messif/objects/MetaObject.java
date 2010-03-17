@@ -380,7 +380,8 @@ public abstract class MetaObject extends LocalAbstractObject {
     public void clearSurplusData() {
         super.clearSurplusData();
         for (LocalAbstractObject object : getObjects())
-            object.clearSurplusData();
+            if (object != null)
+                object.clearSurplusData();
     }
 
     /**

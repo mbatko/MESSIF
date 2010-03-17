@@ -260,7 +260,8 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public void clearSurplusData() {
         super.clearSurplusData();
         for (LocalAbstractObject object : objects) {
-            object.clearSurplusData();
+            if (object != null)
+                object.clearSurplusData();
         }
     }
 
