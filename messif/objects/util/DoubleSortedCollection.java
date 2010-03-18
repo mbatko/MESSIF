@@ -3,6 +3,7 @@ package messif.objects.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 
 /**
@@ -37,27 +38,36 @@ public abstract class DoubleSortedCollection extends RankedSortedCollection {
     }
 
     /**
-     * Given a ranked object, this method should return the new distance this collection is sorted according to.
-     * @param origObject the original ranked object
+     * Given an object, this method should return the new distance this collection is sorted according to.
+     * @param origObject the original object
+     * @param origDistance the original distance
      * @return new sorting distance
      */
-    protected abstract float getNewDistance(RankedAbstractObject origObject);
+    public abstract float getNewDistance(AbstractObject origObject, float origDistance);
 
-    
     @Override
     public boolean add(RankedAbstractObject e) {
-        float newDistance = getNewDistance(e);
-        RankedAbstractObject newObject = (RankedAbstractObject) e.clone(newDistance);
+        return add((RankedAbstractObject) e.clone(getNewDistance(e.getObject(), e.getDistance())), e.getDistance());
+    }
 
+    /**
+     * Adds the specified element to this list.
+     * The element is added according the to order defined by the comparator.
+     *
+     * @param newObject the element to add to this list
+     * @param oldDistance old ranking distance (used for keeping the threshold)
+     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     */
+    public boolean add(RankedAbstractObject newObject, float oldDistance) {
         // if the last object would "fall off" the collection
-        if (isFull() && (!isEmpty()) && (getLastDistance() > newDistance)) {
+        if (isFull() && (!isEmpty()) && (getLastDistance() > newObject.getDistance())) {
             removeFromOrigDistances(get(getMaximalCapacity() - 1));
         }
 
         // add also to the map with original distances
-        if (!isFull() || (getLastDistance() > newDistance)) {
-            originalDistances.put(newObject, e.getDistance());
-            if ((thresholdObject == null) || (originalDistances.get(thresholdObject) < e.getDistance())) {
+        if (!isFull() || (getLastDistance() > newObject.getDistance())) {
+            originalDistances.put(newObject, oldDistance);
+            if ((thresholdObject == null) || (originalDistances.get(thresholdObject) < oldDistance)) {
                 thresholdObject = newObject;
             }
         }

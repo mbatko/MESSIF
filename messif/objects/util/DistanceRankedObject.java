@@ -109,16 +109,17 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
      * @param newDistance distance to be set for the clonned object
      * @return the clone with new distance
      */
-    @SuppressWarnings("unchecked")
     public DistanceRankedObject<T> clone(float newDistance) {
         try {
+            @SuppressWarnings("unchecked")
             DistanceRankedObject<T> clone = (DistanceRankedObject<T>) super.clone(); // This IS checked (clonning)
             clone.distance = newDistance;
             return clone;
-        } catch (CloneNotSupportedException cloneNotSupportedException) {
-            throw new InternalError(cloneNotSupportedException.toString());
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e.toString());
         }
     }
+
 
     //****************** Textual representation ******************//
 

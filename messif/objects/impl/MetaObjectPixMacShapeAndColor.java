@@ -15,6 +15,7 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
+import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
@@ -22,7 +23,6 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.util.DoubleSortedCollection;
-import messif.objects.util.RankedAbstractObject;
 
 /**
  * Special meta object that stores only the objects required for the PixMac search.
@@ -568,9 +568,9 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         }
 
         @Override
-        protected float getNewDistance(RankedAbstractObject origObject) {
-            return origObject.getDistance() + keywordsWeight *
-                    queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject.getObject()).keyWords);
+        public float getNewDistance(AbstractObject origObject, float origDistance) {
+            return origDistance + keywordsWeight *
+                    queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords);
         }
     }
 
@@ -596,9 +596,9 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         }
 
         @Override
-        protected float getNewDistance(RankedAbstractObject origObject) {
-            float keywordsDistance = queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject.getObject()).keyWords);
-            return origObject.getDistance() + keywordsWeight * (keywordsDistance * keywordsDistance);
+        public float getNewDistance(AbstractObject origObject, float origDistance) {
+            float keywordsDistance = queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords);
+            return origDistance + keywordsWeight * (keywordsDistance * keywordsDistance);
         }
     }
 
@@ -633,16 +633,16 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         }
 
         @Override
-        protected float getNewDistance(RankedAbstractObject origObject) {
+        public float getNewDistance(AbstractObject origObject, float origDistance) {
             // if the set of query keywords are empty then return the original distance
             if (queryKeywords.getSize() <= 0) {
-                return origObject.getDistance();
+                return origDistance;
             }
             // if there is a word in the intersection
-            if (queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject.getObject()).keyWords) < 1) {
-                return origObject.getDistance();
+            if (queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords) < 1) {
+                return origDistance;
             }
-            return origObject.getDistance() + VALUE_TO_ADD;
+            return origDistance + VALUE_TO_ADD;
         }
     }
 

@@ -6,8 +6,10 @@
 package messif.operations;
 
 import java.util.Iterator;
+import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardPowerSortedCollection;
+import messif.objects.util.DoubleSortedCollection;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.ApproxKNNQueryOperation.LocalSearchType;
 
@@ -22,6 +24,8 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
 
     /** Index of the first objects returned from the answer (to simulate an incremental query) */
     private final int from;
+    /** Internal collection with keyword reranking */
+    private final DoubleSortedCollection collection;
 
     /**
      * Creates a new instance of ApproxKNNQueryOperationPixMacMIndex
@@ -39,14 +43,17 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return", "Addition to k", "Text similarity weight", "Local search param", "Type of <br/>local search param", "Answer type"})
     public ApproxKNNQueryOperationPixMacMIndex(MetaObjectPixMacShapeAndColor queryObject, int k, int from, int kincrease, float keywordsWeight, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType) {
-        super(queryObject, k, localSearchParam, localSearchType, answerType);
-        if (from < 0 || from >= k)
+        super(queryObject, k + from, localSearchParam, localSearchType, answerType);
+        if (from < 0)
             throw new IllegalArgumentException("From parameter cannot be negative and must be smaller than k");
         this.from = from;
         if (queryObject.getKeyWords() != null) {
-            setAnswerCollection(new KeywordsJaccardPowerSortedCollection( //new KeywordsJaccardSortedCollection(
-                    k, k + kincrease, queryObject.getKeyWords(), keywordsWeight
-            ));
+            collection = new KeywordsJaccardPowerSortedCollection( //new KeywordsJaccardSortedCollection(
+                    k + from, k + from + kincrease, queryObject.getKeyWords(), keywordsWeight
+            );
+            setAnswerCollection(collection);
+        } else {
+            collection = null;
         }
     }
 
@@ -58,6 +65,29 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
     @Override
     public Iterator<RankedAbstractObject> getAnswer() {
         return getAnswer(from, getK() - from);
+    }
+
+    @Override
+    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+        if (collection == null)
+            return super.addToAnswer(queryObject, object, distThreshold);
+        if (object == null)
+            return null;
+        float distance = queryObject.getDistance(object, null, distThreshold);
+
+        // Create ranked object with new distance
+        try {
+            RankedAbstractObject ret = new RankedAbstractObject(
+                answerType.update(object),
+                collection.getNewDistance(object, distance)
+            );
+            if (collection.add(ret, distance))
+                return ret;
+            else
+                return null;
+        } catch (CloneNotSupportedException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
 }
