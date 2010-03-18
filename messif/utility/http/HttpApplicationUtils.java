@@ -104,7 +104,7 @@ public abstract class HttpApplicationUtils {
         else if (LocalAbstractObject.class.isAssignableFrom(processorClass))
             return new ExtractionProcessor(args[offset], processorClass, namedInstances);
         else if (AbstractObjectList.class.isAssignableFrom(processorClass))
-            return new ExtractionListProcessor(args[offset], processorClass, namedInstances);
+            return (HttpApplicationProcessor)new ExtractionListProcessor(args[offset], namedInstances);
         else if (AbstractOperation.class.isAssignableFrom(processorClass))
             return new OperationProcessor(algorithm, processorClass, args, offset, length, namedInstances);
         else

@@ -17,7 +17,6 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
 import messif.utility.http.HttpApplicationAuthenticator;
 import messif.utility.http.HttpApplicationUtils;
-import messif.utility.http.OperationHandler;
 
 /**
  * Provides a HTTP extension to {@link Application} that allows to execute operations

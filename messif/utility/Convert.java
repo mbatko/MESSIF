@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -60,7 +61,7 @@ public abstract class Convert {
     public static <E> E stringToType(String string, Class<E> type, Map<String, Object> namedInstances) throws InstantiationException {
         if (string.equals("null"))
             return null;
-        
+
         // Converting string types
         if (type == String.class)
             return type.cast(string);
@@ -137,7 +138,20 @@ public abstract class Convert {
         } catch (NoSuchMethodException e) {
             // Method not found, but never mind, other conversions might be possible...
         }
-        
+
+        // Try name of a static field
+        try {
+            int dotPos = string.lastIndexOf('.');
+            if (dotPos != -1) {
+                Field field = Class.forName(string.substring(0, dotPos)).getField(string.substring(dotPos + 1));
+                if (Modifier.isStatic(field.getModifiers()) && type.isAssignableFrom(field.getType()))
+                    return type.cast(field.get(null));
+            }
+        } catch (ClassNotFoundException ignore) {
+        } catch (NoSuchFieldException ignore) {
+        } catch (IllegalAccessException ignore) {
+        }
+
         throw new InstantiationException("String '" + string + "' cannot be converted to '" + type.getName() + "'");
     }
 
