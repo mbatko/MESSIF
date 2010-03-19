@@ -207,7 +207,7 @@ public class ObjectRegionShape extends LocalAbstractObject implements BinarySeri
         if (!(obj instanceof ObjectRegionShape))
             return false;
 
-        return Arrays.equals(((ObjectRegionShape)obj).m_ArtDE, m_ArtDE);
+        return Arrays.deepEquals(((ObjectRegionShape)obj).m_ArtDE, m_ArtDE);
     }
 
     @Override

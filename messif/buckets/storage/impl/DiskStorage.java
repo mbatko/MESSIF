@@ -385,18 +385,18 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                 objectCount = buffer.getInt();
                 deletedFragments = buffer.getInt();
                 modified = false;
-
-                // Check the file indicated occupation versus real size
-                if (fileChannel.size() < startPosition + headerSize + fileOccupation)
-                    throw new IOException("Disk storage is corrupted, file occupation indicates " +
-                            fileOccupation + " (start: " + startPosition + ", headerSize: " + headerSize +
-                            ") but file size is only " + fileChannel.size()
-                    );
             } else {
                 // Header indicates pending close, so it is probably incorrect - reconstruct it from the file
                 reconstructHeader(fileChannel, position + headerSize);
                 modified = true;
             }
+
+            // Check the file indicated occupation versus real size
+            if (fileChannel.size() < startPosition + headerSize + fileOccupation)
+                throw new IOException("Disk storage is corrupted, file occupation indicates " +
+                        fileOccupation + " (start: " + startPosition + ", headerSize: " + headerSize +
+                        ") but file size is only " + fileChannel.size()
+                );
         } catch (BufferUnderflowException e) {
             throw new IOException("Header is corrupted, consider removing the file " + file);
         }
@@ -422,7 +422,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         // Read all objects (by seeking)
         BufferInputStream reader = openInputStream(fileChannel);
         try {
-            // End iterating one an "null" object is found
+            // End iterating once a "null" object is found
             for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
                 if (objectSize > 0) {
                     objectCount++;
@@ -431,9 +431,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                     deletedFragments++;
                 }
             }
-            fileOccupation = reader.getPosition() - 4; // Ignore last object size (integer) read
+            fileOccupation = reader.getPosition() - headerSize - 4; // Ignore last object size (integer) read
         } catch (EOFException ignore) {
-            fileOccupation = reader.getPosition(); // The file ends
+            fileOccupation = reader.getPosition() - headerSize; // The file end encountered
         } finally {
             reader.close();
         }
@@ -518,10 +518,14 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         FileChannel chan = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
 
         // Read the occupation and number of objects
-        if (fileExists)
+        if (fileExists) {
             readHeader(chan, startPosition);
-        else
+            // If the header was rebuilt, flush the header so that next open does not need to rebuild it again
+            if (modified && !readonly)
+                writeHeader(chan, startPosition, FLAG_CLOSED);
+        } else {
             writeHeader(chan, startPosition, FLAG_CLOSED);
+        }
 
         return chan;
     }

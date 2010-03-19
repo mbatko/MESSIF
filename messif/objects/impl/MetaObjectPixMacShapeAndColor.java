@@ -329,6 +329,34 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         return keyWords;
     }
 
+    @Override
+    public int dataHashCode() {
+        int rtv = colorLayout.dataHashCode();
+        rtv += colorStructure.dataHashCode();
+        rtv += edgeHistogram.dataHashCode();
+        rtv += scalableColor.dataHashCode();
+        rtv += regionShape.dataHashCode();
+        return rtv;
+    }
+
+    @Override
+    public boolean dataEquals(Object obj) {
+        if (!(obj instanceof MetaObjectPixMacShapeAndColor))
+            return false;
+        MetaObjectPixMacShapeAndColor castObj = (MetaObjectPixMacShapeAndColor)obj;
+        if (!colorLayout.dataEquals(castObj.colorLayout))
+            return false;
+        if (!colorStructure.dataEquals(castObj.colorStructure))
+            return false;
+        if (!edgeHistogram.dataEquals(castObj.edgeHistogram))
+            return false;
+        if (!scalableColor.dataEquals(castObj.scalableColor))
+            return false;
+        if (!regionShape.dataEquals(castObj.regionShape))
+            return false;
+        return true;
+    }
+
 
     //***************************  Distance computation  *******************************//
 

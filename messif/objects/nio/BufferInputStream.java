@@ -29,7 +29,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
     //****************** Constants ******************//
 
     /** Minimal buffer size in bytes */
-    private final int MINIMAL_BUFFER_SIZE = 32;
+    private static final int MINIMAL_BUFFER_SIZE = 32;
 
 
     //****************** Attributes ******************//

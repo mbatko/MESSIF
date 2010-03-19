@@ -34,7 +34,7 @@ public class ChannelInputStream extends BufferInputStream implements BinaryInput
     //****************** Constants ******************//
 
     /** Time to wait for additional data (in miliseconds) */
-    private final long WAIT_DATA_TIME = 100;
+    private static final long WAIT_DATA_TIME = 100;
 
 
     //****************** Attributes ******************//

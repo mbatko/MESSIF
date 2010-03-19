@@ -33,6 +33,9 @@ public class DeleteOperation extends AbstractOperation {
     /** Maximal number of deleted objects, zero means unlimited */
     private final int deleteLimit;
 
+    /** Flag whether to check that the deleted object's locator is equal to {@link #deletedObject}'s locator */
+    private final boolean checkLocator;
+
     /** List of all actually deleted objects */
     private final List<LocalAbstractObject> objects;
 
@@ -43,12 +46,24 @@ public class DeleteOperation extends AbstractOperation {
      * Creates a new instance of DeleteOperation.
      * @param deletedObject the object to match the data against
      * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
+     * @param checkLocator flag whether to check that the deleted object's locator is equal to {@link #deletedObject}'s locator
+     */
+    @AbstractOperation.OperationConstructor({"Object to delete", "Limit for # of deletions", "Check locator when deleting"})
+    public DeleteOperation(LocalAbstractObject deletedObject, int deleteLimit, boolean checkLocator) {
+        this.deletedObject = deletedObject;
+        this.deleteLimit = deleteLimit;
+        this.checkLocator = checkLocator;
+        this.objects = new ArrayList<LocalAbstractObject>();
+    }
+
+    /**
+     * Creates a new instance of DeleteOperation.
+     * @param deletedObject the object to match the data against
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
      */
     @AbstractOperation.OperationConstructor({"Object to delete", "Limit for # of deletions"})
     public DeleteOperation(LocalAbstractObject deletedObject, int deleteLimit) {
-        this.deletedObject = deletedObject;
-        this.deleteLimit = deleteLimit;
-        this.objects = new ArrayList<LocalAbstractObject>();
+        this(deletedObject, deleteLimit, false);
     }
 
     /**
@@ -81,6 +96,15 @@ public class DeleteOperation extends AbstractOperation {
     }
 
     /**
+     * Returns the flag whether to check that the deleted object's locator
+     * is equal to {@link #deletedObject}'s locator.
+     * @return the flag whether to check the locator when deleting
+     */
+    public boolean isCheckingLocator() {
+        return checkLocator;
+    }
+
+    /**
      * Returns the list of all actually deleted objects.
      * @return the list of all actually deleted objects
      */
@@ -103,6 +127,8 @@ public class DeleteOperation extends AbstractOperation {
                 return getDeletedObject();
             case 1:
                 return getDeleteLimit();
+            case 2:
+                return isCheckingLocator();
             default:
                 throw new IndexOutOfBoundsException("Delete operation has only two arguments");
         }
@@ -110,7 +136,7 @@ public class DeleteOperation extends AbstractOperation {
 
     @Override
     public int getArgumentCount() {
-        return 2;
+        return 3;
     }
 
 
