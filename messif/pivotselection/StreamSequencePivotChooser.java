@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AbstractStreamObjectIterator;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 
 
@@ -22,7 +23,7 @@ public class StreamSequencePivotChooser extends AbstractPivotChooser implements 
     private static final long serialVersionUID = 1L;
 
     /** Stream to read pivots from */
-    protected final StreamGenericAbstractObjectIterator<LocalAbstractObject> stream;
+    protected final AbstractStreamObjectIterator<LocalAbstractObject> stream;
 
 
     /****************** Construcotrs ******************/

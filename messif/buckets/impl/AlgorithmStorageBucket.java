@@ -8,37 +8,41 @@ package messif.buckets.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import messif.algorithms.Algorithm;
-import messif.algorithms.AlgorithmMethodException;
-import messif.objects.AbstractObject;
-import messif.objects.LocalAbstractObject;
-import messif.operations.DeleteOperation;
-import messif.operations.GetAllObjectsQueryOperation;
-import messif.operations.GetObjectQueryOperation;
-import messif.operations.InsertOperation;
-import messif.operations.QueryOperation;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
+import messif.algorithms.Algorithm;
+import messif.algorithms.AlgorithmMethodException;
+import messif.buckets.BucketStorageException;
+import messif.buckets.index.IndexComparator;
+import messif.buckets.index.ModifiableSearch;
+import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
+import messif.operations.data.DeleteOperation;
+import messif.operations.data.InsertOperation;
+import messif.operations.QueryOperation;
+import messif.buckets.Addible;
 import messif.buckets.Bucket;
 import messif.buckets.BucketDispatcher;
-import messif.buckets.BucketErrorCode;
-import messif.buckets.CapacityFullException;
-import messif.buckets.FilterRejectException;
 import messif.buckets.LocalBucket;
-import messif.buckets.LocalFilteredBucket;
-import messif.buckets.OccupationLowException;
+import messif.buckets.Removable;
+import messif.buckets.StorageFailureException;
+import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.OperationIndexComparator;
+import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
-import messif.objects.util.StreamGenericAbstractObjectIterator;
-import messif.objects.UniqueID;
-import messif.operations.GetObjectsByLocatorsOperation;
+import messif.operations.AnswerType;
+import messif.operations.data.BulkInsertOperation;
+import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 /**
  * This is a LocalBucket that allows to create buckets backed by an Algorithm.
@@ -52,7 +56,7 @@ import messif.utility.Convert;
  *
  * @author xbatko
  */
-public class AlgorithmStorageBucket extends LocalFilteredBucket {
+public class AlgorithmStorageBucket extends LocalBucket implements ModifiableIndex<LocalAbstractObject> {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = -792888618241233159L;    
@@ -60,10 +64,10 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     //****************** Local data ******************//
 
     /** Encapsulated algorithm */
-    protected final Algorithm algorithm;
+    private final Algorithm algorithm;
 
     /** Stored object count */
-    protected int objectCount = 0;
+    private int objectCount = 0;
 
 
     //****************** Constructors ******************//
@@ -96,6 +100,12 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     public void finalize() throws Throwable {
         algorithm.finalize();
         super.finalize();
+    }
+
+    @Override
+    public void destroy() throws Throwable {
+        algorithm.destroy();
+        super.destroy();
     }
 
 
@@ -159,7 +169,7 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
 
         // Create new instance of algorithm
         try {
-            return Convert.createInstanceWithInheritableArgs(algClass, algParams.toArray());
+            return Instantiators.createInstanceWithInheritableArgs(algClass, algParams.toArray());
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("The class " + algClass.getName() + " does not contain constructor for given parameters " + algParams + ": " + e.getMessage());
         } catch (InvocationTargetException e) {
@@ -196,11 +206,11 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
 
         // Create new instance of algorithm
         try {
-            Map<String, StreamGenericAbstractObjectIterator> objectStreams = Convert.safeGenericCastMap(parameters.get("objectStreams"), String.class, StreamGenericAbstractObjectIterator.class); // This cast IS checked, because StreamGenericAbstractObjectIterator has LocalAbstractObject as default E
-            return Convert.createInstanceWithStringArgs(
+            Map<String, Object> namedInstances = Convert.safeGenericCastMap(parameters.get("namedInstances"), String.class, Object.class);
+            return Instantiators.createInstanceWithStringArgs(
                     Algorithm.getAnnotatedConstructors(algClass),
                     algParams.toArray(new String[algParams.size()]),
-                    objectStreams
+                    namedInstances
             );
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Can't create algorithm '" + algClass.getName() + "' for AlgorithmStorageBucket", e.getCause());
@@ -208,32 +218,227 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
     }
 
 
-    //***************** Implementations using algorithm instance *****************//
+    //***************** Index method overrides *****************//
+
+    @Override
+    protected ModifiableIndex<LocalAbstractObject> getModifiableIndex() {
+        return this;
+    }
+
+    public int size() {
+        return objectCount;
+    }
+
+    /**
+     * Return the instance of the algorithm encapsulated by this bucket
+     * @return the instance of the algorithm encapsulated by this bucket
+     */
+    public Algorithm getAlgorithm() {
+        return algorithm;
+    }
 
     /**
      * Stores the specified object in the encapsulated algorithm, i.e.
      * the InsertOperation is executed.
      *
      * @param object The new object to be inserted
-     * @return error code - for details, see documentation of {@link BucketErrorCode}
-     * @throws UnsupportedOperationException if the encapsulated algorithm does not support InsertOperation
+     * @return error code - for details, see documentation of {@link messif.buckets.BucketErrorCode}
+     * @throws BucketStorageException if there was an error storing the object to the encapsulated algorithm,
+     *              e.g. the encapsulated algorithm does not support InsertOperation
      */
-    protected BucketErrorCode storeObject(LocalAbstractObject object) throws UnsupportedOperationException {
+    public boolean add(LocalAbstractObject object) throws BucketStorageException {
         InsertOperation operation = new InsertOperation(object);
         try {
             algorithm.executeOperation(operation);
         } catch (NoSuchMethodException e) {
-            throw new UnsupportedOperationException(e.getMessage());
+            throw new StorageFailureException(e);
         } catch (AlgorithmMethodException e) {
-            throw new UnsupportedOperationException(e.getCause());
+            throw new StorageFailureException(e.getCause());
         }
 
         // Update object counter
-        if (operation.wasSuccessful())
+        if (operation.wasSuccessful()) {
             objectCount++;
-
-        return (BucketErrorCode)operation.getErrorCode();
+            return true;
+        } else {
+            return false;
+        }
     }
+
+    @Override
+    public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
+        return addObjects(objects.iterator());
+    }
+
+    @Override
+    public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
+
+        BulkInsertOperation operation = new BulkInsertOperation(objects);
+        try {
+            algorithm.executeOperation(operation);
+            objectCount += operation.getInsertedObjects().size();
+        } catch (NoSuchMethodException e) {
+            super.addObjects(objects);
+        } catch (AlgorithmMethodException e) {
+            super.addObjects(objects);
+        }
+
+        // Update object counter
+        if (operation.wasSuccessful()) {
+            return operation.getInsertedObjects().size();
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * Removes the given object by calling {@link DeleteOperation} on the
+     * encapsulated algorithm.
+     *
+     * @param object the object to delete
+     * @throws BucketStorageException if the algorithm does not support delete operation or there was an error deleting the object
+     */
+    @Override
+    public int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
+        DeleteOperation operation;
+        try {
+            operation = algorithm.executeOperation(new DeleteOperation(object, deleteLimit));
+        } catch (NoSuchMethodException e) {
+            throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
+        } catch (AlgorithmMethodException e) {
+            throw new StorageFailureException("DeleteOperation executed on " + algorithm.getName() + " failed", e.getCause());
+        }
+
+        // Update object count
+        if (operation.wasSuccessful())
+            objectCount -= operation.getObjects().size();
+        return operation.getObjects().size();
+    }
+
+    public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
+        return new AlgorithmStorageSearch<Object>(null, Collections.emptyList());
+    }
+
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C key) throws IllegalStateException {
+        return new AlgorithmStorageSearch<Object>(null, Collections.singletonList(key));
+    }
+
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, keys);
+    }
+
+    public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
+        return new AlgorithmStorageSearch<C>(comparator, from, to);
+    }
+
+    /**
+     * Internal class that provides the {@link ModifiableIndex} for the encapsulated algorithm.
+     * @param <C> the type of keys of this search
+     */
+    private class AlgorithmStorageSearch<C> extends AbstractSearch<C, LocalAbstractObject> implements ModifiableSearch<LocalAbstractObject> {
+        /** Iterator over objects returned as this search's answer */
+        private final ListIterator<LocalAbstractObject> iterator;
+
+        /**
+         * Creates a new instance of AlgorithmStorageSearch.
+         * During the constructor call, a search operation is executed on
+         * the encapsulated algorithm.
+         * @param comparator the comparator that is used to compare the keys
+         * @param keys list of keys to search for
+         * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
+         */
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
+            super(comparator, keys);
+            this.iterator = executeAlgorithmOperation(comparator, keys);
+        }
+
+        /**
+         * Creates a new instance of AlgorithmStorageSearch for the specified search comparator and [from,to] bounds.
+         * @param comparator the comparator that compares the <code>keys</code> with the stored objects
+         * @param fromKey the lower bound on the searched keys
+         * @param toKey the upper bound on the searched keys
+         */
+        @SuppressWarnings("unchecked")
+        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C fromKey, C toKey) {
+            super(comparator, fromKey, toKey);
+            this.iterator = executeAlgorithmOperation(comparator, Arrays.asList(fromKey, toKey));
+        }
+
+        /**
+         * Creates an operation to execute on the encapsulated algorithm for the specified comparator and keys.
+         * @param comparator the comparator to use for the query definition
+         * @param keys the list of keys the operation searches for
+         * @return a new instance of query operation for the given key
+         */
+        @SuppressWarnings("unchecked")
+        protected ListIterator<LocalAbstractObject> executeAlgorithmOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) {
+            // Prepare operation for the given comparator
+            QueryOperation<?> operation;
+            if (comparator != null && !keys.isEmpty() && comparator instanceof OperationIndexComparator)
+                operation = ((OperationIndexComparator<C>)comparator).createIndexOperation(keys); // This cast IS checked because the OperationIndexComparator is always a subtype
+            else
+                operation = new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
+
+            // Execute operation to get objects from the algorithm
+            operation = executeOperation(operation);
+
+            // Read results into a list
+            List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
+            Iterator<AbstractObject> answer = operation.getAnswerObjects();
+            while (answer.hasNext()) {
+                LocalAbstractObject object = answer.next().getLocalAbstractObject();
+                list.add(object);
+            }
+
+            return list.listIterator();
+        }
+
+        /**
+         * Executes a query operation on the encapsulated algorithm and wraps
+         * the query's answer into a list.
+         * @param operation the operation to execute on the algorithm
+         * @return the operation executed by the algorithm
+         * @throws IllegalStateException if there was a problem executing the operation on the encapsulated algorithm
+         */
+        protected QueryOperation<?> executeOperation(QueryOperation<?> operation) throws IllegalStateException {
+            // Execute operation
+            try {
+                return algorithm.executeOperation(operation);
+            } catch (AlgorithmMethodException e) {
+                throw new IllegalStateException("Cannot execute " + operation.getClass().getName() + " on " + algorithm.getName(), e.getCause());
+            } catch (NoSuchMethodException e) { // Specified query is not supported, fall back to get-all-objects
+                // If the operation already is the fallback, bail out
+                if (operation instanceof GetAllObjectsQueryOperation)
+                    throw new IllegalStateException("GetAllObjects operation must be supported by " + algorithm.getName() + " in order to be wrapped as algorithm-bucket");
+                // Fall-back operation
+                return executeOperation(new GetAllObjectsQueryOperation());
+            }
+        }
+
+        @Override
+        protected LocalAbstractObject readNext() throws BucketStorageException {
+            return iterator.hasNext()?iterator.next():null;
+        }
+
+        @Override
+        protected LocalAbstractObject readPrevious() throws BucketStorageException {
+            return iterator.hasPrevious()?iterator.previous():null;
+        }
+
+        public void remove() throws IllegalStateException, BucketStorageException {
+            LocalAbstractObject object = getCurrentObject();
+            if (object == null)
+                throw new IllegalStateException("There is no object to delete yet");
+            deleteObject(object);
+        }
+
+        public void close() {
+        }
+
+    }
+
+
+    //****************** Special bucket methods overrides ******************//
 
     /**
      * Process a query operation on objects from this bucket.
@@ -261,51 +466,81 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
         }
     }
 
-    /**
-     * Delete all objects from this bucket, that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
-     * the specified object.
-     * @param object the object to match against
-     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
-     * @throws OccupationLowException This exception is throws if the low occupation limit is reached when deleting object
-     * @return the number of deleted objects
-     */
-    @Override
-    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws OccupationLowException {
-        DeleteOperation operation = new DeleteOperation(object, deleteLimit);
-        try {
-            algorithm.executeOperation(operation);
-        } catch (NoSuchMethodException e) {
-            throw new UnsupportedOperationException(e.getMessage());
-        } catch (AlgorithmMethodException e) {
-            throw new UnsupportedOperationException(e.getCause());
-        }
-
-        if (operation.getErrorCode().equals(BucketErrorCode.LOWOCCUPATION_EXCEEDED))
-            throw new OccupationLowException();
-
-        // Update occupation
-        occupation -= operation.getTotalSizeDeleted();
-
-        // Update object count
-        objectCount -= operation.getObjectsDeleted();
-
-        // Update statistics
-        counterBucketDelObject.add(this, operation.getObjectsDeleted());
-        
-        return operation.getObjectsDeleted();
-    }
-
-    /**
-     * Returns current number of objects stored in bucket.
-     * @return current number of objects stored in bucket
-     */
-    @Override
-    public int getObjectCount() {
-        return objectCount;
-    }
-
 
     //****************** Splitting ******************//
+
+    /** Internal class for capturing split results */
+    private class SplitResult implements  SplittableAlgorithm.SplittableAlgorithmResult, Removable<LocalAbstractObject>, Addible<LocalAbstractObject> {
+        /** Table of created AlgorithmStorageBuckets for encapsulated algorithms */
+        private Map<Algorithm, AlgorithmStorageBucket> bucketMap = new HashMap<Algorithm, AlgorithmStorageBucket>();
+        /** Bucket dispatcher that is used to create the encapsulating buckets */
+        private final BucketDispatcher bucketCreator;
+        /** Number of objects moved */
+        private int objectsMoved = 0;
+
+        /**
+         * Creates a new instance of SplitResult.
+         * @param bucketCreator the bucket dispatcher that is used to create the encapsulating buckets
+         */
+        public SplitResult(BucketDispatcher bucketCreator) {
+            this.bucketCreator = bucketCreator;
+        }
+
+        public void markMovedObjects(Algorithm alg, Collection<? extends LocalAbstractObject> objects) throws BucketStorageException, InstantiationException {
+            // Call single addition for all objects
+            for (LocalAbstractObject object : objects)
+                markMovedObject(alg, object);
+        }
+
+        public void markMovedObject(Algorithm alg, LocalAbstractObject object) throws BucketStorageException, InstantiationException {
+            // Get the existing bucket for the specified algorithm
+            AlgorithmStorageBucket bucket = bucketMap.get(alg);
+            if (bucket == null) {
+                // Bucket for the specified algorithm doesn't exist yet, create a AlgorithmStorageBucket wrapper
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("algorithm", alg);
+                bucketMap.put(alg, bucket = (AlgorithmStorageBucket)bucketCreator.createBucket(AlgorithmStorageBucket.class, params));
+            }
+
+            currentMovedObject = object;
+            AlgorithmStorageBucket.this.deleteObject(this);
+            bucket.addObject(object, this);
+            objectsMoved++;
+        }
+
+        /**
+         * Returns the number of objects moved
+         * @return the number of objects moved
+         */
+        public int getObjectsMoved() {
+            return objectsMoved;
+        }
+
+        /**
+         * Returns the encapsulating {@link AlgorithmStorageBucket}s created during the split.
+         * @return the encapsulating {@link AlgorithmStorageBucket}s created during the split
+         */
+        public Collection<AlgorithmStorageBucket> getCreatedBuckets() {
+            return bucketMap.values();
+        }
+
+
+        //****************** Empty implementation of Addible & Removable interface ******************//
+
+        /** Currently moved object (set from {@link #markMovedObject}) */
+        private LocalAbstractObject currentMovedObject;
+
+        public LocalAbstractObject getCurrentObject() throws NoSuchElementException {
+            return currentMovedObject;
+        }
+
+        public void remove() throws IllegalStateException, BucketStorageException {
+        }
+
+        public boolean add(LocalAbstractObject object) throws BucketStorageException {
+            return true;
+        }
+    }
 
     /**
      * Splits this bucket according to the specified policy.
@@ -319,230 +554,24 @@ public class AlgorithmStorageBucket extends LocalFilteredBucket {
      * @param whoStays identification of a partition whose objects stay in this bucket.
      * @return the number of objects moved
      * @throws IllegalArgumentException if there are too few target buckets
-     * @throws CapacityFullException if a target bucket overflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
-     * @throws OccupationLowException if a this bucket underflows during object move; <b>warning:</b> the split is interrupted and you should reinitialize it
+     * @throws BucketStorageException if there was a storage error (capacity overflow/underflow or filter reject) during split
      */
     @Override
-    public synchronized int split(SplitPolicy policy, final List<Bucket> targetBuckets, final BucketDispatcher bucketCreator, int whoStays) throws OccupationLowException, IllegalArgumentException, CapacityFullException {
+    public synchronized int split(SplitPolicy policy, final List<Bucket> targetBuckets, final BucketDispatcher bucketCreator, int whoStays) throws IllegalArgumentException, BucketStorageException {
         if (!(algorithm instanceof SplittableAlgorithm) || bucketCreator == null)
             return super.split(policy, targetBuckets, bucketCreator, whoStays);
 
         // Prepare the split result object
-        final AtomicInteger count = new AtomicInteger(0);
-        final AlgorithmStorageBucket thisBucket = this;
-        SplittableAlgorithm.SplittableAlgorithmResult result = new SplittableAlgorithm.SplittableAlgorithmResult() {
-            protected Map<Algorithm, AlgorithmStorageBucket> bucketMap = new HashMap<Algorithm, AlgorithmStorageBucket>();
-            public void markMovedObjects(Algorithm alg, Collection<? extends LocalAbstractObject> objects) throws OccupationLowException, CapacityFullException, InstantiationException, FilterRejectException {
-                // Call single addition for all objects
-                for (LocalAbstractObject object : objects)
-                    markMovedObject(alg, object);
-            }
-            public void markMovedObject(Algorithm alg, LocalAbstractObject object) throws OccupationLowException, CapacityFullException, InstantiationException, FilterRejectException {
-                // Get the existing bucket for the specified algorithm
-                AlgorithmStorageBucket bucket = bucketMap.get(alg);
-                if (bucket == null) {
-                    // Bucket for the specified algorithm doesn't exist yet, create a AlgorithmStorageBucket wrapper
-                    Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("algorithm", alg);
-                    bucketMap.put(alg, bucket = (AlgorithmStorageBucket)bucketCreator.createBucket(AlgorithmStorageBucket.class, params));
-                    if (targetBuckets != null)
-                        targetBuckets.add(bucket);
-                }
-
-                // Update filters of the destination algorithm bucket
-                thisBucket.filterDeleteObjectBefore(object);
-                bucket.filterAddObjectBefore(object);
-
-                // Check the destination bucket for overflow
-                long bytesMoved = object.getSize();
-                if (bucket.occupation + (bucket.occupationAsBytes?bytesMoved:1) > bucket.capacity)
-                    throw new CapacityFullException("Encapsulating bucket capacity for algorithm '" + alg.getName() + "' was exceeded");
-                // Check the current bucket for underflow
-                if (occupation - (occupationAsBytes?bytesMoved:1) < lowOccupation)
-                    throw new OccupationLowException("Encapsulating bucket capacity for algorithm '" + algorithm.getName() + "' was exceeded");
-                // Update the occupation
-                bucket.occupation += bucket.occupationAsBytes?bytesMoved:1;
-                occupation -= occupationAsBytes?bytesMoved:1;
-                // Update objects count
-                bucket.objectCount++;
-                objectCount--;
-                count.incrementAndGet();
-
-                // Update filters of this algorithm bucket
-               thisBucket.filterDeleteObjectAfter(object);
-               bucket.filterAddObjectAfter(object);
-            }
-        };
+        SplitResult result = new SplitResult(bucketCreator);
 
         // Execute the split
         ((SplittableAlgorithm)algorithm).split(policy, result, whoStays);
 
-        return count.get();
+        // Add created buckets
+        if (targetBuckets != null)
+            targetBuckets.addAll(result.getCreatedBuckets());
+
+        return result.getObjectsMoved();
     }
 
-
-    //****************** Iterator object ******************//
-
-    /**
-     * Returns iterator through all the objects in this bucket.
-     * @return iterator through all the objects in this bucket
-     */
-    protected LocalBucketIterator<? extends AlgorithmStorageBucket> iterator() {
-        return new AlgorithmStorageBucketIterator<AlgorithmStorageBucket>(this);
-    }
-
-    /**
-     * Internal class for algorithm-backed iterator implementation.
-     * @param <T> the type of the bucket this iterator operates on
-     */
-    protected static class AlgorithmStorageBucketIterator<T extends AlgorithmStorageBucket> extends LocalBucket.LocalBucketIterator<T> {
-        /** Currently executed iterator */
-        protected Iterator<AbstractObject> iterator = null;
-        /** Last returned object */
-        protected LocalAbstractObject currentObject = null;
-
-        /**
-         * Creates a new instance of AlgorithmStorageBucketIterator with the AlgorithmStorageBucket.
-         * This constructor is intended to be called only from AlgorithmStorageBucket class.
-         *
-         * @param bucket actual instance of AlgorithmStorageBucket on which this iterator should work
-         */
-        protected AlgorithmStorageBucketIterator(T bucket) {
-           super(bucket);
-        }
-
-        /**
-         * Get an object with specified ID from this bucket.
-         * This method will execute GetObject operation on the encapsulated algorithm.
-         *
-         * @param objectID ID of the object to retrieve
-         * @return object with specified ID from this bucket
-         * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-         */
-        @Override
-        public LocalAbstractObject getObjectByID(UniqueID objectID) throws NoSuchElementException {
-            GetObjectQueryOperation operation = new GetObjectQueryOperation(objectID);
-            try {
-                bucket.algorithm.executeOperation(operation);
-            } catch (NoSuchMethodException e) {
-                // Algorithm doesn't support GetObjectQueryOperation query, try the fallback sequential search approach with getAllObjects
-                return super.getObjectByID(objectID);
-            } catch (AlgorithmMethodException e) {
-                throw new NoSuchElementException("Object not found because of error: " + e.getCause());
-            }
-            if (operation.getAnswerCount() == 0)
-                throw new NoSuchElementException("Object not found");
-
-            return currentObject = operation.getAnswerObject().getLocalAbstractObject();
-        }
-
-        /**
-         * Get an object with specified ID from this bucket.
-         * This method will execute GetObject operation on the encapsulated algorithm.
-         *
-         * @param locatorURIs the set of locator URIs of the object to retrieve
-         * @param removeFound if <tt>true</tt> the locators which were found are removed from the <tt>locatorURIs</tt> set, otherwise, <tt>locatorURIs</tt> is not touched
-         * @return object with specified ID from this bucket
-         * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-         */
-        @Override
-        public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
-            GetObjectsByLocatorsOperation operation = new GetObjectsByLocatorsOperation(locatorURIs);
-            try {
-                bucket.algorithm.executeOperation(operation);
-            } catch (NoSuchMethodException e) {
-                // Algorithm doesn't support GetObjectByLocatorOperation query, try the fallback sequential search approach with getAllObjects 
-                return super.getObjectByAnyLocator(locatorURIs, removeFound);
-            } catch (AlgorithmMethodException e) {
-                throw new NoSuchElementException("Object not found because of error: " + e.getCause());
-            }
-
-            // Return first object found
-            currentObject = operation.getAnswer().next().getObject().getLocalAbstractObject();
-            if (removeFound)
-                locatorURIs.remove(currentObject.getLocatorURI());
-            return currentObject;
-        }
-
-        /**
-         * Physically removes the last object returned by this iterator.
-         * This method will execute DeleteOperation on the encapsulated algorithm.
-         * 
-         * @throws NoSuchElementException if next or getObjectByID was not called before
-         * @throws UnsupportedOperationException if the encapsulated algorithm does not support DeleteOperation
-         */
-        protected void removeInternal() throws NoSuchElementException, UnsupportedOperationException {
-            if (currentObject == null)
-                throw new NoSuchElementException("Can't call remove before next was called");
-            
-            DeleteOperation operation = new DeleteOperation(currentObject);
-            try {
-                bucket.algorithm.executeOperation(operation);
-            } catch (NoSuchMethodException e) {
-                throw new UnsupportedOperationException(e.getMessage());
-            } catch (AlgorithmMethodException e) {
-                throw new NoSuchElementException("Object not found because of error: " + e.getCause());
-            }
-
-            // Update object count
-            if (operation.wasSuccessful())
-                bucket.objectCount -= operation.getObjectsDeleted();
-        }
-
-        /**
-         * Internal method that either returns previously initialized iterator or
-         * creates a new one by executing GetAllObjectsQueryOperation on the encapsulated algorithm.
-         *
-         * @return iterator over all objects stored in the encapsulated algorithm
-         * @throws UnsupportedOperationException if the encapsulated algorithm does not support GetAllObjectsQueryOperation
-         */
-        protected Iterator<AbstractObject> getIterator() throws UnsupportedOperationException {
-            if (iterator != null)
-                return iterator;
-            
-            GetAllObjectsQueryOperation operation = new GetAllObjectsQueryOperation();
-            try {
-                bucket.algorithm.executeOperation(operation);
-            } catch (NoSuchMethodException e) {
-                throw new UnsupportedOperationException(e.getMessage());
-            } catch (AlgorithmMethodException e) {
-                throw new UnsupportedOperationException(e.getCause());
-            }
-            
-            return iterator = operation.getAnswer();
-        }
-
-        /**
-         * Returns the next element in the iteration.
-         *
-         * @return the next element in the iteration.
-         * @throws NoSuchElementException iteration has no more elements.
-         */
-        public LocalAbstractObject next() throws NoSuchElementException {
-            return currentObject = getIterator().next().getLocalAbstractObject();
-        }
-
-        /**
-         * Returns <tt>true</tt> if the iteration has more elements. (In other
-         * words, returns <tt>true</tt> if <tt>next</tt> would return an element
-         * rather than throwing an exception.)
-         *
-         * @return <tt>true</tt> if the iterator has more elements.
-         */
-        public boolean hasNext() {
-            return getIterator().hasNext();
-        }
-
-        /**
-         * Returns the object returned by the last call to next().
-         * @return the object returned by the last call to next()
-         * @throws NoSuchElementException if next() has not been called yet
-         */
-        public LocalAbstractObject getCurrentObject() throws NoSuchElementException {
-            if (currentObject == null)
-                throw new NoSuchElementException("Can't call getCurrentObject before next was called");
-            
-            return currentObject;
-        }
-    }
 }

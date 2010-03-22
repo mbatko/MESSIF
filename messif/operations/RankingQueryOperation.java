@@ -14,7 +14,7 @@ import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
-import messif.utility.SortedCollection;
+import messif.objects.util.RankedSortedCollection;
 
 
 /**
@@ -38,7 +38,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     //****************** Attributes ******************//
 
     /** Set holding the answer of this query */
-    private final SortedCollection<RankedAbstractObject> answer;
+    private RankedSortedCollection answer;
 
     /** Flag whether to store sub-distances for metaobjects */
     private final boolean storeMetaDistances;
@@ -86,35 +86,86 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         super(answerType);
         this.storeMetaDistances = storeMetaDistances;
         if (maxAnswerSize < Integer.MAX_VALUE)
-            this.answer = new SortedCollection<RankedAbstractObject>(maxAnswerSize, maxAnswerSize, null);
+            this.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
         else
-            this.answer = new SortedCollection<RankedAbstractObject>(null);
+            this.answer = new RankedSortedCollection();
+    }
+
+
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public RankingQueryOperation clone() throws CloneNotSupportedException {
+        RankingQueryOperation operation = (RankingQueryOperation)super.clone();
+
+        // Create a new collection for the answer set
+        int maxAnswerSize = operation.answer.getMaximalCapacity();
+        if (maxAnswerSize < Integer.MAX_VALUE)
+            operation.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
+        else
+            operation.answer = new RankedSortedCollection();
+
+        return operation;
     }
 
 
     //****************** Overrides for answer set ******************//
+
+    /**
+     * Set a new collection that maintains the answer list of this ranking query.
+     * Note that this method should be used only for changing the reranking/filtering
+     * of the results.
+     * @param collection a new instance of answer collection
+     */
+    public void setAnswerCollection(RankedSortedCollection collection) {
+        if (!collection.isEmpty())
+            collection.clear();
+        collection.addAll(answer);
+        this.answer = collection;
+    }
 
     @Override
     public Class<? extends RankedAbstractObject> getAnswerClass() {
         return RankedAbstractObject.class;
     }
 
-    /**
-     * Returns the number of objects in this query answer.
-     * @return the number of objects in this query answer
-     */
     @Override
     public int getAnswerCount() {
         return answer.size();
     }
     
-    /**
-     * Returns an iterator over all objects in the answer to this query.
-     * @return an iterator over all objects in the answer to this query
-     */
     @Override
     public Iterator<RankedAbstractObject> getAnswer() {
         return answer.iterator();
+    }
+
+    public Iterator<RankedAbstractObject> getAnswer(int skip, int count) {
+        return answer.iterator(skip, count);
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        final Iterator<RankedAbstractObject> iterator = getAnswer();
+        return new Iterator<AbstractObject>() {
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            public AbstractObject next() {
+                return iterator.next().getObject();
+            }
+
+            public void remove() {
+                iterator.remove();
+            }
+        };
     }
 
     /**
@@ -132,7 +183,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws NoSuchElementException if the answer is empty
      */
     public float getAnswerDistance() throws NoSuchElementException {
-        return answer.last().getDistance();
+        return answer.getLastDistance();
     }
 
     /**
@@ -150,16 +201,21 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * If the answer has not reached the maximal size (specified in constructor) yet,
      * {@link LocalAbstractObject#MAX_DISTANCE} is returned.
      * Otherwise, the distance of the last answer's object is returned.
-     * @return the distance to the k-th nearest object in the answer list or
+     * @return the distance to the last object in the answer list or
      *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
      */
     public float getAnswerThreshold() {
-        if (answer.isFull())
-            return answer.last().getDistance();
-        else
-            return LocalAbstractObject.MAX_DISTANCE;
+        return answer.getThresholdDistance();
     }
 
+    /**
+     * Returns <tt>true</tt> if sub-distances for metaobjects are stored in the answer.
+     * @return <tt>true</tt> if sub-distances for metaobjects are stored in the answer
+     */
+    public boolean isStoringMetaDistances() {
+        return storeMetaDistances;
+    }
+    
     /**
      * Add an object to the answer. The rank of the object is computed automatically
      * as a distance between the query object and the specified object.
@@ -172,19 +228,13 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        if (queryObject instanceof MetaObject && storeMetaDistances) {
-            MetaObject metaQueryObject = (MetaObject)queryObject;
-            float[] metaDistances = new float[metaQueryObject.getObjectCount()];
-            float distance = metaQueryObject.getDistance(object, metaDistances, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            return addToAnswer(object, distance, metaDistances);
-        } else {
-            float distance = queryObject.getDistance(object, distThreshold);
-            if (distance > distThreshold)
-                return null;
-            return addToAnswer(object, distance, null);
-        }
+        if (object == null)
+            return null;
+        float[] metaDistances = storeMetaDistances?queryObject.createMetaDistancesHolder():null;
+        float distance = queryObject.getDistance(object, metaDistances, distThreshold);
+        if (distance > distThreshold)
+            return null;
+        return addToAnswer(object, distance, metaDistances);
     }
 
      /**
@@ -197,6 +247,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires clonning but the passed object cannot be cloned
      */
     public final RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
+        if (object == null)
+            return null;
         RankedAbstractObject rankedObject;
         try {
             // Create the ranked object encapsulation

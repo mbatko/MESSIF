@@ -3,7 +3,10 @@ package messif.objects.keys;
 import java.util.Comparator;
 
 /**
- * This interface is to be implemented by 
+ * This class provides an abstract operator for object keys that have a defined order.
+ * The operator must know the maximal and minimal keys and must be able to provide
+ * a successor and predecesor keys. Finally, it should be able to create
+ * {@link KeyInterval key intervals} for the pair of keys.
  * 
  * @param <T> specific type of the key
  * @author xnovak8

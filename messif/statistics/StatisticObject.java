@@ -73,8 +73,9 @@ public class StatisticObject extends Statistics<StatisticObject> {
     
     /****************** Text representation ******************/
     
+    @Override
     public String toString() {
-        return name + ": " + value;
+        return getName() + ": " + value;
     }
 
 
@@ -88,6 +89,11 @@ public class StatisticObject extends Statistics<StatisticObject> {
      */
     public void setCheckpoint() {
         valueCheckpoint = value;
+    }
+
+    @Override
+    protected StatisticObject cast() {
+        return this;
     }
     
 }

@@ -6,7 +6,6 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,23 +13,27 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
  * Implementation of {@link MetaObject} that stores encapsulated objects
  * in a hash table.
+ * The metric distance function for this object is the absolute value of the
+ * differences of locatorURI hashcodes.
  * 
  * @author xbatko
  */
@@ -62,7 +65,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         if (cloneObjects) {
             this.objects = new TreeMap<String, LocalAbstractObject>();
             for (Entry<String, LocalAbstractObject> entry : objects.entrySet())
-                this.objects.put(entry.getKey(), (LocalAbstractObject)entry.getValue().clone(objectKey));
+                this.objects.put(entry.getKey(), (LocalAbstractObject)entry.getValue().clone(getObjectKey()));
         } else {
             this.objects = new TreeMap<String, LocalAbstractObject>(objects);
         }
@@ -181,12 +184,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      */
     protected void readObjects(BufferedReader stream, Collection<String> restrictNames) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing MetaObject.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
         String[] uriNamesClasses = line.split(";");
@@ -196,16 +194,22 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
-                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((this.getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
         }
 
         // Read objects and add them to the collection
         for (i++; i < uriNamesClasses.length; i += 2) {
-            LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
-            if (object != null && (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1]))) {
-                object.setObjectKey(this.objectKey);
-                objects.put(uriNamesClasses[i - 1], object);
+            try {
+                LocalAbstractObject object = readObject(stream, uriNamesClasses[i]);
+                if (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1])) {
+                    object.setObjectKey(this.getObjectKey());
+                    objects.put(uriNamesClasses[i - 1], object);
+                }
+            } catch (IOException e) {
+                // Ignore the exception if the object is not loaded anyway
+                if (restrictNames == null || restrictNames.contains(uriNamesClasses[i - 1]))
+                    Logger.getLogger(getClass().getName()).warning(new StringBuffer("Error creating object ").append(uriNamesClasses[i - 1]).append(" for MetaObject with ID ").append(this.getLocatorURI()).append(":\n ").append(e).toString());
             }
         }
     }
@@ -244,24 +248,60 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     /**
      * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * Note that the collection can contain <tt>null</tt> values.
-     * @return a map all the encapsulated objects
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
      */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
         return objects;
     }
 
+    @Override
+    public LocalAbstractObject getObject(String name) {
+        return objects.get(name);
+    }
+
+    @Override
+    public Collection<String> getObjectNames() {
+        return Collections.unmodifiableCollection(objects.keySet());
+    }
+
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        return Collections.unmodifiableCollection(objects.values());
+    }
+
+    @Override
+    public int getObjectCount() {
+        return objects.size();
+    }
+
+    /**
+     * The actual implementation of the metric function.
+     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
+     * The array <code>metaDistances</code> is ignored.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    @Override
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
+    }
+
 
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObject loaded from binary input stream.
+     * Creates a new instance of MetaObject loaded from binary input buffer.
      * 
-     * @param input the stream to read the MetaObject from
+     * @param input the buffer to read the MetaObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObjectMap(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected MetaObjectMap(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.objects = new TreeMap<String, LocalAbstractObject>();
         int items = serializator.readInt(input);
@@ -269,15 +309,8 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
             objects.put(serializator.readString(input), serializator.readObject(input, LocalAbstractObject.class));
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, objects.size());
         for (Entry<String, LocalAbstractObject> entry : objects.entrySet()) {
@@ -287,11 +320,6 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         return size;
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator) + 4;

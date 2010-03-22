@@ -10,14 +10,15 @@ package messif.netbucket.replication;
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
 import messif.buckets.Bucket;
+import messif.buckets.BucketStorageException;
 import messif.buckets.CapacityFullException;
 import messif.buckets.LocalBucket;
 import messif.netbucket.NetworkBucketDispatcher;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
 import messif.statistics.StatisticSimpleWeakrefCounter;
-import messif.utility.Logger;
 
 /**
  *
@@ -28,9 +29,6 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
     /** Class id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.netbucket");
-
     /** Statistic for per query operation DC */
     protected StatisticSimpleWeakrefCounter bucketOperationDistcompCounter = StatisticSimpleWeakrefCounter.getStatistics("BucketOperationDistcompCounter." + this.hashCode());
     
@@ -72,7 +70,7 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
     /****************** Override for replica change ******************/
 
     /** Add new bucket with encapsulation into ReplicationBucket */
-    public synchronized LocalBucket addBucket(LocalBucket bucket) throws CapacityFullException {
+    public synchronized LocalBucket addBucket(LocalBucket bucket) throws BucketStorageException, IllegalStateException {
         // Create replica envelope and call super implementation
         ReplicationBucket newBucket = new ReplicationBucket(this, bucket);
         
@@ -82,7 +80,7 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
                 for (NetworkNode replicaNode : getAllReplicaNodes())
                     newBucket.createReplica(replicaNode);
             } catch (CapacityFullException e) { 
-                log.severe(e);
+                log.log(Level.SEVERE, e.getClass().toString(), e);
             }
         }
 
@@ -92,7 +90,7 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
 
     /******************************    Methods to be executed on the replication buckets    ******************************/
     
-    public void createReplica(NetworkNode atNetworkNode) throws CapacityFullException {
+    public void createReplica(NetworkNode atNetworkNode) throws BucketStorageException, IllegalStateException {
         for (Bucket bucket : getAllBuckets())
             ((ReplicationBucket) bucket).createReplica(atNetworkNode);
     }

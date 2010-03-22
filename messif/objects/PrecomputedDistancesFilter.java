@@ -6,9 +6,10 @@
 package messif.objects;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.statistics.StatisticCounter;
@@ -35,13 +36,19 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /****************** Statistics ******************/
+    //****************** Statistics ******************//
 
     /** Global counter for saving distance computations by using precomputed */
     protected static StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
 
 
-    /****************** Constructor ******************/
+    //****************** Attributes ******************//
+
+    /** The next filter in this chain */
+    PrecomputedDistancesFilter nextFilter;
+
+
+    //****************** Constructor ******************//
 
     /**
      * Creates a new instance of PrecomputedDistancesFilter.
@@ -50,10 +57,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     }
 
 
-    /****************** Filter chaining ******************/
-
-    /** The next filter in this chain */
-    PrecomputedDistancesFilter nextFilter = null;
+    //****************** Filter chaining ******************//
 
     /**
      * Returns the next filter in this filter's chain.
@@ -91,7 +95,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     }
 
 
-    /****************** Filtering methods ******************/
+    //****************** Filtering methods ******************//
 
     /**
      * Returns the precomputed distance to an object.
@@ -138,6 +142,9 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
      */
     public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
+        // Test for the same classes
+        if (! this.getClass().equals(targetFilter.getClass()))
+            throw new IllegalArgumentException("Trying to use different filters to filter an object: thisFilter=" + this.getClass() + " objectFilter=" + targetFilter.getClass());
         if (excludeUsingPrecompDistImpl(targetFilter, radius)) {
             counterPrecomputedDistanceSavings.add();
             return true;
@@ -184,16 +191,51 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     protected abstract boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius);
 
 
-    /****************** Write *********************/
+    //****************** Serialization ******************//
 
     /**
-     * Return the string value of this filter.
-     * @return the string value of this filter
+     * Writes this distances filter into the output text stream.
+     * The key is written using the following format:
+     * <pre>#filter filterClass filter value</pre>
+     *
+     * @param stream the stream to write the key to
+     * @throws IOException if any problem occures during comment writing
      */
-    public abstract String getText();
+    public final void write(OutputStream stream) throws IOException {
+        if (isDataWritable()) {
+            stream.write("#filter ".getBytes());
+            stream.write(getClass().getName().getBytes());
+            stream.write(' ');
+            writeData(stream);
+            stream.write('\n');
+        }
+
+        // Write the whole chain
+        if (nextFilter != null)
+            nextFilter.write(stream);
+    }
+
+    /**
+     * Store this filter's data to a text stream.
+     * This method should have the opposite deserialization in constructor.
+     * Note that this method should <em>not</em> write a line separator (\n).
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected abstract void writeData(OutputStream stream) throws IOException;
+
+    /**
+     * Returns whether this filter's data can be written to a text stream.
+     * Note that the method {@link #writeData(java.io.OutputStream)} should
+     * provide a valid writing implementation.
+     * 
+     * @return <tt>true</tt> if this filter can be written to a text stream
+     */
+    protected abstract boolean isDataWritable();
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object.
@@ -212,24 +254,24 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of PrecomputedDistancesFilter loaded from binary input stream.
+     * Creates a new instance of PrecomputedDistancesFilter loaded from binary input.
      * 
-     * @param input the stream to read the PrecomputedDistancesFilter from
+     * @param input the input to read the PrecomputedDistancesFilter from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected PrecomputedDistancesFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected PrecomputedDistancesFilter(BinaryInput input, BinarySerializator serializator) throws IOException {
         nextFilter = serializator.readObject(input, PrecomputedDistancesFilter.class);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return serializator.write(output, nextFilter);
     }
 

@@ -7,9 +7,9 @@
 package messif.pivotselection;
 
 import java.io.Serializable;
-import messif.buckets.BucketFilterInterface.FilterSituations;
-import messif.buckets.FilterRejectException;
-import messif.buckets.LocalFilteredBucket;
+import messif.buckets.BucketFilterAfterAdd;
+import messif.buckets.BucketFilterAfterRemove;
+import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AbstractObjectList;
@@ -21,7 +21,7 @@ import messif.objects.util.AbstractObjectList;
  *
  * @author  Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
-public class IncrementalPivotChooser extends AbstractPivotChooser implements Serializable {
+public class IncrementalPivotChooser extends AbstractPivotChooser implements Serializable, BucketFilterAfterAdd, BucketFilterAfterRemove {
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -127,14 +127,14 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
     public IncrementalPivotChooser() {
     }
         
-    /** filterObject()
-     * Method called automatically when an object is inserted or deleted.
-     * We do not take any special action, just count the number of changes in the bucket.
-     */
-    public void filterObject(LocalAbstractObject object, FilterSituations situation, LocalFilteredBucket inBucket) throws FilterRejectException {
-        if (situation == FilterSituations.AFTER_ADD || situation == FilterSituations.AFTER_DEL)
-            // Increment the number of changes since the last reselection of samples only
-            ++changesFromLastSampleSetSelection;
+    public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
+        // Increment the number of changes since the last reselection of samples only
+        changesFromLastSampleSetSelection++;
+    }
+
+    public void filterAfterRemove(LocalAbstractObject object, LocalBucket bucket) {
+        // Increment the number of changes since the last reselection of samples only
+        changesFromLastSampleSetSelection++;
     }
     
     /** Selects new pivots.
@@ -333,4 +333,5 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
             distsFormer[i] = Math.max(distsFormer[i], d);
         }
     }
+
 }

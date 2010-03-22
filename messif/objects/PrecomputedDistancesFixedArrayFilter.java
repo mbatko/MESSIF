@@ -9,11 +9,15 @@ package messif.objects;
 
 import messif.objects.util.AbstractObjectList;
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import java.io.OutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
+ * Precomputed distance filter that has a fixed array of distances.
+ * While filtering, this filter uses one stored distance after the other
+ * and matches it agains the opposite object's distance.
  *
  * @author xbatko
  */
@@ -78,22 +82,20 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         }
     }
 
-    /**
-     * Return the string value of this filter.
-     * @return the string value of this filter
-     */
     @Override
-    public String getText(){
-        StringBuffer outBuf = new StringBuffer();
-        for (float number : precompDist) {
-            outBuf.append(' ');
-            outBuf.append(Float.toString(number));
-        }
-        return outBuf.toString().substring(1);
+    protected boolean isDataWritable() {
+        return true;
     }
-    
 
-    /****************** Manipulation methods ******************/
+    protected void writeData(OutputStream stream) throws IOException {
+        for (float number : precompDist) {
+            stream.write(' ');
+            stream.write(Float.toString(number).getBytes());
+        }
+    }
+
+
+    //****************** Manipulation methods ******************//
 
     /** Add distance at the end of internal list of precomputed distances.
      * @param  dist   distance to append
@@ -101,6 +103,21 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      */
     public synchronized int addPrecompDist(float dist) {
         insertPrecompDist(actualSize, dist);
+        return actualSize;
+    }
+
+    /** Add the passed distances at the end of internal list of precomputed distances.
+     * @param  dists   array of distances to append
+     * @return The total number of precomputed distances stored.
+     */
+    public synchronized int addPrecompDist(float[] dists) {
+        // Resize the internal array if necessary
+        resizePrecompDistArray(dists.length + actualSize);
+
+        // Copy the array
+        System.arraycopy(dists, 0, precompDist, actualSize, dists.length);
+        actualSize += dists.length;
+
         return actualSize;
     }
 
@@ -232,11 +249,24 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      * @throws IndexOutOfBoundsException is thrown when <code>pos</code> is out of bounds. 
      */
     public synchronized void removePrecompDist(int pos) throws IndexOutOfBoundsException {
-        if (precompDist == null)
-            throw new IndexOutOfBoundsException("There are no precomputed distances to remove");
+        if (precompDist == null || actualSize <= pos)
+            throw new IndexOutOfBoundsException("There are no precomputed distance at the passed position to remove");
         
         System.arraycopy(precompDist, pos + 1, precompDist, pos, actualSize - 1 - pos);
         actualSize--;
+    }
+
+    /** Removes the requested number of distances from the end of the array.
+     * @param cnt    the number of distances to remove
+     * @throws IndexOutOfBoundsException is thrown when the list of precomputed distance is already empty.
+     */
+    public synchronized void removeLastPrecompDists(int cnt) throws IndexOutOfBoundsException {
+        if (precompDist == null || actualSize == 0)
+            throw new IndexOutOfBoundsException("There are no precomputed distances to remove");
+
+        actualSize-=cnt;
+        if (actualSize < 0)
+            actualSize = 0;
     }
 
     /** Replaces the current array of precomputed distances with the values passed in the argument.
@@ -294,7 +324,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return retArr;
     }
     
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object.
@@ -312,17 +342,10 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return rtv;
     }
 
-    /****************** Filtering methods ******************/
 
-    /** Return true if the obj has been filtered out using stored precomputed distance.
-     * Otherwise returns false, i.e. when obj must be checked using original distance (getDistance()).
-     *
-     * In other words, method returns true if this object and obj are more distant than radius. By
-     * analogy, returns false if this object and obj are within distance radius. However, both this cases
-     * use only precomputed distances! Thus, the real distance between this object and obj can be greater
-     * than radius although the method returned false!!!
-     */
-    protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    //****************** Filtering methods ******************//
+
+    protected final boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return excludeUsingPrecompDistImpl((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
         } catch (ClassCastException e) {
@@ -330,6 +353,19 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         }
     }
 
+    /**
+     * Return true if the obj has been filtered out using stored precomputed distance.
+     * Otherwise returns false, i.e. when obj must be checked using original distance (getDistance()).
+     *
+     * In other words, method returns true if this object and obj are more distant than radius. By
+     * analogy, returns false if this object and obj are within distance radius. However, both this cases
+     * use only precomputed distances! Thus, the real distance between this object and obj can be greater
+     * than radius although the method returned false!!!
+     *
+     * @param targetFilter the target precomputed distances
+     * @param radius the radius to check the precomputed distances for
+     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
+     */
     protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
         // We have no precomputed distances either in the query or this object
         if (precompDist == null || targetFilter.precompDist == null)
@@ -343,7 +379,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return false;
     }
 
-    protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    protected final boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return includeUsingPrecompDistImpl((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
         } catch (ClassCastException e) {
@@ -351,6 +387,14 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         }
     }
 
+    /**
+     * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances.
+     * See {@link messif.objects.LocalAbstractObject#includeUsingPrecompDist} for full explanation.
+     *
+     * @param targetFilter the target precomputed distances
+     * @param radius the radius to check the precomputed distances for
+     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
+     */
     protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
         // We have no precomputed distances either in the query or this object
         if (precompDist == null || targetFilter.precompDist == null)
@@ -389,13 +433,13 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of PrecomputedDistancesFixedArrayFilter loaded from binary input stream.
+     * Creates a new instance of PrecomputedDistancesFixedArrayFilter loaded from binary input.
      * 
-     * @param input the stream to read the PrecomputedDistancesFixedArrayFilter from
+     * @param input the input to read the PrecomputedDistancesFixedArrayFilter from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected PrecomputedDistancesFixedArrayFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected PrecomputedDistancesFixedArrayFilter(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         actualSize = serializator.readInt(input);
         precompDist = serializator.readFloatArray(input);
@@ -403,13 +447,13 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, actualSize) +
                serializator.write(output, precompDist);

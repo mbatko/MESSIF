@@ -8,8 +8,7 @@ package messif.network;
 import java.lang.reflect.Modifier;
 import messif.executor.MethodClassExecutor;
 import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.logging.Level;
 
 
 
@@ -102,7 +101,7 @@ public class InvokingReceiver extends MethodClassExecutor implements Receiver {
         try {
             method.invoke(executionObject, msg);
         } catch (Exception e) {
-            MessageDispatcher.log.severe(e);
+            MessageDispatcher.log.log(Level.SEVERE, e.getClass().toString(), e);
         }
     }
 }

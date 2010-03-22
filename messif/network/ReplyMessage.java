@@ -21,8 +21,8 @@ public abstract class ReplyMessage extends Message {
 
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Constructors ******************/
+
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of ReplyMessage.
@@ -32,30 +32,29 @@ public abstract class ReplyMessage extends Message {
         super(message);
     }
 
-    /** Hot fix: create an empty message */
-    public ReplyMessage() {
-    }
 
-    /****************** Clonning ******************/
-    
+    //****************** Clonning ******************//
+
     /**
      * Always throws CloneNotSupportedException exception, because conning is not supported for replies.
      * @return nothing, because this method always throws CloneNotSupportedException
      * @throws CloneNotSupportedException if this instance cannot be cloned
      */
+    @Override
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException("Reply messages cannot be cloned");
     }
-    
 
-    /****************** String representation ******************/
+
+    //****************** String representation ******************//
 
     /**
      * Returns a string representation of this response message.
      * @return a string representation of this response message
      */
+    @Override
     public String toString() {
         return "ReplyMessage (ID:" + messageID + ") <<" + getClass().getName() + ">>";
     }
-    
+
 }

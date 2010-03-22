@@ -2,12 +2,13 @@
 package messif.objects.keys;
 
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import java.io.OutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * The object key that contains an Double and an locator URI.
+ * The object key that contains a double value and a locator URI.
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
  */
@@ -47,8 +48,10 @@ public class DoubleKey extends AbstractObjectKey {
     }
     
     /**
-     * Auxiliary method for parsing the string 'doubleKey locatorURI'
+     * Auxiliary method for parsing the string 'doubleKey locatorURI'.
+     * @param keyString the string with the key and the locator URI
      * @return the locatorURI string
+     * @throws IllegalArgumentException if the string is not in the 'doubleKey locatorURI' format
      */
     private static String getLocatorURI(String keyString) throws IllegalArgumentException {
         try {
@@ -57,18 +60,14 @@ public class DoubleKey extends AbstractObjectKey {
             throw new IllegalArgumentException("string must be of format 'doubleKey locatorUri': "+keyString);
         }
     }
-    
-    /**
-     * Returns the string representation of this key (the key and the locator).
-     * @return the string representation of this key 
-     */
+
     @Override
-    public String getText() {
-        StringBuffer buf = new StringBuffer(Double.toString(key));
-        buf.append(' ').append(locatorURI);
-        return buf.toString();
+    protected void writeData(OutputStream stream) throws IOException {
+        stream.write(Double.toString(key).getBytes());
+        stream.write(' ');
+        super.writeData(stream);
     }
-        
+
     /**
      * Compare the keys according to the double key
      * @param o the key to compare this key with
@@ -109,36 +108,35 @@ public class DoubleKey extends AbstractObjectKey {
         return (key == ((DoubleKey) obj).key);
     }
     
-    /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(getLocatorURI()).toString();
     }
 
 
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of DoubleKey loaded from binary input stream.
+     * Creates a new instance of DoubleKey loaded from binary input.
      * 
-     * @param input the stream to read the DoubleKey from
+     * @param input the input to read the DoubleKey from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected DoubleKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected DoubleKey(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         key = serializator.readDouble(input);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) + serializator.write(output, key);
     }
 

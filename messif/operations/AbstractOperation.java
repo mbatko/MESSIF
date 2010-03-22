@@ -17,6 +17,7 @@ import messif.utility.ErrorCode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import messif.utility.Clearable;
+import messif.utility.Convert;
 
 
 /**
@@ -63,7 +64,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @return a hash code value for this operation
      */
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return operID.hashCode();
     }
 
@@ -78,7 +79,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      *          argument; <code>false</code> otherwise
      */
     @Override
-    public boolean equals(Object obj) {
+    public final boolean equals(Object obj) {
         if (!getClass().isInstance(obj))
             return false;
         return operID.equals(((AbstractOperation)obj).operID);
@@ -235,8 +236,8 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
      */
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
+    public AbstractOperation clone() throws CloneNotSupportedException {
+        return (AbstractOperation)super.clone();
     }
 
 
@@ -370,44 +371,48 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     }
 
     /**
-     * Internal method for searching any annotated constructor in all the subclasses.
+     * Searches the given {@code operationClass} for an annotated constructor.
+     * The constructor with the smallest number of arguments is returned.
      *
-     * @param operationClass class to search for the constructor in
-     * @throws java.lang.IllegalArgumentException if either the operationClass is null or the class is not annotated using <code>AbstractOperation.OperationName</code>
-     * @return appropripate constructor
+     * @param <T> the operation class
+     * @param operationClass the operation class to search the constructor for
+     * @return the constructor for the operation
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    private static Constructor getAnnotatedConstructor(Class<?> operationClass) throws IllegalArgumentException {
+    public static <T extends AbstractOperation> Constructor<T> getAnnotatedConstructor(Class<? extends T> operationClass) throws NoSuchMethodException {
         return getAnnotatedConstructor(operationClass, -1);
     }
 
     /**
-     * Internal method for searching the annotated constructor in all the subclasses that has appropriate number of arguments.
+     * Searches the given {@code operationClass} for an annotated constructor
+     * that has the given {@code argumentsCount}.
      *
-     * @param operationClass class to search for the constructor in
-     * @param nArguments number of arguments that the constructor must have
-     * @return appropripate constructor
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @param <T> the operation class 
+     * @param operationClass the operation class to search the constructor for
+     * @param argumentsCount number of arguments that the constructor must have
+     * @return the constructor for the operation
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    private static Constructor getAnnotatedConstructor(Class<?> operationClass, int nArguments) throws IllegalArgumentException {
+    public static <T extends AbstractOperation> Constructor<T> getAnnotatedConstructor(Class<? extends T> operationClass, int argumentsCount) throws NoSuchMethodException {
         // Ignore the classes that are not annotated by OperationName
         if (operationClass == null || !operationClass.isAnnotationPresent(OperationName.class))
-            throw new IllegalArgumentException("There is no valid annotated constructor in '" + operationClass + "' for " + nArguments + " parameters");
+            throw new NoSuchMethodException("Class " + operationClass.getName() + " cannot be created automatically, because the annotation is missing");
 
         // Remember the constructor with smallest number of arguments if nArguments == -1
         int minimalConstructorArgs = Integer.MAX_VALUE;
-        Constructor minimalConstructor = null;
+        Constructor<T> minimalConstructor = null;
 
         // Search all its constructors for proper annotation
-        for (Constructor constructor : operationClass.getConstructors()) {
+        for (Constructor<T> constructor : Convert.getConstructors(operationClass)) {
             if (constructor.isAnnotationPresent(OperationConstructor.class)) {
                 int thisConstructorArgs = constructor.getParameterTypes().length;
-                if (nArguments == -1) {
+                if (argumentsCount == -1) {
                     if (minimalConstructorArgs > thisConstructorArgs) {
                         minimalConstructor = constructor;
                         minimalConstructorArgs = thisConstructorArgs;
                     }
                 } else {
-                    if (thisConstructorArgs == nArguments) {
+                    if (thisConstructorArgs == argumentsCount) {
                         return constructor;
                     }
                 }
@@ -418,8 +423,8 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         if (minimalConstructor != null)
             return minimalConstructor;
 
-        // Recurse
-        return getAnnotatedConstructor(operationClass.getSuperclass(), nArguments);
+        // Not found
+        throw new NoSuchMethodException("There is no valid annotated constructor in " + operationClass + " for " + argumentsCount + " parameters");
     }
 
     /**
@@ -427,9 +432,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * This is used by auto-generated clients to show descriptiron during operation creation.
      * @param operationClass class to get the descriptions for
      * @return constructor argument descriptions
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    public static String[] getConstructorArgumentDescriptions(Class<? extends AbstractOperation> operationClass) throws IllegalArgumentException {
+    public static String[] getConstructorArgumentDescriptions(Class<? extends AbstractOperation> operationClass) throws NoSuchMethodException {
         return getAnnotatedConstructor(operationClass).getAnnotation(OperationConstructor.class).value();
     }
 
@@ -439,9 +444,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @param operationClass class to get the descriptions for
      * @param nArguments the number of arguments of the constructor
      * @return constructor argument descriptions
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    public static String[] getConstructorArgumentDescriptions(Class<? extends AbstractOperation> operationClass, int nArguments) throws IllegalArgumentException {
+    public static String[] getConstructorArgumentDescriptions(Class<? extends AbstractOperation> operationClass, int nArguments) throws NoSuchMethodException {
         return getAnnotatedConstructor(operationClass, nArguments).getAnnotation(OperationConstructor.class).value();
     }
 
@@ -449,9 +454,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * Returns constructor argument types for the provided operation class.
      * @param operationClass class to get the constructor types for
      * @return constructor argument types
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    public static Class<?>[] getConstructorArguments(Class<? extends AbstractOperation> operationClass) throws IllegalArgumentException {
+    public static Class<?>[] getConstructorArguments(Class<? extends AbstractOperation> operationClass) throws NoSuchMethodException {
         return getAnnotatedConstructor(operationClass).getParameterTypes();
     }
 
@@ -460,9 +465,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @param operationClass class to get the constructor types for
      * @param nArguments the number of arguments of the constructor
      * @return constructor argument types
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    public static Class<?>[] getConstructorArguments(Class<? extends AbstractOperation> operationClass, int nArguments) throws IllegalArgumentException {
+    public static Class<?>[] getConstructorArguments(Class<? extends AbstractOperation> operationClass, int nArguments) throws NoSuchMethodException {
         return getAnnotatedConstructor(operationClass, nArguments).getParameterTypes();
     }
     
@@ -470,9 +475,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * Returns full constructor description for the provided operation class.
      * @param operationClass class to get the constructor types for
      * @return full constructor description
-     * @throws IllegalArgumentException if either the operationClass is null or the class is not annotated by {@link OperationName}
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
-    public static String getConstructorDescription(Class<? extends AbstractOperation> operationClass) throws IllegalArgumentException {
+    public static String getConstructorDescription(Class<? extends AbstractOperation> operationClass) throws NoSuchMethodException {
         StringBuffer rtv = new StringBuffer();
         rtv.append(operationClass.getName());
         for (String argdesc : getConstructorArgumentDescriptions(operationClass))
@@ -488,20 +493,18 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @param operationClass the class of the operation that should be created
      * @param arguments arguments supplied to the constructor; they should match the types of getConstructorArguments(operationClass)
      * @return a new instance of operation
-     * @throws IllegalArgumentException if the argument count or their types don't match the specified class
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
+     * @throws IllegalArgumentException if the argument count or their types don't match the specified operation class constructor
      * @throws InvocationTargetException if there was an exception in the operation's constructor
      */
-    public static <E extends AbstractOperation> E createOperation(Class<E> operationClass, Object... arguments) throws IllegalArgumentException, InvocationTargetException {
+    public static <E extends AbstractOperation> E createOperation(Class<E> operationClass, Object... arguments) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
         // Create a new instance of the class for the specified constructor prototypes and arguments
         try {
-            // We must search for the constructor again, because we need the constructor for the lower class not the ancestor's !!!
-            return operationClass.getDeclaredConstructor(getConstructorArguments(operationClass, arguments.length)).newInstance(arguments);
+            return getAnnotatedConstructor(operationClass, arguments.length).newInstance(arguments);
         } catch (InstantiationException e) {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("Error creating a new instance of " + operationClass + ": cannot instantiate abstract class");
         } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException(e);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e);
+            throw new InternalError("This should never happen, since getAnnotatedConstructor returns a public constructor");
         }
     }
 

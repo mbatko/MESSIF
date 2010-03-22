@@ -2,7 +2,7 @@
 package messif.objects;
 
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -49,7 +49,7 @@ public class PrecompDistPerforatedArrayFilter extends PrecomputedDistancesFixedA
         return false;
     }
 
-    protected PrecompDistPerforatedArrayFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected PrecompDistPerforatedArrayFilter(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 }

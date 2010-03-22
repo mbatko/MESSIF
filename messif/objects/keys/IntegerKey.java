@@ -1,10 +1,14 @@
 
 package messif.objects.keys;
 
-import messif.objects.keys.AbstractObjectKey;
+import java.io.IOException;
+import java.io.OutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializator;
 
 /**
- * The object key that contains an Integer and an locator URI.
+ * The object key that contains an integer value and a locator URI.
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
  */
@@ -44,8 +48,10 @@ public class IntegerKey extends AbstractObjectKey {
     }
     
     /**
-     * Auxiliary method for parsing the string 'integerKey locatorURI'
+     * Auxiliary method for parsing the string 'integerKey locatorURI'.
+     * @param keyString the string with the key and the locator URI
      * @return the locatorURI string
+     * @throws IllegalArgumentException if the string is not in the 'integerKey locatorURI' format
      */
     private static String getLocatorURI(String keyString) throws IllegalArgumentException {
         try {
@@ -55,17 +61,13 @@ public class IntegerKey extends AbstractObjectKey {
         }
     }
     
-    /**
-     * Returns the string representation of this key (the key and the locator).
-     * @return the string representation of this key 
-     */
     @Override
-    public String getText() {
-        StringBuffer buf = new StringBuffer(Integer.toString(key));
-        buf.append(' ').append(locatorURI);
-        return buf.toString();
+    protected void writeData(OutputStream stream) throws IOException {
+        stream.write(Integer.toString(key).getBytes());
+        stream.write(' ');
+        super.writeData(stream);
     }
-        
+
     /**
      * Compare the keys according to the integer key
      * @param o the key to compare this key with
@@ -106,10 +108,46 @@ public class IntegerKey extends AbstractObjectKey {
         return (key == ((IntegerKey) obj).key);
     }
     
-    /** Return the URI string. */
     @Override
     public String toString() {
-        return (new StringBuffer()).append(key).append(": ").append(locatorURI).toString();
+        return (new StringBuffer()).append(key).append(": ").append(getLocatorURI()).toString();
     }
-    
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of IntegerKey loaded from binary input.
+     * 
+     * @param input the input to read the IntegerKey from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the input
+     */
+    protected IntegerKey(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        key = serializator.readInt(input);
+    }
+
+    /**
+     * Binary-serialize this object into the <code>output</code>.
+     * @param output the output that this object is binary-serialized into
+     * @param serializator the serializator used to write objects
+     * @return the number of bytes actually written
+     * @throws IOException if there was an I/O error during serialization
+     */
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) + serializator.write(output, key);
+    }
+
+    /**
+     * Returns the exact size of the binary-serialized version of this object in bytes.
+     * @param serializator the serializator used to write objects
+     * @return size of the binary-serialized version of this object
+     */
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + 4;
+    }
+
 }

@@ -8,14 +8,13 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,17 +22,14 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Stack;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParserFactory;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import org.xml.sax.Attributes;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -41,7 +37,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  * @author xbatko
  */
-public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
+public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
@@ -83,12 +79,12 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     public MetaObjectSAPIR(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
         if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(objectKey);
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(objectKey);
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(objectKey);
-            this.homogeneousTexture = (ObjectHomogeneousTexture)this.homogeneousTexture.clone(objectKey);
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(objectKey);
-            this.location = (ObjectGPSCoordinate)this.location.clone(objectKey);
+            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
+            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
+            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
+            this.homogeneousTexture = (ObjectHomogeneousTexture)this.homogeneousTexture.clone(getObjectKey());
+            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
+            this.location = (ObjectGPSCoordinate)this.location.clone(getObjectKey());
         }
     }
 
@@ -105,12 +101,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(BufferedReader stream, Set<String> restrictNames) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing MetaObject.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
         String[] uriNamesClasses = line.split(";");
@@ -120,8 +111,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
         // If the URI locator is used (and it is not set from the previous - this is the old format)
         if (i == 1) {
-            if ((this.objectKey == null) && (uriNamesClasses[0].length() > 0))
-                    this.objectKey = new AbstractObjectKey(uriNamesClasses[0]);
+            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
         }
 
         for (; i < uriNamesClasses.length; i += 2) {
@@ -170,7 +161,20 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
      */
     @Override
     public int getObjectCount() {
-        return 6;
+        int count = 0;
+        if (colorLayout != null)
+            count++;
+        if (colorStructure != null)
+            count++;
+        if (edgeHistogram != null)
+            count++;
+        if (homogeneousTexture != null)
+            count++;
+        if (scalableColor != null)
+            count++;
+        if (location != null)
+            count++;
+        return count;
     }
 
     /**
@@ -195,6 +199,42 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             return location;
         else
             return null;
+    }
+
+    @Override
+    public Collection<LocalAbstractObject> getObjects() {
+        Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(6);
+        if (colorLayout != null)
+            objects.add(colorLayout);
+        if (colorStructure != null)
+            objects.add(colorStructure);
+        if (edgeHistogram != null)
+            objects.add(edgeHistogram);
+        if (homogeneousTexture != null)
+            objects.add(homogeneousTexture);
+        if (scalableColor != null)
+            objects.add(scalableColor);
+        if (location != null)
+            objects.add(location);
+        return objects;
+    }
+
+    @Override
+    public Collection<String> getObjectNames() {
+        Collection<String> names = new ArrayList<String>(6);
+        if (colorLayout != null)
+            names.add(descriptorNames[0]);
+        if (colorStructure != null)
+            names.add(descriptorNames[1]);
+        if (edgeHistogram != null)
+            names.add(descriptorNames[2]);
+        if (homogeneousTexture != null)
+            names.add(descriptorNames[3]);
+        if (scalableColor != null)
+            names.add(descriptorNames[4]);
+        if (location != null)
+            names.add(descriptorNames[5]);
+        return names;
     }
 
     /**
@@ -329,34 +369,6 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
 
     /****************** XML parsing ******************/
 
-    /** Factory method that creates MetaObjects from SAPIR XML files */
-    public static MetaObjectSAPIR create(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(xmlFile, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed URI */
-    public static MetaObjectSAPIR create(String uri) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(uri, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputStream */
-    public static MetaObjectSAPIR create(InputStream is) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
-    /** Factory method that creates MetaObjects from SAPIR XML files retrieved from the passed InputSource */
-    public static MetaObjectSAPIR create(InputSource is) throws ParserConfigurationException, SAXException, IOException {
-        XMLHandlerSAPIR xmlHandler = new XMLHandlerSAPIR();
-        SAXParserFactory.newInstance().newSAXParser().parse(is, xmlHandler);
-        return new MetaObjectSAPIR(xmlHandler.getLocatorURI(), xmlHandler.getObjects());
-    }
-
     public String getObjectsXML() {
         StringBuffer rtv = new StringBuffer();
         if (colorLayout != null)
@@ -458,7 +470,7 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
                 try {
                     objects.put(descriptorName, (LocalAbstractObject)XMLHandlerSAPIR.class.getMethod("new" + descriptorName, Map.class).invoke(this, descriptorData));
                 } catch (InvocationTargetException e) {
-                    throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack.toString(), e);
+                    throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack.toString(), (Exception)e.getCause());
                 } catch (IllegalArgumentException thisShouldNeverHappen) {
                     thisShouldNeverHappen.printStackTrace();
                 } catch (IllegalAccessException thisShouldNeverHappen) {
@@ -505,7 +517,16 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
             return rtv.toString();
         }
 
-        protected static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+        public static StringBuffer appendObjectXML(StringBuffer xmlString, String name, LocalAbstractObject object) throws NoSuchElementException {
+            // Hack for location
+            if (name.equals("Location")) {
+                ObjectGPSCoordinate location = (ObjectGPSCoordinate)object;
+                xmlString.append("<location latitude=\"").append(location.getLatitude());
+                xmlString.append("\" longitude=\"").append(location.getLongitude());
+                xmlString.append("\"/>");
+                return xmlString;
+            }
+
             // Append opening descriptor tag
             xmlString.append('<');
             xmlString.append(descriptorTagName);
@@ -685,13 +706,13 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObjectSAPIR loaded from binary input stream.
+     * Creates a new instance of MetaObjectSAPIR loaded from binary input buffer.
      * 
-     * @param input the stream to read the MetaObjectSAPIR from
+     * @param input the buffer to read the MetaObjectSAPIR from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObjectSAPIR(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected MetaObjectSAPIR(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         colorLayout = serializator.readObject(input, ObjectColorLayout.class);
         colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
@@ -701,15 +722,8 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         location = serializator.readObject(input, ObjectGPSCoordinate.class);
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, colorLayout);
         size += serializator.write(output, colorStructure);
@@ -720,11 +734,6 @@ public class MetaObjectSAPIR extends MetaObject implements BinarySerializable {
         return size;
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator);

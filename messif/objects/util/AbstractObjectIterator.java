@@ -143,6 +143,29 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
             }
     }
 
+    /**
+     * Returns a randomly choosen object from the objects remaining in this iterator.
+     * Note that all the remaining objects in this iterator are read.
+     * @return a randomly choosen object
+     * @throws NoSuchElementException if this iterator has no objects left
+     */
+    public E getRandomObject() throws NoSuchElementException {
+        return getRandomObjects(1, false).get(0);
+    }
+
+    /**
+     * Returns a list containing randomly choosen objects from the objects remaining in this iterator.
+     * Note that all the remaining objects in this iterator are read.
+     *
+     * @param count the number of objects to return
+     * @param unique flag if the returned list contains each object only once
+     * @return a new list instance which contains randomly selected objects
+     * @see AbstractObjectList#randomList(int, boolean, java.util.List, java.util.Iterator)
+     */
+    public AbstractObjectList<E> getRandomObjects(int count, boolean unique) {
+        return AbstractObjectList.randomList(count, unique, this);
+    }
+
 
     //****************** ObjectProvider implementation ******************//
 

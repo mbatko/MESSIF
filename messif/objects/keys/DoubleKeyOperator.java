@@ -1,7 +1,6 @@
 package messif.objects.keys;
 
 import java.io.Serializable;
-import messif.objects.keys.DoubleKey;
 
 /**
  *
@@ -11,7 +10,6 @@ public class DoubleKeyOperator extends KeyOperator<DoubleKey> implements Seriali
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;    
 
-    @Override
     public int compare(DoubleKey o1, DoubleKey o2) {
         return o1.compareTo(o2);
     }

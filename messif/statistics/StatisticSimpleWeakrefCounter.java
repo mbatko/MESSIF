@@ -170,7 +170,7 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
     /****************** Text representation ******************/
     
     public String toString() { 
-	return new StringBuffer(name).append(": ").append(values.toString()).toString();
+	return new StringBuffer(getName()).append(": ").append(values.toString()).toString();
     }
 
     protected synchronized int deepHashCode() {
@@ -190,6 +190,11 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
      */
     public void setCheckpoint() {
         checkpointValue = deepHashCode();
+    }
+
+    @Override
+    protected StatisticSimpleWeakrefCounter cast() {
+        return this;
     }
 
 }

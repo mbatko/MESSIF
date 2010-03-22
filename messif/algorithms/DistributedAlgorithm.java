@@ -15,8 +15,7 @@ import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticRefCounter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +25,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import messif.network.Message;
 import messif.network.ReplyMessage;
 import messif.network.ReplyReceiver;
 import messif.statistics.Statistics;
@@ -71,7 +72,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
             // Start Message dispatcher
             this.messageDisp = new MessageDispatcher(port, broadcastPort);
         } catch (IOException e) {
-            log.severe(e);
+            log.log(Level.SEVERE, e.getClass().toString(), e);
             throw new IllegalArgumentException("Can't start message dispatcher: " + e.getMessage());
         }
     }
@@ -116,39 +117,13 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         this.messageDisp = new MessageDispatcher(parentDispatcher, nodeID);
     }
 
-    /**
-     * Compatibility deserialization method that reads this object having version 4.
-     * This works with the special <code>ObjectInputStreamConverter</code> class from utils.
-     * @param in the stream from which to read the serialized algorithm
-     * @throws IOException if there was an I/O error reading the stream
-     * @throws ClassNotFoundException if some of the classes stored in the stream cannot be resolved
-     */
-    private void readObjectVer4(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        int port = in.readInt();
-        int broadcastPort = in.readInt();
-
-        try {
-            // Reopen file channel (set it through reflection to overcome the "final" flag)
-            Field field = DistributedAlgorithm.class.getDeclaredField("messageDisp");
-            field.setAccessible(true);
-            field.set(this, new MessageDispatcher(port, broadcastPort));
-        } catch (Exception e) {
-            throw new IOException(e.toString());
-        }
-    }
-
 
     //****************** Destructor ******************//
 
-    /**
-     * Public destructor to stop the algorithm.
-     * This should be overriden in order to clean up.
-     * @throws Throwable if there was an error finalizing
-     */
     @Override
     public void finalize() throws Throwable {
-        super.finalize();
         messageDisp.closeSockets();
+        super.finalize();
     }
 
 
@@ -191,19 +166,41 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      * @throws AlgorithmMethodException if there was an error executing operation
      */
     protected void receiveRequest(DistAlgRequestMessage msg) throws AlgorithmMethodException {
-        Statistics navigElDistComp = null;
         try {
-            // Setup statistics
-            navigElDistComp = msg.registerBoundStat("DistanceComputations");
             execute(false, msg.getOperation(), msg);
         } catch (Exception e) {
             throw new AlgorithmMethodException(e);
-        } finally {
-            if (navigElDistComp != null)
-                navigElDistComp.unbind();
         }
     }
-    
+
+    /**
+     * Given a just-arrived message, this method registers (binds) DC, DC.Savings and BlockReads statistics
+     *   for current thread.
+     * @param msg new arrived message
+     * @return collection of registered statistics
+     * @throws InstantiationException
+     */
+    protected Collection<Statistics> setupMessageStatistics(Message msg) throws InstantiationException {
+        Collection<Statistics> registeredStats = new ArrayList<Statistics>();
+        registeredStats.add(msg.registerBoundStat("DistanceComputations"));
+        registeredStats.add(msg.registerBoundStat("DistanceComputations.Savings"));
+        registeredStats.add(msg.registerBoundStat("BlockReads"));
+
+        return registeredStats;
+    }
+
+    /**
+     * Unbind given statistics.
+     * @param stats set of stats to unbind
+     */
+    protected void deregisterMessageStatistics(Collection<Statistics> stats) {
+        if (stats == null)
+            return;
+        for (Statistics statistics : stats) {
+            statistics.unbind();
+        }
+    }
+
     /**
      * Execute operation on this algorithm.
      * @param <T> the type of executed operation
@@ -401,8 +398,9 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      *  @param replyMessages the list of reply messages received with partial answers
      */
     public static void mergeOperationsFromReplies(AbstractOperation targetOperation, Collection<? extends DistAlgReplyMessage> replyMessages) {
-        for (DistAlgReplyMessage msg : replyMessages)
+        for (DistAlgReplyMessage msg : replyMessages) {
             targetOperation.updateFrom(msg.getOperation());
+        }
     }
 
     /** Update supplied statistics with partial statistics from reply messages
@@ -410,38 +408,50 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      *  @param replyMessages the list of reply messages received with partial statistics
      */
     public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends ReplyMessage> replyMessages) {
-        mergeStatisticsFromReplies(targetStatistics, replyMessages, 0);
+        mergeStatisticsFromReplies(targetStatistics, replyMessages, OperationStatistics.getLocalThreadStatistics());
     }
     
     /** Update supplied statistics with partial statistics from reply messages
      *  @param targetStatistics the operation statistics object that should be updated
      *  @param replyMessages the list of reply messages received with partial statistics
-     *  @param localDC says the number of DC performed by the local search on this node, if any
+     *  @param localStats statistics of local processing of the operation on this node
      */
-    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends ReplyMessage> replyMessages, long localDC) {
+    public void mergeStatisticsFromReplies(OperationStatistics targetStatistics, Collection<? extends ReplyMessage> replyMessages, OperationStatistics localStats) {
         if (replyMessages.isEmpty())
             return;
 
         StatisticCounter totalMsgs = targetStatistics.getStatisticCounter("Total.Messages");
         
         // first, create the nodesMap - maximum over node's DCs on given positions in all replies
-        SortedMap<Integer, Map<NetworkNode, Long>> nodesMap = new TreeMap<Integer, Map<NetworkNode, Long>>();
+        SortedMap<Integer, Map<NetworkNode, OperationStatistics>> nodesMap = new TreeMap<Integer, Map<NetworkNode, OperationStatistics>>();
+        if (localStats != null) {
+            Map<NetworkNode, OperationStatistics> statsOfFirstSender = new HashMap<NetworkNode, OperationStatistics>();
+            statsOfFirstSender.put(getThisNode(), localStats);
+            nodesMap.put(0, statsOfFirstSender);
+        }
         for (ReplyMessage reply : replyMessages) {
             // create a map of node->DC taken as max over all nodes in all replies
             int i = 0;
             NetworkNode previousNode = null;
             for (Iterator<NavigationElement> it = reply.getPathElements(); it.hasNext(); i++) {
                 NavigationElement el = it.next();
-                Map<NetworkNode, Long> positionMap = nodesMap.get(i);
+                Map<NetworkNode, OperationStatistics> positionMap = nodesMap.get(i);
                 if (positionMap == null)
-                    nodesMap.put(i, positionMap = new HashMap<NetworkNode, Long>());
+                    nodesMap.put(i, positionMap = new HashMap<NetworkNode, OperationStatistics>());
                 
                 NetworkNode node = el.getSender();
-                Long actualNodeDC = positionMap.get(node);
-                if (actualNodeDC != null) // sum the DC of hosts that appear more than once in the navigation path
-                    positionMap.put(node, Math.max(actualNodeDC, (el.getStatistics()==null)?0:el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get()));
-                else {
-                    positionMap.put(node, (el.getStatistics()==null)?0:el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get());
+                OperationStatistics actualNodeStatistics = positionMap.get(node);
+                if (actualNodeStatistics != null) { // sum the DC of peers that appear more than once in the navigation path
+                    //positionMap.put(node, Math.max(actualNodeStatistics, (el.getStatistics()==null)?0:el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get()));
+                    if ((el.getStatistics() != null) && 
+                        (actualNodeStatistics.getStatisticCounter("NavigationElement.DistanceComputations").get() < el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get())) {
+                        positionMap.put(node, el.getStatistics());
+                    }
+                } else {
+                    //positionMap.put(node, (el.getStatistics()==null)?0:el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get());
+                    if (el.getStatistics() != null) {
+                        positionMap.put(node, el.getStatistics());
+                    }
                     if ((previousNode != null) && ! previousNode.equalsIgnoreNodeID(node))
                         totalMsgs.add();
                 }
@@ -454,28 +464,37 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         
         // calculate sum of DCs computed on the whole PEER
         StatisticRefCounter peersDC = targetStatistics.getStatisticRefCounter("Peers.DistanceComputations");
-        for (Map<NetworkNode, Long> position : nodesMap.values()) {
-            for (Map.Entry<NetworkNode, Long> nodeMaxDC : position.entrySet())
-                peersDC.add(new NetworkNode(nodeMaxDC.getKey(), false), nodeMaxDC.getValue());
+        StatisticCounter totalDC = targetStatistics.getStatisticCounter("Total.DistanceComputations");
+        StatisticCounter totalDCSavings = targetStatistics.getStatisticCounter("Total.DistanceComputations.Savings");
+        StatisticCounter totalBlockReads = targetStatistics.getStatisticCounter("Total.BlockReads");
+        for (Map<NetworkNode, OperationStatistics> position : nodesMap.values()) {
+            for (Map.Entry<NetworkNode, OperationStatistics> nodeMaxDC : position.entrySet()) {
+                long value = nodeMaxDC.getValue().getStatisticCounter("NavigationElement.DistanceComputations").get();
+                peersDC.add(new NetworkNode(nodeMaxDC.getKey(), false), value);
+                totalDC.add(value);
+                value = nodeMaxDC.getValue().getStatisticCounter("NavigationElement.DistanceComputations.Savings").get();
+                totalDCSavings.add(value);
+                value = nodeMaxDC.getValue().getStatisticCounter("NavigationElement.BlockReads").get();
+                totalBlockReads.add(value);
+            }
             // calculate total messages as sum of sizes of the positions in the "nodesMap"
         }
-        
+
         // statistics
         StatisticRefCounter peersParDC = targetStatistics.getStatisticRefCounter("PeersParallel.DistanceComputations");
         StatisticCounter hopCount = targetStatistics.getStatisticCounter("HopCount");
-        //hopCount.reset();
         
         // iterate over the replies again and calculate parallel DC for all hosts
         for (ReplyMessage reply : replyMessages) {
             // create a map of node->DC because messages can create loops (in the terms of "hosts")
-            Set<NetworkNode> visitedHosts = new HashSet<NetworkNode>();
+            Set<NetworkNode> visitedPeers = new HashSet<NetworkNode>();
             long parDCs = 0;
             int replyLength = 0;
             NetworkNode previousHost = null;
             for (Iterator<NavigationElement> it = reply.getPathElements(); it.hasNext(); ) {
                 NavigationElement el = it.next();
                 NetworkNode peer = new NetworkNode(el.getSender(), false);
-                if (visitedHosts.add(peer))
+                if (visitedPeers.add(peer))
                     peersParDC.min(peer, peersDC.get(peer) + parDCs);
                 parDCs += (el.getStatistics()==null)?0:el.getStatistics().getStatisticCounter("NavigationElement.DistanceComputations").get();
                 
@@ -493,39 +512,22 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         StatisticCounter parDC = targetStatistics.getStatisticCounter("Parallel.DistanceComputations");
         for (Object obj : peersParDC.getKeys())
             parDC.max(peersParDC.get(obj));
-        if (localDC > 0)
-            parDC.max(localDC);
-        
-        // create total distance computations statistics
-        long totalDC = 0;
-        for (Object host : peersDC.getKeys())
-            totalDC += peersDC.get(host);
-        targetStatistics.getStatisticCounter("Total.DistanceComputations").add(totalDC);
-        targetStatistics.getStatisticCounter("Total.DistanceComputations").add(localDC);
-        
-        
+                
         // the peers that answered (are at the end of the paths) are put into a separate map
         StatisticRefCounter answeringPeers = targetStatistics.getStatisticRefCounter("AnsweringPeers.DistanceComputations");
         for (ReplyMessage reply : replyMessages) {
             NetworkNode peer = new NetworkNode(reply.getSender(), false);
-            StatisticCounter counter = peersDC.remove(peer);
-            if (counter != null)
-                answeringPeers.add(peer, counter.get());
+            answeringPeers.add(peer, peersDC.get(peer));
         }
-        // add this node statistics
-        if (localDC > 0) {
-            NetworkNode peer = new NetworkNode(getThisNode(), false);
-            answeringPeers.add(peer, localDC);
+        if ((localStats != null) && (localStats.getStatisticCounter("DistanceComputations").get() > 0)) {
+            answeringPeers.add(getThisNode(), localStats.getStatisticCounter("DistanceComputations").get());
         }
+        // add statistic "AnsweringNodes"
+        targetStatistics.getStatisticCounter("AnsweringPeers").add(answeringPeers.getKeyCount());
         
         // remove the hosts parallel statistic and
         targetStatistics.removeStatistic("PeersParallel.DistanceComputations");
-        targetStatistics.removeStatistic("Peers.DistanceComputations");
-        
-        // add statistic "AnsweringNodes"
-        targetStatistics.getStatisticCounter("AnsweringNodes").add(replyMessages.size());
-        if (localDC > 0)
-            targetStatistics.getStatisticCounter("AnsweringNodes").add();
+        targetStatistics.removeStatistic("Peers.DistanceComputations");        
     }
     
 }

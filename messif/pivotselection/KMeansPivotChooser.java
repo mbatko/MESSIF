@@ -19,7 +19,7 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
     /** Size of the sample set to select a pivot from in each iteration of the k-means */
     public static final int PIVOTS_SAMPLE_SIZE = 1000;
     
-    /** Threshhold to consider 2 pivots the same */
+    /** Threshold to consider 2 pivots the same */
     public static final float PIVOTS_DISTINCTION_THRESHOLD = 0.1f;
     
     /** Maximal number of iterations to let run */
@@ -57,14 +57,15 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
             for (LocalAbstractObject preselPivot : initialPivots) {
                 if (count > pivots.size()) {
                     pivots.add(preselPivot);
-                    System.out.println("adding preselected pivot: "+preselPivot.getLocatorURI());
+                    System.err.println("Adding preselected pivot: "+preselPivot.getLocatorURI());
                 }
             }
         }
         if (count > pivots.size()) {
-            System.out.println("Selecting: "+(count - pivots.size()) +" pivots at random");
+            System.err.println("Selecting: "+(count - pivots.size()) +" pivots at random");
             pivots.addAll(objectList.randomList(count - pivots.size(), true, new AbstractObjectList<LocalAbstractObject>()));
         }
+        //printPivots("Initial pivots:", pivots);
         
         boolean continueKMeans = true;
         
@@ -72,17 +73,17 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
         List<AbstractObjectList<LocalAbstractObject>> actualClusters;
         int nIterations = 0;
         while (continueKMeans && (nIterations++ < MAX_ITERATIONS)) {
-            System.out.println("Running "+nIterations+"th iteration");
-            System.out.print("    Voronoi partitioning... ");
+            System.err.println("Running "+nIterations+"th iteration");
+            System.err.print("    Voronoi partitioning... ");
             actualClusters = voronoiLikePartitioning(objectList, pivots);
-            System.out.println("done");
-            StringBuffer buf = new StringBuffer("       cluster sizes: ");
+            System.err.println("done");
+            StringBuffer buf = new StringBuffer("       cluster sizes:");
             for (AbstractObjectList<LocalAbstractObject> cluster : actualClusters) {
-                buf.append(cluster.size()).append(", ");
+                buf.append(" ").append(cluster.size());
             }
-            System.out.println(buf.toString());
+            System.err.println(buf.toString());
             
-            System.out.println("    Selecting clustroids...");
+            System.err.println("    Selecting clustroids...");
             // now calculate the new pivots for the new clusters
             int i = 0;
             List<SelectClustroidThread> selectingThreads = new ArrayList<SelectClustroidThread>();
@@ -101,19 +102,20 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
                     e.printStackTrace();
                 }
                 if (thread.clustroid == null) {
-                    System.out.println("        WARNING: no clustroid selected - empty cluster?: "+ actualClusters.get(i).size());
+                    System.err.println("        WARNING: no clustroid selected - empty cluster?: "+ actualClusters.get(i).size());
                     //System.out.println("          selecting the pivot at random");
                     continueKMeans = true;
                 } else {
                     float pivotShiftDist = pivots.get(i).getDistance(thread.clustroid);
                     if (pivotShiftDist > PIVOTS_DISTINCTION_THRESHOLD) {
-                        System.out.println("        pivot "+ i +" shifted by "+pivotShiftDist);
+                        System.err.println("        pivot "+ i +" shifted by "+pivotShiftDist);
                         pivots.set(i, thread.clustroid);
                         continueKMeans = true;
                     }
                 }
                 i++;
             }
+            //printPivots("Current pivots:", pivots);
         }
         
         //this.preselectedPivots.clear();
@@ -121,7 +123,24 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
             preselectedPivots.add(pivot);
         
     }
+
+    /**
+     * Prints all pivots selected by this chooser. Pivots are printed to <code>System.err</code>.
+     * @param msg optional message printed before the pivots
+     */
+    public void printPivots(String msg) {
+        printPivots(msg, preselectedPivots);
+    }
     
+    private void printPivots(String msg, List<LocalAbstractObject> pivots) {
+        if (msg != null)
+            System.err.println(msg);
+        int i = 0;
+        for (LocalAbstractObject p : pivots) {
+            System.err.println("Pivot " + (++i) + ": " + p);
+        }
+    }
+
     /** Given a set of objects, a set of pivots, */
     private List<AbstractObjectList<LocalAbstractObject>> voronoiLikePartitioning(AbstractObjectList<LocalAbstractObject> objects, List<LocalAbstractObject> pivots) {
         List<AbstractObjectList<LocalAbstractObject>> clusters =  new ArrayList<AbstractObjectList<LocalAbstractObject>>(pivots.size());

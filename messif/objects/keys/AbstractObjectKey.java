@@ -6,33 +6,32 @@
 package messif.objects.keys;
 
 import java.io.IOException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
  * This class encapsulates the standard key used by the AbstractObject - the URI locator.
- *  It is also an ancestor of all key classes to be used in the Abstact object.
+ * It is also an ancestor of all key classes to be used in the Abstact object.
  *
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:xnovak8@fi.muni.cz">xnovak8@fi.muni.cz</a>
+ * @author xbatko
  */
 public class AbstractObjectKey implements java.io.Serializable, Comparable<AbstractObjectKey>, BinarySerializable {
-
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
-    
-    /** The URI locator */
-    protected final String locatorURI;
 
-    /**
-     * Returns the URI from this key as a string.
-     * @return the URI from this key as a string
-     */
-    public String getLocatorURI() {
-        return locatorURI;
-    }
-    
+    //************ Attributes ************//
+
+    /** The URI locator */
+    private final String locatorURI;
+
+
+    //************ Constructor ************//
+
     /** 
      * Creates a new instance of AbstractObjectKey given the locator URI.
      * @param locatorURI the URI locator
@@ -41,14 +40,78 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
         this.locatorURI = locatorURI;
     }
 
+
+    //************ Factory method ************//
+
     /**
-     * Returns the string representation of this key (the locator).
-     * @return the string representation of this key (the locator)
+     * Factory method for creating object key instances of arbitrary class.
+     * The key class must contain a public constructor with single {@link String} argument.
+     *
+     * @param <T> the class of created the object key
+     * @param keyClass the class of created the object key
+     * @param keyData the data from which to create the key
+     * @return a new instance of object key
      */
-    public String getText() {
-        return (locatorURI == null)?"":locatorURI;
+    public static <T extends AbstractObjectKey> T create(Class<? extends T> keyClass, String keyData) {
+        try {
+            return keyClass.getConstructor(String.class).newInstance(keyData);
+        } catch (IllegalAccessException e) {
+            throw new InternalError("This should never happen: " + e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": it is an abstract class");
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": there is no constructor " + e.getMessage());
+        } catch (InvocationTargetException e) {
+            throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": " + e.getCause(), e.getCause());
+        }
     }
-    
+
+
+    //************ Attribute access methods ************//
+
+    /**
+     * Returns the URI from this key as a string.
+     * @return the URI from this key as a string
+     */
+    public String getLocatorURI() {
+        return locatorURI;
+    }
+
+
+    //****************** Serialization ******************//
+
+    /**
+     * Writes this object key into the output text stream.
+     * The key is written using the following format:
+     * <pre>#objectKey keyClass key value</pre>
+     *
+     * @param stream the stream to write the key to
+     * @throws IOException if any problem occures during comment writing
+     */
+    public final void write(OutputStream stream) throws IOException {
+        stream.write("#objectKey ".getBytes());
+        stream.write(getClass().getName().getBytes());
+        stream.write(' ');
+        writeData(stream);
+        stream.write('\n');
+    }
+
+    /**
+     * Store this key's data to a text stream.
+     * This method should have the opposite deserialization in constructor.
+     * Note that this method should <em>not</em> write a line separator (\n).
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected void writeData(OutputStream stream) throws IOException {
+        if (locatorURI != null)
+            stream.write(locatorURI.getBytes());
+    }
+
+
+    //************ Comparator and equality methods ************//
+
     /**
      * Compare the keys according to their locators.
      * @param o the key to compare this key with
@@ -100,6 +163,9 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
         return locatorURI.equals(((AbstractObjectKey) obj).locatorURI);
     }
 
+
+    //************ String representation ************//
+
     /**
      * Returns the URI string.
      * @return the URI string
@@ -113,24 +179,24 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of AbstractObjectKey loaded from binary input stream.
+     * Creates a new instance of AbstractObjectKey loaded from binary input.
      * 
-     * @param input the stream to read the AbstractObjectKey from
+     * @param input the input to read the AbstractObjectKey from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected AbstractObjectKey(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected AbstractObjectKey(BinaryInput input, BinarySerializator serializator) throws IOException {
         this.locatorURI = serializator.readString(input);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return serializator.write(output, locatorURI);
     }
 

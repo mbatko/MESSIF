@@ -7,9 +7,8 @@
 package messif.operations;
 
 import messif.objects.AbstractObject;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
+import java.util.NoSuchElementException;
 
 
 /**
@@ -47,6 +46,23 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     }
 
 
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public SingletonQueryOperation clone() throws CloneNotSupportedException {
+        SingletonQueryOperation operation = (SingletonQueryOperation)super.clone();
+        operation.answer = null;
+        return operation;
+    }
+
+
     //****************** Answer access methods ******************//
 
     /**
@@ -74,12 +90,31 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      */
     @Override
     public Iterator<AbstractObject> getAnswer() {
-        List<AbstractObject> list;
-        if (answer == null)
-            list = Collections.emptyList();
-        else
-            list = Collections.singletonList(answer);
-        return list.iterator();
+        return getAnswer(0, 1);
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswer(final int skip, int count) {
+        return new Iterator<AbstractObject>() {
+            private boolean hasNext = answer != null && skip == 0;
+            public boolean hasNext() {
+                return hasNext;
+            }
+            public AbstractObject next() {
+                if (!hasNext)
+                    throw new NoSuchElementException();
+                hasNext = false;
+                return answer;
+            }
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported");
+            }
+        };
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
     }
 
     /**
@@ -102,6 +137,8 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {
+            if (object == null)
+                return false;
             answer = answerType.update(object);
             return true;
         } catch (CloneNotSupportedException e) {
@@ -141,7 +178,8 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        answer.clearSurplusData();
+        if (answer != null)
+            answer.clearSurplusData();
     }
 
 }

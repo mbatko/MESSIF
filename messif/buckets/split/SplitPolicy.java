@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.buckets.LocalBucket;
-import messif.buckets.LocalFilteredBucket;
 import messif.objects.BallRegion;
 import messif.objects.util.ObjectMatcher;
 
@@ -40,8 +39,20 @@ import messif.objects.util.ObjectMatcher;
  */
 public abstract class SplitPolicy implements ObjectMatcher {
 
+    //****************** Attributes ******************
+
     /** The table of annotated parameters of this split policy */
     private Map<String, Parameter> parameters;
+
+    //****************** Constants ******************
+
+    /**
+     * Identification of any partition (returned if a region cannot fit a single partition).
+     * Equal to <code>-1</code>
+     */
+    public final static int PART_ID_ANY = -1;
+
+    //****************** Constructor ******************
 
     /**
      * Creates a new instance of SplitPolicy.
@@ -78,7 +89,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
      */
     protected BucketBallRegion getBucketBallRegion(LocalBucket bucket) throws NoSuchElementException {
         try {
-            return ((LocalFilteredBucket)bucket).getFilter(BucketBallRegion.class);
+            return bucket.getFilter(BucketBallRegion.class);
         } catch (ClassCastException e) {
             throw new NoSuchElementException("Provided bucket is not an instance of LocalFilteredBucket");
         }
@@ -97,7 +108,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
      */
     public int match(LocalBucket bucket) {
         try {
-            return match(((LocalFilteredBucket)bucket).getFilter(BucketBallRegion.class));
+            return match(bucket.getFilter(BucketBallRegion.class));
         } catch (ClassCastException e) {
             return -1;
         } catch (NoSuchElementException e) {
@@ -106,7 +117,7 @@ public abstract class SplitPolicy implements ObjectMatcher {
     }
 
 
-    /****************** Parameter handling ******************/
+    //****************** Parameter handling ******************
 
     /**
      * Returns <tt>true</tt> if this policy has all the arguments necessary for a split defined.

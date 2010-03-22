@@ -13,9 +13,10 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.utility.Clearable;
-import messif.utility.Convert;
-import messif.utility.Logger;
+import messif.utility.reflection.Instantiators;
 
 /**
  * Encapsulates an algorithm with an RMI server.
@@ -27,7 +28,7 @@ import messif.utility.Logger;
  */
 public class AlgorithmRMIServer extends Thread {
     /** Logger */
-    private static Logger log = Logger.getLoggerEx("rmi");
+    private static Logger log = Logger.getLogger("rmi");
 
     /** Incoming connections socket */
     private final ServerSocketChannel socket;
@@ -84,24 +85,33 @@ public class AlgorithmRMIServer extends Thread {
                             ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(connection.getOutputStream()));
                             out.flush();
                             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                            Class<? extends Algorithm> algorithmClass = algorithm.getClass();
 
                             for (;;) {
                                 String methodName = in.readUTF();
-                                Object[] methodArguments = (Object[]) in.readObject();
+                                Object[] methodArguments;
                                 try {
-                                    Object retVal = Convert.getMethod(algorithm.getClass(), methodName, false, methodArguments).invoke(algorithm, methodArguments);
+                                    methodArguments = (Object[]) in.readUnshared();
+                                } catch (ClassNotFoundException e) {
+                                    log.severe("Received unknown class from RMI client: " + e.getMessage());
+                                    out.writeUnshared(e);
+                                    break;
+                                }
+                                try {
+                                    Object retVal = Instantiators.getMethod(algorithmClass, methodName, false, null, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
-                                    out.writeObject(retVal);
+                                    out.writeUnshared(retVal);
                                 } catch (InvocationTargetException e) {
-                                    out.writeObject(e.getCause());
+                                    out.writeUnshared(e.getCause());
                                 } catch (NoSuchMethodException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 } catch (IllegalAccessException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 } catch (RuntimeException e) {
-                                    out.writeObject(e);
+                                    out.writeUnshared(e);
                                 }
+                                out.reset();
                                 out.flush();
                             }
                         } catch (ClosedByInterruptException e) {
@@ -110,8 +120,6 @@ public class AlgorithmRMIServer extends Thread {
                             // Connection closed, exiting
                         } catch (IOException e) {
                             log.warning("Error communicating with RMI client: " + e);
-                        } catch (ClassNotFoundException e) {
-                            log.severe("Received unknown class from RMI client: " + e.getMessage());
                         } finally {
                             // ignore exceptions when closing
                             try {
@@ -125,7 +133,7 @@ public class AlgorithmRMIServer extends Thread {
         } catch (ClosedByInterruptException e) {
             // Exit this thread by interruption
         } catch (IOException e) {
-            log.severe(e);
+            log.log(Level.SEVERE, e.getClass().toString(), e);
         }
     }
 

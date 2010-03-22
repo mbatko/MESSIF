@@ -8,7 +8,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -38,8 +38,8 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     }
     
     
-    /** Metric function
-     *      Implements city-block distance measure (so-called L1 metric)
+    /** 
+     * Metric function implements Euclidean (L_2) metric
      */
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
@@ -51,8 +51,10 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
         
         // Get sum of absolute difference on all dimensions
         float rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--)
-            rtv += (data[i] - objdata[i])*(data[i] - objdata[i]);
+        for (int i = data.length - 1; i >= 0; i--) {
+            float dif = (data[i] - objdata[i]);
+            rtv += dif * dif;
+        }
         
         return ((float)Math.sqrt(rtv));
     }
@@ -61,13 +63,13 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectIntVector loaded from binary input stream.
+     * Creates a new instance of ObjectIntVector loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectIntVector from
+     * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectIntVectorL2(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectIntVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 

@@ -109,7 +109,25 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * @return an iterator over all objects in the answer to this query
      */
     public abstract Iterator<TAnswer> getAnswer();
-    
+
+    /**
+     * Returns an iterator over all objects in the answer skipping the first
+     * {@code skip} items and returning only {@code count} elements. If {@code count}
+     * is less than or equal to zero, all objects from the answer (except for
+     * {@code skip}) are returned.
+     *
+     * @param skip number of answer objects to skip
+     * @param count number of answer objects to iterate (maximally, actual number of results can be smaller)
+     * @return an iterator over the objects in the answer to this query
+     */
+    public abstract Iterator<TAnswer> getAnswer(int skip, int count);
+
+    /**
+     * Returns an iterator over all {@link AbstractObject}s in the answer to this query.
+     * This method unwraps the objects from the results.
+     * @return an iterator over all {@link AbstractObject}s in the answer to this query
+     */
+    public abstract Iterator<AbstractObject> getAnswerObjects();
 
     /**
      * Reset the current query answer.
@@ -127,13 +145,8 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      */
     @Override
     protected void appendErrorCode(StringBuilder str) {
-        if (!errValue.isSet()) {
-            str.append(" has not finished yet (").append(getAnswerCount()).append(" objects returned so far)");
-        } else if (wasSuccessful()) {
-            str.append(" returned ").append(getAnswerCount()).append(" objects");
-        } else {
-            str.append(" failed: ").append(errValue.toString());
-        }
+        str.append(" returned ").append(getAnswerCount()).append(" objects");
+        super.appendErrorCode(str);
     }
 
 }

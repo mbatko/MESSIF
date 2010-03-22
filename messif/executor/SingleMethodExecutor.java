@@ -27,6 +27,9 @@ public class SingleMethodExecutor implements Executable {
     /** Arguments for prepare/finalize method */
     protected final Object[] arguments;
 
+    /** Returned value from the executed method */
+    protected Object returnedValue;
+
     /** Creates a new instance of SingleMethodExecutor */
     public SingleMethodExecutor(Method method, Object object, Object[] arguments) {
         this.method = method;
@@ -90,7 +93,7 @@ public class SingleMethodExecutor implements Executable {
     public <E> E getArgument(Class<E> argClass) throws NoSuchElementException {
         for (Object argument:arguments)
             if (argClass.isAssignableFrom(argument.getClass()))
-                return (E)argument; // This cast IS checked on the previous line
+                return argClass.cast(argument);
         
         throw new NoSuchElementException("Parameter with class " + argClass + " was not found");
     }
@@ -100,12 +103,20 @@ public class SingleMethodExecutor implements Executable {
         return arguments;
     }
 
+    /**
+     * Returns value returned by the executed method.
+     * @return value returned by the executed method
+     */
+    public Object getReturnedValue() {
+        return returnedValue;
+    }
+
 
     /****************** Execution method ******************/
 
     /** Invoke the method represented by this object */
     public void execute() throws NoSuchMethodException, InvocationTargetException {
-        MethodExecutor.execute(method, object, arguments);
+        returnedValue = MethodExecutor.execute(method, object, arguments);
     }
 
 }

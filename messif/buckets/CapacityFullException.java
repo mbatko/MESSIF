@@ -11,7 +11,7 @@ package messif.buckets;
  *
  * @author  xbatko
  */
-public class CapacityFullException extends Exception {
+public class CapacityFullException extends BucketStorageException {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;    
@@ -20,7 +20,7 @@ public class CapacityFullException extends Exception {
      * Creates a new instance of <code>BucketCapacityFullException</code> without detail message.
      */
     public CapacityFullException() {
-        super("No free space to allocate");
+        super(BucketErrorCode.HARDCAPACITY_EXCEEDED, "No free space to allocate");
     }
         
     /**
@@ -28,7 +28,7 @@ public class CapacityFullException extends Exception {
      * @param msg detailed message
      */
     public CapacityFullException(String msg) {
-        super(msg);
+        super(BucketErrorCode.HARDCAPACITY_EXCEEDED, msg);
     }
     
 }

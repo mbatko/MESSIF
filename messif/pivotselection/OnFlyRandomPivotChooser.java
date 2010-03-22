@@ -11,10 +11,8 @@
 package messif.pivotselection;
 
 import java.io.Serializable;
-import messif.buckets.BucketFilterInterface;
-import messif.buckets.BucketFilterInterface.FilterSituations;
-import messif.buckets.FilterRejectException;
-import messif.buckets.LocalFilteredBucket;
+import messif.buckets.BucketFilterAfterAdd;
+import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 
 /**
@@ -26,7 +24,7 @@ import messif.objects.LocalAbstractObject;
  *
  * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
  */
-public class OnFlyRandomPivotChooser extends RandomPivotChooser implements Serializable, BucketFilterInterface {
+public class OnFlyRandomPivotChooser extends RandomPivotChooser implements Serializable, BucketFilterAfterAdd {
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -38,7 +36,7 @@ public class OnFlyRandomPivotChooser extends RandomPivotChooser implements Seria
      * Filter method used to pick one pivot at random.
      *
      * This method selects one pivot at random using an incremental schema.
-     * Whenever a new object arrives we compute a random number within the interval <0,N+1)
+     * Whenever a new object arrives we compute a random number within the interval &lt;0,N+1)
      * (where N is the number of object stored in this bucket). If the random number is 
      * equal to N we choose the new object as a pivot.
      * These technique is correct and the probability of selecting each object of the bucket
@@ -46,14 +44,10 @@ public class OnFlyRandomPivotChooser extends RandomPivotChooser implements Seria
      *
      * Notice that this filter erases all previously selested pivots (e.g. by getPivot(int)).
      */
-    public void filterObject(LocalAbstractObject object, FilterSituations situation, LocalFilteredBucket inBucket) throws FilterRejectException {
-        // Ignore other situations than after add
-        if (situation != FilterSituations.AFTER_ADD)
-            return;
-
-        int idx = (int)(Math.random() * (float)(inBucket.getObjectCount() + 1));
+    public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
+        int idx = (int)(Math.random() * (float)(bucket.getObjectCount() + 1));
         
-        if (idx == inBucket.getObjectCount()) {
+        if (idx == bucket.getObjectCount()) {
             // the new incoming object is selected as pivot
             preselectedPivots.clear();
             preselectedPivots.add(object);

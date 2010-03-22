@@ -11,9 +11,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
-import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
-import messif.utility.Convert;
 
 
 /**
@@ -82,35 +80,9 @@ public abstract class ObjectString extends LocalAbstractObject {
      * Throws EOFException when eof of the given stream is reached.
      */
     public ObjectString(BufferedReader stream) throws IOException {
-        this(stream, null, null);
-    }
-    
-    /** Creates a new instance of Object from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
-     */
-    public ObjectString(BufferedReader stream, String keySeparator, Class<? extends AbstractObjectKey> keyClass) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectString.");
-        } while (processObjectComment(line));
-        
-        if (keySeparator != null) {
-            if (keyClass == null)
-                keyClass = AbstractObjectKey.class;
-            String[] keyAndData = line.split(keySeparator, 2);
-            if (keyAndData.length == 2) {
-                this.text = keyAndData[1];
-                try {
-                    setObjectKey(Convert.stringToType(keyAndData[0], keyClass));
-                } catch (InstantiationException e) {
-                    throw new IOException(e.getMessage());
-                }
-            } else this.text = keyAndData[0];
-        } else this.text = line;
+        String line = readObjectComments(stream);
+        this.text = line;
     }
 
     /** Write object to stream */

@@ -7,9 +7,9 @@
 package messif.netcreator;
 
 import java.io.Serializable;
+import java.util.logging.Logger;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
-import messif.utility.Logger;
 
 /**
  *
@@ -20,8 +20,8 @@ public abstract class NetworkNodeDispatcher implements Startable, Serializable {
     private static final long serialVersionUID = 1L;    
 
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("netnode.creator");
-    
+    protected static Logger log = Logger.getLogger(NetworkNodeDispatcher.class.getName());
+
     /****************** Registered startables ******************/
     protected final Startable[] startables;
     

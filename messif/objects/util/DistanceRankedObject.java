@@ -12,7 +12,7 @@ import java.io.Serializable;
  * @param <T> the encapsulated object class
  * @author xbatko
  */
-public class DistanceRankedObject<T> implements Serializable, DistanceRanked, Comparable<DistanceRankedObject<?>> {
+public class DistanceRankedObject<T> implements Cloneable, Serializable, DistanceRanked, Comparable<DistanceRankedObject<?>> {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 50201L;
@@ -20,10 +20,10 @@ public class DistanceRankedObject<T> implements Serializable, DistanceRanked, Co
     //****************** Attributes ******************//
 
     /** Encapsulated object */
-    protected final T object;
+    private final T object;
 
     /** Distance that represents the rank of this object */
-    protected final float distance;
+    private float distance;
 
 
     //****************** Constructor ******************//
@@ -102,6 +102,22 @@ public class DistanceRankedObject<T> implements Serializable, DistanceRanked, Co
      */
     public int compareTo(DistanceRankedObject<?> o) {
         return Float.compare(distance, o.distance);
+    }
+
+    /**
+     * Clone this ranked object and change the distance of the clonned one
+     * @param newDistance distance to be set for the clonned object
+     * @return the clone with new distance
+     */
+    public DistanceRankedObject<T> clone(float newDistance) {
+        try {
+            @SuppressWarnings("unchecked")
+            DistanceRankedObject<T> clone = (DistanceRankedObject<T>) super.clone(); // This IS checked (clonning)
+            clone.distance = newDistance;
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e.toString());
+        }
     }
 
 

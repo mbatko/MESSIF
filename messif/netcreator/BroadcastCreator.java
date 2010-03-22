@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import messif.network.Message;
+import java.util.logging.Level;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
 import messif.network.ThreadInvokingReceiver;
@@ -106,10 +106,10 @@ public class BroadcastCreator extends NetworkNodeDispatcher {
 
             try {
                 // Send "Use" message
-                Message msg = messageDisp.sendMessageWaitReply(new MessageActivate(pool), node).getFirstReply();
+                MessageActivateResponse msg = messageDisp.sendMessageWaitSingleReply(new MessageActivate(pool), MessageActivateResponse.class, node);
 
                 // Get response type
-                if ((msg instanceof MessageActivateResponse) && ((MessageActivateResponse)msg).isSuccess())
+                if (msg.isSuccess())
                     return node; // Remote server responded positively
             } catch (IOException e) {} // Remote server is dead
         }
@@ -130,7 +130,7 @@ public class BroadcastCreator extends NetworkNodeDispatcher {
 
                 log.info("Activated by: " + msg.getSender());
             } catch (CantStartException e) {
-                log.severe(e);
+                log.log(Level.SEVERE, e.getClass().toString(), e);
 
                 // Send negative response
                 messageDisp.replyMessage(new MessageActivateResponse(MessageActivateResponse.CANT_START, msg));

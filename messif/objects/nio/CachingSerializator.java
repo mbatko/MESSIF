@@ -9,12 +9,14 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import messif.utility.Convert;
 
 /**
@@ -26,9 +28,10 @@ import messif.utility.Convert;
  * 
  * This serializator checks the serialUIDs of the cached objects for changes.
  * 
+ * @param <T> default class used when reading serialized object
  * @author xbatko
  */
-public class CachingSerializator extends MultiClassSerializator {
+public class CachingSerializator<T> extends MultiClassSerializator<T> {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -56,7 +59,7 @@ public class CachingSerializator extends MultiClassSerializator {
      * @param cachedClasses the classes that are used frequently and should be cached
      * @throws IllegalArgumentException if there is an invalid value in <code>cachedClasses</code>
      */
-    public CachingSerializator(Class<?> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
+    public CachingSerializator(Class<? extends T> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
         super(defaultClass);
 
         if (cachedClasses == null || cachedClasses.length == 0)
@@ -69,8 +72,11 @@ public class CachingSerializator extends MultiClassSerializator {
         // Fill the predefined data
         for (Class selClass : cachedClasses) {
             try {
+                if (Modifier.isAbstract(selClass.getModifiers()))
+                    throw new IllegalArgumentException("Cannot cache class '" + selClass.getName() + "' because it is abstract");
                 Class<? extends BinarySerializable> castClass = Convert.genericCastToClass(selClass, BinarySerializable.class);
-                this.cachedClasses.put(castClass, addToCache(castClass));
+                if (this.cachedClasses.put(castClass, addToCache(castClass)) != null)
+                    throw new IllegalArgumentException("Class '" + selClass.getName() + "' was specified twice");
             } catch (ClassCastException e) {
                 throw new IllegalArgumentException("Class '" + selClass.getName() + "' does not implement BinarySerializable");
             }
@@ -160,6 +166,8 @@ public class CachingSerializator extends MultiClassSerializator {
             return position;
 
         // Other class
+        if (log.isLoggable(Level.INFO))
+            log.info("Consider using cache for class " + object.getClass());
         return CLASSNAME_SERIALIZATION;
     }
 

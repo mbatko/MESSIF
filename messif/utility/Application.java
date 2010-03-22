@@ -8,6 +8,7 @@ package messif.utility;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,12 +29,14 @@ import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -43,11 +46,16 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractStreamObjectIterator;
+import messif.objects.util.RankedSortedCollection;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.objects.util.StreamsMetaObjectMapIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
+import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
+import messif.utility.reflection.Instantiators;
 
 
 
@@ -128,11 +136,15 @@ import messif.statistics.Statistics;
  * <pre>
  *  execmyop = operationExecute
  *  execmyop.param.1 = messif.operations.&lt;myop&gt;
- *  execmyop.param.2 = ...
+ *  execmyop.param.2 = &lt;myparam1:0&gt;
+ *  execmyop.param.3 = ...
  * </pre>
- * This action will execute the operation whose name is provided in variable <i>myop</i>.
- * If the variable is not set, it is replaced by empty string, which in this particular
- * case will result in error.
+ * This action will execute the operation whose name is provided in the variable <i>myop</i>.
+ * If the variable is not set, it is replaced by an empty string, which in this particular
+ * case will result in error. Therefore, it is possible to provide a default value for
+ * a variable by appending a colon and the default value to the variable name.
+ * This is shown in the second parameter in the example above - if the
+ * <i>myparam1</i> variable is not set, the zero value is used for the execmyop.param.2.
  * </p>
  * <p>
  * The default action name that is looked up in the control file is <i>actions</i>
@@ -143,7 +155,7 @@ import messif.statistics.Statistics;
  */
 public class Application {
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("application");
+    protected static Logger log = Logger.getLogger("application");
 
     /** Currently running algorithm */
     protected Algorithm algorithm = null;
@@ -163,8 +175,11 @@ public class Application {
     /** Internal list of methods that can be executed */
     protected final MethodExecutor methodExecutor;
 
-    /** List of currently opened object streams */
-    protected final Map<String, StreamGenericAbstractObjectIterator> objectStreams = new HashMap<String, StreamGenericAbstractObjectIterator>();
+    /** List of currently created named instances */
+    protected final Map<String, Object> namedInstances = new HashMap<String, Object>();
+
+    /** Socket used for command communication */
+    protected ServerSocketChannel cmdSocket;
 
     /**
      * Create new instance of Application.
@@ -172,6 +187,14 @@ public class Application {
      */
     protected Application() {
         methodExecutor = new MethodNameExecutor(this, PrintStream.class, String[].class);
+    }
+
+    /**
+     * Log an exception with a {@link Level#SEVERE} level.
+     * @param e the exception to log
+     */
+    protected static void logException(Throwable e) {
+        log.log(Level.SEVERE, e.getClass().toString(), e);
     }
 
 
@@ -217,14 +240,14 @@ public class Application {
         List<Constructor<Algorithm>> constructors = Algorithm.getAnnotatedConstructors(algorithmClass);
         try {
             // Create a new instance of the algorithm
-            algorithm = Convert.createInstanceWithStringArgs(constructors, args, 2, objectStreams);
+            algorithm = Instantiators.createInstanceWithStringArgs(constructors, args, 2, namedInstances);
             algorithms.add(algorithm);
             return true;
         } catch (InvocationTargetException e) {
             Throwable ex = e.getCause();
             while (ex instanceof InvocationTargetException)
                 ex = ex.getCause();
-            log.severe((ex != null)?ex:e);
+            logException((ex != null)?ex:e);
             out.println((ex != null)?ex:e);
             out.println("---------------- Available constructors ----------------");
             
@@ -471,45 +494,54 @@ public class Application {
             // Get class from the first argument
             Class<AbstractOperation> operationClass = Convert.getClassForName(args[1], AbstractOperation.class);
 
+            AbstractOperation operation;
             try {
                 // Create new instance of the operation
-                lastOperation = AbstractOperation.createOperation(
+                operation = AbstractOperation.createOperation(
                         operationClass,
                         Convert.parseTypesFromString(
                             args,
                             AbstractOperation.getConstructorArguments(operationClass, args.length - 2),
                             2, // skip the method name and operation class arguments
-                            objectStreams
+                            namedInstances
                         )
                 );
             } catch (Exception e) {
-                out.println(e.toString());
+                if (e instanceof InvocationTargetException) {
+                    out.println(e.getCause().toString());
+                } else {
+                    out.println(e.toString());
+                }
                 out.println("---------------- Operation parameters ----------------");
                 out.println(AbstractOperation.getConstructorDescription(operationClass));
                 return false;
             }
-            
+
             // Execute operation
-            OperationStatistics.resetLocalThreadStatistics();
+            algorithm.resetOperationStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            algorithm.executeOperation(lastOperation);
+            lastOperation = algorithm.executeOperation(operation);
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (AlgorithmMethodException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (NoSuchMethodException ex) {
+                    out.println(opClass.getName() + " can be processed but not instantiated");
+                }
             return false;
         }
     }
@@ -555,21 +587,25 @@ public class Application {
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
             
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (NoSuchMethodException ex) {
+                    // Ignore operations that can be processed but not instantiated
+                }
             
             return false;
         }
-
+        AbstractOperation operation;
         try {
             // Try to create a new instance of the operation
-            lastOperation = AbstractOperation.createOperation(
+            operation = AbstractOperation.createOperation(
                     operationClass,
                     Convert.parseTypesFromString(
                         args, 
                         AbstractOperation.getConstructorArguments(operationClass),
                         2, // skip the method name and operation class arguments
-                        objectStreams
+                        namedInstances
                     )
             );
             
@@ -577,13 +613,17 @@ public class Application {
             OperationStatistics.resetLocalThreadStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            algorithm.backgroundExecuteOperation(lastOperation);
+            algorithm.backgroundExecuteOperation(operation);
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             out.println("---------------- Operation parameters ----------------");
-            out.println(AbstractOperation.getConstructorDescription(operationClass));
+            try {
+                out.println(AbstractOperation.getConstructorDescription(operationClass));
+            } catch (NoSuchMethodException ex) {
+                out.println("Operation " + operationClass.getName() + " can be processed but not instantiated");
+            }
             return false;
         }
     }
@@ -611,12 +651,15 @@ public class Application {
         }
 
         try {
-            algorithm.waitBackgroundExecuteOperation();
+            List<AbstractOperation> waitBackgroundExecuteOperation = algorithm.waitBackgroundExecuteOperation();
+            if (! waitBackgroundExecuteOperation.isEmpty()) {
+                lastOperation = waitBackgroundExecuteOperation.get(0);
+            }
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         }
@@ -643,14 +686,15 @@ public class Application {
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
     public boolean operationExecuteAgain(PrintStream out, String... args) {
         try {
-            if (algorithm != null && lastOperation != null) {
+            AbstractOperation operation = lastOperation;
+            if (algorithm != null && operation != null) {
                 // Execute operation
                 OperationStatistics.resetLocalThreadStatistics();
                 if (bindOperationStatsRegexp != null)
                     OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && lastOperation instanceof QueryOperation)
-                    ((QueryOperation)lastOperation).resetAnswer();
-                algorithm.executeOperation(lastOperation);
+                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && operation instanceof QueryOperation)
+                    ((QueryOperation)operation).resetAnswer();
+                algorithm.executeOperation(operation);
                 if (bindOperationStatsRegexp != null)
                     OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
                 return true;
@@ -659,18 +703,22 @@ public class Application {
                 return false;
             }
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (AlgorithmMethodException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
         } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
             out.println(e.toString());
             out.println("---------------- Available operations ----------------");
-            for (Class<AbstractOperation> opClass : algorithm.getSupportedOperations())
-                out.println(AbstractOperation.getConstructorDescription(opClass));
+            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+                try {
+                    out.println(AbstractOperation.getConstructorDescription(opClass));
+                } catch (NoSuchMethodException ex) {
+                    // Ignore operations that can be processed but not instantiated
+                }
             return false;
         }
     }
@@ -698,6 +746,50 @@ public class Application {
     public boolean operationInfo(PrintStream out, String... args) {
         out.println(lastOperation);
         return true;
+    }
+
+    /**
+     * Changes the answer collection of the last executed operation.
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationChangeAnswerCollection messif.utility.SortedCollection
+     * </pre>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args answer collection class followed by its constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "change the answer collection of the last executed operation", arguments = {"collection class", "arguments for constructor ..."})
+    public boolean operationChangeAnswerCollection(PrintStream out, String... args) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null) {
+            out.println("No operation has been executed yet");
+            return false;
+        }
+        if (!(operation instanceof RankingQueryOperation)) {
+            out.println("Answer collection can be changed only for ranked results");
+            return false;
+        }
+
+        try {
+            // Get sorted collection class
+            Class<? extends RankedSortedCollection> clazz = Convert.getClassForName(args[1], RankedSortedCollection.class);
+
+            // Create new instance of sorted collection
+            @SuppressWarnings("unchecked")
+            RankedSortedCollection newAnswerCollection = Instantiators.createInstanceWithStringArgs(Arrays.asList((Constructor<RankedSortedCollection>[])clazz.getConstructors()), args, 2);
+
+            // Set the instance in the operation
+            ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);
+
+            return true;
+        } catch (ClassNotFoundException e) {
+            out.println(e);
+            return false;
+        } catch (InvocationTargetException e) {
+            out.println(e.getCause());
+            return false;
+        }
     }
 
     /**
@@ -731,14 +823,15 @@ public class Application {
      */  
     @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)"})
     public boolean operationAnswer(PrintStream out, String... args) {
-        if (lastOperation == null || !(lastOperation instanceof QueryOperation)) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null || !(operation instanceof QueryOperation)) {
             out.println("The operationAnswer method must be called after some QueryOperation was executed");
             return false;
         }
 
         // Separator is second argument (get newline if not specified)
         String separator = (args.length > 1)?args[1]:System.getProperty("line.separator");
-        Iterator<?> iter = ((QueryOperation<?>)lastOperation).getAnswer();
+        Iterator<?> iter = ((QueryOperation<?>)operation).getAnswer();
         while (iter.hasNext()) {
             out.print(iter.next());
             out.print(separator);
@@ -789,7 +882,7 @@ public class Application {
                         continue;
 
                 // Try to invoke the method
-                Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, 2, objectStreams));
+                Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, 2, namedInstances));
                 if (!method.getReturnType().equals(void.class))
                     out.println(rtv);
                 return true;
@@ -798,18 +891,18 @@ public class Application {
             out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
             return false;
         } catch (RuntimeException e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         } catch (InvocationTargetException e) {
             Throwable ex = e.getCause();
             if (ex instanceof AlgorithmMethodException || ex instanceof InvocationTargetException)
                 ex = ex.getCause();
-            log.severe(ex);
+            logException(ex);
             out.println(ex.toString());
             return false;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println(e.toString());
             return false;
         }
@@ -848,16 +941,22 @@ public class Application {
      * Print all global statistics.
      * Statistics are shown as <code>name: value</code>.
      * <p>
-     * Two optional arguments are accepted:
+     * Three optional arguments are accepted:
      *   <ul>
      *     <li>regular expression applied on names as a filter</li>
      *     <li>separator of statistics (defaults to newline)</li>
+     *     <li>separator appended after printed statistics (defaults to newline)</li>
      *   </ul>
      * </p>
      * <p>
      * Example of usage:
+     * To print statistics comma-separated, use:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* ,
+     * </pre>
+     * To avoid appending newline and append comma, use:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* , ,
      * </pre>
      * </p>
      * 
@@ -867,11 +966,51 @@ public class Application {
      */ 
     @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsGlobal(PrintStream out, String... args) {
-        if (args.length >= 3)
-            out.println(Statistics.printStatistics(args[1], args[2]));
-        else if (args.length >= 2)
+        if (args.length >= 3) {
+            String stats = Statistics.printStatistics(args[1], args[2]);
+            if (args.length >= 4) {
+                out.print(stats);
+                out.print(args[3]);
+            } else
+                out.println(stats);
+        } else if (args.length >= 2)
             out.println(Statistics.printStatistics(args[1]));
         else out.println(Statistics.printStatistics());
+        return true;
+    }
+
+    /**
+     * Gets a value from a global statistic.
+     * If the global statistic does not exist, a new one is created.
+     * <p>
+     * Two arguments are required:
+     *   <ul>
+     *     <li>the name of the statistic</li>
+     *     <li>the class of the statistic</li>
+     *   </ul>
+     * </p>
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsGlobalGet DistanceComputations messif.statistics.StatisticCounter
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name and class of the global statistic
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "get/create global statistic", arguments = { "statistic name", "statistic class" })
+    public boolean statisticsGlobalGet(PrintStream out, String... args) {
+        try {
+            out.println(Instantiators.createInstanceUsingFactoryMethod(Convert.getClassForName(args[2], Statistics.class), "getStatistics", args[1]));
+        } catch (InvocationTargetException e) {
+            out.println("Cannot get global statistics: " + e.getCause());
+            return false;
+        } catch (Exception e) {
+            out.println("Cannot get global statistics: " + e);
+            return false;
+        }
         return true;
     }
 
@@ -905,16 +1044,22 @@ public class Application {
      * it can be done explicitely using the {@link #statisticsSetAutoBinding} method.
      * Statistics are shown as <code>name: value</code>.
      * <p>
-     * Two optional arguments are accepted:
+     * Three optional arguments are accepted:
      *   <ul>
      *     <li>regular expression applied on names as a filter</li>
      *     <li>separator of statistics (defaults to newline)</li>
+     *     <li>separator appended after printed statistics (defaults to newline)</li>
      *   </ul>
      * </p>
      * <p>
      * Example of usage:
+     * To print statistics comma-separated, use:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* ,
+     * </pre>
+     * To avoid appending newline and append comma, use:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* , ,
      * </pre>
      * </p>
      * 
@@ -924,11 +1069,16 @@ public class Application {
      */ 
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
     public boolean statisticsLastOperation(PrintStream out, String... args) {
-        if (args.length >= 3)
-            out.println(OperationStatistics.getLocalThreadStatistics().printStatistics(args[1], args[2]));
-        else if (args.length >= 2)
-            out.println(OperationStatistics.getLocalThreadStatistics().printStatistics(args[1]));
-        else out.println(OperationStatistics.getLocalThreadStatistics().printStatistics());
+        if (args.length >= 3) {
+            String stats = algorithm.getOperationStatistics().printStatistics(args[1], args[2]);
+            if (args.length >= 4) {
+                out.print(stats);
+                out.print(args[3]);
+            } else
+                out.println(stats);
+        } else if (args.length >= 2)
+            out.println(algorithm.getOperationStatistics().printStatistics(args[1]));
+        else out.println(algorithm.getOperationStatistics().printStatistics());
         return true;
     }
 
@@ -961,12 +1111,9 @@ public class Application {
 
     /**
      * Open a named stream which allows to read {@link LocalAbstractObject objects} from a file.
-     * Two required arguments specify the file name from which to open the stream and
-     * the fully-qualified name of the stored object class.
-     * A third argument is the name under which the stream is opened.
-     * Additional arguments are passed as additional parameter of the object constructor
-     * (they are converted to proper constructor's type using {@link Convert#stringToType})
-     * as shown in the second example below.
+     * The first required argument specifies a file name from which to open the stream.
+     * The second required argument gives a fully-qualified name of the stored {@link LocalAbstractObject object class}.
+     * The third required argument is a name under which the stream is opened.
      * 
      * <p>
      * If the name (third argument) is then specified in place where {@link LocalAbstractObject}
@@ -996,18 +1143,33 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args file name to read from,
+     *             class name of objects to be read from the file,
+     *             optional name of the object stream,
+     *             optional additional arguments for the object constructor
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional constructor arguments (not required)" })
+    @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional arguments for the object constructor (optional)" })
     public boolean objectStreamOpen(PrintStream out, String... args) {
         try {
+            // Build collection of additional arguments
+            List<String> additionalArgs;
+            if (args.length > 4) {
+                additionalArgs = new ArrayList<String>();
+                for (int i = 4; i < args.length; i++)
+                    additionalArgs.add(args[i]);
+            } else {
+                additionalArgs = null;
+            }
+
             // Store new stream into stream registry
-            if (objectStreams.put(
+            if (namedInstances.put(
                 args[3],
                 new StreamGenericAbstractObjectIterator<LocalAbstractObject>(
                     Convert.getClassForName(args[2], LocalAbstractObject.class),
-                    args[1]
+                    args[1],
+                    namedInstances,
+                    additionalArgs
                 )
             ) != null)
                 out.println("Previously opened stream changed to a new file");
@@ -1022,32 +1184,91 @@ public class Application {
     }
 
     /**
+     * Open a named stream which allows to read {@link messif.objects.impl.MetaObjectMap objects} from several files.
+     * The arguments are the following: 
+     * <p>
+     *  metaObjectMapStreamOpen [["subdistance_name class file"] ...], &lt;name of the stream>
+     * </p>
+     * Each of the arguments tripple specify the
+     * <ol>
+     * <li>sub-distance name of objects from this file</li>
+     * <li>class of objects in this stream</li>
+     * <li>file name from which to open the stream</li>
+     * </ol>
+     *
+     * A last argument is the name under which the stream is opened.
+     *
+     * <p>
+     * If the name (third argument) is then specified in place where {@link LocalAbstractObject}
+     * is argument required, the next object is read from the stream and used as the argument's value.
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args file name to read from, class name of objects to be read from the file, optional name of the object stream
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "create new stream of MetaObjectMap", arguments = { "[[\"<subdistance_name class file>\"] ...]", "name of the stream"})
+    public boolean metaObjectMapStreamOpen(PrintStream out, String... args) {
+        try {
+            // Store new stream into stream registry
+            StreamsMetaObjectMapIterator streamsMetaObjectMapIterator = new StreamsMetaObjectMapIterator();
+            if (namedInstances.put(args[args.length - 1], streamsMetaObjectMapIterator) != null) {
+                out.println("Previously opened stream changed to a new file");
+            }
+            try {
+                for (int argIndex = 1; argIndex < args.length - 1; argIndex++) {
+                    String[] nameClassFile = args[argIndex].split(" ", 3);
+                    streamsMetaObjectMapIterator.addObjectStream(
+                            nameClassFile[0],
+                            Convert.getClassForName(nameClassFile[1], LocalAbstractObject.class),
+                            nameClassFile[2]);
+                }
+            } catch (IllegalArgumentException illegalArgumentException) {
+                out.println(illegalArgumentException.toString());
+                out.println("usage: metaObjectMapStreamOpen [[<subdistance_name class file>] ...] <stream_name>");
+                return false;
+            }
+            return true;
+        } catch (IOException e) {
+            out.println(e.toString());
+            return false;
+        } catch (ClassNotFoundException e) {
+            out.println(e.toString());
+            return false;
+        }
+    }
+
+
+    /**
      * Sets a value of additional constructor parameter of an opened object stream.
      * See {@link #objectStreamOpen} method for explanation of the concept of 
      * additional constructor parameters.
      * This method requires three arguments:
-     *   the name of the stream the name of which to change,
-     *   the constructor parameter index to change (zero-based) and
-     *   the the new value for the parameter.
+     * <ul>
+     *   <li>the name of the stream the name of which to change,</li>
+     *   <li>the the new value for the parameter,</li>
+     *   <li>the constructor parameter index to change (zero-based).</li>
+     * </ul>
+     * The third argument is optional. If not specified, <tt>0</tt> is assumed.
      * 
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data 1 new_string_value
+     * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data new_string_value 1
      * </pre>
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of objects stream, new parameter value to object's contructor, and zero-based index of the parameter
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required)" })
+    @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required -- zero if not given)" })
     public boolean objectStreamSetParameter(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
+        AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
         if (objectStream != null) 
             try {
                 // Set parameter
-                objectStream.setConstructorParameter((args.length > 3)?Integer.parseInt(args[3]):1, args[2]);
+                objectStream.setConstructorParameter((args.length > 3)?Integer.parseInt(args[3]):0, args[2]);
                 return true;
             } catch (IndexOutOfBoundsException e) {
                 out.println(e.toString());
@@ -1056,7 +1277,8 @@ public class Application {
             } catch (InstantiationException e) {
                 out.println(e.toString());
             }
-        else out.print("Stream '" + args[1] + "' is not opened");
+        else
+            out.print("Stream '" + args[1] + "' is not opened");
         return false;
 
     }
@@ -1073,21 +1295,12 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
     public boolean objectStreamClose(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.remove(args[1]);
-        if (objectStream != null)
-            try {
-                // Close the returned stream
-                objectStream.close();
-            } catch (IOException e) {
-                out.println(e.toString());
-            }
-        else out.print("Stream '" + args[1] + "' is not opened");
-        return true;
+        return namedInstanceRemove(out, args);
     }
 
     /**
@@ -1103,12 +1316,12 @@ public class Application {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args name of opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "reset an AbstractObjectStream stream to read objects from the beginning", arguments = { "name of the stream" })
     public boolean objectStreamReset(PrintStream out, String... args) {
-        StreamGenericAbstractObjectIterator objectStream = objectStreams.get(args[1]);
+        AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
         if (objectStream != null) 
             try {
                 // Reset the returned stream
@@ -1121,23 +1334,147 @@ public class Application {
         return false;
     }
 
+
+    //****************** Property file ******************//
+
     /**
-     * Prints the list of all opened object streams.
+     * Creates a new named properties.
+     * The first required argument specifies the name from which to load the properties.
+     * The second required argument specifies the name for the properties instance that can be used in other methods.
+     * The third optional argument specifies a prefix of keys that the create properties will be restricted to (defaults to <tt>null</tt>).
+     * The fourth optional argument specifies a hashtable of variables that will be replaced in the property values (defaults to <tt>null</tt>).
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; objectStreamList
+     * MESSIF &gt;&gt;&gt; propertiesOpen mufin.cf my_props begins_with_this host=localhost,port=1000
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the property file, the new name, the restrict prefix (not required) and the variables (not required)
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "opens a new named property file", arguments = { "property file", "new name", "restrict prefix (not required)", "variables (not required)" })
+    public boolean propertiesOpen(PrintStream out, String... args) {
+        return propertiesOpen(out, args[1], args[2], (args.length > 3)?args[3]:null, (args.length > 4)?Convert.stringToMap(args[4]):null);
+    }
+
+    /**
+     * Internal method for propertiesOpen.
+     * @param out a stream where the application writes information for the user
+     * @param fileName the property file
+     * @param name the name for the instance
+     * @param prefix the restrict prefix
+     * @param variables the map of variables
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    private boolean propertiesOpen(PrintStream out, String fileName, String name, String prefix, Map<String, String> variables) {
+        try {
+            ExtendedProperties properties = new ExtendedProperties();
+            properties.load(new FileInputStream(fileName));
+            if (prefix != null || variables != null)
+                properties = ExtendedProperties.restrictProperties(properties, prefix, variables);
+            if (namedInstances.put(name, properties) != null)
+                out.println("Previous named instance changed to a new one");
+            return true;
+        } catch (IOException e) {
+            out.println("Cannot read properties: " + e);
+            return false;
+        }
+    }
+
+
+    //****************** Named instances ******************//
+
+    /**
+     * Creates a new named instance.
+     * An argument specifying the signature of a constructor, a factory method or a static field
+     * is required. Additional argument specifies the name for the instance (defaults to
+     * name of the action where this is specified).
+     * <p>
+     * Example of usage for constructor, factory method and static field:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceAdd messif.objects.impl.ObjectByteVectorL1(1,2,3,4,5,6,7,8,9,10) my_object
+     * MESSIF &gt;&gt;&gt; namedInstanceAdd messif.utility.ExtendedProperties.getProperties(mufin.cf) my_props
+     * MESSIF &gt;&gt;&gt; namedInstanceAdd messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator my_comparator
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the instance constructor, factory method or static field signature and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "creates a new named instance", arguments = { "instance constructor, factory method or static field signature", "name to register"})
+    public boolean namedInstanceAdd(PrintStream out, String... args) {
+        try {
+            Object instance = Instantiators.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+            if (namedInstances.put(args[2], instance) != null)
+                out.println("Previous named instance changed to a new one");
+            return true;
+        } catch (ClassNotFoundException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e);
+            return false;
+        } catch (InvocationTargetException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e.getCause());
+            return false;
+        }
+    }
+
+    /**
+     * Prints the list of all named instances.
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceList
      * </pre>
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args operation class followed by constructor arguments
+     * @param args no arguments required
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "list all names of current streams", arguments = {})
-    public boolean objectStreamList(PrintStream out, String... args) {
-        for(Map.Entry<String, StreamGenericAbstractObjectIterator> entry : objectStreams.entrySet())
+    @ExecutableMethod(description = "list all named instances", arguments = {})
+    public boolean namedInstanceList(PrintStream out, String... args) {
+        for(Map.Entry<String, Object> entry : namedInstances.entrySet())
             out.println(entry);
+        return true;
+    }
+
+    /**
+     * Removes a named instances.
+     * An argument specifying the name of the instance to remove is required.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceRemove my_object
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name of the instance to remove
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
+    public boolean namedInstanceRemove(PrintStream out, String... args) {
+        Object instance = namedInstances.remove(args[1]);
+        if (instance != null) {
+            // Try to close the instance
+            if (instance instanceof Closeable) {
+                try {
+                    ((Closeable)instance).close();
+                } catch (IOException e) {
+                    out.println("Error closing named instance: " + e.toString());
+                    return false;
+                }
+
+            // Try to clear the instance
+            } else if (instance instanceof Clearable) {
+                ((Clearable)instance).clearSurplusData();
+            }
+        } else {
+            out.print("There is no instance with name '" + args[1] + "'");
+        }
         return true;
     }
 
@@ -1165,9 +1502,9 @@ public class Application {
     public boolean loggingLevel(PrintStream out, String... args) {
         try {
             if (args.length < 2)
-                out.println("Current global logging level: " + Logger.getLogLevel());
+                out.println("Current global logging level: " + Logging.getLogLevel());
             else
-                Logger.setLogLevel(Level.parse(args[1].toUpperCase()));
+                Logging.setLogLevel(Level.parse(args[1].toUpperCase()));
         } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return false;
@@ -1196,7 +1533,7 @@ public class Application {
     @ExecutableMethod(description = "set logging level for console", arguments = { "new logging level" })
     public boolean loggingConsoleChangeLevel(PrintStream out, String... args) {
         try {
-            Logger.setConsoleLevel(Level.parse(args[1].toUpperCase()));
+            Logging.setConsoleLevel(Level.parse(args[1].toUpperCase()));
         } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return false;
@@ -1216,7 +1553,7 @@ public class Application {
      * The fifth optional argument specifies a regular expression that the message must satisfy
      * in order to be written in this file. 
      * The sixth argument specifies the message part that the regular expression
-     * is applied to - see {@link Logger.RegexpFilterAgainst} values for explanation.
+     * is applied to - see {@link Logging.RegexpFilterAgainst} values for explanation.
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the file's logging level.
      * 
@@ -1234,13 +1571,13 @@ public class Application {
     @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME" })
     public boolean loggingFileAdd(PrintStream out, String... args) {
         try {
-            Logger.addLogFile(
+            Logging.addLogFile(
                     args[1], 
-                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logger.getLogLevel(),
+                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logging.getLogLevel(),
                     (args.length > 3)?Convert.stringToType(args[3], boolean.class):true,
                     (args.length > 4)?Convert.stringToType(args[4], boolean.class):true,
                     (args.length > 5)?args[5]:null,
-                    (args.length > 6)?Logger.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logger.RegexpFilterAgainst.MESSAGE
+                    (args.length > 6)?Logging.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logging.RegexpFilterAgainst.MESSAGE
             );
             return true;
         } catch (IOException e) {
@@ -1274,7 +1611,7 @@ public class Application {
     @ExecutableMethod(description = "close log file", arguments = { "file name" })
     public boolean loggingFileRemove(PrintStream out, String... args) {
         try {
-            Logger.removeLogFile(args[1]);
+            Logging.removeLogFile(args[1]);
             return true;
         } catch (NullPointerException e) {
             out.println("Log file '" + args[1] + "' is not opened");
@@ -1305,7 +1642,7 @@ public class Application {
     @ExecutableMethod(description = "change file log level", arguments = { "file name", "new logging level" })
     public boolean loggingFileChangeLevel(PrintStream out, String... args) {
         try {
-            Logger.setLogFileLevel(args[1], Level.parse(args[2].toUpperCase()));
+            Logging.setLogFileLevel(args[1], Level.parse(args[2].toUpperCase()));
             return true;
         } catch (NullPointerException e) {
             out.println("Log file '" + args[1] + "' is not opened");
@@ -1559,7 +1896,7 @@ public class Application {
     /****************** Control file command functions ******************/
 
     /** Pattern that match variables in control files */
-    private static final Pattern variablePattern = Pattern.compile("<([^>]+)>", Pattern.MULTILINE);
+    private static final Pattern variablePattern = Pattern.compile("(?:<|\\$\\{)([^>}]+?)(?::-?([^>}]+))?(?:>|\\})", Pattern.MULTILINE);
 
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).
@@ -1574,14 +1911,14 @@ public class Application {
      */
     protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
         // Check for postponed execution
-        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, variables);
-        if (postponeUntil != null) {
+        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, 2, variables);
+        if (postponeUntil != null && postponeUntil.trim().length() > 0) {
             try {
                 long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
                 if (sleepTime > 0)
                     Thread.sleep(sleepTime);
             } catch (NumberFormatException e) {
-                out.println(e.getMessage() + " in postponeUntil parameter of '" + actionName + "'");
+                out.println(e.getMessage() + " for postponeUntil parameter of '" + actionName + "'");
                 return false;
             } catch (InterruptedException e) {
                 out.println("Thread interrupted while waiting for posponed execution");
@@ -1595,17 +1932,17 @@ public class Application {
         String arg = props.getProperty(actionName, actionName);
         do {
             // Add var-substituted arg to arguments list
-            arguments.add(Convert.substituteVariables(arg, variablePattern, 1, variables));
+            arguments.add(Convert.substituteVariables(arg, variablePattern, 1, 2, variables));
 
             // Read next property with name <actionName>.param.{1,2,3,4,...}
             arg = props.getProperty(actionName + ".param." + Integer.toString(arguments.size()));
         } while (arg != null);
 
         // Store the method name in a separate variable to speed things up
-        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, variables);
+        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, 2, variables);
 
-        // SPECIAL! For objectStreamOpen method a third parameter is automatically added from action name
-        if (methodName.equals("objectStreamOpen") && arguments.size() == 3)
+        // SPECIAL! For objectStreamOpen/namedInstanceAdd method a third/second parameter is automatically added from action name
+        if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || (methodName.equals("namedInstanceAdd") && arguments.size() == 2))
             arguments.add(actionName);
 
         // Read description
@@ -1614,7 +1951,7 @@ public class Application {
         // Read outputFile parameter and set output to correct stream (if parameter outputFile was specified, file is opened, otherwise the default 'out' is used)
         PrintStream outputStream;
         try {
-            String fileName = Convert.substituteVariables(props.getProperty(actionName + ".outputFile"), variablePattern, 1, variables);
+            String fileName = Convert.substituteVariables(props.getProperty(actionName + ".outputFile"), variablePattern, 1, 2, variables);
             if (fileName != null && fileName.length() > 0) {
                 outputStream = outputStreams.get(fileName);
                 if (outputStream == null) // Output stream not opened yet
@@ -1629,7 +1966,7 @@ public class Application {
         }
 
         // Read assign parameter
-        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, variables);
+        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, 2, variables);
         ByteArrayOutputStream assignOutput;
         if (assignVariable != null) {
             assignOutput = new ByteArrayOutputStream();
@@ -1639,10 +1976,10 @@ public class Application {
         }
 
         // Read number of repeats of this method
-        int repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, variables));
+        int repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, 2, variables));
 
         // Read foreach parameter of this method
-        String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, variables);
+        String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, 2, variables);
 
         // Parse foreach values
         String[] foreachValues;
@@ -1662,7 +1999,7 @@ public class Application {
 
                 // Show description if set
                 if (description != null)
-                    outputStream.println(Convert.substituteVariables(description, variablePattern, 1, variables));
+                    outputStream.println(Convert.substituteVariables(description, variablePattern, 1, 2, variables));
 
                 // Perform action
                 if (methodName.indexOf(' ') != -1) {
@@ -1671,8 +2008,17 @@ public class Application {
                         if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams))
                             return false; // Stop execution of block if there was an error
                 } else try {
-                    // Normal method
-                    Object rtv = methodExecutor.execute(outputStream, arguments.toArray(new String[arguments.size()]));
+                    Object rtv;
+                    // SPECIAL! Method propertiesOpen is called with additional arguments
+                    if (methodName.equals("propertiesOpen"))
+                        rtv = propertiesOpen(out,
+                                arguments.get(1), // fileName
+                                (arguments.size() > 2)?arguments.get(2):actionName, // name
+                                (arguments.size() > 3)?arguments.get(3):null, // prefix
+                                (arguments.size() > 4)?Convert.stringToMap(arguments.get(4)):variables
+                        );
+                    else // Normal method
+                        rtv = methodExecutor.execute(outputStream, arguments.toArray(new String[arguments.size()]));
                     outputStream.flush();
                     if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue()) {
                         if (assignOutput != null)
@@ -1701,7 +2047,7 @@ public class Application {
 
             return true; // Execution successful
         } catch (InvocationTargetException e) {
-            log.severe(e.getCause());
+            logException(e.getCause());
             out.println(e.getCause());
             out.println(e.getMessage());
         } catch (NumberFormatException e) {
@@ -1814,7 +2160,7 @@ public class Application {
             rmiServer.start();
             return true;
         } catch (Exception e) {
-            log.severe(e);
+            logException(e);
             out.println("Cannot open RMI service: " + e);
             return false;
         }
@@ -2029,32 +2375,45 @@ public class Application {
 
 
     //****************** Standalone application's main method ******************//
-    
+
     /**
+     * Internal method called from {@link #main(java.lang.String[]) main} method
+     * to initialize this application. Basically, this method calls {@link #parseArguments(java.lang.String[], int)}
+     * and prints a usage if <tt>false</tt> is returned.
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            System.err.println("Usage: Application [<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]");
-            return;
+    protected void startApplication(String[] args) {
+        if (!parseArguments(args, 0)) {
+            System.err.println("Usage: " + getClass().getName() + " " + usage());
+        } else if (cmdSocket != null) {
+            cmdSocketLoop();
         }
+    }
 
-        // Create new instance of application
-        final Application application = new Application();
-        
-        int argIndex = 0;
+    /**
+     * Returns the command line arguments description.
+     * @return the command line arguments description
+     */
+    protected String usage() {
+        return "[<cmdport>] [-register <host>:<port>] [<controlFile> [<action>] [<var>=<value> ...]]";
+    }
 
-        // Open port for telnet interface (first argument is an integer)
-        ServerSocketChannel cmdSocket;
+    /**
+     * Internal method called from {@link #main(java.lang.String[]) main} method
+     * to read parameters and initialize the application.
+     * @param args the command line arguments
+     * @param argIndex the index of the argument where to start
+     * @return <tt>true</tt> if the arguments were valid
+     */
+    protected boolean parseArguments(String[] args, int argIndex) {
+        if (argIndex >= args.length)
+            return false;
+
+        // Prepare port for telnet interface (first argument is an integer)
         try {
-            cmdSocket = ServerSocketChannel.open();
-            cmdSocket.socket().bind(new InetSocketAddress(Integer.parseInt(args[0])));
+            cmdSocket = openCmdSocket(Integer.parseInt(args[argIndex]));
             argIndex++;
         } catch (NumberFormatException ignore) { // First argument is not a number (do not start telnet interface)
-            cmdSocket = null;
-        } catch (IOException e) {
-            System.err.println("Can't open telnet interface: " + e.toString());
-            log.warning("Can't open telnet interface: " + e.toString());
             cmdSocket = null;
         }
 
@@ -2076,36 +2435,68 @@ public class Application {
             String[] newArgs = new String[args.length - argIndex + 1];
             System.arraycopy(args, argIndex, newArgs, 1, args.length - argIndex);
             newArgs[0] = "controlFile";
-            application.controlFile(System.out, newArgs);
+            controlFile(System.out, newArgs);
         }
 
-        // Telnet interface main loop
-        if (cmdSocket != null) {
-            try {
-                cmdSocket.configureBlocking(true);
-                for (;;) {
-                    // Get a connection (blocking mode)
-                    final SocketChannel connection = cmdSocket.accept();
-                    new Thread("thApplicationCmdSocket") {
-                        @Override
-                        public void run() {
-                            try {
-                                application.processInteractiveSocket(connection);
-                                connection.close();
-                            } catch (ClosedByInterruptException e) {
-                                // Ignore this exception because it is a correct exit
-                            } catch (IOException e) {
-                                log.warning(e.toString());
-                            }
-                        }
-                    }.start();
-                }
-            } catch (ClosedByInterruptException e) {
-                // Ignore this exception because it is a correct exit
-            } catch (IOException e) {
-                log.warning(e.toString());
-            }
+        return true;
+    }
+
+    /**
+     * Open the port for telnet interface.
+     * @param port the TCP port to use
+     * @return the opened socket or <tt>null</tt> if there was an error opening the port
+     */
+    private ServerSocketChannel openCmdSocket(int port) {
+        try {
+            ServerSocketChannel ret = ServerSocketChannel.open();
+            ret.socket().bind(new InetSocketAddress(port));
+            return ret;
+        } catch (IOException e) {
+            System.err.println("Can't open telnet interface: " + e.toString());
+            log.warning("Can't open telnet interface: " + e.toString());
+            return null;
         }
+    }
+
+    /**
+     * Telnet interface loop.
+     * It waits for the next connection on {@link #cmdSocket} and then starts a new thread that
+     * executes the commands given at the prompt.
+     */
+    private void cmdSocketLoop() {
+        try {
+            cmdSocket.configureBlocking(true);
+            for (;;) {
+                // Get a connection (blocking mode)
+                final SocketChannel connection = cmdSocket.accept();
+                new Thread("thApplicationCmdSocket") {
+                    @Override
+                    public void run() {
+                        try {
+                            processInteractiveSocket(connection);
+                            connection.close();
+                        } catch (ClosedByInterruptException e) {
+                            // Ignore this exception because it is a correct exit
+                        } catch (IOException e) {
+                            log.warning(e.toString());
+                        }
+                    }
+                }.start();
+            }
+        } catch (ClosedByInterruptException e) {
+            // Ignore this exception because it is a correct exit
+        } catch (IOException e) {
+            log.warning(e.toString());
+        }
+    }
+
+    /**
+     * Start a MESSIF application.
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        // Create new instance of application
+        new Application().startApplication(args);
     }
 
 }

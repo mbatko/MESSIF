@@ -9,8 +9,6 @@
 
 package messif.objects.impl;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
@@ -98,7 +96,7 @@ public class ObjectStringSmithWaterman extends ObjectString {
      * @throws EOFException when end of the given text stream is reached
      */
     public ObjectStringSmithWaterman(BufferedReader stream) throws IOException, EOFException {
-        super(stream, " ", AbstractObjectKey.class);
+        super(stream);
         selfSimilarityMeasure = measure(text, text, scoringMatrix);
     }    
 

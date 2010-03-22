@@ -6,8 +6,6 @@
 
 package messif.executor;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -16,7 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 
 
@@ -94,7 +92,7 @@ public class MethodClassExecutor extends MethodExecutor {
             
             // Check prototype and add method to the registry
             Class<?>[] methodArgTypes = method.getParameterTypes();
-            if (Convert.isPrototypeMatching(methodArgTypes, methodPrototype, differentiateByArgNo)) {
+            if (Instantiators.isPrototypeMatching(methodArgTypes, methodPrototype, differentiateByArgNo)) {
                 // Prototypes are matching in all except the differentiate index, which must be subclass of the class specified in the prototype
                 if (methodPrototype[differentiateByArgNo].isAssignableFrom(methodArgTypes[differentiateByArgNo]) && !registeredMethods.containsKey(methodArgTypes[differentiateByArgNo]))
                     registeredMethods.put(methodArgTypes[differentiateByArgNo], method);
@@ -253,6 +251,7 @@ public class MethodClassExecutor extends MethodExecutor {
      * This method is typically used to return the list of supported arguments.
      * Only the specified subclasses are returned.
      *
+     * @param <E> the super-class of the returned classes
      * @param subclassesToSearch a filter the list to contain only the subclasses of this parameter
      * @param modifiers or'ed together (see {@link java.lang.reflect.Modifier} for their list). All set modifiers must be present
      *        for a specific method except for the access modifiers. For example, value
@@ -263,14 +262,18 @@ public class MethodClassExecutor extends MethodExecutor {
      *        matches all <b>final transient</b> methods that are either <b>public</b> or <b>protected</b>.
      * @return the list of classes that this executor recognizes
      */
-    public <E> List<Class<E>> getDifferentiatingClasses(Class<E> subclassesToSearch, int modifiers) {
+    public <E> List<Class<? extends E>> getDifferentiatingClasses(Class<? extends E> subclassesToSearch, int modifiers) {
         int accessModifiers = modifiers & accessModifierMask;
         modifiers &= ~accessModifierMask;
-        List<Class<E>> rtv = new ArrayList<Class<E>>();
+        List<Class<? extends E>> rtv = new ArrayList<Class<? extends E>>();
         for (Map.Entry<Class<?>, Method> entry : registeredMethods.entrySet())
-            if ((entry.getValue().getModifiers() & modifiers) == modifiers && ((entry.getValue().getModifiers() & accessModifiers) != 0))
-                if (subclassesToSearch.isAssignableFrom(entry.getKey()))
-                    rtv.add((Class<E>)entry.getKey()); // This cast IS checked on the previous line
+            if ((entry.getValue().getModifiers() & modifiers) == modifiers && ((entry.getValue().getModifiers() & accessModifiers) != 0)) {
+                if (subclassesToSearch.isAssignableFrom(entry.getKey())) {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends E> val = (Class<? extends E>)entry.getKey(); // This cast IS checked on the previous line
+                    rtv.add(val);
+                }
+            }
         return rtv;
     }
 
@@ -279,10 +282,11 @@ public class MethodClassExecutor extends MethodExecutor {
      * This method is typically used to return the list of supported arguments.
      * Only the specified subclasses that have public method are returned.
      *
+     * @param <E> the super-class of the returned classes
      * @param subclassesToSearch a filter the list to contain only the subclasses of this parameter
      * @return the list of classes that this executor recognizes
      */
-    public <E> List<Class<E>> getDifferentiatingClasses(Class<E> subclassesToSearch) {
+    public <E> List<Class<? extends E>> getDifferentiatingClasses(Class<? extends E> subclassesToSearch) {
         return getDifferentiatingClasses(subclassesToSearch, Modifier.PUBLIC);
     }
 

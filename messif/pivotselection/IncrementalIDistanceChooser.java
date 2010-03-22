@@ -15,7 +15,8 @@ import messif.objects.util.AbstractObjectList;
 
 
 /**
- *
+ * Chooses pivots according to a generalized iDistance clustering strategy.
+ * 
  * @author xnovak8
  */
 public class IncrementalIDistanceChooser extends AbstractPivotChooser implements Serializable {
@@ -23,25 +24,40 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
     private static final long serialVersionUID = 1L;
 
     /** Size of the sample set used to test the candidate pivot (used to estimate mu_d) */
-    public static int sampleSetSize = 10000;
+    private final int sampleSetSize;
     
     /** Size of the candidate set of pivots from which one pivot will be picked. */
-    public static int samplePivotSize = 100;  //50;
+    private final int samplePivotSize;
     
     /** Creates a new instance of IncrementalPivotChooser */
     public IncrementalIDistanceChooser() {
+        this(10000, 100);
     }
-    
-    /** @return the closest pivot for the passed object */
-    private LocalAbstractObject getClosestPivot(LocalAbstractObject x, Iterator<? extends AbstractObject> pivotIter) {
-        // select pivot closest to "x"
+
+    /**
+     * Creates a new instance of IncrementalPivotChooser.
+     * @param sampleSetSize the size of the sample set used to test the candidate pivot (used to estimate mu_d)
+     * @param samplePivotSize the size of the candidate set of pivots from which one pivot will be picked
+     */
+    public IncrementalIDistanceChooser(int sampleSetSize, int samplePivotSize) {
+        this.sampleSetSize = sampleSetSize;
+        this.samplePivotSize = samplePivotSize;
+    }
+
+    /**
+     * Select a pivot closes to <code>object</code>.
+     * @param object the object for which to get the closest pivot
+     * @param pivotIter pivots iterator
+     * @return the closest pivot for the passed object
+     */
+    private LocalAbstractObject getClosestPivot(LocalAbstractObject object, Iterator<? extends AbstractObject> pivotIter) {
         float minVal = Float.MAX_VALUE;
         float tmpDist;
         LocalAbstractObject preselectedPivot = null;
         LocalAbstractObject pivotX = pivotIter.hasNext() ? ((LocalAbstractObject) pivotIter.next()):null;
         preselectedPivot = pivotX;
         for (; pivotIter.hasNext(); pivotX = (LocalAbstractObject) pivotIter.next()) {
-            tmpDist = x.getDistance(pivotX);
+            tmpDist = object.getDistance(pivotX);
             if (minVal > tmpDist) {
                 minVal = tmpDist;
                 preselectedPivot = pivotX;
@@ -68,8 +84,7 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
         // Store all passed objects temporarily
         AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);
         
-        //int sampleSize = (Math.sqrt(sampleSetSize) > objectList.size()) ? objectList.size() * objectList.size() : sampleSetSize;
-        int sampleSize = Math.min(objectList.size() / 10, sampleSetSize);
+        int sampleSize = (Math.sqrt(sampleSetSize) > objectList.size()) ? objectList.size() * objectList.size() : sampleSetSize;
 
         // Select objects randomly
         AbstractObjectList<LocalAbstractObject> leftPair  = objectList.randomList(sampleSize, false, new AbstractObjectList<LocalAbstractObject>());

@@ -7,8 +7,9 @@
 package messif.operations;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import messif.objects.AbstractObject;
 import messif.objects.util.RankedAbstractObject;
 
@@ -26,7 +27,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     //****************** Attributes ******************//
 
     /** List holding the answer of this query */
-    private final Collection<AbstractObject> answer;
+    private List<AbstractObject> answer;
 
 
     //****************** Constructors ******************//
@@ -54,9 +55,26 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      * @param answerType the type of objects this operation stores in its answer
      * @param answer the collection used for storing the answer
      */
-    protected ListingQueryOperation(AnswerType answerType, Collection<AbstractObject> answer) {
+    protected ListingQueryOperation(AnswerType answerType, List<AbstractObject> answer) {
         super(answerType);
         this.answer = answer;
+    }
+
+
+    //****************** Clonning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public ListingQueryOperation clone() throws CloneNotSupportedException {
+        ListingQueryOperation operation = (ListingQueryOperation)super.clone();
+        operation.answer = new ArrayList<AbstractObject>();
+        return operation;
     }
 
 
@@ -89,6 +107,30 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         return answer.iterator();
     }
 
+    @Override
+    public Iterator<AbstractObject> getAnswer(int skip, final int count) {
+        final ListIterator<AbstractObject> listIterator = answer.listIterator(skip);
+        return new Iterator<AbstractObject>() {
+            private int returnedCount = 0;
+            public boolean hasNext() {
+                return returnedCount < count && listIterator.hasNext();
+            }
+            public AbstractObject next() {
+                AbstractObject ret = listIterator.next();
+                returnedCount++;
+                return ret;
+            }
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported");
+            }
+        };
+    }
+
+    @Override
+    public Iterator<AbstractObject> getAnswerObjects() {
+        return getAnswer();
+    }
+
 
     //****************** Answer manipulation methods ******************//
 
@@ -101,6 +143,8 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {
+            if (object == null)
+                return false;
             return answer.add(answerType.update(object));
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
@@ -139,9 +183,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      * @param operation the source operation from which to get the update
      */
     protected void updateFrom(SingletonQueryOperation operation) {
-        Iterator<? extends AbstractObject> iter = operation.getAnswer();
-        while (iter.hasNext())
-            addToAnswer(iter.next());
+        addToAnswer(operation.getAnswerObject());
     }
 
     /**

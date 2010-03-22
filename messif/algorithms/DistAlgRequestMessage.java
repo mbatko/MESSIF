@@ -39,7 +39,7 @@ public class DistAlgRequestMessage extends Message {
     public Object clone() throws CloneNotSupportedException {
         DistAlgRequestMessage rtv = (DistAlgRequestMessage)super.clone();
         
-        rtv.operation = (AbstractOperation)operation.clone();
+        rtv.operation = operation.clone();
         
         return rtv;
     }

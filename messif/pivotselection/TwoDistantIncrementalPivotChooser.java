@@ -7,10 +7,9 @@
 package messif.pivotselection;
 
 import java.io.Serializable;
-import messif.buckets.BucketFilterInterface;
-import messif.buckets.BucketFilterInterface.FilterSituations;
+import messif.buckets.BucketFilterAfterAdd;
 import messif.buckets.FilterRejectException;
-import messif.buckets.LocalFilteredBucket;
+import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 
@@ -21,7 +20,7 @@ import messif.objects.util.AbstractObjectIterator;
  * 
  * @author  xbatko
  */
-public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser implements Serializable, BucketFilterInterface {
+public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser implements Serializable, BucketFilterAfterAdd {
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -70,20 +69,16 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
     /**
      * Method for preselecting pivots as they are added to a bucket.
      *
-     * @param object the inserted/deleted object
-     * @param situation actual situation in which the method is called (see FilterSituations constants for detailed description)
-     * @param inBucket bucket, where the object will be/was stored
-     * @throws FilterRejectException if the current operation should be aborted (should be thrown only in BEFORE situations)
+     * @param object the inserted object
+     * @param bucket the bucket where the object was stored
      */
-    public void filterObject(LocalAbstractObject object, FilterSituations situation, LocalFilteredBucket inBucket) throws FilterRejectException {
-        // Ignore other situations than after insert...
-        if (situation == FilterSituations.AFTER_ADD)
-            try {
-                counterPivotDistComp.bindTo(counterObjectDistComp);
-                updateSelectedPivots(object);
-            } finally {
-                counterPivotDistComp.unbind();
-            }
+    public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
+        try {
+            counterPivotDistComp.bindTo(counterObjectDistComp);
+            updateSelectedPivots(object);
+        } finally {
+            counterPivotDistComp.unbind();
+        }
     }
 
 
@@ -151,5 +146,5 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
             pivotsDistance = 0;
         }
     }
-    
+
 }

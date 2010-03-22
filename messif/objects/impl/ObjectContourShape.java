@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -14,33 +18,31 @@ import messif.objects.LocalAbstractObject;
  * 
  * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:david.novak@fi.muni.cz">david.novak@fi.muni.cz</a>
  */
-public class ObjectContourShape extends LocalAbstractObject {
+public class ObjectContourShape extends LocalAbstractObject implements BinarySerializable {
 
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
-    /****************** Attributes ******************/
+    //****************** Attributes ******************//
 
     // number of peaks is peak.length / 2
 	protected final byte [] globalCurvatureVector; // length 2
 	protected final byte [] prototypeCurvatureVector; // length 0-2; NOT USED IN THE DISTANCE FUNCTION
-	protected final byte highestPeakY; // NOT USED IN THE DISTANCE FUNCTION
+	//protected final byte highestPeakY; // NOT USED IN THE DISTANCE FUNCTION
 	protected final byte [] peak; // 2 x (1-62): 
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /** 
      * Creates a new instance of ObjectContourShape
      * @param globalCurvatureVector
      * @param prototypeCurvatureVector
-     * @param highestPeakY
      * @param peak 
      */
-    public ObjectContourShape(byte [] globalCurvatureVector, byte [] prototypeCurvatureVector, byte highestPeakY, byte [] peak) {
+    public ObjectContourShape(byte [] globalCurvatureVector, byte [] prototypeCurvatureVector, byte [] peak) {
         this.globalCurvatureVector = globalCurvatureVector;
         this.prototypeCurvatureVector = prototypeCurvatureVector;
-        this.highestPeakY = highestPeakY;
         this.peak = peak;
     }
 
@@ -54,16 +56,10 @@ public class ObjectContourShape extends LocalAbstractObject {
      *   comma-separated or space-separated numbers.
      * @throws IndexOutOfBoundsException when the line is not of this format: <br/>
      *    globalCurvatureVector; prototypeCurvatureVector; highhestPeakY; peaks vector
-     * 
      */
     public ObjectContourShape(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IndexOutOfBoundsException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectHomogeneousTexture.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
 
         String[] fields = line.trim().split(";\\p{Space}*");
         
@@ -79,10 +75,8 @@ public class ObjectContourShape extends LocalAbstractObject {
         for (int i = 0; i < prototypeCurvatureVectorStrings.length; i++)
             this.prototypeCurvatureVector[i] = Byte.parseByte(prototypeCurvatureVectorStrings[i]);
         
-        this.highestPeakY = Byte.parseByte(fields[2]);
-        
         // Read peaks vector
-        String[] peaksStrings = fields[3].trim().split(",\\p{Space}*");
+        String[] peaksStrings = fields[2].trim().split(",\\p{Space}*");
         this.peak = new byte[peaksStrings.length];
         for (int i = 0; i < peaksStrings.length; i++)
             this.peak[i] = Byte.parseByte(peaksStrings[i]);
@@ -108,11 +102,6 @@ public class ObjectContourShape extends LocalAbstractObject {
             stream.write(' ');
         }
 
-        // writhe the highest peak
-        stream.write(String.valueOf(highestPeakY).getBytes());
-        stream.write(';');
-        stream.write(' ');
-
         // Write the peaks vector
         for (int i = 0; i < peak.length; i++) {
             stream.write(String.valueOf(peak[i]).getBytes());
@@ -126,14 +115,14 @@ public class ObjectContourShape extends LocalAbstractObject {
     }
 
 
-    /****************** Size function ******************/
+    //****************** Size function ******************//
 
     public int getSize() {
-        return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + 1 + this.peak.length) * Byte.SIZE / 8;
+        return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + this.peak.length) * Byte.SIZE / 8;
     }
 
 
-    /****************** Data equality functions ******************/
+    //****************** Data equality functions ******************//
 
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectContourShape))
@@ -142,7 +131,6 @@ public class ObjectContourShape extends LocalAbstractObject {
         return
                 Arrays.equals(globalCurvatureVector, castObj.globalCurvatureVector) &&
                 Arrays.equals(prototypeCurvatureVector, castObj.prototypeCurvatureVector) && 
-                highestPeakY == castObj.highestPeakY &&
                 Arrays.equals(peak, castObj.peak);
     }
 
@@ -151,7 +139,7 @@ public class ObjectContourShape extends LocalAbstractObject {
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     private static float range(float x) {
         while (x < 0f) {
@@ -485,7 +473,7 @@ public class ObjectContourShape extends LocalAbstractObject {
     }
 
     
-    /*****************************  Cloning **********************************/
+    //*****************************  Cloning **********************************//
     
     /**
      * Creates and returns a randomly modified copy of this object.
@@ -497,5 +485,36 @@ public class ObjectContourShape extends LocalAbstractObject {
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("cloneRandomlyModify not supported yet");
     }
-    
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectByteVector loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectByteVector from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectContourShape(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        globalCurvatureVector = serializator.readByteArray(input);
+        prototypeCurvatureVector = serializator.readByteArray(input);
+        peak = serializator.readByteArray(input);
+    }
+
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, globalCurvatureVector) + serializator.write(output, prototypeCurvatureVector) +
+               + serializator.write(output, peak);
+    }
+
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return  super.getBinarySize(serializator) + 
+                serializator.getBinarySize(globalCurvatureVector) + serializator.getBinarySize(prototypeCurvatureVector) +
+                serializator.getBinarySize(peak);
+    }
+
 }

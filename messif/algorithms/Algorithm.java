@@ -28,15 +28,22 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
+import messif.objects.LocalAbstractObject;
+import messif.operations.QueryOperation;
+import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
+import messif.statistics.StatisticCounter;
+import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
-import messif.utility.Logger;
 
 
 /**
@@ -58,7 +65,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Constants ******************//
 
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.algorithm");
+    protected static Logger log = Logger.getLogger("messif.algorithm");
 
     /** Maximal number of currently executed operations */
     protected static final int maximalConcurrentOperations = 1024;
@@ -67,7 +74,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Attributes ******************//
 
     /** The name of this algorithm */
-    protected final String algorithmName;
+    private final String algorithmName;
 
     /** Number of actually running operations */
     private transient Semaphore runningOperations;
@@ -96,13 +103,32 @@ public abstract class Algorithm implements Serializable {
     //****************** Destructor ******************//
 
     /**
-     * Public destructor to stop the algorithm.
-     * This should be overriden in order to clean up.
+     * Finalize the algorithm. All transient resources associated with this
+     * algorithm are released.
+     * After this method is called, the behavior of executing any operation is unpredictable.
+     *
      * @throws Throwable if there was an error finalizing
      */
     @Override
     public void finalize() throws Throwable {
         super.finalize();
+    }
+
+    /**
+     * Destroy this algorithm. This method releases all resources (transient and persistent)
+     * associated with this algorithm.
+     * After this method is called, the behavior of executing any operation is unpredictable.
+     *
+     * <p>
+     * This implementation defaults to call {@link #finalize()}, but should be overriden
+     * if the algorithm needs to differentiate between finalizing and destroying. In that case
+     * the "super.destroy()" should <i>not</i> be called if finalizing is not part of destroy.
+     * </p>
+     *
+     * @throws Throwable if there was an error while cleaning
+     */
+    public void destroy() throws Throwable {
+        finalize();
     }
 
 
@@ -114,6 +140,15 @@ public abstract class Algorithm implements Serializable {
      */
     public String getName() {
         return algorithmName;
+    }
+
+    /**
+     * Returns the class of objects indexed by this algorithm.
+     * This methods returns a generic {@link LocalAbstractObject} class.
+     * @return the class of objects indexed by this algorithm
+     */
+    public Class<? extends LocalAbstractObject> getObjectClass() {
+        return LocalAbstractObject.class;
     }
 
 
@@ -257,8 +292,8 @@ public abstract class Algorithm implements Serializable {
      * The operations returned can be further queried on arguments by static methods in AbstractOperation.
      * @return the list of operations this particular algorithm supports
      */
-    public List<Class<AbstractOperation>> getSupportedOperations() {
-        return operationExecutor.getDifferentiatingClasses(AbstractOperation.class);
+    public List<Class<? extends AbstractOperation>> getSupportedOperations() {
+        return getSupportedOperations(AbstractOperation.class);
     }
 
     /**
@@ -269,8 +304,24 @@ public abstract class Algorithm implements Serializable {
      * @param subclassToSearch ancestor class of the returned operations.
      * @return the list of operations this particular algorithm supports
      */
-    public <E extends AbstractOperation> List<Class<E>> getSupportedOperations(Class<E> subclassToSearch) {
+    public <E extends AbstractOperation> List<Class<? extends E>> getSupportedOperations(Class<? extends E> subclassToSearch) {
         return operationExecutor.getDifferentiatingClasses(subclassToSearch);
+    }
+
+    /**
+     * Returns the first operation that is a supported by this algorithm and is a subclass of (or the same class as) {@code subclassToSearch}.
+     * The operations returned can be further queried on arguments by static methods in AbstractOperation.
+     *
+     * @param <E> type of the returned operations
+     * @param subclassToSearch ancestor class of the returned operations
+     * @return the first operation of {@code subclassToSearch} that is a supported by this algorithm
+     * @throws NoSuchMethodException if this algorithm does not support any operation of the given {@code subclassToSearch}
+     */
+    public final <E extends AbstractOperation> Class<? extends E> getFirstSupportedOperation(Class<? extends E> subclassToSearch) throws NoSuchMethodException {
+        List<Class<? extends E>> supportedOperations = getSupportedOperations(subclassToSearch);
+        if (supportedOperations == null || supportedOperations.isEmpty())
+            throw new NoSuchMethodException("Algorithm does not support operation " + subclassToSearch.getName());
+        return supportedOperations.get(0);
     }
 
     /**
@@ -339,6 +390,39 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
+     * Execute query operation on this algorithm and return the answer.
+     * This is a shortcut method for calling {@link #executeOperation(messif.operations.AbstractOperation)} and
+     * {@link QueryOperation#getAnswer()}.
+     *
+     * @param <T> the type of query operation answer
+     * @param operation the operation to execute on this algorithm
+     * @return iterator for the answer of the executed query
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    public <T> Iterator<? extends T> getQueryAnswer(QueryOperation<? extends T> operation) throws AlgorithmMethodException, NoSuchMethodException {
+        return executeOperation(operation).getAnswer();
+    }
+
+    /**
+     * Execute query operation on this algorithm and return the answer.
+     * The operation to execute is created according to the given class and arguments.
+     * This is a shortcut method for calling {@link AbstractOperation#createOperation(java.lang.Class, java.lang.Object[])} and
+     * {@link #getQueryAnswer(messif.operations.QueryOperation)}.
+     *
+     * @param <T> the type of query operation answer
+     * @param operationClass the class of the operation to execute on this algorithm
+     * @param arguments the arguments for the operation constructor
+     * @return iterator for the answer of the executed query
+     * @throws InvocationTargetException if the operation constructor has thrown an exception
+     * @throws NoSuchMethodException if the operation is unknown or unsupported by this algorithm
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     */
+    public <T> Iterator<? extends T> getQueryAnswer(Class<? extends QueryOperation<? extends T>> operationClass, Object... arguments) throws InvocationTargetException, AlgorithmMethodException, NoSuchMethodException {
+        return getQueryAnswer(AbstractOperation.createOperation(operationClass, arguments));
+    }
+
+    /**
      * Execute algorithm operation on background.
      * <i>Note:</i> Method {@link #waitBackgroundExecuteOperation} MUST be called in the future to release resources.
      * @param operation the operation to execute on this algorithm
@@ -386,7 +470,7 @@ public abstract class Algorithm implements Serializable {
             if (maximalConcurrentOperations > 0)
                 runningOperations.release(operationsCount);
             
-            List<E> retList = list.getAllMethodsArgument(argClass);
+            List<E> retList = list.getAllMethodsReturnValue(argClass);
             
             // clear the list of finished threads
             list.clearThreadLists();
@@ -479,6 +563,39 @@ public abstract class Algorithm implements Serializable {
 
     }
 
+    
+    /**
+     * This method can be used by all algorithms before processing any operation to set default (operation) statistics.
+     * @throws messif.algorithms.AlgorithmMethodException if new statistic cannot be created
+     */
+    public void statisticsBeforeOperation() throws AlgorithmMethodException {
+        try {
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
+        } catch (ClassNotFoundException e) {
+            log.log(Level.SEVERE, e.getClass().toString(), e);
+            throw new AlgorithmMethodException(e);
+        }
+    }
+
+    /**
+     * This method can be used by all algorithms after processing any operation to set default (operation) statistics.
+     * The results are right only when the {@link #statisticsBeforeOperation() } method was used before.
+     * @param operation (typically query) operation that was just processed 
+     */
+    public void statisticsAfterOperation(AbstractOperation operation) {
+        OperationStatistics.getLocalThreadStatistics().unbindAllStats();
+        StatisticCounter accessedObjects = OperationStatistics.getOpStatisticCounter("AccessedObjects");
+        accessedObjects.set(OperationStatistics.getOpStatisticCounter("DistanceComputations").get()
+                + OperationStatistics.getOpStatisticCounter("DistanceComputations.Savings").get());
+        if (operation instanceof QueryOperation) {
+            OperationStatistics.getOpStatisticCounter("AnswerCount").set(((QueryOperation) operation).getAnswerCount());
+            if ((operation instanceof RankingQueryOperation) && (((QueryOperation) operation).getAnswerCount() > 0)) {
+                OperationStatistics.getLocalThreadStatistics().getStatistics("AnswerDistance", StatisticObject.class).set(((RankingQueryOperation) operation).getAnswerDistance());
+            }
+        }
+    }    
 
     //****************** Operation method specifier ******************//
 
@@ -530,7 +647,7 @@ public abstract class Algorithm implements Serializable {
         List<Constructor<E>> rtv = new ArrayList<Constructor<E>>();
         
         // Search all its constructors for proper annotation
-        for (Constructor<E> constructor : (Constructor<E>[])algorithmClass.getConstructors()) // This IS A STUPID unchecked !!!
+        for (Constructor<E> constructor : Convert.getConstructors(algorithmClass))
             if (constructor.isAnnotationPresent(AlgorithmConstructor.class))
                 rtv.add(constructor);
         

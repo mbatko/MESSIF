@@ -8,14 +8,13 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
@@ -55,12 +54,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
      */
     public ObjectColorLayout(BufferedReader stream) throws IOException, NumberFormatException, IndexOutOfBoundsException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectColorLayout.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         String[] fields = line.trim().split(";\\p{Space}*");
         this.YCoeff = split(fields[0], ",\\p{Space}*");
@@ -208,39 +202,27 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectColorLayout loaded from binary input stream.
+     * Creates a new instance of ObjectColorLayout loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectColorLayout from
+     * @param input the buffer to read the ObjectColorLayout from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectColorLayout(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectColorLayout(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         YCoeff = serializator.readByteArray(input);
         CbCoeff = serializator.readByteArray(input);
         CrCoeff = serializator.readByteArray(input);
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, YCoeff) +
                serializator.write(output, CbCoeff) +
                serializator.write(output, CrCoeff);
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         return super.getBinarySize(serializator) + serializator.getBinarySize(YCoeff) +

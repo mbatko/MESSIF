@@ -6,25 +6,26 @@
 
 package messif.objects;
 
-import messif.objects.keys.AbstractObjectKey;
-import messif.netbucket.RemoteAbstractObject;
-import messif.statistics.StatisticCounter;
-import messif.statistics.Statistics;
-import messif.utility.Convert;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.netbucket.RemoteAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.statistics.StatisticCounter;
+import messif.statistics.Statistics;
+import messif.utility.Convert;
+
 
 /**
  * This class is ancestor of all objects that hold some data the MESSI Framework can work with.
- * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject<tt> must
+ * Since MESSIF works with metric-based data, every descendant of <tt>LocalAbstractObject</tt> must
  * implement a metric function {@link #getDistanceImpl} for its own data.
  *
  * To be able to read/write data from text streams, a constructor with one {@link java.io.BufferedReader} argument
@@ -37,7 +38,7 @@ import messif.objects.nio.BinarySerializator;
  * sets it to <tt>null</tt>.
  *
  * @see AbstractObject
- * @see messif.netbucket.RemoteAbstractObject
+ * @see RemoteAbstractObject
  *
  * @author  xbatko
  */
@@ -107,7 +108,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * Thus, this method returns this object itself.
      * @return this abstract object as local object
      */
-    public LocalAbstractObject getLocalAbstractObject() {
+    public final LocalAbstractObject getLocalAbstractObject() {
         return this;
     }
 
@@ -119,18 +120,10 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * For LocalAbstractObject create new object.
      * @return new RemoteAbstractObject containing URI locator of this object.
      */
-    public RemoteAbstractObject getRemoteAbstractObject() {
+    @Override
+    public final RemoteAbstractObject getRemoteAbstractObject() {
         return new RemoteAbstractObject(this);
     }
-
-
-    //****************** Size function ******************//
-
-    /**
-     * Returns the size of this object in bytes.
-     * @return the size of this object in bytes
-     */
-    public abstract int getSize();
 
 
     //****************** Unused/undefined, min, max distances ******************//
@@ -153,7 +146,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the distance between this object and the provided object <code>obj</code>
      */
     public final float getDistance(LocalAbstractObject obj) {
-        return getDistance(obj, MAX_DISTANCE);
+        return getDistance(obj, null, MAX_DISTANCE);
     }
 
     /**
@@ -187,6 +180,34 @@ public abstract class LocalAbstractObject extends AbstractObject {
     }
 
     /**
+     * Metric distance function.
+     * Measures the distance between this object and <code>obj</code>.
+     * The array <code>metaDistances</code> is filled with the distances
+     * of the respective encapsulated objects if this object contains any, i.e.
+     * this object is a descendant of {@link MetaObject}.
+     * 
+     * <p>
+     * Note that this method does not use the fast access to the 
+     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
+     * even if there is a filter that supports it.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        // This check is to enhance performance when statistics are disabled
+        if (Statistics.isEnabledGlobally())
+            counterDistanceComputations.add();
+
+        return getDistanceImpl(obj, metaDistances, distThreshold);
+    }
+
+    /**
      * The actual implementation of the metric function (see {@link #getDistance} for full explanation).
      * The implementation should not increment distanceComputations statistics.
      *
@@ -195,6 +216,31 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      */
     protected abstract float getDistanceImpl(LocalAbstractObject obj, float distThreshold);
+
+    /**
+     * The actual implementation of the metric function that updates the distances
+     * of encapsulated objects. This is required for the {@link MetaObject}
+     * descendants.
+     *
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
+     * @see LocalAbstractObject#getDistance
+     */
+    float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return getDistanceImpl(obj, distThreshold);
+    }
+
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    public float[] createMetaDistancesHolder() {
+        return null;
+    }
 
     /**
      * Normalized metric distance function, i.e. the result of {@link #getDistance}
@@ -306,7 +352,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter of specified class from this object's filter chain
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
-    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
+    public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass) throws NullPointerException {
         return getDistanceFilter(filterClass, true);
     }
 
@@ -322,11 +368,11 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter of specified class from this object's filter chain
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
-    public <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
+    public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
         for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
             Class<?> currentFilterClass = currentFilter.getClass();
             if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
-                return (T)currentFilter; // This cast IS checked on the previous line
+                return filterClass.cast(currentFilter);
         }
 
         return null;
@@ -338,7 +384,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a filter at specified position in this filter's chain
      * @throws IndexOutOfBoundsException if the specified position is too big
      */
-    public PrecomputedDistancesFilter getDistanceFilter(int position) throws IndexOutOfBoundsException {
+    public final PrecomputedDistancesFilter getDistanceFilter(int position) throws IndexOutOfBoundsException {
         // Fill iteration variable
         PrecomputedDistancesFilter currentFilter = distanceFilter;
         while (currentFilter != null) {
@@ -395,12 +441,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @param filter the concrete instance of filter to delete from this object's filter chain
      * @return <tt>true</tt> if the filter was unchained (deleted). If the given filter was not found, <tt>false</tt> is returned.
      */
-    public boolean unchainFilter(PrecomputedDistancesFilter filter) {
+    public final boolean unchainFilter(PrecomputedDistancesFilter filter) {
         if (distanceFilter == null)
             return false;
         
         if (distanceFilter == filter) {
             distanceFilter = distanceFilter.nextFilter;
+            filter.nextFilter = null;
             return true;
         } else {
             PrecomputedDistancesFilter prev = distanceFilter;
@@ -408,6 +455,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
             while (curr != null) {
                 if (curr == filter) {
                     prev.nextFilter = curr.nextFilter;
+                    filter.nextFilter = null;
                     return true;
                 }
                 prev = curr;
@@ -467,98 +515,30 @@ public abstract class LocalAbstractObject extends AbstractObject {
     }
 
 
-    //****************** Equality driven by object data ******************//
-
-    /** 
-     * Indicates whether some other object has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object is the same as the obj
-     *          argument; <code>false</code> otherwise.
-     */
-    public abstract boolean dataEquals(Object obj);
-
-    /**
-     * Returns a hash code value for the data of this object.
-     * @return a hash code value for the data of this object
-     */
-    public abstract int dataHashCode();
-
-    /**
-     * A wrapper class that allows to hash/equal abstract objects
-     * using their data and not ID. Especially, standard hashing
-     * structures (HashMap, etc.) can be used on wrapped object.
-     */
-    public static class DataEqualObject {
-        /** Encapsulated object */
-        protected final LocalAbstractObject object;
-
-        /**
-         * Creates a new instance of DataEqualObject wrapper over the specified LocalAbstractObject.
-         * @param object the encapsulated object
-         */
-        public DataEqualObject(LocalAbstractObject object) {
-            this.object = object;
-        }
-
-        /**
-         * Returns the encapsulated object.
-         * @return the encapsulated object
-         */
-        public LocalAbstractObject get() {
-            return object;
-        }
-
-        /**
-         * Returns a hash code value for the object data.
-         * @return a hash code value for the data of this object
-         */
-        @Override
-        public int hashCode() {
-            return object.dataHashCode();
-        }
-
-        /** 
-         * Indicates whether some other object has the same data as this one.
-         * @param   obj   the reference object with which to compare.
-         * @return  <code>true</code> if this object is the same as the obj
-         *          argument; <code>false</code> otherwise.
-         */
-        @Override
-        public boolean equals(Object obj) {
-            return object.dataEquals(obj);
-        }
-    }
-
-
     //****************** Factory method ******************//
 
     /**
-     * Creates a new LocalAbstractObject of the specified type from string.
-     * The format is "objectClass:object data", where "object data" is anything
-     * after the first colon (including colons of course). The object data is
-     * feeded through string buffer stream to the stream constructor of
-     * the object.
+     * Creates a new instance of {@code objectClass} from the {@code dataReader}.
+     * The constructor of the {@link LocalAbstractObject} that reads the textual
+     * data is used.
      *
-     * @param objectClassAndData the string to parse the class and data from
-     * @return a new LocalAbstractObject of the specified type
-     * @throws IllegalArgumentException if there is no class (colon separated), the class is invalid, the class is not LocalAbstractObject descendant or there is no stream constructor
+     * @param <T> the class of the object to create
+     * @param objectClass the class of the object to create
+     * @param dataReader the buffered reader of the object data
+     * @return a new instance of {@code objectClass}
+     * @throws IllegalArgumentException if the class has is no stream constructor
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
-    public static LocalAbstractObject valueOf(String objectClassAndData) throws IllegalArgumentException, InvocationTargetException {
+    public static <T extends LocalAbstractObject> T create(Class<T> objectClass, BufferedReader dataReader) throws IllegalArgumentException, InvocationTargetException {
         try {
-            // Get position of a colon that separates object class from data
-            int colonPos = objectClassAndData.indexOf(':');
-            
-            return valueOf(
-                    // Get everything before the colon as the class name
-                    Convert.getClassForName(objectClassAndData.substring(0, colonPos), LocalAbstractObject.class),
-                    // Get everything after the colon as the object data
-                    objectClassAndData.substring(colonPos + 1)
-            );
-        } catch (ClassNotFoundException e) {
+            // Create instance of the specified object
+            return objectClass.getConstructor(BufferedReader.class).newInstance(dataReader);
+        } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(e.getMessage());
-        } catch (IndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("Cannot found object class. Use format objectClass:objectData: "+objectClassAndData);
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException(e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -573,20 +553,8 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @throws IllegalArgumentException if the specified class lacks a public <tt>BufferedReader</tt> constructor
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
-    public static <E extends LocalAbstractObject> E valueOf(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
-        try {
-            // Create instance of the specified object
-            return objectClass.getConstructor(BufferedReader.class).newInstance(
-                // Create buffered reader from string
-                new BufferedReader(new StringReader(objectData))
-            );
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException(e);
-        } catch (InstantiationException e) {
-            throw new IllegalArgumentException(e);
-        }
+    public static <E extends LocalAbstractObject> E create(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
+        return create(objectClass, new BufferedReader(new StringReader(objectData)));
     }
 
 
@@ -642,63 +610,117 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return a randomly modified clone of this instance
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
-    public abstract LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException;
+    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+        throw new CloneNotSupportedException("Object " + getClass() + " have no random modification implemented");
+    }
+
+
+    //****************** Data methods ******************//
+
+    /**
+     * Returns the size of this object in bytes.
+     * @return the size of this object in bytes
+     */
+    public abstract int getSize();
+
+    /**
+     * Indicates whether some other object has the same data as this one.
+     * @param   obj   the reference object with which to compare.
+     * @return  <code>true</code> if this object is the same as the obj
+     *          argument; <code>false</code> otherwise.
+     */
+    public abstract boolean dataEquals(Object obj);
+
+    /**
+     * Returns a hash code value for the data of this object.
+     * @return a hash code value for the data of this object
+     */
+    public abstract int dataHashCode();
+
+    /**
+     * A wrapper class that allows to hash/equal abstract objects
+     * using their data and not ID. Especially, standard hashing
+     * structures (HashMap, etc.) can be used on wrapped object.
+     */
+    public static class DataEqualObject {
+        /** Encapsulated object */
+        protected final LocalAbstractObject object;
+
+        /**
+         * Creates a new instance of DataEqualObject wrapper over the specified LocalAbstractObject.
+         * @param object the encapsulated object
+         */
+        public DataEqualObject(LocalAbstractObject object) {
+            this.object = object;
+        }
+
+        /**
+         * Returns the encapsulated object.
+         * @return the encapsulated object
+         */
+        public LocalAbstractObject get() {
+            return object;
+        }
+
+        /**
+         * Returns a hash code value for the object data.
+         * @return a hash code value for the data of this object
+         */
+        @Override
+        public int hashCode() {
+            return object.dataHashCode();
+        }
+
+        /**
+         * Indicates whether some other object has the same data as this one.
+         * @param   obj   the reference object with which to compare.
+         * @return  <code>true</code> if this object is the same as the obj
+         *          argument; <code>false</code> otherwise.
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof DataEqualObject)
+                return object.dataEquals(((DataEqualObject)obj).object);
+            else
+                return object.dataEquals(obj);
+        }
+    }
 
 
     //****************** Serialization ******************//
 
     /**
      * Processes the comment line of text representation of the object.
-     * The comment is of format "#typeOfComment comment value". 
+     * The comment is of format "#typeOfComment class value".
      * Recognized types of comments are: <ul>
-     *   <li>"#objectKey keyClass key value", where keyClass extends AbstractObjectKey</li>
-     *   <li>"#filter filterClass filter value", where filterClass extends </li>
+     *   <li>"#objectKey keyClass keyValue", where keyClass extends AbstractObjectKey and the comment {@link #setObjectKey(messif.objects.keys.AbstractObjectKey) sets the object key}</li>
+     *   <li>"#filter filterClass filterValue", where filterClass extends PrecomputedDistancesFilter and the comment {@link #chainFilter(messif.objects.PrecomputedDistancesFilter, boolean) adds a precomputed distances filter}</li>
      * </ul>
-     * @param line the string with the comment - should start with "#"
-     * @return <b>false</b> if <code>line<code/> does not start with "#", <b>true</b> otherwise
-     * @throws java.io.IOException if the comment type was recognized but its value is illegal
+     * @param reader the reader from which to get lines with comments
+     * @return the first line that does not have the requested format (this method never returns <tt>null</tt>)
+     * @throws EOFException if the last line was read
+     * @throws IOException if the comment type was recognized but its value is illegal
      */
-    protected boolean processObjectComment(String line) throws IOException {
-        if (! line.startsWith("#"))
-            return false;
+    protected String readObjectComments(BufferedReader reader) throws EOFException, IOException {
+        for (;;) {
+            String line = reader.readLine();
+            if (line == null)
+                throw new EOFException("EoF reached while initializing " + getClass().getName());
 
-        try {
-            String[] splitLine = line.split(" ", 3);
-            
-            if (splitLine[0].equals("#objectKey")) {
-                if (splitLine.length < 3)
-                    throw new IOException("comment must be of format '#objectKey keyClass key value': "+line);
-
-                // Get key class constructor
-                Constructor<AbstractObjectKey> keyConstructor = Convert.getClassForName(splitLine[1], AbstractObjectKey.class)
-                        .getConstructor(String.class);
-                // Create and set the key 
-                setObjectKey(keyConstructor.newInstance(splitLine[2]));
-            } else if (splitLine[0].equals("#filter")) {
-                if (splitLine.length < 3)
-                    throw new IOException("comment must be of format '#filterKey filterClass filter value': "+line);
-
-                // Get key class constructor
-                Constructor<PrecomputedDistancesFilter> keyConstructor = Convert.getClassForName(splitLine[1], PrecomputedDistancesFilter.class)
-                        .getConstructor(String.class);
-                // Create and set the key 
-                chainFilter(keyConstructor.newInstance(splitLine[2]), false);
+            try {
+                if (line.startsWith("#objectKey ")) {
+                    // Create and set the key
+                    setObjectKey(Convert.stringAndClassToType(line.substring(11), ' ', AbstractObjectKey.class));
+                } else if (line.startsWith("#filter ")) {
+                    // Create and set the filter
+                    chainFilter(Convert.stringAndClassToType(line.substring(8), ' ', PrecomputedDistancesFilter.class), false);
+                } else {
+                    return line;
+                }
+            } catch (IllegalArgumentException e) {
+                throw new IOException(e.getMessage());
             }
-            
-        } catch (ClassNotFoundException e) {
-            throw new IOException(e.getMessage());
-        } catch (NoSuchMethodException e) {
-            throw new IOException(e.getMessage());
-        } catch (IllegalAccessException e) {
-            throw new IOException(e.getMessage());
-        } catch (InstantiationException e) {
-            throw new IOException(e.getMessage());
-        } catch (InvocationTargetException e) {
-            throw new IOException(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            throw new IOException(e.getMessage());
         }
-        return true;
     }
 
     /**
@@ -730,28 +752,14 @@ public abstract class LocalAbstractObject extends AbstractObject {
      */
     public final void write(OutputStream stream, boolean writeComments) throws IOException {
         if (writeComments) {
-            // write the key as a comment
-            if (objectKey != null) {
-                stream.write("#objectKey ".getBytes());
-                stream.write(objectKey.getClass().getName().getBytes());
-                stream.write(' ');
-                stream.write(objectKey.getText().getBytes());
-                stream.write('\n');
-            }
+            // Write object key
+            AbstractObjectKey key = getObjectKey();
+            if (key != null)
+                key.write(stream);
 
-            // write the filters as comments
-            PrecomputedDistancesFilter filter = this.distanceFilter;
-            while (filter != null) {
-                try {
-                    String filterText = filter.getText();
-                    stream.write("#filter ".getBytes());
-                    stream.write(filter.getClass().getName().getBytes());
-                    stream.write(' ');
-                    stream.write(filterText.getBytes());
-                    stream.write('\n');
-                } catch (UnsupportedOperationException ignore) { }
-                filter = filter.getNextFilter();
-            }
+            // Write object distance filters
+            if (distanceFilter != null)
+                distanceFilter.write(stream);
         }
         writeData(stream);
     }
@@ -769,13 +777,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of LocalAbstractObject loaded from binary input stream.
+     * Creates a new instance of LocalAbstractObject loaded from binary input.
      * 
-     * @param input the stream to read the LocalAbstractObject from
+     * @param input the input to read the LocalAbstractObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected LocalAbstractObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected LocalAbstractObject(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         suppData = serializator.readObject(input, Object.class);
         distanceFilter = serializator.readObject(input, PrecomputedDistancesFilter.class);
@@ -783,13 +791,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    protected int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, suppData) +
                serializator.write(output, distanceFilter);

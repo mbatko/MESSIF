@@ -8,14 +8,13 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
@@ -39,7 +38,12 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
     /****************** Constructors ******************/
 
-    /** Creates a new instance of ObjectHomogeneousTexture */
+    /** Creates a new instance of ObjectHomogeneousTexture from
+     * @param average
+     * @param standardDeviation
+     * @param energy 
+     * @param energyDeviation
+     */
     public ObjectHomogeneousTexture(short average, short standardDeviation, short[] energy, short[] energyDeviation) {
         this.average = average;
         this.standardDeviation = standardDeviation;
@@ -61,36 +65,38 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     //****************** Text file store/retrieve methods ******************
     
     /** Creates a new instance of ObjectHomogeneousTexture from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
-     * Throws NumberFormatException when the line read from given stream does
-     * not consist of comma-separated or space-separated numbers.
+     * @param stream input stream to read the data from
+     * @throws IOException when an error appears during reading from given stream
+     *    throws EOFException when eof of the given stream is reached.
+     * @throws NumberFormatException when the line read from given stream does
+       * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectHomogeneousTexture(BufferedReader stream) throws IOException, NumberFormatException, IndexOutOfBoundsException {
+    public ObjectHomogeneousTexture(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectHomogeneousTexture.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         String[] fields = line.trim().split(";\\p{Space}*");
-        this.average = Short.parseShort(fields[0]);
+        int averageInt = Integer.parseInt(fields[0]);
+        if ((averageInt < 0) || (averageInt > 256)) {
+            throw new NumberFormatException("the first number (average) of HomogeneousTexture must be of type unsigned8: " + averageInt);
+        }
+        this.average = (short) averageInt;
         this.standardDeviation = Short.parseShort(fields[1]);
-        String[] energy = fields[2].trim().split(",\\p{Space}*");
-        this.energy = new short[energy.length];
-        for (int i = 0; i < energy.length; i++)
-            this.energy[i] = Short.parseShort(energy[i]);
+        String[] energyStrings = fields[2].trim().split(",\\p{Space}*");
+        this.energy = new short[energyStrings.length];
+        for (int i = 0; i < energyStrings.length; i++)
+            this.energy[i] = Short.parseShort(energyStrings[i]);
         if (fields.length >= 4 && fields[3].length() > 0) {
-            String[] energyDeviation = fields[3].trim().split(",\\p{Space}*");
-            this.energyDeviation = new short[energyDeviation.length];
-            for (int i = 0; i < energyDeviation.length; i++)
-                this.energyDeviation[i] = Short.parseShort(energyDeviation[i]);
+            String[] energyDeviationStrings = fields[3].trim().split(",\\p{Space}*");
+            this.energyDeviation = new short[energyDeviationStrings.length];
+            for (int i = 0; i < energyDeviationStrings.length; i++)
+                this.energyDeviation[i] = Short.parseShort(energyDeviationStrings[i]);
         } else this.energyDeviation = null;
     }
 
-    /** Write object to text stream */
+    /** Write object to text stream
+     * @throws IOException
+     */
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.valueOf(average).getBytes());
         stream.write(';');
@@ -338,6 +344,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
      * @param  args  expected size of the array is 2: <b>minVector</b> vector with minimal values in all positions
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
+     * @throws CloneNotSupportedException if predecessors does not support cloning
      */
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectHomogeneousTexture rtv = (ObjectHomogeneousTexture) this.clone();
@@ -366,13 +373,13 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectHomogeneousTexture loaded from binary input stream.
+     * Creates a new instance of ObjectHomogeneousTexture loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectHomogeneousTexture from
+     * @param input the buffer to read the ObjectHomogeneousTexture from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectHomogeneousTexture(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectHomogeneousTexture(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         average = serializator.readShort(input);
         standardDeviation = serializator.readShort(input);
@@ -380,15 +387,8 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         energyDeviation = serializator.readShortArray(input);
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, average) +
                serializator.write(output, standardDeviation) +
@@ -396,11 +396,6 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
                serializator.write(output, energyDeviation);
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         return  super.getBinarySize(serializator) + 2 + 2 + serializator.getBinarySize(energy) + serializator.getBinarySize(energyDeviation);

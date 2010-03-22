@@ -12,22 +12,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
-import messif.statistics.Statistics;
 import messif.utility.Convert;
 
 /**
  * Represents a collection of LocalAbstractObjects encapsulated as one object.
- * <p>
  * All the encapsulated objects share the same locator URI.
- * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes.
- * </p>
  *
  * @author xbatko
  */
@@ -85,18 +81,33 @@ public abstract class MetaObject extends LocalAbstractObject {
             private static final long serialVersionUID = 1L;
 
             @Override
-            public Map<String, LocalAbstractObject> getObjectMap() {
-                return Collections.emptyMap();
-            }
-
-            @Override
-            public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-               return clone(false);
-            }
-
-            @Override
             protected void writeData(OutputStream stream) throws IOException {
                 throw new UnsupportedOperationException("This object cannot be stored into text file");
+            }
+
+            @Override
+            protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+                return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
+            }
+
+            @Override
+            public LocalAbstractObject getObject(String name) {
+                return null;
+            }
+
+            @Override
+            public Collection<String> getObjectNames() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public Collection<LocalAbstractObject> getObjects() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public int getObjectCount() {
+                return 0;
             }
         };
     }
@@ -105,11 +116,16 @@ public abstract class MetaObject extends LocalAbstractObject {
     //****************** Attribute access ******************//
 
     /**
-     * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     * Returns the number of encapsulated objects.
+     * @return the number of encapsulated objects
      */
-    public abstract Map<String, LocalAbstractObject> getObjectMap();
+    public abstract int getObjectCount();
+
+    /**
+     * Returns a set of symbolic names of the encapsulated objects.
+     * @return a set of symbolic names of the encapsulated objects
+     */
+    public abstract Collection<String> getObjectNames();
 
     /**
      * Returns the encapsulated object for given symbolic name.
@@ -117,25 +133,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param name the symbolic name of the object to return
      * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
      */
-    public LocalAbstractObject getObject(String name) {
-        return getObjectMap().get(name);
-    }
-
-    /**
-     * Returns a set of symbolic names of the encapsulated objects.
-     * @return a set of symbolic names of the encapsulated objects
-     */
-    public Collection<String> getObjectNames() {
-        return getObjectMap().keySet();
-    }
-
-    /**
-     * Returns a collection of all the encapsulated objects.
-     * @return a collection of all the encapsulated objects
-     */
-    public Collection<LocalAbstractObject> getObjects() {
-        return getObjectMap().values();
-    }
+    public abstract LocalAbstractObject getObject(String name);
 
     /**
      * Returns <tt>true</tt> if there is an encapsulated object for given symbolic name.
@@ -147,11 +145,26 @@ public abstract class MetaObject extends LocalAbstractObject {
     }
 
     /**
-     * Returns the number of encapsulated objects.
-     * @return the number of encapsulated objects
+     * Returns a collection of all the encapsulated objects.
+     * @return a collection of all the encapsulated objects
      */
-    public int getObjectCount() {
-        return getObjectMap().size();
+    public Collection<LocalAbstractObject> getObjects() {
+        Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(getObjectCount());
+        for (String string : getObjectNames()) {
+            objects.add(getObject(string));
+        }
+        return objects;
+    }
+
+    /**
+     * Returns a collection of all the encapsulated objects associated with their symbolic names.
+     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     */
+    public Map<String, LocalAbstractObject> getObjectMap() {
+        Map<String, LocalAbstractObject> ret = new HashMap<String, LocalAbstractObject>(getObjectCount());
+        for (String name : getObjectNames())
+            ret.put(name, getObject(name));
+        return ret;
     }
 
 
@@ -218,12 +231,10 @@ public abstract class MetaObject extends LocalAbstractObject {
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof MetaObject))
             return false;
-        Map<String, LocalAbstractObject> otherObjects = ((MetaObject)obj).getObjectMap();
-
-        // Compare the data of the respective objects (name-compatible)
-        for (Entry<String, LocalAbstractObject> entry : getObjectMap().entrySet()) {
-            LocalAbstractObject o1 = entry.getValue();
-            LocalAbstractObject o2 = otherObjects.get(entry.getKey());
+        MetaObject otherObj = (MetaObject)obj;
+        for (String name : getObjectNames()) {
+            LocalAbstractObject o1 = getObject(name);
+            LocalAbstractObject o2 = otherObj.getObject(name);
             if (o1 == null || o2 == null) {
                 if (o1 != null || o2 != null)
                     return false;
@@ -261,42 +272,16 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    @Override
     protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         return getDistanceImpl(obj, null, distThreshold);
     }
 
     /**
-     * Metric distance function.
-     * Measures the distance between this object and <code>obj</code>.
-     * The array <code>metaDistances</code> is filled with the distances
-     * of the respective encapsulated objects.
-     * 
-     * <p>
-     * Note that this method does not use the fast access to the 
-     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
-     * even if there is a filter that supports it.
-     * </p>
-     *
-     * @param obj the object to compute distance to
-     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
-     * @param distThreshold the threshold value on the distance
-     * @return the actual distance between obj and this if the distance is lower than distThreshold.
-     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
-     *         must be greater than the threshold distance.
-     */
-    public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
-        // This check is to enhance performance when statistics are disabled
-        if (Statistics.isEnabledGlobally())
-            counterDistanceComputations.add();
-
-        return getDistanceImpl(obj, metaDistances, distThreshold);
-    }
-
-    /**
      * The actual implementation of the metric function.
-     * The distance is computed as the difference of this and <code>obj</code>'s locator hash-codes.
-     * The array <code>metaDistances</code> is ignored.
+     * If {@code metaDistances} parameter is not <tt>null</tt>, it should be filled
+     * with the distances to the respective encapsulated objects (method
+     * {@link #fillMetaDistances(messif.objects.MetaObject, float, float[]) fillMetaDistances}
+     * can be used).
      *
      * @param obj the object to compute distance to
      * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
@@ -304,10 +289,70 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
-        return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
+    @Override
+    protected abstract float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold);
+
+    /**
+     * Returns the array that can hold distances to the respective encapsulated objects.
+     * This method returns a valid array only for descendants of {@link MetaObject},
+     * otherwise <tt>null</tt> is returned.
+     * @return the array that can hold distances to meta distances
+     */
+    @Override
+    public float[] createMetaDistancesHolder() {
+        return new float[getObjectCount()];
     }
 
+    /**
+     * Convenience method that fills the given {@code metaDistances} array with distances.
+     * Every item of the array is filled with the distance between
+     * the encapsulated object stored in this metaobject under the name given in the
+     * respective item of {@code objectNames} and the encapsulated object stored
+     * in {@code obj} metaobject under the same name. If any of the two objects
+     * are <tt>null</tt>, the value of {@code unknownDistance} parameter is filled.
+     *
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param objectNames the list of names of encapsulated objects to retrieve
+     *          from this and {@code obj} (must have the same number of items as {@code metaDistances}
+     * @param unknownDistance the distance to fill if either this or obj's encapsulated object is <tt>null</tt>
+     * @return the number of computed distances (i.e. the number of distTreshold items minus
+     *          the number of <tt>null</tt> objects)
+     * @see LocalAbstractObject#getDistance
+     */
+    protected final int fillMetaDistances(MetaObject obj, float distThreshold, float[] metaDistances, String[] objectNames, float unknownDistance) {
+        int count = 0;
+        for (int i = 0; i < metaDistances.length; i++) {
+            LocalAbstractObject obj1 = getObject(objectNames[i]);
+            LocalAbstractObject obj2 = obj.getObject(objectNames[i]);
+            if (obj1 == null || obj2 == null) {
+                metaDistances[i] = unknownDistance;
+            } else {
+                count++;
+                metaDistances[i] = obj1.getDistanceImpl(obj2, distThreshold);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Convenience method that fills the given {@code metaDistances} array with distances.
+     * Every item of the array is filled with the distance between
+     * all the encapsulated objects stored in this metaobject and the respective
+     * (using the same name) encapsulated object in {@code obj}. If any of the two objects
+     * are <tt>null</tt>, the value of {@link #UNKNOWN_DISTANCE} is filled.
+     *
+     * @param obj the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @return the number of computed distances (i.e. the number of distTreshold items minus
+     *          the number of <tt>null</tt> objects)
+     * @see LocalAbstractObject#getDistance
+     */
+    protected final int fillMetaDistances(MetaObject obj, float distThreshold, float[] metaDistances) {
+        return fillMetaDistances(obj, distThreshold, metaDistances, getObjectNames().toArray(new String[getObjectCount()]), UNKNOWN_DISTANCE);
+    }
 
     //****************** Additional overrides ******************//
 
@@ -335,7 +380,8 @@ public abstract class MetaObject extends LocalAbstractObject {
     public void clearSurplusData() {
         super.clearSurplusData();
         for (LocalAbstractObject object : getObjects())
-            object.clearSurplusData();
+            if (object != null)
+                object.clearSurplusData();
     }
 
     /**
@@ -351,13 +397,13 @@ public abstract class MetaObject extends LocalAbstractObject {
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObject loaded from binary input stream.
+     * Creates a new instance of MetaObject loaded from binary input.
      * 
-     * @param input the stream to read the MetaObject from
+     * @param input the input to read the MetaObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected MetaObject(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 

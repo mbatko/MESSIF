@@ -6,8 +6,6 @@
 
 package messif.statistics;
 
-import java.util.*;
-
 
 /** Statistics for counting time. The time is incremented by the amount of
  *  time elapsed between calls to methods start() & stop().
@@ -34,7 +32,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Counter operation ******************/
+    //****************** Counter operation ******************//
     protected long time = 0;
     protected long lastStartTime = 0;
     private long timeCheckpoint = 0;         /* backup time for checkpoint feature */
@@ -88,7 +86,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
 
-    /****************** Statistics merging ******************/
+    //****************** Statistics merging ******************//
     
     protected synchronized void updateFrom(StatisticTimer sourceStat) {
         time += sourceStat.get();
@@ -98,15 +96,13 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         time = sourceStat.get();
     }
     
-    /** Reset the current statistic (this one only).
-     */
     public void reset() {
         time = 0;
         lastStartTime = 0;
         setCheckpoint();
     }
     
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /** Creates a new instance of StatisticTimer */
     protected StatisticTimer(String name) {
@@ -114,7 +110,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
     
-    /****************** Creator ******************/
+    //****************** Creator ******************//
     
     /** Create new statistic timer with specified name or get the one already existing */
     public static StatisticTimer getStatistics(String name) throws ClassCastException {
@@ -122,12 +118,13 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
     
-    /****************** Text representation ******************/
+    //****************** Text representation ******************//
     
-    public String toString() { return name + ": " + get(); }
+    @Override
+    public String toString() {
+        return getName() + ": " + get();
+    }
 
-    /** Reports if timer has been changed since the last setCheckpoint() call.
-     */
     public boolean changedSinceCheckpoint() {
         return (time != timeCheckpoint || lastStartTime > 0);
     }
@@ -136,6 +133,11 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
      */
     public void setCheckpoint() {
         timeCheckpoint = time;
+    }
+
+    @Override
+    protected StatisticTimer cast() {
+        return this;
     }
     
 }

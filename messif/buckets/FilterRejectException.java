@@ -11,7 +11,7 @@ package messif.buckets;
  *
  * @author  xbatko
  */
-public class FilterRejectException extends RuntimeException {
+public class FilterRejectException extends BucketStorageException {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;    
@@ -20,14 +20,14 @@ public class FilterRejectException extends RuntimeException {
      * Creates a new instance of <code>FilterRejectException</code> without detail message.
      */
     public FilterRejectException() {
+        super(BucketErrorCode.OBJECT_REFUSED);
     }
-    
-    
+
     /**
      * Constructs an instance of <code>FilterRejectException</code> with the specified detail message.
      * @param msg the detail message
      */
     public FilterRejectException(String msg) {
-        super(msg);
+        super(BucketErrorCode.OBJECT_REFUSED, msg);
     }
 }

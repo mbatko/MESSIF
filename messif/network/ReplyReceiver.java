@@ -7,7 +7,6 @@
 package messif.network;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import messif.utility.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A {@link Receiver} for receiving reply messages.
@@ -26,28 +26,71 @@ import java.util.logging.Level;
  * @param <TReplyMessage> type of the reply message that this receiver accepts
  * @author  xbatko
  */
-public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiver {
+public final class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiver {
 
     /** Logger */
-    protected static Logger log = Logger.getLoggerEx("messif.network");
+    protected static Logger log = Logger.getLogger("messif.network");
 
 
-    /****************** Attributes for reply waiting ******************/
+    //****************** Attributes for reply waiting ******************//
 
     /** Class of the reply messages to await */
-    protected final Class<? extends TReplyMessage> replyClass;
+    private final Class<? extends TReplyMessage> replyClass;
 
     /** List of received reply messages */
-    protected final List<TReplyMessage> messages = new ArrayList<TReplyMessage>();
+    private final List<TReplyMessage> messages = new ArrayList<TReplyMessage>();
 
     /** Set of network nodes from which this receiver expects response */
-    protected final Set<List<NetworkNode>> waitingPaths;
+    private final Set<List<NetworkNode>> waitingPaths;
 
     /** Set of network nodes that we have received response from, but that are not commited yet */
-    protected final List<TReplyMessage> uncommitedMessages;
+    private final List<TReplyMessage> uncommitedMessages;
 
     /** Reply receiver list where this receiver is registered */
-    protected final ReplyReceiverList registeredToList;
+    private final ReplyReceiverList registeredToList;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ReplyReceiver.
+     * This method is only called from {@link MessageDispatcher} for within
+     * {@link MessageDispatcher#sendMessageWaitReply sendMessageWaitReply} method.
+     *
+     * @param replyClass the class of reply messages to await (and all its subclasses)
+     * @param registeredToList the reply receiver list where this receiver is registered (and will deregister itself after getReplies)
+     */
+    ReplyReceiver(Class<? extends TReplyMessage> replyClass, ReplyReceiverList registeredToList) {
+        waitingPaths = new HashSet<List<NetworkNode>>();
+        uncommitedMessages = new ArrayList<TReplyMessage>();
+        this.replyClass = replyClass;
+        this.registeredToList = registeredToList;
+    }
+
+
+    //******************** Type casting *********************//
+
+
+    /**
+     * Cast a given {@link ReplyReceiver} to a correct generic type.
+     * The receiver's reply class is checked so this cast is type-safe.
+     *
+     * @param <E> the reply messages that the cast receiver waits for
+     * @param receiver the receiver to cast
+     * @param replyMessageClass the class of the reply messages that the cast receiver waits for
+     * @return a safe-cast reply receiver
+     */
+    @SuppressWarnings("unchecked")
+    public static <E extends ReplyMessage> ReplyReceiver<E> cast(ReplyReceiver<?> receiver, Class<? extends E> replyMessageClass) {
+        if (receiver == null)
+            return null;
+        if (replyMessageClass.isAssignableFrom(receiver.replyClass))
+            return (ReplyReceiver<E>)receiver;
+        else
+            throw new ClassCastException("Receiver is waiting for messages of " + receiver.replyClass + " and not " + replyMessageClass.getName());    }
+
+
+    //******************** Attribute access method *********************//
 
     /**
      * Returns the number of replies still pending. The returned number may not be precise (can return lower value),
@@ -74,25 +117,8 @@ public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiv
         return (registeredToList == null) && isFinished();
     }
 
-    /****************** Constructors ******************/
 
-    /**
-     * Creates a new instance of ReplyReceiver.
-     * This method is only called from {@link MessageDispatcher} for within
-     * {@link MessageDispatcher#sendMessageWaitReply sendMessageWaitReply} method.
-     *
-     * @param replyClass the class of reply messages to await (and all its subclasses)
-     * @param registeredToList the reply receiver list where this receiver is registered (and will deregister itself after getReplies)
-     */
-    protected ReplyReceiver(Class<? extends TReplyMessage> replyClass, ReplyReceiverList registeredToList) {
-        waitingPaths = new HashSet<List<NetworkNode>>();
-        uncommitedMessages = new ArrayList<TReplyMessage>();
-        this.replyClass = replyClass;
-        this.registeredToList = registeredToList;
-    }
-
-
-    /********************  Management of the reply waiting *********************/
+    //******************** Management of the reply waiting *********************//
 
     /**
      * Internal method to add a navigation path to the waiting list.
@@ -178,7 +204,7 @@ public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiv
     }
 
 
-    /****************** Message receiving ******************/
+    //****************** Message receiving ******************//
 
     /**
      * The {@link Receiver} interface method.
@@ -194,7 +220,7 @@ public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiv
         if (allowSuperclass || isFinished() || !replyClass.isInstance(msg))
             return false;
         
-        TReplyMessage replyMessage = (TReplyMessage)msg; // this cast IS checked on the previous line
+        TReplyMessage replyMessage = replyClass.cast(msg);
         
         synchronized (messages) {
             AtomicInteger updatesCount = new AtomicInteger(0);
@@ -226,7 +252,7 @@ public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiv
     }
 
 
-    /****************** Message waiting ******************/
+    //****************** Message waiting ******************//
 
     /**
      * Returns all reply messages gathered by this reply receiver so far.
@@ -281,7 +307,7 @@ public class ReplyReceiver<TReplyMessage extends ReplyMessage> implements Receiv
     }
 
 
-    /****************** String representation ******************/
+    //****************** String representation ******************//
 
     /**
      * Returns a string representation of this reply receiver.

@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import messif.network.Message;
+import java.util.logging.Level;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
 import messif.network.ThreadInvokingReceiver;
@@ -105,7 +105,7 @@ public class CentralCreator extends NetworkNodeDispatcher {
 
                 try {
                     // Send "Use" message
-                    MessageActivateResponse msg = (MessageActivateResponse)messageDisp.sendMessageWaitReply(new MessageActivate(null), node).getFirstReply();
+                    MessageActivateResponse msg = messageDisp.sendMessageWaitSingleReply(new MessageActivate(null), MessageActivateResponse.class, node);
 
                     // Get response type
                     if (msg.isSuccess())
@@ -113,8 +113,7 @@ public class CentralCreator extends NetworkNodeDispatcher {
                 } catch (IOException e) {
                     // Remote server is dead
                 } catch (ClassCastException e) {
-                    // This should never happen
-                    log.severe(e);
+                    throw new InternalError("This should never happen");
                 }
             }
 
@@ -155,7 +154,7 @@ public class CentralCreator extends NetworkNodeDispatcher {
 
                 log.info("Activated by: " + msg.getSender());
             } catch (CantStartException e) {
-                log.severe(e);
+                log.log(Level.SEVERE, e.getClass().toString(), e);
 
                 // Send negative response
                 messageDisp.replyMessage(new MessageActivateResponse(MessageActivateResponse.CANT_START, msg));

@@ -9,7 +9,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
+import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 
@@ -46,21 +46,19 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
         // Access data of the other object (throws ClassCastException if trying to compare with another type of object)
         byte[] objData = ((ObjectVectorEdgecomp)obj).data;
 
-        double [] Total_EdgeHist_Ref = new double [150];
-        double [] Total_EdgeHist_Query = new double [150];
-        
-        double [] Local_EdgeHist = new double[80];
-        double [] Local_EdgeHist_Query = new double[80];
+        float [] Total_EdgeHist_Ref = new float [150];
+        float [] Total_EdgeHist_Query = new float [150];
         
         // to use XM distance function
         for (int i=0; i<80; i++) {
-            Local_EdgeHist[i] = QuantTable[i%5][this.data[i]];
-            Local_EdgeHist_Query[i]	= QuantTable[i%5][objData[i]];
+            Total_EdgeHist_Ref[i+5] = QuantTable[i%5][this.data[i]];
+            Total_EdgeHist_Query[i+5]	= QuantTable[i%5][objData[i]];
         }
         
-        EHD_Make_Global_SemiGlobal(Local_EdgeHist,  Total_EdgeHist_Ref);
-        EHD_Make_Global_SemiGlobal(Local_EdgeHist_Query,  Total_EdgeHist_Query);
-        double dist = 0.0;
+        EHD_Make_Global_SemiGlobal(Total_EdgeHist_Ref);
+        EHD_Make_Global_SemiGlobal(Total_EdgeHist_Query);
+
+        float dist = 0.0f;
         for(int i=0; i < 80+70; i++){
             // Global(5)+Semi_Global(65)
             double dTemp = (Total_EdgeHist_Ref[i] - Total_EdgeHist_Query[i]);
@@ -68,23 +66,22 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
             dist += dTemp;
         }
 
-        return (float)dist;
+        return dist;
     }
 
-    private static double [][] QuantTable = {
-        {0.010867,0.057915,0.099526,0.144849,0.195573,0.260504,0.358031,0.530128},
-        {0.012266,0.069934,0.125879,0.182307,0.243396,0.314563,0.411728,0.564319},
-        {0.004193,0.025852,0.046860,0.068519,0.093286,0.123490,0.161505,0.228960},
-        {0.004174,0.025924,0.046232,0.067163,0.089655,0.115391,0.151904,0.217745},
-        {0.006778,0.051667,0.108650,0.166257,0.224226,0.285691,0.356375,0.450972},
+    private static float [][] QuantTable = {
+        {0.010867f,0.057915f,0.099526f,0.144849f,0.195573f,0.260504f,0.358031f,0.530128f},
+        {0.012266f,0.069934f,0.125879f,0.182307f,0.243396f,0.314563f,0.411728f,0.564319f},
+        {0.004193f,0.025852f,0.046860f,0.068519f,0.093286f,0.123490f,0.161505f,0.228960f},
+        {0.004174f,0.025924f,0.046232f,0.067163f,0.089655f,0.115391f,0.151904f,0.217745f},
+        {0.006778f,0.051667f,0.108650f,0.166257f,0.224226f,0.285691f,0.356375f,0.450972f},
     };
 
-    private void EHD_Make_Global_SemiGlobal(double[] LocalHistogramOnly, double[] TotalHistogram) {
+    private void EHD_Make_Global_SemiGlobal(float[] TotalHistogram) {
         int i, j;
-        System.arraycopy(LocalHistogramOnly, 0, TotalHistogram, 5, 80);
         // Make Global Histogram Start
         for(i=0; i<5; i++)
-            TotalHistogram[i]=0.0;
+            TotalHistogram[i]=0.0f;
         for( j=0; j < 80; j+=5) {
             for( i=0; i < 5; i++) {
                 TotalHistogram[i] += TotalHistogram[5+i+j];
@@ -92,7 +89,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
         }  // for( j )
         for(i=0; i<5; i++)
             // Global *5.
-            TotalHistogram[i] = TotalHistogram[i]*5/16.0;
+            TotalHistogram[i] = TotalHistogram[i]*5/16;
         
         // Make Global Histogram end
         
@@ -104,7 +101,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     (TotalHistogram[5+j]
                     +TotalHistogram[5+20+j]
                     +TotalHistogram[5+40+j]
-                    +TotalHistogram[5+60+j])/4.0;
+                    +TotalHistogram[5+60+j])/4;
         }
         for(i=105; i < 125; i++) {
             j = i-105;
@@ -112,7 +109,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     (TotalHistogram[5+20*(j/5)+j%5]
                     +TotalHistogram[5+20*(j/5)+j%5+5]
                     +TotalHistogram[5+20*(j/5)+j%5+10]
-                    +TotalHistogram[5+20*(j/5)+j%5+15])/4.0;
+                    +TotalHistogram[5+20*(j/5)+j%5+15])/4;
         }
         ///////////////////////////////////////////////////////
         //				4 area Semi-Global
@@ -124,7 +121,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     (TotalHistogram[5+10*(j/5)+0+j%5]
                     +TotalHistogram[5+10*(j/5)+5+j%5]
                     +TotalHistogram[5+10*(j/5)+20+j%5]
-                    +TotalHistogram[5+10*(j/5)+25+j%5])/4.0;
+                    +TotalHistogram[5+10*(j/5)+25+j%5])/4;
         }
         //  Down area 2.
         for(i=135; i < 145; i++) {
@@ -133,7 +130,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     (TotalHistogram[5+10*(j/5)+40+j%5]
                     +TotalHistogram[5+10*(j/5)+45+j%5]
                     +TotalHistogram[5+10*(j/5)+60+j%5]
-                    +TotalHistogram[5+10*(j/5)+65+j%5])/4.0;
+                    +TotalHistogram[5+10*(j/5)+65+j%5])/4;
         }
         // Center Area 1
         for(i=145; i < 150; i++) {
@@ -142,7 +139,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
                     (TotalHistogram[5+25+j%5]
                     +TotalHistogram[5+30+j%5]
                     +TotalHistogram[5+45+j%5]
-                    +TotalHistogram[5+50+j%5])/4.0;
+                    +TotalHistogram[5+50+j%5])/4;
         }
     }
 
@@ -150,13 +147,13 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectVectorEdgecomp loaded from binary input stream.
+     * Creates a new instance of ObjectVectorEdgecomp loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectVectorEdgecomp from
+     * @param input the buffer to read the ObjectVectorEdgecomp from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectVectorEdgecomp(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectVectorEdgecomp(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 

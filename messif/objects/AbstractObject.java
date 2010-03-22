@@ -10,8 +10,8 @@ import messif.objects.keys.AbstractObjectKey;
 import java.io.IOException;
 import java.io.Serializable;
 import messif.netbucket.RemoteAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Clearable;
 
@@ -21,7 +21,7 @@ import messif.utility.Clearable;
  * This is the top-most class of the object hierarchy.
  *
  * @see LocalAbstractObject
- * @see messif.netbucket.RemoteAbstractObject
+ * @see RemoteAbstractObject
  *
  * @author  xbatko
  */
@@ -33,7 +33,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     //****************** Attributes ******************//
 
     /** The key of this object - it must contain the URI. */
-    protected AbstractObjectKey objectKey;
+    private AbstractObjectKey objectKey;
 
 
     //****************** Constructors ******************//
@@ -184,7 +184,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @return a clone of this instance
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
-    public AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
+    public final AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
         AbstractObject rtv = clone();
         rtv.objectKey = objectKey;
         return rtv;
@@ -213,26 +213,26 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of AbstractObject loaded from binary input stream.
+     * Creates a new instance of AbstractObject loaded from binary input.
      * 
-     * @param input the stream to read the AbstractObject from
+     * @param input the input to read the AbstractObject from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected AbstractObject(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected AbstractObject(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         objectKey = serializator.readObject(input, AbstractObjectKey.class);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    protected int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, objectKey);
     }

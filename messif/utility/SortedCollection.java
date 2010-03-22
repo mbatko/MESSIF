@@ -16,11 +16,12 @@ import java.util.NoSuchElementException;
  * Implementation of a sorted collection.
  * The order is maintained using the comparator specified in the constructor.
  * Complexity of insertion is O(log n).
- * 
+ *
  * @param <T> the type of objects stored in this collection
  * @author xbatko
  */
-public class SortedCollection<T> implements Collection<T>, Serializable, Cloneable {
+public class SortedCollection<T> extends SortedArrayData<T, T> implements Collection<T>, Serializable, Cloneable {
+    /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Constants ******************//
@@ -32,7 +33,7 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     //****************** Attributes ******************//
 
     /** Comparator used to maintain order in this collection */
-    private final Comparator comparator;
+    private final Comparator<? super T> comparator;
 
     /** Array buffer into which the elements of the SortedCollection are stored */
     private Object[] items;
@@ -47,7 +48,6 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     private transient int modCount;
 
 
-
     //****************** Constructor ******************//
 
     /**
@@ -58,12 +58,15 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
     public SortedCollection(int initialCapacity, int maximalCapacity, Comparator<? super T> comparator) throws IllegalArgumentException {
+        if (comparator == null)
+            this.comparator = new Comparable2IndexComparator<T>();
+        else
+            this.comparator = comparator;
         if (initialCapacity < 1)
             throw new IllegalArgumentException("Illegal capacity: " + initialCapacity);
         if (maximalCapacity < initialCapacity)
             throw new IllegalArgumentException("Illegal maximal capacity: " + maximalCapacity);
 
-        this.comparator = comparator;
         this.capacity = maximalCapacity;
         this.items = new Object[initialCapacity];
     }
@@ -91,6 +94,17 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     }
 
     /**
+     * Constructs an empty collection with the specified initial capacity.
+     * The order is defined using the natural order of items.
+     * The capacity of this collection is not limited.
+     * @param initialCapacity the initial capacity of the collection
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
+     */
+    public SortedCollection(int initialCapacity) throws IllegalArgumentException {
+        this(initialCapacity, null);
+    }
+
+    /**
      * Constructs an empty collection.
      * The order is defined using the natural order of items.
      * The initial capacity of the collection is set to 16 and maximal capacity
@@ -99,6 +113,28 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      */
     public SortedCollection() throws IllegalArgumentException {
         this(null);
+    }
+
+
+    //****************** Comparing methods ******************//
+
+    /**
+     * Interanal comparator that compares {@link Comparable} objects.
+     * @param <T> type of objects to compare
+     */
+    private static final class Comparable2IndexComparator<T> implements Comparator<T>, Serializable {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        @SuppressWarnings("unchecked")
+        public final int compare(T o1, T o2) {
+            return ((Comparable)o1).compareTo(o2); // This is unchecked but a responsibility of the constructor caller
+        }
+    }
+
+    @Override
+    protected int compare(T key, T object) throws ClassCastException {
+        return comparator.compare(key, object);
     }
 
 
@@ -126,6 +162,14 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      */
     public boolean isFull() {
 	return size == capacity;
+    }
+
+    /**
+     * Returns the maximal capatity of this collection.
+     * @return the maximal capatity of this collection
+     */
+    public int getMaximalCapacity() {
+        return capacity;
     }
 
     /**
@@ -159,30 +203,6 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     }
 
     /**
-     * Returns the index of the first occurrence of the specified element
-     * in this list, or -1 if this list does not contain the element.
-     * More formally, returns the lowest index <tt>i</tt> such that
-     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param o element to search for
-     * @return the index of the first occurrence of the specified element in
-     *         this list, or -1 if this list does not contain the element
-     */
-    private int indexOf(Object o) {
-	if (o == null) {
-	    for (int i = 0; i < size; i++)
-		if (items[i] == null)
-		    return i;
-	} else {
-	    for (int i = 0; i < size; i++)
-		if (o.equals(items[i]))
-		    return i;
-	}
-	return -1;
-    }
-
-    /**
      * Returns the element at the specified position in this collection.
      * @param  index index of the element to return
      * @return the element at the specified position in this collection
@@ -190,20 +210,49 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
     @SuppressWarnings("unchecked")
-    private final T get(int index) {
+    protected final T get(int index) {
         return (T)items[index];
     }
 
+
     /**
-     * Returns the last element of this collection according to the order
+     * Removes and returns the last element of this collection according to the order
      * specified by the comparator.
-     * @return the element at the specified position in this collection
+     * @return the last element in this collection
      * @throws NoSuchElementException if the collection is empty
      */
-    public T last() throws NoSuchElementException {
+    public T removeLast() throws NoSuchElementException {
         if (isEmpty())
             throw new NoSuchElementException();
-        return get(size - 1);
+        T last = get(size - 1);
+        remove(size - 1);
+        return last;
+    }
+
+    /**
+     * Removes and returns the last element of this collection according to the order
+     * specified by the comparator.
+     * @return the last element in this collection
+     * @throws NoSuchElementException if the collection is empty
+     * @deprecated Use {@link #removeLast() removeLast()} method instead
+     */
+    @Deprecated
+    public T popLast() throws NoSuchElementException {
+        return removeLast();
+    }
+
+    /**
+     * Removes and returns the first element of this collection according to the order
+     * specified by the comparator.
+     * @return the first element in this collection
+     * @throws NoSuchElementException if the collection is empty
+     */
+    public T removeFirst() throws NoSuchElementException {
+        if (isEmpty())
+            throw new NoSuchElementException();
+        T first = get(0);
+        remove(0);
+        return first;
     }
 
 
@@ -281,52 +330,6 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     //****************** Modification methods ******************//
 
     /**
-     * Returns the index where the object <code>e</code> should be inserted.
-     * The order defined by the comparator is used.
-     * @param e the object to get the insertion point for
-     * @return the index where the object <code>e</code> should be inserted
-     */
-    @SuppressWarnings("unchecked")
-    private int insertionPoint(T e) {
-	int low = 0;
-	int high = size - 1;
-
-	while (low <= high) {
-	    int mid = (low + high) >>> 1;
-	    int cmp = comparator.compare(e, items[mid]); // This IS checked, since this collection contains only T
-
-	    if (cmp < 0) // Inserted object is smaller than the current middle
-		high = mid - 1;
-            else // Inserted object is greater than or equal to the current middle
-		low = mid + 1;
-	}
-	return low;  // key not found.
-    }
-
-    /**
-     * Returns the index where the object <code>e</code> should be inserted.
-     * The order defined by the inserted object's {@link Comparable#compareTo} method.
-     * @param e the object to get the insertion point for
-     * @return the index where the object <code>e</code> should be inserted
-     */
-    @SuppressWarnings("unchecked")
-    private int insertionPoint(Comparable e) {
-	int low = 0;
-	int high = size - 1;
-
-	while (low <= high) {
-	    int mid = (low + high) >>> 1;
-	    int cmp = e.compareTo(items[mid]); // This IS checked, since this collection contains only T
-
-	    if (cmp < 0) // Inserted object is smaller than the current middle
-		high = mid - 1;
-            else // Inserted object is greater than or equal to the current middle
-		low = mid + 1;
-	}
-	return low;  // key not found.
-    }
-
-    /**
      * Adds the specified element to this list.
      * The element is added according the to order defined by the comparator.
      * @param e element to be appended to this list
@@ -334,7 +337,7 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      */
     public boolean add(T e) {
         modCount++;
-        int i = (comparator == null)?insertionPoint((Comparable)e):insertionPoint(e);
+        int i = binarySearch(e, 0, size - 1, false);
 
         // If array is too small to hold new item
         if (size == items.length) {
@@ -390,21 +393,22 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      */
     public boolean remove(Object o) {
         int index = indexOf(o);
-        if (index < 0)
-            return false;
-        remove(index);
-	return true;
+        return (index < 0)?false:remove(index);
     }
 
     /**
-     * Removes an element at the specified position from this list.
-     * @param index the position of the element to remove
+     * Removes the element at the specified position in this collection.
+     * @param index index of the element to remove
+     * @return <tt>false</tt> if the object was not removed (e.g. because there is no object with this index)
      */
-    private void remove(int index) {
+    protected boolean remove(int index) {
+        if (index < 0 || index >= size)
+            return false;
         modCount++;
         if (index < size - 1)
             System.arraycopy(items, index + 1, items, index, size - index - 1);
         items[--size] = null; // Let gc do its work
+        return true;
     }
 
 
@@ -426,77 +430,6 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
     }
 
     /**
-     * Merge sorts two item arrays into the destination array using the specified comparator.
-     * @param items1 the first array to merge
-     * @param from1 the starting index in the first array
-     * @param to1 the last index (exclusive) in the first array
-     * @param items2 the second array to merge
-     * @param from2 the starting index in the second array
-     * @param to2 the last index (exclusive) in the second array
-     * @param comparator the comparator used to compare objects from the collections;
-     *        its type check is supressed, the array items are expected to be compatible
-     * @param destination the destination array
-     * @param fromDest the starting index in the destination array
-     * @param toDest the last index (exclusive) in the destination array
-     */
-    @SuppressWarnings("unchecked")
-    private static void mergeSort(Object[] items1, int from1, int to1, Object[] items2, int from2, int to2, Comparator comparator, Object[] destination, int fromDest, int toDest) {
-        // Merge sort data
-        while (from1 < to1 && from2 < to2 && fromDest < toDest) {
-            // Compare the first elements in items1 and items2
-            int cmp = (comparator == null)?
-                ((Comparable)items1[from1]).compareTo(items2[from2]):
-                comparator.compare(items1[from1], items2[from2]);
-
-            // If the current item of this collection is bigger than the current item of the added collection
-            if (cmp > 0)
-                destination[fromDest++] = items2[from2++];
-            else
-                destination[fromDest++] = items1[from1++];
-        }
-
-        // Copy the remaining data
-        if (from2 >= to2)
-            System.arraycopy(items1, from1, destination, fromDest, Math.min(toDest - fromDest, to1 - from1));
-        else if (from1 >= to1)
-            System.arraycopy(items2, from2, destination, fromDest, Math.min(toDest - fromDest, to2 - from2));
-    }
-
-    /**
-     * Add all of the elements in the specified collection to this list.
-     * The elements are added according the to order defined by the comparator.
-     * @param c collection containing elements to be added to this list
-     * @return <tt>true</tt> if this list changed as a result of the call
-     * @throws NullPointerException if the specified collection is null
-     */
-    public boolean addAll(SortedCollection<? extends T> c) {
-        // If source array is empty, we are done
-        if (c.isEmpty())
-            return false;
-
-	// Check if the comparators are equal
-        if ((comparator != c.comparator) && (comparator == null || !comparator.equals(c.comparator)))
-            return addAll((Collection<? extends T>)c); // Fallback to normal addAll method
-
-        // More effective implementation is available, because these two collections maintain the same order
-
-        // Prepare new array to hold items (always will have at least one element)
-        Object[] newItems = new Object[Math.min(this.size + c.size, capacity)];
-
-        // Merge sort arrays
-        if (isEmpty())
-            System.arraycopy(c.items, 0, newItems, 0, c.size);
-        else
-            mergeSort(items, 0, size, c.items, 0, c.size, comparator, newItems, 0, newItems.length);
-
-        modCount++;
-        this.items = newItems;
-        this.size = newItems.length;
-
-        return true;
-    }
-
-    /**
      * Removes all of this collection's elements that are also contained in the
      * specified collection. After this call returns, this collection will contain
      * no elements in common with the specified collection.
@@ -510,9 +443,14 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      */
     public boolean removeAll(Collection<?> c) {
         boolean ret = false;
-        for (Object item : c)
-            if (remove(item))
+        Iterator<T> iterator = iterator();
+        while (iterator.hasNext()) {
+            if (c.contains(iterator.next())) {
                 ret = true;
+                iterator.remove();
+            }
+        }
+
         return ret;
     }
 
@@ -590,13 +528,39 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
      * @return an iterator over the elements in this collection
      */
     public Iterator<T> iterator() {
-        return new Itr();
+        return new Itr(0, size);
+    }
+
+    /**
+     * Returns an iterator over the elements in this collection skipping the first
+     * {@code skip} items and returning only {@code count} elements. If {@code count}
+     * is less than or equal to zero, all objects from the collection (except for
+     * {@code skip}) are returned. Note that their order is defined by the comparator.
+     *
+     * @param skip number of items to skip
+     * @param count number of items to iterate (maximally, can be less)
+     * @return an iterator over the elements in this collection
+     */
+    public Iterator<T> iterator(int skip, int count) {
+        if (skip < 0)
+            throw new IllegalArgumentException("Skip argument cannot be negative");
+        int iteratorSize;
+        if (count <= 0)
+            iteratorSize = size;
+        else if (skip + count > size)
+            iteratorSize = size;
+        else
+            iteratorSize = count + skip;
+        return new Itr(skip, iteratorSize);
     }
 
     /** Internal class that implements iterator for this collection */
     private class Itr implements Iterator<T> {
 	/** Index of an element to be returned by subsequent call to next */
-	private int curIndex = 0;
+	private int cursor;
+
+	/** Index of the last element to return plus one */
+	private final int iteratorSize;
 
 	/**
 	 * Index of element returned by most recent call to next or
@@ -612,20 +576,27 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
 	 */
 	private int expectedModCount = modCount;
 
+        /**
+         * Creates a new iterator instance.
+         * @param cursor the index of initial item where the iteration starts
+         * @param iteratorSize index of the last element to return plus one
+         */
+        private Itr(int cursor, int iteratorSize) {
+            this.cursor = cursor;
+            this.iteratorSize = iteratorSize;
+        }
+
 	public boolean hasNext() {
-            return curIndex < SortedCollection.this.size;
+            return cursor < iteratorSize;
 	}
 
 	public T next() {
             checkForComodification();
-	    try {
-		T next = SortedCollection.this.get(curIndex);
-		lastRet = curIndex++;
-		return next;
-	    } catch (IndexOutOfBoundsException e) {
-		checkForComodification();
-		throw new NoSuchElementException();
-	    }
+	    if (!hasNext())
+                throw new NoSuchElementException();
+            T next = get(cursor);
+            lastRet = cursor++;
+            return next;
 	}
 
 	public void remove() {
@@ -635,8 +606,8 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
 
 	    try {
 		SortedCollection.this.remove(lastRet);
-		if (lastRet < curIndex)
-		    curIndex--;
+		if (lastRet < cursor)
+		    cursor--;
 		lastRet = -1;
 		expectedModCount = modCount;
 	    } catch (IndexOutOfBoundsException e) {
@@ -644,7 +615,12 @@ public class SortedCollection<T> implements Collection<T>, Serializable, Cloneab
 	    }
 	}
 
-	private final void checkForComodification() {
+        /**
+         * Internal method that checks for the modification of this collection
+         * during iteration and throws ConcurrentModificationException.
+         * @throws ConcurrentModificationException if the collection was modified while iterating
+         */
+	private final void checkForComodification() throws ConcurrentModificationException {
 	    if (modCount != expectedModCount)
 		throw new ConcurrentModificationException();
 	}

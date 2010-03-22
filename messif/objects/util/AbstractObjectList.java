@@ -211,8 +211,19 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
     }
 
     
-    /******************* Random lists *************************/
-    
+    // ******************* Random selection *************************
+
+    /**
+     * Returns one object selected from the list at random.
+     *
+     * @return An object selected at random or null if the list is empty.
+     */
+    public E randomObject() {
+        int l = size();
+        
+        return ((l == 0) ? null : get( (int)(Math.random() * (double)l) ));
+    }
+
     /** Returns a list containing randomly choosen objects from this list.
      * If the uniqueness of objects in the retrieved list is not required, the number of objects
      * in the response is equal to 'count'. If unique list is requested the number of objects

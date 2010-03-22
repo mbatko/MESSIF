@@ -7,14 +7,13 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.util.AbstractObjectIterator;
@@ -44,8 +43,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     
     /** Creates a new instance of object */
     public ObjectIntVector(int[] data) {
-        this.data = new int[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
+        this.data = data.clone();
     }
     
     /** Creates a new instance of randomly generated object */
@@ -65,12 +63,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      */
     public ObjectIntVector(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line;
-        do {
-            line = stream.readLine();
-            if (line == null)
-                throw new EOFException("EoF reached while initializing ObjectIntVector.");
-        } while (processObjectComment(line));
+        String line = readObjectComments(stream);
         
         String[] numbers = line.trim().split("[, ]+");
 
@@ -256,35 +249,23 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectIntVector loaded from binary input stream.
+     * Creates a new instance of ObjectIntVector loaded from binary input buffer.
      * 
-     * @param input the stream to read the ObjectIntVector from
+     * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectIntVector(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected ObjectIntVector(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         data = serializator.readIntArray(input);
     }
 
-    /**
-     * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
-     * @param serializator the serializator used to write objects
-     * @return the number of bytes actually written
-     * @throws IOException if there was an I/O error during serialization
-     */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
                serializator.write(output, data);
     }
 
-    /**
-     * Returns the exact size of the binary-serialized version of this object in bytes.
-     * @param serializator the serializator used to write objects
-     * @return size of the binary-serialized version of this object
-     */
     @Override
     public int getBinarySize(BinarySerializator serializator) {
         return super.getBinarySize(serializator) + serializator.getBinarySize(data);

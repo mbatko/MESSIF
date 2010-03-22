@@ -10,8 +10,8 @@ package messif.objects;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.UUID;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -60,12 +60,10 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      */
     @Override
     public final boolean equals(Object obj) {
-        try {
-            UniqueID castObj = (UniqueID)obj;
-            return this.leastSigBits == castObj.leastSigBits && this.mostSigBits == castObj.mostSigBits;
-        } catch (ClassCastException e) {
+        if (!(obj instanceof UniqueID))
             return false;
-        }
+        UniqueID castObj = (UniqueID)obj;
+        return this.leastSigBits == castObj.leastSigBits && this.mostSigBits == castObj.mostSigBits;
     }
 
     /**
@@ -80,7 +78,12 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
                 leastSigBits);
     }
 
-    /** Returns val represented by the specified number of hex digits. */
+    /**
+     * Returns long value <code>val</code> represented by the specified number of hex digits.
+     * @param val the value to convert to hex digits
+     * @param digits the number of digits the convert
+     * @return a string containing the hex-digit representation
+     */
     private static String digits(long val, int digits) {
 	long hi = 1L << (digits * 4);
 	return Long.toHexString(hi | (val & (hi - 1))).substring(1);
@@ -144,25 +147,25 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of UniqueID loaded from binary input stream.
+     * Creates a new instance of UniqueID loaded from binary input.
      * 
-     * @param input the stream to read the ID from
+     * @param input the input to read the ID from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected UniqueID(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected UniqueID(BinaryInput input, BinarySerializator serializator) throws IOException {
         this.mostSigBits = serializator.readLong(input);
         this.leastSigBits = serializator.readLong(input);
     }
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the output stream this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
-    protected int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    protected int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return serializator.write(output, mostSigBits) +
                serializator.write(output, leastSigBits);
     }

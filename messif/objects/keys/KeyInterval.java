@@ -103,6 +103,11 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
         return getFrom().equals(((KeyInterval) obj).getFrom()) && getTo().equals(((KeyInterval) obj).getTo());
     }
 
+    @Override
+    public int hashCode() {
+        return (getFrom().hashCode() << 8) ^ getTo().hashCode();
+    }
+    
     /**
      * Given a set of keys, this method cuts the given interval to dijcunct set of "right-open" intervals.
      */
@@ -116,5 +121,5 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
     public String toString() {
         return (new StringBuffer("[")).append(getFrom()).append(",").append(getTo()).append("]").toString();
     }
-    
+
 }

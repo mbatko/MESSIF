@@ -8,16 +8,26 @@
 package messif.objects;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import messif.objects.nio.BinaryInputStream;
-import messif.objects.nio.BinaryOutputStream;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
+
 /**
+ * Precomputed distance filter that has the stored precomputed distances mapped
+ * to the respective {@link LocalAbstractObject}.
+ * While filtering, this filter uses one stored distance against the respective
+ * object from the map.
+ * Note that this filter should not be used when the instances of referenced objects
+ * are not in memory. Moreover, this filter cannot be written to text stream, since
+ * the reference objects cannot be correctly resolved. However, a java serialization
+ * or {@link BinarySerializator binary serialization} can be used.
  *
  * @author xbatko
  */
@@ -29,24 +39,30 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
     /** The hash table of precomputed distances */
     protected final Map<LocalAbstractObject, Float> precompDistMapping;
 
-    /** Creates a new instance of PrecomputedDistancesPivotMapFilter */
+    /**
+     * Creates a new instance of PrecomputedDistancesPivotMapFilter
+     */
     public PrecomputedDistancesPivotMapFilter() {
         precompDistMapping = Collections.synchronizedMap(new HashMap<LocalAbstractObject, Float>());
     }
 
-    /** Creates a new instance of PrecomputedDistancesPivotMapFilter */
+    /**
+     * Creates a new instance of PrecomputedDistancesPivotMapFilter
+     * @param object the object to which to add this filter
+     */
     public PrecomputedDistancesPivotMapFilter(LocalAbstractObject object) {
         this();
         object.chainFilter(this, true);
     }
 
-    /**
-     * Return the string value of this filter.
-     * @return the string value of this filter
-     */
     @Override
-    public String getText(){
-        throw new UnsupportedOperationException("The pivot map filter is not to be written into the text file");
+    protected boolean isDataWritable() {
+        return false;
+    }
+
+    @Override
+    protected void writeData(OutputStream stream) throws IOException {
+        throw new UnsupportedOperationException("The pivot map filter cannot be written to the text file");
     }
 
     /**
@@ -55,8 +71,10 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
      *      or replaces the old value of distance.
      *      If 'dist == LocalAbstractObject.UNKNOWN_DISTANCE' then the precomputed distance is
      *      removed.
+     * Note that no distance computation is done.
      * 
-     * 
+     * @param obj the object for which to add distance
+     * @param dist the distance to add
      * @return If there is no distance associated with the object obj
      *         the function returns false. Otherwise, returns true.
      */
@@ -73,7 +91,8 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return true;
     }
 
-    /** Resets the precomputed distance to given object (pivot).
+    /**
+     * Resets the precomputed distance to given object (pivot).
      *
      * @param obj Object to which the precomputed distance is stored.
      *
@@ -84,30 +103,25 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return setPrecompDist(obj, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
 
-    /** Removes all precomputed distances.
+    /**
+     * Removes all precomputed distances.
      */
     public void resetAllPrecompDist() {
         precompDistMapping.clear();
     }
 
-    /** Returns the number of stored precomputed distance.
+    /**
+     * Returns the number of stored precomputed distances.
+     * @return the number of stored precomputed distances
      */
     public int getPrecompDistSize() {
         return precompDistMapping.size();
     }
 
 
-    /****************** Filtering methods ******************/
+    //****************** Filtering methods ******************//
 
-    /** Return true if the obj has been filtered out using stored precomputed distance.
-     * Otherwise returns false, i.e. when obj must be checked using original distance (getDistance()).
-     *
-     * In other words, method returns true if this object and obj are more distant than radius. By
-     * analogy, returns false if this object and obj are within distance radius. However, both this cases
-     * use only precomputed distances! Thus, the real distance between this object and obj can be greater
-     * than radius although the method returned false!!!
-     */
-    protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    protected final boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return excludeUsingPrecompDistImpl((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
         } catch (ClassCastException e) {
@@ -115,6 +129,19 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         }
     }
 
+    /**
+     * Return true if the obj has been filtered out using stored precomputed distance.
+     * Otherwise returns false, i.e. when obj must be checked using original distance (getDistance()).
+     *
+     * In other words, method returns true if this object and obj are more distant than radius. By
+     * analogy, returns false if this object and obj are within distance radius. However, both this cases
+     * use only precomputed distances! Thus, the real distance between this object and obj can be greater
+     * than radius although the method returned false!!!
+     *
+     * @param targetFilter the target precomputed distances
+     * @param radius the radius to check the precomputed distances for
+     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
+     */
     protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
         for (Map.Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
             Float targetDistance = targetFilter.precompDistMapping.get(entry.getKey());
@@ -127,7 +154,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return false;
     }
 
-    protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    protected final boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return includeUsingPrecompDistImpl((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
         } catch (ClassCastException e) {
@@ -135,6 +162,14 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         }
     }
 
+    /**
+     * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances.
+     * See {@link messif.objects.LocalAbstractObject#includeUsingPrecompDist} for full explanation.
+     *
+     * @param targetFilter the target precomputed distances
+     * @param radius the radius to check the precomputed distances for
+     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
+     */
     protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
         for (Map.Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
             Float targetDistance = targetFilter.precompDistMapping.get(entry.getKey());
@@ -151,11 +186,6 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return true;
     }
 
-    /**
-     * Returns the precomputed distance to an object
-     *      If there is no distance associated with the object 'obj'
-     *      the function returns LocalAbstractObject.UNKNOWN_DISTANCE.
-     */
     protected float getPrecomputedDistanceImpl(LocalAbstractObject obj) {
         Float distance = precompDistMapping.get(obj);
 
@@ -165,7 +195,10 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return distance.floatValue();
     }
 
-    /** Return all objects to which this object has precomputed distances */
+    /**
+     * Return all objects to which this object has precomputed distances.
+     * @return all objects to which this object has precomputed distances
+     */
     public Set<LocalAbstractObject> getPrecompObjects() {
         if (precompDistMapping == null)
             return Collections.emptySet();
@@ -173,8 +206,9 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
     }
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
+    @Override
     public Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException("PrecomputedDistancesPivotMapFilter can't be clonned");
     }
@@ -183,13 +217,13 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of PrecomputedDistancesPivotMapFilter loaded from binary input stream.
+     * Creates a new instance of PrecomputedDistancesPivotMapFilter loaded from binary input.
      * 
-     * @param input the stream to read the PrecomputedDistancesPivotMapFilter from
+     * @param input the input to read the PrecomputedDistancesPivotMapFilter from
      * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the stream
+     * @throws IOException if there was an I/O error reading from the input
      */
-    protected PrecomputedDistancesPivotMapFilter(BinaryInputStream input, BinarySerializator serializator) throws IOException {
+    protected PrecomputedDistancesPivotMapFilter(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         int items = serializator.readInt(input);
         precompDistMapping = Collections.synchronizedMap(new HashMap<LocalAbstractObject, Float>(items));
@@ -199,13 +233,13 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
 
     /**
      * Binary-serialize this object into the <code>output</code>.
-     * @param output the data output this object is binary-serialized into
+     * @param output the output that this object is binary-serialized into
      * @param serializator the serializator used to write objects
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
     @Override
-    public int binarySerialize(BinaryOutputStream output, BinarySerializator serializator) throws IOException {
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, precompDistMapping.size());
         for (Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
