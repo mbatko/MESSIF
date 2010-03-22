@@ -17,15 +17,15 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.PrecomputedDistancesFixedArrayFilter;
-import messif.operations.ApproxKNNQueryOperation;
-import messif.operations.BulkInsertOperation;
-import messif.operations.DeleteByLocatorOperation;
-import messif.operations.DeleteOperation;
-import messif.operations.IncrementalNNQueryOperation;
-import messif.operations.InsertOperation;
+import messif.operations.query.ApproxKNNQueryOperation;
+import messif.operations.data.BulkInsertOperation;
+import messif.operations.data.DeleteByLocatorOperation;
+import messif.operations.data.DeleteOperation;
+import messif.operations.query.IncrementalNNQueryOperation;
+import messif.operations.data.InsertOperation;
 import messif.operations.QueryOperation;
-import messif.operations.RangeQueryOperation;
-import messif.operations.kNNQueryOperation;
+import messif.operations.query.RangeQueryOperation;
+import messif.operations.query.KNNQueryOperation;
 
 /**
  * Implementation of the naive sequential scan algorithm.
@@ -276,12 +276,12 @@ public class SequentialScan extends Algorithm {
     
     
     /**
-     * Performs the k-nearest neighbor search operation with given kNNQueryOperation object.
-     * The answer is held in the kNNQueryOperation object.
+     * Performs the k-nearest neighbor search operation with given KNNQueryOperation object.
+     * The answer is held in the KNNQueryOperation object.
      *
      * @param operation The kNN query operation which carries the query object and k as well as the response list.
      */
-    public void knnSearch(kNNQueryOperation operation) {
+    public void knnSearch(KNNQueryOperation operation) {
         // If pivot-based filtering is required, store the distances from pivots.
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());

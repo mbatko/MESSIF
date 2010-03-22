@@ -12,10 +12,10 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.operations.AnswerType;
-import messif.operations.GetAllObjectsQueryOperation;
-import messif.operations.GetObjectByLocatorOperation;
-import messif.operations.GetObjectQueryOperation;
-import messif.operations.GetObjectsByLocatorsOperation;
+import messif.operations.query.GetAllObjectsQueryOperation;
+import messif.operations.query.GetObjectByLocatorOperation;
+import messif.operations.query.GetObjectQueryOperation;
+import messif.operations.query.GetObjectsByLocatorsOperation;
 import messif.operations.QueryOperation;
 
 /**

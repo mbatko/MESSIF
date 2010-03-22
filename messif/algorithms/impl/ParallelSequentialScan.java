@@ -14,10 +14,10 @@ import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.operations.BulkInsertOperation;
-import messif.operations.DeleteByLocatorOperation;
-import messif.operations.DeleteOperation;
-import messif.operations.InsertOperation;
+import messif.operations.data.BulkInsertOperation;
+import messif.operations.data.DeleteByLocatorOperation;
+import messif.operations.data.DeleteOperation;
+import messif.operations.data.InsertOperation;
 import messif.operations.QueryOperation;
 
 /**

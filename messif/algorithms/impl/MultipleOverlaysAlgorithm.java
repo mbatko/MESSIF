@@ -21,8 +21,8 @@ import messif.objects.MetaObject;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
-import messif.operations.ApproxKNNQueryOperationMIndex;
-import messif.operations.PartitionedKNNQueryOperation;
+import messif.operations.query.ApproxKNNQueryOperationMIndex;
+import messif.operations.query.PartitionedKNNQueryOperation;
 import messif.utility.SortedCollection;
 
 /**
