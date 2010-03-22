@@ -1,3 +1,19 @@
+/*
+ *  This file is part of MESSIF library.
+ *
+ *  MESSIF library is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  MESSIF library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package messif.operations.query;
 
 import java.util.Arrays;
@@ -11,7 +27,9 @@ import messif.operations.AnswerType;
  * This query extends the standard approximate k-nearest neighbors query
  * with settable approximation parameters. 
  * 
- * @author David Novak, FI Masaryk University, Brno, Czech Republic; <a href="mailto:david.novak@fi.muni.cz">david.novak@fi.muni.cz</a>
+ * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
+ * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Approximate kNN Query parametrized for Recursive M-Chord")
 public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {

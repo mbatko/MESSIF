@@ -1,12 +1,19 @@
 /*
- * ObjectGPSCoordinate.java
+ *  This file is part of MESSIF library.
  *
- * Created on 31.7.2007, 10:08:46
+ *  MESSIF library is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  MESSIF library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package messif.objects.impl;
 
 import java.io.BufferedReader;
@@ -22,7 +29,9 @@ import messif.objects.nio.BinarySerializator;
 /**
  * Implements GPS coordinates objects. The distance is computed using WGS84 model.
  *
- * @author Vlastislav Dohnal, xdohnal@fi.muni.cz, Faculty of Informatics, Masaryk University, Brno, Czech Republic
+ * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
+ * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySerializable {
 
@@ -255,7 +264,9 @@ public class ObjectGPSCoordinate extends LocalAbstractObject implements BinarySe
      *     such as the WGS84 ellipsiod, and these have now largely supplanted
      *     the others.</p>
      *
-     * @author Paul D. Anderson
+     * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
+     * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+     * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
      * @version 3.0, February 18, 2006
      */
     protected static class ReferenceEllipsoid {

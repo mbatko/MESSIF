@@ -1,9 +1,19 @@
 /*
- * DiskBlockBucket.java
+ *  This file is part of MESSIF library.
  *
- * Created on 12. kveten 2008, 16:49
+ *  MESSIF library is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  MESSIF library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package messif.buckets.impl;
 
 import java.io.File;
@@ -31,7 +41,9 @@ import messif.objects.nio.MultiClassSerializator;
  * Note that this bucket only saves the name of the file when serialized,
  * thus the file must exist when the bucket is deserialized.
  *
- * @author  xbatko
+ * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
+ * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  * @see BucketDispatcher
  * @see LocalBucket
  * @see DiskBlockBucket
