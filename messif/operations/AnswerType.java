@@ -17,6 +17,7 @@
 package messif.operations;
 
 import messif.objects.AbstractObject;
+import messif.objects.NoDataObject;
 
 /**
  * Enumeration of types a query operation can return.
@@ -35,7 +36,13 @@ public enum AnswerType {
     CLONNED_OBJECTS,
     /** Answer contains clones of the original objects with {@link messif.objects.AbstractObject#clearSurplusData() cleared surplus data} */
     CLEARED_OBJECTS,
-    /** Answer contains only {@link messif.netbucket.RemoteAbstractObject remote objects} */
+    /** Answer contains only {@link messif.objects.NoDataObject objects} */
+    NODATA_OBJECTS,
+    /**
+     * Answer contains only {@link messif.objects.NoDataObject objects}
+     * @deprecated Use {@link #NODATA_OBJECTS} instead.
+     */
+    @Deprecated
     REMOTE_OBJECTS;
 
 
@@ -58,9 +65,10 @@ public enum AnswerType {
                 object = object.clone();
                 object.clearSurplusData();
                 return object;
+            case NODATA_OBJECTS:
             case REMOTE_OBJECTS:
             default:
-                return object.getRemoteAbstractObject();
+                return object.getNoDataObject();
         }
     }
 

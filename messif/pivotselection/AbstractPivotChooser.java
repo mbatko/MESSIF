@@ -19,8 +19,8 @@ package messif.pivotselection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.objects.util.AbstractObjectIterator;
@@ -28,7 +28,6 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.util.ObjectProvidersIterator;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticRefCounter;
-import messif.transactions.TransactionList;
 
 
 /**
@@ -50,10 +49,13 @@ import messif.transactions.TransactionList;
  *
  */
 public abstract class AbstractPivotChooser {
-    
+
+    //****************** Attributes ******************//
+
     /** List of selected pivots */
-    protected final TransactionList<LocalAbstractObject> preselectedPivots = new TransactionList<LocalAbstractObject>(new AbstractObjectList<LocalAbstractObject>());
-    
+    protected final List<LocalAbstractObject> preselectedPivots = new AbstractObjectList<LocalAbstractObject>();
+    /** Registered sample providers */
+    protected final Set<ObjectProvider<? extends LocalAbstractObject>> sampleProviders = Collections.synchronizedSet(new HashSet<ObjectProvider<? extends LocalAbstractObject>>());
     /** Statistic counter for pivot chooser distance computations */    
     protected static final StatisticCounter counterPivotDistComp = StatisticCounter.getStatistics("DistanceComputations.PivotChooser");
     /** Global distance computations statistic counter */
@@ -64,7 +66,7 @@ public abstract class AbstractPivotChooser {
     protected static final StatisticRefCounter counterBucketReadBuckets  = StatisticRefCounter.getStatistics("BucketRead");
 
 
-    /****************** Pivot Access Methods ******************/
+    //****************** Pivot Access Methods ******************//
     
     /**
      * Clears the list of preselected pivots.
@@ -147,7 +149,7 @@ public abstract class AbstractPivotChooser {
     }
 
 
-    /****************** Pivot list change methods ******************/
+    //****************** Pivot list change methods ******************//
     
     /**
      * Deletes the last pivot from the list of current pivots and returns it.
@@ -208,11 +210,8 @@ public abstract class AbstractPivotChooser {
     protected abstract void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator);
 
 
-    /****************** Sample set management methods ******************/
+    //****************** Sample set management methods ******************//
     
-    /** Registered sample providers */
-    protected final Set<ObjectProvider<? extends LocalAbstractObject>> sampleProviders = Collections.synchronizedSet(new HashSet<ObjectProvider<? extends LocalAbstractObject>>());
-
     /**
      * Registers a new sample set provider used by this pivot chooser to select pivots.
      * @param provider the sample set provider
@@ -226,64 +225,8 @@ public abstract class AbstractPivotChooser {
      * (others are silently ignored).
      * @param provider the previously registered sample set provider
      */
-    public void deregisterSampleProvider(ObjectProvider<? extends AbstractObject> provider) {
+    public void deregisterSampleProvider(ObjectProvider<? extends LocalAbstractObject> provider) {
         sampleProviders.remove(provider);
-    }
-
-
-    /****************** Transaction management ******************/
-    
-    /**
-     * Begin a transaction of pivot processing
-     * Previous preselected pivots are still returned by getPivot method, but
-     * preselectedPivots array can be modified freely (previous pivots are left in the array).
-     * Don't forget to end a pending transaction by calling commit or rollback methods.
-     * 
-     * Set blocking argument to false if this function should return immediately
-     * with return value of false in case of another transaction is running
-     * @param blocking If false, the function returns immediately with return value
-     * of false in case of another transaction is running
-     * @return Returns false if there is another transaction running and blocking parameter is false.
-     * Othewise, true is returned.
-     */
-    public boolean beginTransaction(boolean blocking) {
-        return preselectedPivots.beginTransaction(blocking);
-    }
-    
-    /**
-     * Returns current transaction state
-     * @return  Returns true, if there is a transaction running or false otherwise
-     */
-    public boolean isTransactionRunning() {
-        return preselectedPivots.isTransactionRunning();
-    }
-    
-    /**
-     * End transaction of pivot processing, commiting changes
-     */
-    public void commitTransaction() {
-        preselectedPivots.commitTransaction();
-    }
-    
-    /**
-     * End transaction of pivot processing, undoing changes
-     */
-    public void rollbackTransaction() {
-        preselectedPivots.rollbackTransaction();
-    }
-    
-    /**
-     * Reports whether the list of selected pivots was changed during the last
-     * transaction or not. The state is retained until a new transaction is started.
-     * If the list was changed and the transaction was rolled back, returns false,
-     * which is obvious.
-     * When a transaction is pending, returns true/false based on the changes made or not.
-     * 
-     * @return Returns true, if the list of selected pivots was changed during the currently
-     * running (or last commited) transaction
-     */
-    public boolean changedDuringTransaction() {
-        return preselectedPivots.changedDuringTransaction();
     }
 
 }
