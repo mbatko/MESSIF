@@ -103,13 +103,13 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters.
      * The approximation parameters are set to reasonable default values.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, AnswerType.NODATA_OBJECTS);
     }
     
     /**
@@ -134,7 +134,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, localSearchParam, localSearchType, AnswerType.NODATA_OBJECTS);
     }
 
     /**
@@ -154,7 +154,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters for distributed processing
      *  and specify parameters for centralized approximation.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      * @param initialLevelClusterNumber if greater than 0 then taken as the fixed number of clusters to be visited by the operation
@@ -173,7 +173,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int initialLevelClusterNumber, int initialLevel, boolean limitBranchingByPenalty, 
             int minClustersForBranching, int maxClustersForBranching, float penaltyLimit, int maxPeersForGreatClusters, float greatClusterPenaltyLimit,
             int maxPeersForClusters, int localSearchParam, LocalSearchType localSearchType) {
-        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForGreatClusters, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, initialLevelClusterNumber, initialLevel, limitBranchingByPenalty, minClustersForBranching, maxClustersForBranching, penaltyLimit, maxPeersForGreatClusters, greatClusterPenaltyLimit, maxPeersForClusters, localSearchParam, localSearchType, AnswerType.NODATA_OBJECTS);
     }
     
     /**
