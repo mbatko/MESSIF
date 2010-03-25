@@ -50,7 +50,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of RangeQueryOperation for a given query object and radius.
-     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
+     * Reduced objects ({@link messif.objects.NoDataObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      */
@@ -61,7 +61,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of RangeQueryOperation for a given query object and radius.
-     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
+     * Reduced objects ({@link messif.objects.NoDataObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
@@ -95,7 +95,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
-     * Reduced objects ({@link messif.objects.RemoteAbstractObject}) will be used.
+     * Reduced objects ({@link messif.objects.NoDataObject}) will be used.
      * @param queryObject the query object
      * @param radius the query radius
      * @param maxAnswerSize sets the maximal answer size

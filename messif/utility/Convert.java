@@ -59,7 +59,7 @@ public abstract class Convert {
      *   <li>static array of any "convertible" element type - parameter should be comma-separated values that will be converted using {@link #stringToType} into the array's items</li>
      *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
      *   <li>any class with a public constructor that has a single {@link String} parameter</li>
-     *   <li>any class with a <code>valueOf(String <i>parameter</i>)</code> factory method, e.g., {@link messif.network.NetworkNode#valueOf}</li>
+     *   <li>any class with a <code>valueOf(String <i>parameter</i>)</code> factory method, e.g., {@link java.lang.Integer#valueOf(java.lang.String)}</li>
      * </ul>
      * </p>
      * 

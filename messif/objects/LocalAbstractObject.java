@@ -16,7 +16,6 @@
  */
 package messif.objects;
 
-import messif.netbucket.RemoteAbstractObject;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
@@ -48,7 +47,7 @@ import messif.utility.Convert;
  * sets it to <tt>null</tt>.
  *
  * @see AbstractObject
- * @see RemoteAbstractObject
+ * @see NoDataObject
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz

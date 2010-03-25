@@ -40,7 +40,7 @@ public class GetRandomObjectQueryOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetRandomObjectQueryOperation.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      */
     @AbstractOperation.OperationConstructor({})
     public GetRandomObjectQueryOperation() {

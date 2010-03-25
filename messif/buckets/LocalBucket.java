@@ -46,8 +46,6 @@ import messif.utility.SortedCollection;
  * the methods of the iterator. More effective implementations can override other methods as well.
  * For deletion, you need to override method iterator:removeInternal().
  *
- * @see messif.netbucket.RemoteBucket
- *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz

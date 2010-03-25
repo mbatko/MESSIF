@@ -42,7 +42,7 @@ public class GetAllObjectsQueryOperation extends ListingQueryOperation {
 
     /**
      * Creates a new instance of GetAllObjectsQuery.
-     * Stored objects will be {@link messif.netbucket.RemoteAbstractObject}.
+     * Stored objects will be {@link messif.objects.NoDataObject}.
      */
     @AbstractOperation.OperationConstructor({})
     public GetAllObjectsQueryOperation() {

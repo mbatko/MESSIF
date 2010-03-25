@@ -16,7 +16,6 @@
  */
 package messif.operations.query;
 
-import messif.netbucket.RemoteAbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
@@ -29,7 +28,7 @@ import messif.utility.ErrorCode;
 
 /**
  * Incremental Nearest Neighbor Search.
- * This operation returns only {@link messif.netbucket.RemoteAbstractObject references} to the original
+ * This operation returns only {@link messif.objects.NoDataObject references} to the original
  * object.
  * 
  * The behavior of an algorithm implementing this operation must hold the following contract:<br>

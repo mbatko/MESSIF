@@ -47,7 +47,7 @@ public class GetObjectQueryOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectQueryOperation for the specified object ID.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param objectID the object ID to search for
      */
     @AbstractOperation.OperationConstructor({"Object ID"})

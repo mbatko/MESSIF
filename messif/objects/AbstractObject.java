@@ -30,7 +30,7 @@ import messif.utility.Clearable;
  * This is the top-most class of the object hierarchy.
  *
  * @see LocalAbstractObject
- * @see RemoteAbstractObject
+ * @see NoDataObject
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -155,10 +155,10 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     //****************** No-data object converter ******************//
 
     /**
-     * Returns this abstract object as local object.
-     * For a LocalAbstractObject it returns itself, for a RemoteAbstractObject
-     * it first downloads the object and then returns it as local object.
-     * @return this abstract object as local object
+     * Returns this object as no-data object.
+     * Only the object key and ID is preserved, any internal or supplemental data
+     * are not copied.
+     * @return this object as {@link NoDataObject}
      */
     public NoDataObject getNoDataObject() {
         return new NoDataObject(this);

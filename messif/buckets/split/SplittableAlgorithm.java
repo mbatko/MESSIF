@@ -19,19 +19,16 @@ package messif.buckets.split;
 import java.util.Collection;
 import messif.algorithms.Algorithm;
 import messif.buckets.BucketStorageException;
-import messif.buckets.CapacityFullException;
-import messif.buckets.FilterRejectException;
-import messif.buckets.OccupationLowException;
 import messif.objects.LocalAbstractObject;
 
 
 /**
- * Implement this interface on an {@link messif.algorithms.Algorithm Algorithm}
+ * Implement this interface on an {@link Algorithm}
  * if it supports "clever" splitting. If this interface is not implemented for an algorithm,
- * the standard way through {@link messif.operations.GetAllObjectsQueryOperation get all objects} and 
- * {@link messif.operations.DeleteOperation delete} operations will be used in case of splitting.
+ * the standard way through {@link messif.operations.query.GetAllObjectsQueryOperation get all objects} and
+ * {@link messif.operations.data.DeleteOperation delete} operations will be used in case of splitting.
  * 
- * @see messif.algorithms.Algorithm
+ * @see Algorithm
  * @see SplitPolicy
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz

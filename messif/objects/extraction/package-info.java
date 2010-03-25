@@ -1,5 +1,5 @@
 /**
- * Support for {@link messif.objects.LocalAbstractObject} extraction.
+ * Support for {@link messif.objects.LocalAbstractObject object} extraction.
  * Extractors are responsible for computing specific features of objects
  * that can be used for indexing. For example, an extractor can derive
  * MPEG-7 descriptors from a given binary image.
