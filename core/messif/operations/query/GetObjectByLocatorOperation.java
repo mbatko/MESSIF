@@ -46,7 +46,7 @@ public class GetObjectByLocatorOperation extends SingletonQueryOperation {
 
     /**
      * Creates a new instance of GetObjectByLocatorOperation for a specified locator.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param locator the locator to be searched by this operation
      */
     @AbstractOperation.OperationConstructor({"The object locator"})

@@ -59,7 +59,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Creates a new instance of RankingQueryOperation.
-     * Objects added to answer are {@link AnswerType#NODATA_OBJECTS changed to remote objects}.
+     * Objects added to answer are {@link AnswerType#NODATA_OBJECTS changed to no-data objects}.
      * Unlimited number of objects can be added to the answer.
      */
     protected RankingQueryOperation() {
@@ -68,7 +68,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Creates a new instance of RankingQueryOperation.
-     * Objects added to answer are {@link AnswerType#NODATA_OBJECTS changed to remote objects}.
+     * Objects added to answer are {@link AnswerType#NODATA_OBJECTS changed to no-data objects}.
      * @param maxAnswerSize sets the maximal answer size
      * @throws IllegalArgumentException if the maximal answer size is negative
      */

@@ -211,7 +211,7 @@ public abstract class Extractors {
     /**
      * Creates extractor for the provided class.
      * If the class is a descendant of {@link LocalAbstractObject}, a
-     * {@link #createTextExtractor(java.lang.Class) text extractor} is returned.
+     * {@link #createTextExtractor text extractor} is returned.
      * If the class implements {@link Extractor} interface, a new instance
      * of this class is returned (using nullary constructor).
      *

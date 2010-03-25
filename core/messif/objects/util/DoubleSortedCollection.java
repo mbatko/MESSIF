@@ -73,7 +73,7 @@ public abstract class DoubleSortedCollection extends RankedSortedCollection {
      *
      * @param newObject the element to add to this list
      * @param oldDistance old ranking distance (used for keeping the threshold)
-     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     * @return <tt>true</tt> (as specified by {@link java.util.Collection#add})
      */
     public boolean add(RankedAbstractObject newObject, float oldDistance) {
         // if the last object would "fall off" the collection

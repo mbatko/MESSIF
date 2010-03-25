@@ -47,7 +47,7 @@ public class GetRandomObjectsQueryOperation extends ListingQueryOperation {
 
     /**
      * Creates a new instance of GetRandomObjecstQueryOperation.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param count the number of random objects to retrieve
      */
     @AbstractOperation.OperationConstructor({"Number of random objects"})

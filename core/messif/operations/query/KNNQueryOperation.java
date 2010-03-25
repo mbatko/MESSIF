@@ -50,7 +50,7 @@ public class KNNQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of kNNQueryOperation for a given query object and maximal number of objects to return.
-     * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS remote objects}.
+     * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
      * @param queryObject the object to which the nearest neighbors are searched
      * @param k the number of nearest neighbors to retrieve
      */

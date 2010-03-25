@@ -134,7 +134,7 @@ public class BucketDispatcher implements Serializable {
     /**
      * Creates a new instance of BucketDispatcher only with maximal capacity specification.
      * The soft capacity and low-occupation limits are not set. The occupation and capacity
-     * is counted in bytes. The {@link MemoryStorageBucket} is used as default bucket class.
+     * is counted in bytes.
      *
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets

@@ -1,6 +1,6 @@
 /**
  * Message-based networking support.
- * @see messif.network.MessageDispacher
+ * @see messif.network.MessageDispatcher
  */
 package messif.network;
 

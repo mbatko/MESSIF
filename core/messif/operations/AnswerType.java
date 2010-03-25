@@ -50,7 +50,7 @@ public enum AnswerType {
 
     /**
      * Updates a {@link AbstractObject} so that it conforms to this answer type.
-     * That means, the object is clonned/cleared/changed to remote object.
+     * That means, the object is clonned, cleared or transformed into a {@link NoDataObject}.
      * @param object the object to update
      * @return an updated object
      * @throws CloneNotSupportedException if a clone was requested but the specified object cannot be clonned
