@@ -398,7 +398,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             List<LocalAbstractObject> list = new ArrayList<LocalAbstractObject>(operation.getAnswerCount());
             Iterator<AbstractObject> answer = operation.getAnswerObjects();
             while (answer.hasNext()) {
-                LocalAbstractObject object = answer.next().getLocalAbstractObject();
+                LocalAbstractObject object = (LocalAbstractObject)answer.next();
                 list.add(object);
             }
 

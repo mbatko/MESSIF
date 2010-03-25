@@ -77,61 +77,7 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
     /** Number of objects added to or deleted from this bucket since the last selection of sample sets.
      */
     private int changesFromLastSampleSetSelection = 0;
-        
-    
-    /** TEMPORARY ONLY until a correct transaction management of subclass' attributes gets implemented in AbstractPivotChooser
-     */
-    private int backupSampleSize = 0;
-    private AbstractObjectList<LocalAbstractObject> backupLeftPair  = null;
-    private AbstractObjectList<LocalAbstractObject> backupRightPair = null;
-    private float[] backupDistsFormer = null;
-    private int backupChangesFromLastSampleSetSelection = 0;
 
-    public synchronized boolean beginTransaction(boolean blocking) {
-        if (! super.beginTransaction(blocking))
-            return false;
-        
-        // Store the current state of internal attributes
-        backupSampleSize = sampleSize;
-        backupLeftPair = leftPair;      // This is ok, since no changes are done to existing list, but new lists are created upon any change.
-        backupRightPair = rightPair;
-        backupDistsFormer = (distsFormer != null) ? distsFormer.clone() : null;
-        backupChangesFromLastSampleSetSelection = changesFromLastSampleSetSelection;
-        
-        return true;
-    }
-    
-    public synchronized void commitTransaction() {
-        super.commitTransaction();
-        // Reset all backup values
-        backupSampleSize = 0;
-        backupLeftPair  = null;
-        backupRightPair = null;
-        backupDistsFormer = null;
-        backupChangesFromLastSampleSetSelection = 0;
-    }
-    
-    public synchronized void rollbackTransaction() {
-        super.rollbackTransaction();
-        // Recover the last state of internal attributes
-        sampleSize = backupSampleSize;
-        leftPair = backupLeftPair;
-        rightPair = backupRightPair;
-        if (distsFormer == null || backupDistsFormer == null || distsFormer.length != backupDistsFormer.length)
-            distsFormer = backupDistsFormer;
-        else
-            System.arraycopy(backupDistsFormer, 0, distsFormer, 0, backupDistsFormer.length);
-        changesFromLastSampleSetSelection = backupChangesFromLastSampleSetSelection;
-        // Reset all backup values
-        backupSampleSize = 0;
-        backupLeftPair  = null;
-        backupRightPair = null;
-        backupDistsFormer = null;
-        backupChangesFromLastSampleSetSelection = 0;
-    }
-    /** END OF TEMPORARY STUFF
-     */
-    
     
     /************* METHODS & CONSTRUCTORS **********************/
     

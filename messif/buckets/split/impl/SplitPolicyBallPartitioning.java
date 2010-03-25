@@ -40,7 +40,7 @@ import messif.objects.util.ObjectMatcher;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class SplitPolicyBallPartitioning extends SplitPolicy implements ObjectMatcher {
+public class SplitPolicyBallPartitioning extends SplitPolicy {
 
     //****************** Attributes ******************
 
