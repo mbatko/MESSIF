@@ -62,8 +62,8 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
     /**
      * Creates a new instance of ReplicationNetworkBucketDispatcher
      */
-    public ReplicationNetworkBucketDispatcher(MessageDispatcher messageDisp, int maxBuckets, long bucketCapacity, boolean replicateBucketsEqually) throws InstantiationException {
-        super(messageDisp, maxBuckets, bucketCapacity);
+    public ReplicationNetworkBucketDispatcher(MessageDispatcher messageDisp, int maxBuckets, long bucketCapacity, boolean replicateBucketsEqually, Class<? extends LocalBucket> defaultBucketClass) throws InstantiationException {
+        super(messageDisp, maxBuckets, bucketCapacity, defaultBucketClass);
         this.replicateBucketsEqually = replicateBucketsEqually;
     }
     
