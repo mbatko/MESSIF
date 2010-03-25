@@ -60,12 +60,12 @@ public class HttpApplication extends Application {
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; httpAddContext /search messif.operations.ApproxKNNQueryOperation messif.objects.extraction.Extractors.createTextExtractor(messif.objects.impl.MetaObjectSAPIRWeightedDist) "k" REMOTE_OBJECTS
+     * MESSIF &gt;&gt;&gt; httpAddContext /search messif.operations.query.ApproxKNNQueryOperation messif.objects.extraction.Extractors.createTextExtractor(messif.objects.impl.MetaObjectMap) "k" REMOTE_OBJECTS
      * </pre>
-     * This will create a Context that will execute {@link messif.operations.ApproxKNNQueryOperation}
+     * This will create a Context that will execute {@link messif.operations.query.ApproxKNNQueryOperation}
      * using a three parameters. The first parameter will be instance of an extractor created by call to
      * {@link messif.objects.extraction.Extractors#createTextExtractor} with
-     * a {@link messif.objects.impl.MetaObjectSAPIRWeightedDist} parameter. This extractor will be used
+     * a {@link messif.objects.impl.MetaObjectMap} parameter. This extractor will be used
      * create a {@link LocalAbstractObject object} from the HTTP request body. The second parameter will be the
      * HTTP request get parameter <em>k</em> (e.g. the URL will contain .../search?k=30).
      * The third parameter will be always the {@link messif.operations.AnswerType#REMOTE_OBJECTS} constant.
