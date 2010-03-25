@@ -16,19 +16,18 @@
  */
 package messif.objects.util;
 
-import messif.objects.LocalAbstractObject;
-
 
 /**
  * Interface which provides matching capabilities. 
  * Matching functionality is used when you need to filter out some objects of the whole bucket, for example.
  *
+ * @param <T> the type of objects to match
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public interface ObjectMatcher {
+public interface ObjectMatcher<T> {
     
     /**
      * Matching method.
@@ -41,5 +40,5 @@ public interface ObjectMatcher {
      *         When applied on a bucket (through the method GetMatchingObjects()) it is convenient to return 0 for all objects
      *         which stay in the bucket. Zero value returned means that object doesn't match.
      */
-    public int match(LocalAbstractObject object);
+    public int match(T object);
 }

@@ -117,7 +117,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
         // Iterate through all objects and add one by one
         int ret = 0;
         while (objects.hasNext()) {
-            addObject(objects.next().getLocalAbstractObject());
+            addObject(objects.next());
             ret++;
         }
         return ret;

@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.objects.UniqueID;
 
@@ -187,9 +188,16 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
         // Iterate through objects in this list and the target collection
         Iterator<?> iterator = castObj.iterator();
         for (E localObject : this) {
+            Object otherObject = iterator.next();
+
             // Check their data equality
-            if (!localObject.getLocalAbstractObject().dataEquals(iterator.next()))
-                return false;
+            if (localObject instanceof LocalAbstractObject) {
+                if (!((LocalAbstractObject)localObject).dataEquals(otherObject))
+                    return false;
+            } else {
+                if (!localObject.equals(otherObject))
+                    return false;
+            }
         }
 
         return true;
@@ -202,7 +210,11 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
     public int dataHashCode() {
 	int hashCode = 1;
 	for (E obj : this) {
-	    hashCode = 31*hashCode + (obj==null ? 0 : obj.getLocalAbstractObject().dataHashCode());
+	    hashCode = 31*hashCode + (obj == null ? 0 :
+                (obj instanceof LocalAbstractObject ?
+                    ((LocalAbstractObject)obj).dataHashCode() :
+                    obj.hashCode()
+                ));
 	}
 	return hashCode;
     }

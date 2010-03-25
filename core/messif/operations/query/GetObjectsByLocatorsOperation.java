@@ -86,7 +86,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances) {
-        this(locators, queryObjectForDistances, AnswerType.REMOTE_OBJECTS, Integer.MAX_VALUE);
+        this(locators, queryObjectForDistances, AnswerType.NODATA_OBJECTS, Integer.MAX_VALUE);
     }
 
     /**
@@ -133,7 +133,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      * @param maxAnswerCount the limit for the number of objects kept in this operation's answer
      */
     public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, int maxAnswerCount) {
-        this(null, queryObjectForDistances, AnswerType.REMOTE_OBJECTS, maxAnswerCount);
+        this(null, queryObjectForDistances, AnswerType.NODATA_OBJECTS, maxAnswerCount);
     }
 
 

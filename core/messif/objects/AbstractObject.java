@@ -16,10 +16,9 @@
  */
 package messif.objects;
 
-import messif.objects.keys.AbstractObjectKey;
 import java.io.IOException;
 import java.io.Serializable;
-import messif.netbucket.RemoteAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -153,7 +152,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     }
 
 
-    //****************** Local object converter ******************//
+    //****************** No-data object converter ******************//
 
     /**
      * Returns this abstract object as local object.
@@ -161,17 +160,9 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * it first downloads the object and then returns it as local object.
      * @return this abstract object as local object
      */
-    public abstract LocalAbstractObject getLocalAbstractObject();
-
-
-    //****************** Remote object converter ******************//
-
-    /**
-     * Returns the RemoteAbstractObject that contains only the URI locator of this object.
-     * For LocalAbstractObject creates a new object, for RemoteAbstractObject returns itself.
-     * @return RemoteAbstractObject that contains only the URI locator of this object.
-     */
-    public abstract RemoteAbstractObject getRemoteAbstractObject();
+    public NoDataObject getNoDataObject() {
+        return new NoDataObject(this);
+    }
 
 
     //****************** Clonning ******************//

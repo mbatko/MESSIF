@@ -68,7 +68,7 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects",  "Aggregation function"})
     public AggregationFunctionQueryOperation(LocalAbstractObject queryObject, int k, AggregationFunction aggregationFunction) {
-        this(queryObject, k, aggregationFunction, AnswerType.REMOTE_OBJECTS, true);
+        this(queryObject, k, aggregationFunction, AnswerType.NODATA_OBJECTS, true);
     }
 
     /**

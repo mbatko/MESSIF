@@ -72,13 +72,13 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
     /**
      * Creates a new instance of ApproxRangeQueryOperation for a given query object and maximal number of objects to return.
      * The approximation parameters are set to reasonable default values.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param r query radius
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r) {
-        this(queryObject, r, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, r, AnswerType.NODATA_OBJECTS);
     }
 
     /**
@@ -96,7 +96,7 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
     /**
      * Creates a new instance of ApproxRangeQueryOperation for a given query object,
      * radius and parameters that control the approximation.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param r query radius
      * @param localSearchParam local search parameter - typically approximation parameter

@@ -16,13 +16,13 @@
  */
 package messif.objects;
 
+import messif.netbucket.RemoteAbstractObject;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
-import messif.netbucket.RemoteAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -110,31 +110,6 @@ public abstract class LocalAbstractObject extends AbstractObject {
      */
     protected LocalAbstractObject(String locatorURI) {
         super(locatorURI);
-    }
-
-
-    //****************** Local object converter ******************//
-
-    /**
-     * Returns this abstract object as local object.
-     * Thus, this method returns this object itself.
-     * @return this abstract object as local object
-     */
-    public final LocalAbstractObject getLocalAbstractObject() {
-        return this;
-    }
-
-
-    //****************** Remote object converter ******************//
-
-    /**
-     * Returns the RemoteAbstractObject that contains only the URI locator of this object.
-     * For LocalAbstractObject create new object.
-     * @return new RemoteAbstractObject containing URI locator of this object.
-     */
-    @Override
-    public final RemoteAbstractObject getRemoteAbstractObject() {
-        return new RemoteAbstractObject(this);
     }
 
 

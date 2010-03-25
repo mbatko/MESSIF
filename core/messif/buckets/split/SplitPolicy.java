@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import messif.buckets.LocalBucket;
 import messif.objects.BallRegion;
+import messif.objects.LocalAbstractObject;
 import messif.objects.util.ObjectMatcher;
 
 /**
@@ -48,7 +49,7 @@ import messif.objects.util.ObjectMatcher;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class SplitPolicy implements ObjectMatcher {
+public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> {
 
     //****************** Attributes ******************
 
@@ -89,6 +90,14 @@ public abstract class SplitPolicy implements ObjectMatcher {
      * @return the group (partition) to which the whole ball region belongs or -1 if it is uncertain
      */
     public abstract int match(BallRegion region);
+
+    /**
+     * Returns the group (partition) to which a given object belongs.
+     *
+     * @param object an object that is tested for the matching condition
+     * @return the group (partition) to which the given object belongs
+     */
+    public abstract int match(LocalAbstractObject object);
 
     /**
      * Returns the {@link BucketBallRegion} associated with the specified bucket.

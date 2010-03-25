@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import messif.buckets.impl.MemoryStorageBucket;
 import messif.pivotselection.AbstractPivotChooser;
 
 
@@ -139,9 +138,10 @@ public class BucketDispatcher implements Serializable {
      *
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets
+     * @param defaultBucketClass the default class for newly created buckets
      */
-    public BucketDispatcher(int maxBuckets, long bucketCapacity) {
-        this(maxBuckets, bucketCapacity, bucketCapacity, 0, true, MemoryStorageBucket.class);
+    public BucketDispatcher(int maxBuckets, long bucketCapacity, Class<? extends LocalBucket> defaultBucketClass) {
+        this(maxBuckets, bucketCapacity, bucketCapacity, 0, true, defaultBucketClass);
     }
 
     /**

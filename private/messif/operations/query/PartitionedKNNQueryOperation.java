@@ -75,7 +75,7 @@ public class PartitionedKNNQueryOperation extends KNNQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius"})
     public PartitionedKNNQueryOperation(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, AnswerType.NODATA_OBJECTS);
     }
 
     /**

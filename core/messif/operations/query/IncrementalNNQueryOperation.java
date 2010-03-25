@@ -80,7 +80,7 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
     /**
      * Creates a new instance of IncrementalNNQueryOperation.
      * At least one next nearest neighbor will be returned for each execution.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject the object to which the nearest neighbors are searched
      */
     @AbstractOperation.OperationConstructor({"Query object"})
@@ -90,13 +90,13 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
 
     /**
      * Creates a new instance of IncrementalNNQueryOperation.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject the object to which the nearest neighbors are searched
      * @param minNN the minimal number of nearest neighbors to retrieve
      */
     @AbstractOperation.OperationConstructor({"Query object", "Minimum number of nearest objects"})
     public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN) {
-        this(queryObject, minNN, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, minNN, AnswerType.NODATA_OBJECTS);
     }
 
     /**

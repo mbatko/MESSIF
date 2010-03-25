@@ -203,7 +203,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
-    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher matcher) throws NoSuchElementException, OccupationLowException, FilterRejectException {
+    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher) throws NoSuchElementException, OccupationLowException, FilterRejectException {
         return getMatchingObjects(matcher, false);
     }
 
@@ -222,7 +222,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
-    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher matcher, boolean removeMatching) throws NoSuchElementException, OccupationLowException, FilterRejectException {
+    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching) throws NoSuchElementException, OccupationLowException, FilterRejectException {
         return getMatchingObjects(matcher, removeMatching, 0);
     }
 
@@ -243,7 +243,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
-    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher matcher, boolean removeMatching, int whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {
+    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching, int whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {
         int[] whoStaysArray = {whoStays};
         return getMatchingObjects(matcher, removeMatching, whoStaysArray);
     }
@@ -265,7 +265,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
-    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher matcher, boolean removeMatching, int[] whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {
+    public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching, int[] whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {
         UnsupportedOperationException caughtException = null;
         
         // Prepare return holder
@@ -279,7 +279,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
             E obj = next();
             
             // Get matcher result for next object
-            int matchingPart = matcher.match(obj.getLocalAbstractObject());
+            int matchingPart = matcher.match(obj);
             
             // If matchingPart is not found in whoStays
             if (Arrays.binarySearch(whoStays, matchingPart) < 0) {

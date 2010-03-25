@@ -72,13 +72,13 @@ public class ApproxKNNRecursiveMChordOperation extends ApproxKNNQueryOperation {
     
     /**
      * Creates a new instance of ApproxKNNRecursiveMChordOperation with default parameters.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects"})
     public ApproxKNNRecursiveMChordOperation(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, AnswerType.NODATA_OBJECTS);
     }
     
     /**

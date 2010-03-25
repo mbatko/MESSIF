@@ -84,13 +84,13 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation {
     /**
      * Creates a new instance of ApproxkNNQueryOperation for a given query object and maximal number of objects to return.
      * The approximation parameters are set to reasonable default values.
-     * {@link AnswerType#REMOTE_OBJECTS} will be returned in the result.
+     * {@link AnswerType#NODATA_OBJECTS} will be returned in the result.
      * @param queryObject query object
      * @param k number of objects to be returned
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects"})
     public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k) {
-        this(queryObject, k, AnswerType.REMOTE_OBJECTS);
+        this(queryObject, k, AnswerType.NODATA_OBJECTS);
     }
 
     /**

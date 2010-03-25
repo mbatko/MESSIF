@@ -92,9 +92,10 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * @param messageDisp the message dispatcher used by this network bucket dispatcher
      * @param maxBuckets the maximal number of buckets maintained by this dispatcher
      * @param bucketCapacity the default bucket hard capacity for newly created buckets
+     * @param defaultBucketClass the default class for newly created buckets
      */
-    public NetworkBucketDispatcher(MessageDispatcher messageDisp, int maxBuckets, long bucketCapacity) {
-        super(maxBuckets, bucketCapacity);
+    public NetworkBucketDispatcher(MessageDispatcher messageDisp, int maxBuckets, long bucketCapacity, Class<? extends LocalBucket> defaultBucketClass) {
+        super(maxBuckets, bucketCapacity, defaultBucketClass);
         this.messageDisp = messageDisp;
         startReceiving();
     }

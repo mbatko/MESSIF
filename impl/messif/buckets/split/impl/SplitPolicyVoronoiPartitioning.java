@@ -19,7 +19,6 @@ package messif.buckets.split.impl;
 import messif.buckets.split.SplitPolicy;
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.ObjectMatcher;
 
 /**
  * This class implements Voronoi-like partitioning policy.
@@ -28,7 +27,7 @@ import messif.objects.util.ObjectMatcher;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class SplitPolicyVoronoiPartitioning extends SplitPolicy implements ObjectMatcher {
+public class SplitPolicyVoronoiPartitioning extends SplitPolicy {
 
     //****************** Attributes ******************
 
