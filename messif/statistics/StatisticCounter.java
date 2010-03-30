@@ -119,7 +119,7 @@ public final class StatisticCounter extends Statistics<StatisticCounter> {
     
     /** Create new statistic counter with specified name or get the one already existing */
     public static StatisticCounter getStatistics(String name) {
-        return statistics.get(name, StatisticCounter.class);
+        return getStatistics(name, StatisticCounter.class);
     }
 
     //****************** Text representation ******************//

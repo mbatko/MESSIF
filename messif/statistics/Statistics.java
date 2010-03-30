@@ -42,6 +42,28 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
     /** Class id for serialization */
     private static final long serialVersionUID = 3L;
 
+    //****************** Thread serial number for operation statistics ******************//
+
+    /** Next serial number to be assigned */
+    private static AtomicInteger nextThreadNum = new AtomicInteger(1);
+
+    /** Current thread's serial number */
+    private static ThreadLocal<Integer> threadNum = new InheritableThreadLocal<Integer>() {
+        @Override
+        protected synchronized Integer initialValue() {
+         return nextThreadNum.getAndIncrement();
+        }
+    };
+
+
+    //****************** Global statistics ******************//
+
+    /** Flag for enabling/disabling statistics globally */
+    private static boolean statisticsEnabled = true;
+    /** List of global statistics */
+    private static final StatisticsList statistics = new StatisticsList();
+
+
     //****************** Attributes ******************//
     
     /** Name of this statistic */
@@ -55,6 +77,10 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
      * Only keys are relevant, values are not used.
      */
     private transient Map<TSelf, Object> boundStatistics = new WeakHashMap<TSelf, Object>();
+    /** Operations thread number lock */
+    private transient Integer lockedThreadNum = null;
+    /** Serialization replacement object */
+    protected transient Statistics<TSelf> replaceWith = null;
 
 
     //****************** Constructors ******************//
@@ -67,6 +93,9 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         // Set statistic name
         this.name = name;
     }
+
+
+    //****************** Factory method ******************//
 
     /**
      * Creates a new instance of a {@link Statistics}.
@@ -91,6 +120,30 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Can't create a statistics object", e.getCause());
         }
+    }
+
+    /**
+     * Returns a registered global statistic.
+     * If there is not global statistic of the given name, a new instance is created, registered and returned.
+     *
+     * @param <T> the type of the statistic to get
+     * @param statisticName the name of the statistic to get
+     * @param statisticClass the type of the statistic to get
+     * @return a registered global statistic instance
+     * @throws IllegalArgumentException if the statistics of the given name does not exist and cannot be created
+     * @throws ClassCastException if the statistics of the given name exists, but is not instance of {@code statisticClass}
+     */
+    public static <T extends Statistics<? extends T>> T getStatistics(String statisticName, Class<? extends T> statisticClass) throws IllegalArgumentException, ClassCastException {
+        return statistics.get(statisticName, statisticClass);
+    }
+
+    /**
+     * Returns a registered global statistic.
+     * @param statisticName the name of the statistic to get
+     * @return a registered global statistic instance or <tt>null</tt> if no statistic is registered with this name
+     */
+    public static Statistics<?> getStatistics(String statisticName) {
+        return statistics.get(statisticName);
     }
 
 
@@ -169,18 +222,25 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
     }
 
     /**
-     * Remove a statistic from list
+     * Remove a bound statistic from this one.
+     * @param stat the statistic to unbind
      */
     protected void removeBoundStat(TSelf stat) {
         boundStatistics.remove(stat);
     }
 
-    /** Enumeration of statistics bound to this (for subclasses only) */
+    /**
+     * Returns a set of all statistics that are bound to this one.
+     * @return a set of all statistics that are bound to this one
+     */
     protected final Set<TSelf> getBoundStats() {
         return boundStatistics.keySet();
     }
    
-    /** Deregister ourselves from list of "parent" object */
+    /**
+     * Deregister this statistic from the "parent" statistic it is bound to.
+     * If this statistic is not bound, nothing happens.
+     */
     public void unbind() {
         try {
             if (boundTo != null)
@@ -197,8 +257,14 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         }
     }
 
-    /** Bind current statistics object to receive notifications at the same time as the specified statistics receives some.
-     *  @param object the parent statistics object
+    /**
+     * Bind this statistic to the given one.
+     * This statistic will then be updated wheneve the given statistic is updated
+     * using the same values. Note that since the initial values of this and the
+     * other statistic can differ, they can maintain a different value.
+     *
+     * @param object the statistic to which this statistic should be bound to
+     * @throws IllegalArgumentException if this statistic is already bound to another stat
      */
     public void bindTo(TSelf object) throws IllegalArgumentException {
         // Ignore null argument
@@ -221,38 +287,39 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
 
     //****************** Thread operation locking ******************//
 
-    // The next serial number to be assigned
-    private static AtomicInteger nextThreadNum = new AtomicInteger(1);
-    private static ThreadLocal<Integer> threadNum = new InheritableThreadLocal<Integer>() {
-     protected synchronized Integer initialValue() {
-         return nextThreadNum.getAndIncrement();
-     }
-    };
-    static Integer getCurrentThreadLock() { return threadNum.get(); }
+    /**
+     * Returns the serial number assigned to the current thread.
+     * This is used to implement {@link OperationStatistics}.
+     * @return the serial number assigned to the current thread
+     */
+    static Integer getCurrentThreadLock() {
+        return threadNum.get();
+    }
     
-    // Operations thread number lock
-    private transient Integer lockedThreadNum = null;
-
-    /** Lock the operations of this statistic to current thread and all its descendants */
+    /**
+     * Lock this statistic's updates to current thread (and the threads started from it).
+     */
     void lockToThread() {
         lockedThreadNum = getCurrentThreadLock();
     }
     
-    /** Unlock the operations from thread */
+    /**
+     * Unlock this statistic's updates from the thread.
+     */
     void unlockFromThread() {
         lockedThreadNum = null;
     }
     
-    /** Check lock (only for subclasses) */
+    /**
+     * Check if this statistic can update itself.
+     * @return <tt>true</tt> if updates are enabled or <tt>false</tt> if not
+     */
     protected final boolean canPerformOperation() {
         return statisticsEnabled && ((lockedThreadNum == null) || lockedThreadNum.equals(threadNum.get()));
     }
 
 
     //****************** Suspending Stastics Counting ******************//
-    
-    /** Flag for enabling/disabling statistics globally */
-    private static boolean statisticsEnabled = true;
 
     /**
      * Returns <tt>true</tt> if statistics are globally enabled.
@@ -275,9 +342,13 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
 
     //****************** Serialization ******************//
     
-    protected transient Statistics<TSelf> replaceWith = null;
-            
-    // Initialize boundStatistics attribute (must be empty after deserialization)
+    /**
+     * Deserialization method.
+     * Initialize boundStatistics attribute (must be empty after deserialization).
+     * @param in the input stream to deserialize from
+     * @throws IOException if there was an error reading from the input stream
+     * @throws ClassNotFoundException if there was an error resolving classes from the input stream
+     */
     @SuppressWarnings("unchecked")
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
@@ -286,7 +357,7 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         // If this stat was registered globally
         if (in.readBoolean()) {
             // Get global statistics with this name
-            replaceWith = (Statistics<TSelf>)statistics.get(getName());
+            replaceWith = (Statistics<TSelf>)getStatistics(getName()); // This cast IS checked, because replaceWith.getClass() is the correct class...
             
             // Register this statistic
             if (replaceWith == null) {
@@ -296,15 +367,19 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
 
             // Read boundTo statistic name
             String boundToName = (String)in.readObject();
-            Class<TSelf> boundToClass = (Class)in.readObject();
+            Class<TSelf> boundToClass = (Class)in.readObject(); // This cast IS checked, because replaceWith.getClass() is the correct class...
 
             // Restore bindings
             if (boundToName != null && replaceWith.boundTo == null)
-                replaceWith.bindTo(statistics.get(boundToName, boundToClass)); // This cast IS checked, because replaceWith.getClass() is the correct class...
+                replaceWith.bindTo(getStatistics(boundToName, boundToClass));
         }
     }
-    
-    
+
+    /**
+     * Deserialization method to replace the object with a global statistic's one.
+     * @return the object to use as replacement
+     * @throws ObjectStreamException if there was an error (not thrown by this implementation)
+     */
     protected Object readResolve() throws ObjectStreamException {
         if (replaceWith != null)
             return replaceWith;
@@ -312,8 +387,12 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
             return this;
     }
 
-
-    // Store flags for deserialization - global stat registration & bindings
+    /**
+     * Serialization method.
+     * Store the global stat registration and bindings.
+     * @param out the stream to store this object to
+     * @throws IOException if there was an error writing to the stream
+     */
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.defaultWriteObject();
         
@@ -330,71 +409,87 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
         } else out.writeBoolean(false);
     }
 
-    
-    //****************** Checkpoint facilities ***********//
-    
-    /** Sets checkpoint. The implementation should store the current state of statistics and
-     * provide the information about changes in statistics through changedSinceCheckpoint().
-     */
-    public abstract void setCheckpoint();
-    
-    /** Reports if statistics have been changed since the last setCheckpoint() call.
-     */
-    public abstract boolean changedSinceCheckpoint();
 
+    //****************** Global statistics registry ******************//
     
-    /****************** Global statistics registry ******************/
-    
-    protected static final StatisticsList statistics = new StatisticsList();
 
-    /** Returns true if current (this) statistic is present in global statistics registry */
+    /**
+     * Returns <tt>true</tt> if this statistic is present in global statistics registry.
+     * @return <tt>true</tt> if this statistic is present in global statistics registry
+     */
     protected boolean isRegisteredGlobally() {
         // This check if this particular object is the one returned by its name in global registry
         return this == statistics.get(getName());
     }
 
     /** 
-     * Remove the statistic from global registry 
+     * Remove the statistic from global registry.
      * @param name name of the statistic
-     * @return <code>true</code> if the statistic exist(ed)
+     * @return <tt>true</tt> if the statistic existed and was removed
      */
     public static boolean removeStatistic(String name) {
         return statistics.remove(name) != null;
     }
     
-    /** Resets all statistics */
+    /**
+     * Resets all statistics.
+     */
     public static void resetStatistics() {
         statistics.reset();
     }
     
-    /** Resets statistics matching the regular expression */
+    /**
+     * Resets statistics matching the regular expression.
+     * @param regex the regular expression that matches the names of statistics to reset
+     */
     public static void resetStatistics(String regex) {
         statistics.reset(regex);
     }
     
-    /** Returns String containing current states of registered statistics with names matching the provided regular expression
-        and separated by specified separator
+    /**
+     * Returns a string containing current states of global statistics with
+     * names matching the provided regular expression and separated by specified separator.
+     * @param regex the regular expression that matches the names of statistics to use
+     * @param statSeparator the string that separates the respective statistics (can be newline)
+     * @return a string with all the statistics that were printed
      */
     public static String printStatistics(String regex, String statSeparator) {
         return statistics.print(regex, statSeparator);
     }
 
-    /** Returns String containing current states of registered statistics with names matching the provided regular expression */
+    /**
+     * Returns a string containing current states of global statistics with
+     * names matching the provided regular expression.
+     * New-line is used as separator.
+     * @param regex the regular expression that matches the names of statistics to use
+     * @return a string with all the statistics that were printed
+     */
     public static String printStatistics(String regex) {
         return statistics.print(regex);
     }
 
-    /** Returns String containing current states of registered statistics */
+    /**
+     * Returns a string containing current states of all global statistics.
+     * @return a string with all the statistics
+     */
     public static String printStatistics() {
         return statistics.print();
     }
-    
-    /** Access all statistics */
+
+    /**
+     * Returns an iterator over all global statistics.
+     * @return an iterator over all global statistics
+     */
     public static Iterator<Statistics<?>> getAllStatistics() {
         return getAllStatistics(null);
     }
-   
-    /** Access statistics whose names match the given regular expression */
+
+    /**
+     * Returns an iterator over all global statistics with
+     * names matching the provided regular expression.
+     * @param regex the regular expression that matches the names of statistics to use
+     * @return an iterator over all global statistics
+     */
     public static Iterator<Statistics<?>> getAllStatistics(String regex) {
         return statistics.iterator(regex);
     }

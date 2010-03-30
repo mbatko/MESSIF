@@ -117,7 +117,7 @@ public final class StatisticMinMaxCounter extends Statistics<StatisticMinMaxCoun
     
     /** Create new statistic counter with specified name or get the one already existing */
     public static StatisticMinMaxCounter getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticMinMaxCounter.class);
+        return getStatistics(name, StatisticMinMaxCounter.class);
     }
 
     

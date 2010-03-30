@@ -239,7 +239,7 @@ public class StatisticSlidingAvgCounter extends Statistics<StatisticSlidingAvgCo
     
     /** Create new statistic counter with specified name or get the one already existing */
     public static StatisticSlidingAvgCounter getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticSlidingAvgCounter.class);
+        return getStatistics(name, StatisticSlidingAvgCounter.class);
     }
     
     

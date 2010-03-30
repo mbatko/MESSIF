@@ -20,6 +20,16 @@ import java.io.Serializable;
 import java.util.Iterator;
 
 /**
+ * A local (operation's) list of statistics.
+ * This is typically used to retrieve statistics only during a single operation
+ * execution - the statistics registered in this collection are not influenced
+ * by other running operations (or other methods possibly modyfying statistics).
+ *
+ * <p>
+ * To retrieve a statistic, use {@link Statistics#bindTo(messif.statistics.Statistics) binding}.
+ * There are several methods to ease the task of biding a {@link OperationStatistics}
+ * to global statistics, such as {@link #registerBoundStat(java.lang.String)}.
+ * </p>
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -161,7 +171,7 @@ public final class OperationStatistics implements Serializable {
      */
     public <T extends Statistics<T>> T registerBoundStat(Class<? extends T> statClass, String name, String asName) throws ClassNotFoundException {
         // Get the duplicate of the source statistic from global namespace
-        T stat = Statistics.statistics.get(name, statClass);
+        T stat = Statistics.getStatistics(name, statClass);
 
         // Get the new statistic from the local namespace
         T newStat = getStatistics(asName, statClass);
@@ -191,26 +201,29 @@ public final class OperationStatistics implements Serializable {
     }
 
     /** Register bound statistic (using asName name) in this operation statistics namespace */
-    public Statistics<?> registerBoundStat(String name, String asName) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name, String asName) throws IllegalArgumentException {
         // Get the duplicate of the source statistic from global namespace
-        Statistics<?> stat = Statistics.statistics.get(name);
+        Statistics<?> stat = Statistics.getStatistics(name);
 
         if (stat == null)
-            throw new InstantiationException("Statistic '" + name + "' not found in the registry");
+            throw new IllegalArgumentException("Statistic '" + name + "' not found in the registry");
 
         return registerBoundStat(asName, stat);
     }
 
     /** Register bound statistic in this operation statistics namespace */
-    public Statistics<?> registerBoundStat(String name) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name) throws IllegalArgumentException {
         return registerBoundStat(name, name);
     }
     
     /** In this operation statistics namespace, register and bind statistics which are present in the global namespace and 
      * match the given regular expression. */
     public void registerBoundAllStats(String regex) {
-        for (Statistics<?> stat : Statistics.statistics.getAllStatistics(regex))
+        Iterator<Statistics<?>> iterator = Statistics.getAllStatistics(regex);
+        while (iterator.hasNext()) {
+            Statistics<?> stat = iterator.next();
             registerBoundStat(stat.getName(), stat);
+        }
     }
 
     /** Unbind statistics matching the regular expression from their parents */
@@ -218,16 +231,23 @@ public final class OperationStatistics implements Serializable {
         statistics.unbind(regex);
     }
 
-    /** Unbind all stored statistics from their parents */
+    /**
+     * Unbind all stored statistics from their parents.
+     */
     public void unbindAllStats() {
         statistics.unbind();
     }
 
-    /****************** Statistics merging ******************/
+    //****************** Statistics merging ******************//
     
-    /** Update our statistics with other operation stats */
+    /**
+     * Update this statistics with other operation statistics values.
+     * @param sourceStats the operation statistics that are merged with this ones
+     * @throws IllegalArgumentException if there was a statistic of the same name
+     *          in both this and {@sourceStats} but with of different class
+     */
     @SuppressWarnings("unchecked")
-    public synchronized void updateFrom(OperationStatistics sourceStats) throws InstantiationException {
+    public synchronized void updateFrom(OperationStatistics sourceStats) throws IllegalArgumentException {
         // For every source statistics update values in our stat
         for (Statistics<?> stat : sourceStats.statistics) {
             // Update our statistics
@@ -236,10 +256,11 @@ public final class OperationStatistics implements Serializable {
     }
     
 
-    /****************** Text representation ******************/
-    
+    //****************** Text representation ******************//
+
+    @Override
     public String toString() {
         return statistics.toString();
     }
-    
+
 }

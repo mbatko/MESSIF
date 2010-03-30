@@ -165,7 +165,7 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
     
     /** Create new statistic object with specified name or get the one already existing */
     public static StatisticSimpleWeakrefCounter getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticSimpleWeakrefCounter.class);
+        return getStatistics(name, StatisticSimpleWeakrefCounter.class);
     }
 
 

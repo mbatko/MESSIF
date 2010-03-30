@@ -279,7 +279,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
     
     /** Create new statistic object with specified name or get the one already existing */
     public static StatisticRefCounter getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticRefCounter.class);
+        return getStatistics(name, StatisticRefCounter.class);
     }
 
     

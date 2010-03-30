@@ -126,7 +126,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     
     /** Create new statistic timer with specified name or get the one already existing */
     public static StatisticTimer getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticTimer.class);
+        return getStatistics(name, StatisticTimer.class);
     }
 
     

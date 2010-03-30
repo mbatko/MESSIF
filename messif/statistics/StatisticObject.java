@@ -79,7 +79,7 @@ public class StatisticObject extends Statistics<StatisticObject> {
     
     /** Create new statistic object with specified name or get the one already existing */
     public static StatisticObject getStatistics(String name) throws ClassCastException {
-        return statistics.get(name, StatisticObject.class);
+        return getStatistics(name, StatisticObject.class);
     }
 
     
