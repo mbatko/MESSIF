@@ -131,6 +131,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     /** Flag whether the file is modified */
     protected transient boolean modified;
 
+    /** Finalizer thread that writes a modified header */
+    protected transient Thread modifiedThread;
+
 
     //****************** Constructors ******************//
 
@@ -203,6 +206,10 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     @Override
     public void finalize() throws Throwable {
+        if (modifiedThread != null) {
+            Runtime.getRuntime().removeShutdownHook(modifiedThread);
+            modifiedThread = null;
+        }
         closeFileChannel();
         super.finalize();
     }
@@ -355,6 +362,21 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             modified = false;
         } else {
             modified = true;
+
+            // Prepare shutdown thread
+            if (modifiedThread == null) {
+                modifiedThread = new Thread() {
+                    @Override
+                    public void run() {
+                        try {
+                            DiskStorage.this.finalize();
+                        } catch (Throwable e) {
+                            log.warning("Error during finalization: " + e);
+                        }
+                    }
+                };
+                Runtime.getRuntime().removeShutdownHook(modifiedThread);
+            }
         }
     }
 
