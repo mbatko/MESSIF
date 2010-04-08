@@ -156,9 +156,10 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      * This method processes the operation on each of the remote algorithms (running each of it in a separate thread)
      *   and merges the answers.
      * @param operation operation to execute on each of the overlays
-     * @throws messif.algorithms.AlgorithmMethodException
+     * @throws AlgorithmMethodException if there was an exception during the background execution
+     * @throws InterruptedException if the waiting was interrupted
      */
-    public void processOperation(AbstractOperation operation) throws AlgorithmMethodException {
+    public void processOperation(AbstractOperation operation) throws AlgorithmMethodException, InterruptedException {
         try {
             if ((operation.suppData != null) && (processOperationSingleLayer(operation))) {
                 return;
