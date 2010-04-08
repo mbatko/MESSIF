@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.executor.MethodExecutor;
 import messif.executor.MethodThread;
@@ -357,6 +356,8 @@ public abstract class Algorithm implements Serializable {
             } else {
                 operationExecutor.execute(params);
             }
+        } catch (ClassCastException e) { // This can occur when OperationTime statistics exists, but has a wrong class
+            throw new AlgorithmMethodException(e);
         } catch (InvocationTargetException e) {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
@@ -377,11 +378,11 @@ public abstract class Algorithm implements Serializable {
             runningOperations.acquireUninterruptibly();
         try {
             bgExecutionList.get().backgroundExecute(updateStatistics, params);
-        } catch (NoSuchMethodException e) {
+        } catch (NoSuchMethodException e) { // Unlock on exception (but keep the lock if everything was ok)
             if (maximalConcurrentOperations > 0)
                 runningOperations.release();
             throw e;
-        } catch (RuntimeException e) {
+        } catch (RuntimeException e) { // Unlock on exception (but keep the lock if everything was ok)
             if (maximalConcurrentOperations > 0)
                 runningOperations.release();
             throw e;
@@ -459,8 +460,9 @@ public abstract class Algorithm implements Serializable {
      * Wait for all operations executed on background to finish.
      * @return the list of operations that were executed
      * @throws AlgorithmMethodException if there was an exception during the background execution
+     * @throws InterruptedException if the waiting was interrupted
      */
-    public List<AbstractOperation> waitBackgroundExecuteOperation() throws AlgorithmMethodException {
+    public List<AbstractOperation> waitBackgroundExecuteOperation() throws AlgorithmMethodException, InterruptedException {
         return waitBackgroundExecuteOperation(AbstractOperation.class);
     }
 
@@ -471,25 +473,25 @@ public abstract class Algorithm implements Serializable {
      * @param <E> type of the returned operations
      * @param argClass filter on the returned operation classes
      * @return the list of operations that were executed
-     * @throws AlgorithmMethodException 
+     * @throws AlgorithmMethodException if there was an exception during the background execution
+     * @throws InterruptedException if the waiting was interrupted
      */
-    public <E extends AbstractOperation> List<E> waitBackgroundExecuteOperation(Class<E> argClass) throws AlgorithmMethodException {
+    public <E extends AbstractOperation> List<E> waitBackgroundExecuteOperation(Class<E> argClass) throws AlgorithmMethodException, InterruptedException {
+        MethodThreadList list = bgExecutionList.get();
+
+        // Wait for execution end and release locks
+        int operationsCount = list.waitBackgroundExecuteOperation();
+        if (maximalConcurrentOperations > 0)
+            runningOperations.release(operationsCount);
+
         try {
-            MethodThreadList list = bgExecutionList.get();
-            
-            // Wait for execution end and release locks
-            int operationsCount = list.waitBackgroundExecuteOperation();
-            if (maximalConcurrentOperations > 0)
-                runningOperations.release(operationsCount);
-            
             List<E> retList = list.getAllMethodsReturnValue(argClass);
-            
+
             // clear the list of finished threads
             list.clearThreadLists();
-            
+
             return retList;
         } catch (Exception e) {
-            e.printStackTrace();
             throw new AlgorithmMethodException(e);
         }
     }
@@ -560,7 +562,7 @@ public abstract class Algorithm implements Serializable {
         }
 
         @Override
-        public int waitBackgroundExecuteOperation() throws Exception {
+        public int waitBackgroundExecuteOperation() throws InterruptedException {
             int rtv = super.waitBackgroundExecuteOperation();
             synchronized (this) {
                 if (statisticsToMerge != null) {
@@ -578,17 +580,12 @@ public abstract class Algorithm implements Serializable {
     
     /**
      * This method can be used by all algorithms before processing any operation to set default (operation) statistics.
-     * @throws messif.algorithms.AlgorithmMethodException if new statistic cannot be created
+     * @throws ClassCastException if new statistic cannot be created
      */
-    public void statisticsBeforeOperation() throws AlgorithmMethodException {
-        try {
-            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
-            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
-            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
-        } catch (ClassNotFoundException e) {
-            log.log(Level.SEVERE, e.getClass().toString(), e);
-            throw new AlgorithmMethodException(e);
-        }
+    public void statisticsBeforeOperation() throws ClassCastException {
+        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
+        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
+        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
     }
 
     /**

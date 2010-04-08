@@ -169,7 +169,7 @@ public final class OperationStatistics implements Serializable {
      * Register bound statistic (using asName name) in this operation statistics namespace.
      * If there is no global stat of specified name, it is created.
      */
-    public <T extends Statistics<T>> T registerBoundStat(Class<? extends T> statClass, String name, String asName) throws ClassNotFoundException {
+    public <T extends Statistics<T>> T registerBoundStat(Class<? extends T> statClass, String name, String asName) throws ClassCastException {
         // Get the duplicate of the source statistic from global namespace
         T stat = Statistics.getStatistics(name, statClass);
 

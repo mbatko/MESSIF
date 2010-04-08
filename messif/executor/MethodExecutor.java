@@ -107,33 +107,48 @@ public abstract class MethodExecutor {
     }
 
     /**
-     * Returns the method usage built from the {@link ExecutableMethod} annotation.
-     * If the annotation is not present, empty string is returned.
+     * Prints the method usage built from the {@link ExecutableMethod} annotation.
+     * If the annotation is not present, nothing is printed out.
      * Otherwise the concatenation of the method name, its argument descriptions
-     * (in sharp parenthesis) and the method's description is returned.
+     * (in sharp parenthesis) and the method's description is printed out.
      *
+     * @param out the print stream where the usage is print
+     * @param printArguments flag whether to print the method's
+     *          {@link ExecutableMethod#arguments() argument descriptions}
+     * @param printDescription flag whether to print the method's
+     *          {@link ExecutableMethod#description() description}
      * @param method the method for which to get the usage
-     * @return the method usage string
      */
-    public static String getMethodUsage(Method method) {
+    public static void printUsage(PrintStream out, boolean printArguments, boolean printDescription, Method method) {
         ExecutableMethod annotation = method.getAnnotation(ExecutableMethod.class);
         if (annotation == null)
-            return "";
+            return;
         
-        StringBuffer rtv = new StringBuffer(method.getName());
-        for (String argdesc : annotation.arguments())
-            rtv.append(" <").append(argdesc).append(">");
-        rtv.append("\r\n\t").append(annotation.description());
-        
-        return rtv.toString();
+        out.print(method.getName());
+        if (printArguments) {
+            for (String argdesc : annotation.arguments()) {
+                out.print(" <");
+                out.print(argdesc);
+                out.print(">");
+            }
+        }
+        out.println();
+        if (printDescription) {
+            out.print("\t");
+            out.println(annotation.description());
+        }
     }
 
     /**
      * Prints usage of all methods managed by this executor.
      *
      * @param out the print stream where the usage is print
+     * @param printArguments flag whether to print the method's
+     *          {@link ExecutableMethod#arguments() argument descriptions}
+     * @param printDescription flag whether to print the method's
+     *          {@link ExecutableMethod#description() description}
      */
-    public void printUsage(PrintStream out) {
+    public void printUsage(PrintStream out, boolean printArguments, boolean printDescription) {
         // Sort array first
         List<Method> methods = new ArrayList<Method>(getRegisteredMethods());
         Collections.sort(methods, new Comparator<Method>() {
@@ -144,7 +159,21 @@ public abstract class MethodExecutor {
 
         // Print usage for every method
         for (Method method : methods)
-            out.println(getMethodUsage(method));
+            printUsage(out, printArguments, printDescription, method);
+    }
+
+    /**
+     * Prints usage of method that is to be called for the given arguments.
+     * @param out the print stream where the usage is print
+     * @param printArguments flag whether to print the method's
+     *          {@link ExecutableMethod#arguments() argument descriptions}
+     * @param printDescription flag whether to print the method's
+     *          {@link ExecutableMethod#description() description}
+     * @param arguments the arguments for the method
+     * @throws NoSuchMethodException if there is no method for the specified parameters in this executor
+     */
+    public void printUsage(PrintStream out, boolean printArguments, boolean printDescription, Object[] arguments) throws NoSuchMethodException {
+        printUsage(out, printArguments, printDescription, getMethod(arguments));
     }
 
 
@@ -175,8 +204,6 @@ public abstract class MethodExecutor {
             throw new NoSuchMethodException("Can't access method: " + e.getMessage());
         } catch (IllegalArgumentException e) {
             throw new NoSuchMethodException("Specified arguments are invalid or an incorrect method was found: " + e.getMessage());
-        } catch (InvocationTargetException e) {
-            throw new InvocationTargetException(e.getCause(), getMethodUsage(method));
         }
     }
     

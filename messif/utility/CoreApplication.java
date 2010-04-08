@@ -228,7 +228,12 @@ public class CoreApplication {
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "start specified algorithm instance", arguments = {"algorithm class", "arguments for constructor ..."})
-    public boolean algorithmStart(PrintStream out, String... args) {       
+    public boolean algorithmStart(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("algorithmStart requires a class parameter (see 'help algorithmStart')");
+            return false;
+        }
+
         // Get class from the first argument
         Class<Algorithm> algorithmClass;
         try {
@@ -273,6 +278,11 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "loads the algorithm from a given file", arguments = {"file name" })
     public boolean algorithmRestore(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("algorithmRestore requires a file name parameter (see 'help algorithmRestore')");
+            return false;
+        }
+
         try {
             // Load algorithm from file
             algorithm = Algorithm.restoreFromFile(args[1]);
@@ -301,6 +311,11 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "save the algorithm to the given file", arguments = {"file or dir name"})
     public boolean algorithmStore(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("algorithmStore requires a file name parameter (see 'help algorithmStore')");
+            return false;
+        }
+
         try {
             if (algorithm != null) {
                 // Store algorithm to file
@@ -440,8 +455,89 @@ public class CoreApplication {
         return false;
     }
 
+    /**
+     * Show information about supported operations for the current algorithm.
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmSupportedOperations
+     * </pre>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @see #operationExecute
+     */
+    @ExecutableMethod(description = "show all operations supported by current algorithm", arguments = {})
+    public boolean algorithmSupportedOperations(PrintStream out, String... args) {
+        if (algorithm == null) {
+            out.println("No running algorithm is selected");
+            return false;
+        }
+
+        out.println("---------------- Available operations ----------------");
+        for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+            try {
+                out.println(AbstractOperation.getConstructorDescription(opClass));
+            } catch (NoSuchMethodException ex) {
+                out.println(opClass.getName() + " can be processed but not instantiated");
+            }
+
+        return true;
+    }
+
 
     //****************** Operation command functions ******************//
+
+    /**
+     * Creates an operation from the given parameters.
+     * This is internal method used in various operationXXX methods.
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return an instance of operation or <tt>null</tt> if the specified arguments are invalid
+     */
+    private AbstractOperation createOperation(PrintStream out, String[] args) {
+        if (args.length < 2) {
+            out.println("The class of the operation must be specified (see 'help " + args[0] + "')");
+            return null;
+        }
+
+        // Get operation class from the first argument
+        Class<AbstractOperation> operationClass;
+        try {
+            operationClass = Convert.getClassForName(args[1], AbstractOperation.class);
+        } catch (ClassNotFoundException e) {
+            out.println("Can't find operation class: " + e.getMessage());
+            return null;
+        }
+
+        // Create new instance of the operation
+        try {
+            return AbstractOperation.createOperation(
+                    operationClass,
+                    Convert.parseTypesFromString(
+                        args,
+                        AbstractOperation.getConstructorArguments(operationClass, args.length - 2),
+                        2, // skip the method name and operation class arguments
+                        namedInstances
+                    )
+            );
+        } catch (InvocationTargetException e) {
+            out.println(e.getCause().toString());
+        } catch (Exception e) {
+            out.println(e.toString());
+        }
+
+        // Show operation description if there was an error
+        try {
+            String description = AbstractOperation.getConstructorDescription(operationClass);
+            out.println("---------------- Operation parameters ----------------");
+            out.println(description);
+        } catch (NoSuchMethodException e) {
+            out.println(e.getMessage());
+        }
+        return null;
+    }
 
     /**
      * Executes a specified operation on current algorithm.
@@ -470,36 +566,11 @@ public class CoreApplication {
             return false;
         }
 
+        AbstractOperation operation = createOperation(out, args);
+        if (operation == null)
+            return false;
+
         try {
-            if (args.length < 2)
-                throw new NoSuchMethodException("The class of the operation must be specified");
-
-            // Get class from the first argument
-            Class<AbstractOperation> operationClass = Convert.getClassForName(args[1], AbstractOperation.class);
-
-            AbstractOperation operation;
-            try {
-                // Create new instance of the operation
-                operation = AbstractOperation.createOperation(
-                        operationClass,
-                        Convert.parseTypesFromString(
-                            args,
-                            AbstractOperation.getConstructorArguments(operationClass, args.length - 2),
-                            2, // skip the method name and operation class arguments
-                            namedInstances
-                        )
-                );
-            } catch (Exception e) {
-                if (e instanceof InvocationTargetException) {
-                    out.println(e.getCause().toString());
-                } else {
-                    out.println(e.toString());
-                }
-                out.println("---------------- Operation parameters ----------------");
-                out.println(AbstractOperation.getConstructorDescription(operationClass));
-                return false;
-            }
-
             // Execute operation
             algorithm.resetOperationStatistics();
             if (bindOperationStatsRegexp != null)
@@ -508,23 +579,13 @@ public class CoreApplication {
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
-        } catch (RuntimeException e) {
-            logException(e);
-            out.println(e.toString());
-            return false;
         } catch (AlgorithmMethodException e) {
             logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
-        } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
-            out.println(e.toString());
-            out.println("---------------- Available operations ----------------");
-            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
-                try {
-                    out.println(AbstractOperation.getConstructorDescription(opClass));
-                } catch (NoSuchMethodException ex) {
-                    out.println(opClass.getName() + " can be processed but not instantiated");
-                }
+        } catch (NoSuchMethodException e) {
+            out.println(e.getMessage());
+            algorithmSupportedOperations(out, args);
             return false;
         }
     }
@@ -561,52 +622,20 @@ public class CoreApplication {
             return false;
         }
 
-        // Get class from the first argument
-        Class<AbstractOperation> operationClass;
-        try {
-            operationClass = Convert.getClassForName(args[1], AbstractOperation.class);
-
-        } catch (Exception e) {
-            out.println(e.toString());
-            out.println("---------------- Available operations ----------------");
-            
-            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
-                try {
-                    out.println(AbstractOperation.getConstructorDescription(opClass));
-                } catch (NoSuchMethodException ex) {
-                    // Ignore operations that can be processed but not instantiated
-                }
-            
+        AbstractOperation operation = createOperation(out, args);
+        if (operation == null)
             return false;
-        }
-        AbstractOperation operation;
+
         try {
-            // Try to create a new instance of the operation
-            operation = AbstractOperation.createOperation(
-                    operationClass,
-                    Convert.parseTypesFromString(
-                        args, 
-                        AbstractOperation.getConstructorArguments(operationClass),
-                        2, // skip the method name and operation class arguments
-                        namedInstances
-                    )
-            );
-            
             // Execute operation
             OperationStatistics.resetLocalThreadStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
             algorithm.backgroundExecuteOperation(operation);
             return true;
-        } catch (Exception e) {
-            logException(e);
-            out.println(e.toString());
-            out.println("---------------- Operation parameters ----------------");
-            try {
-                out.println(AbstractOperation.getConstructorDescription(operationClass));
-            } catch (NoSuchMethodException ex) {
-                out.println("Operation " + operationClass.getName() + " can be processed but not instantiated");
-            }
+        } catch (NoSuchMethodException e) {
+            out.println(e.getMessage());
+            algorithmSupportedOperations(out, args);
             return false;
         }
     }
@@ -641,9 +670,12 @@ public class CoreApplication {
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
-        } catch (Exception e) {
-            logException(e);
+        } catch (InterruptedException e) {
             out.println(e.toString());
+            return false;
+        } catch (AlgorithmMethodException e) {
+            logException(e.getCause());
+            out.println(e.getCause().toString());
             return false;
         }
     }
@@ -685,23 +717,13 @@ public class CoreApplication {
                 out.println("No operation has been executed yet. Use operationExecute method first.");
                 return false;
             }
-        } catch (RuntimeException e) {
-            logException(e);
-            out.println(e.toString());
-            return false;
         } catch (AlgorithmMethodException e) {
             logException(e.getCause());
             out.println(e.getCause().toString());
             return false;
-        } catch (Exception e) { // ClassNotFound & NoSuchMethod exceptions left
-            out.println(e.toString());
-            out.println("---------------- Available operations ----------------");
-            for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
-                try {
-                    out.println(AbstractOperation.getConstructorDescription(opClass));
-                } catch (NoSuchMethodException ex) {
-                    // Ignore operations that can be processed but not instantiated
-                }
+        } catch (NoSuchMethodException e) {
+            out.println(e.getMessage());
+            algorithmSupportedOperations(out, args);
             return false;
         }
     }
@@ -753,6 +775,10 @@ public class CoreApplication {
         }
         if (!(operation instanceof RankingQueryOperation)) {
             out.println("Answer collection can be changed only for ranked results");
+            return false;
+        }
+        if (args.length < 2) {
+            out.println("operationChangeAnswerCollection requires a class (see 'help operationChangeAnswerCollection')");
             return false;
         }
 
@@ -870,6 +896,10 @@ public class CoreApplication {
     public boolean methodExecute(PrintStream out, String... args) {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
+            return false;
+        }
+        if (args.length < 2) {
+            out.println("methodExecute requires at least the method name (see 'help methodExecute')");
             return false;
         }
 
@@ -1156,6 +1186,10 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "create new stream of LocalAbstractObjects", arguments = { "filename", "class of objects in the stream", "name of the stream", "additional arguments for the object constructor (optional)" })
     public boolean objectStreamOpen(PrintStream out, String... args) {
+        if (args.length < 4) {
+            out.println("objectStreamOpen requires a filename, object class and name (see 'help objectStreamOpen')");
+            return false;
+        }
         try {
             // Build collection of additional arguments
             List<String> additionalArgs;
@@ -1213,6 +1247,10 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "set parameter of objects' constructor", arguments = { "name of the stream", "parameter value", "index of parameter (not required -- zero if not given)" })
     public boolean objectStreamSetParameter(PrintStream out, String... args) {
+        if (args.length < 3) {
+            out.println("objectStreamSetParameter requires a stream name and parameter value (see 'help objectStreamSetParameter')");
+            return false;
+        }
         AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
         if (objectStream != null) 
             try {
@@ -1270,6 +1308,10 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "reset an AbstractObjectStream stream to read objects from the beginning", arguments = { "name of the stream" })
     public boolean objectStreamReset(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("objectStreamReset requires a stream name (see 'help objectStreamReset')");
+            return false;
+        }
         AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
         if (objectStream != null) 
             try {
@@ -1676,12 +1718,25 @@ public class CoreApplication {
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "show this help", arguments = { })
+    @ExecutableMethod(description = "show help", arguments = { "command name (optional)" })
     public boolean help(PrintStream out, String... args) {
-        out.println("---------------- Usage ----------------");
-        out.println("close");
-        out.println("\tclose this connection (the algorithm keeps running)");
-        methodExecutor.printUsage(out);
+        if (args.length > 1) {
+            if (args[1].equals("close")) {
+                out.println("close");
+                out.println("\tclose this connection (the algorithm keeps running)");
+            } else {
+                try {
+                    methodExecutor.printUsage(out, true, true, new Object[] { out, new String[] { args[1] } });
+                } catch (NoSuchMethodException e) {
+                    out.println("There is no command " + args[1]);
+                }
+            }
+        } else {
+            out.println("Use 'help <command>' to get more details about any command");
+            out.println("---------------- Available commands ----------------");
+            out.println("close");
+            methodExecutor.printUsage(out, false, false);
+        }
         return true;
     }
 
@@ -2141,8 +2196,6 @@ public class CoreApplication {
                 methodExecutor.execute(out, arguments);
             } catch (InvocationTargetException e) {
                 out.println(e.getCause().toString());
-                out.println("---------------- Command usage ----------------");
-                out.println(e.getMessage());
             } catch (NoSuchMethodException e) {
                 out.println("Unknown command: " + arguments[0]);
                 out.println("Use 'help' to see all available commands");

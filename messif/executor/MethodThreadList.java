@@ -140,20 +140,17 @@ public class MethodThreadList {
     /**
      * Wait for all operations executed on background to finish
      * @return Number of currently finished methods
-     * @throws Exception if there was an exception during waiting (the waiting is not finished then)
+     * @throws InterruptedException if the waiting was interrupted
      */
-    public int waitBackgroundExecuteOperation() throws Exception {
+    public int waitBackgroundExecuteOperation() throws InterruptedException {
         synchronized (methodStartedList) {
             // Wait for all the threads to finish
             for (Iterator<MethodThread> i = methodStartedList.iterator(); i.hasNext();) {
-                // Get the method thread
+                // Get the method thread and wait for its execution
                 MethodThread thread = i.next();
+                thread.waitExecutionEnd();
                 
-                // Wait and handle the possible exception
-                Exception e = thread.waitExecutionEnd();
-                if (e != null) throw e;
-                
-                // Finished, move to finished list
+                // Finished (either normally or by exception), move to finished list
                 i.remove();
                 methodFinishedList.add(thread);
             }
@@ -182,15 +179,20 @@ public class MethodThreadList {
      * @param argClass the class of the selected argument
      * @return list of executed methods' arguments
      * @throws NoSuchElementException if a parameter with the argClass class was not found
+     * @throws Exception if there was an exception during execution of any of the methods
      */
-    public <E> List<E> getAllMethodsArgument(Class<E> argClass) {
+    public <E> List<E> getAllMethodsArgument(Class<E> argClass) throws Exception {
         synchronized (methodFinishedList) {
             // Prepare return array
             List<E> rtv = new ArrayList<E>(methodFinishedList.size());
 
             // Add thread argument to return array
-            for (MethodThread i:methodFinishedList)
+            for (MethodThread i : methodFinishedList) {
+                Exception e = i.getException();
+                if (e != null)
+                    throw e;
                 rtv.add(i.getArgument(argClass));
+            }
             
             return rtv;
         }
@@ -201,15 +203,20 @@ public class MethodThreadList {
      * @param position the argument position to get
      * @return a list of the argument on the given position from all finished methods
      * @throws NoSuchElementException if a parameter with the argClass class was not found
+     * @throws Exception if there was an exception during execution of any of the methods
      */
-    public List<Object> getAllMethodsArgument(int position) {
+    public List<Object> getAllMethodsArgument(int position) throws Exception {
         synchronized (methodFinishedList) {
             // Prepare return array
             List<Object> rtv = new ArrayList<Object>(methodFinishedList.size());
 
             // Add thread argument to return array
-            for (MethodThread i:methodFinishedList)
-                rtv.add(i.getArgument(position));                
+            for (MethodThread i : methodFinishedList) {
+                Exception e = i.getException();
+                if (e != null)
+                    throw e;
+                rtv.add(i.getArgument(position));
+            }
             
             return rtv;
         }
@@ -221,15 +228,20 @@ public class MethodThreadList {
      * @param valuesClass the class of the return types
      * @return list of executed methods' returned values
      * @throws ClassCastException if some of the returned values cannot be cast to <code>valuesClass</code>
+     * @throws Exception if there was an exception during execution of any of the methods
      */
-    public <E> List<E> getAllMethodsReturnValue(Class<E> valuesClass) throws ClassCastException {
+    public <E> List<E> getAllMethodsReturnValue(Class<E> valuesClass) throws ClassCastException, Exception {
         synchronized (methodFinishedList) {
             // Prepare return array
             List<E> rtv = new ArrayList<E>(methodFinishedList.size());
 
             // Add thread argument to return array
-            for (MethodThread i : methodFinishedList)
+            for (MethodThread i : methodFinishedList) {
+                Exception e = i.getException();
+                if (e != null)
+                    throw e;
                 rtv.add(valuesClass.cast(i.getReturnedValue()));
+            }
 
             return rtv;
         }
@@ -238,8 +250,9 @@ public class MethodThreadList {
     /**
      * Returns a list of values returned from each finished method.
      * @return list of executed methods' returned values
+     * @throws Exception if there was an exception during execution of any of the methods
      */
-    public List<Object> getAllMethodsReturnValue() {
+    public List<Object> getAllMethodsReturnValue() throws Exception {
         return getAllMethodsReturnValue(Object.class);
     }
 

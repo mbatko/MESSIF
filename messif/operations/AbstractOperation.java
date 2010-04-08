@@ -494,7 +494,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         rtv.append(operationClass.getName());
         for (String argdesc : getConstructorArgumentDescriptions(operationClass))
             rtv.append(" <").append(argdesc).append(">");
-        rtv.append("\n\t... ").append(getName(operationClass));
+        rtv.append("\r\n\t... ").append(getName(operationClass));
         
         return rtv.toString();
     }

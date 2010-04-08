@@ -35,20 +35,21 @@ import java.util.List;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public final class MethodThread extends SingleMethodExecutor implements Runnable {
-    
-    /****************** Internal data ******************/
-    
+
+    //****************** Internal data ******************//
+
     /** Thread in which the operation is run */
-    protected final Thread runningThread = new Thread(this);
-    
+    private final Thread runningThread = new Thread(this);
+
     /** Exception catched during the thread execution */
-    protected Exception threadException = null;
+    private Exception threadException = null;
 
     /** List of executed methods */
-    protected final List<Executable> methods;
-    
-    /****************** Constructors ******************/
-    
+    private final List<Executable> methods;
+
+
+    //****************** Constructors ******************//
+
     /**
      * Create new instance of MethodThread
      *
@@ -108,32 +109,50 @@ public final class MethodThread extends SingleMethodExecutor implements Runnable
         runningThread.start();        
     }
 
-    /****************** State access ******************/
-    
-    /** Returns true if the method is still being executed, otherwise false is returned */
+
+    //****************** State access ******************//
+
+    /**
+     * Returns <tt>true</tt> if the method is still being executed, otherwise <tt>false</tt> is returned.
+     * @return <tt>true</tt> if the method is still being executed, otherwise <tt>false</tt> is returned
+     */
     public boolean isRunning() {
         return runningThread.isAlive();
     }
-    
-    /** This method waits for the end of execution (if not already done) and returns true if the execution was successful */
-    public boolean isSuccess() {
-        return waitExecutionEnd() == null;
+
+    /**
+     * This method waits for the end of execution.
+     * If the method is already finished, this method returns immediately.
+     * @return <tt>true</tt> if the execution was successful
+     * @throws InterruptedException if the waiting was interrupted
+     */
+    public boolean isSuccess() throws InterruptedException {
+        waitExecutionEnd();
+        return threadException == null;
+    }
+
+    /**
+     * Returns the exception thrown while executing or <tt>null</tt>
+     * if the execution finished with no exception.
+     * @return the exception thrown in execution
+     */
+    public Exception getException() {
+        return threadException;
     }
 
 
-    /****************** Execution methods ******************/
-    
-    /** Wait for the end of the operation execution in specified thread (returned by backgroundExecute)
-     *  This method will block until the background operation finishes its processing.
-     *  @return exception that occurred during the thread run or null if execution was not interrupted
+    //****************** Execution methods ******************//
+
+    /**
+     * Wait for the end of the operation execution in specified thread (returned by backgroundExecute)
+     * This method will block until the background operation finishes its processing.
+     * @throws InterruptedException if the waiting was interrupted
      */
-    public Exception waitExecutionEnd() {
+    public void waitExecutionEnd() throws InterruptedException {
         synchronized (runningThread) {
             // Wait the end of thread run
             while (runningThread.isAlive())
-                try { runningThread.wait(); } catch (InterruptedException e) { return e; }
-        
-            return threadException;
+                runningThread.wait();
         }
     }
 
@@ -143,8 +162,8 @@ public final class MethodThread extends SingleMethodExecutor implements Runnable
             threadException = null;
             try {
                 if (methods != null)
-                    for (Executable method : methods)
-                        method.execute();
+                    for (Executable executable : methods)
+                        executable.execute();
                 else execute();
             } catch (Exception e) {
                 threadException = e;
