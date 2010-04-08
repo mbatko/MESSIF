@@ -286,6 +286,7 @@ public class SequentialScan extends Algorithm {
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());
         bucket.processQuery(operation);
+        operation.endOperation();
     }
     
     
@@ -300,6 +301,7 @@ public class SequentialScan extends Algorithm {
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());
         bucket.processQuery(operation);
+        operation.endOperation();
     }
     
     
@@ -314,6 +316,7 @@ public class SequentialScan extends Algorithm {
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());
         bucket.processQuery(operation);
+        operation.endOperation();
     }
     
     
@@ -328,6 +331,7 @@ public class SequentialScan extends Algorithm {
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());
         bucket.processQuery(operation);
+        operation.endOperation();
     }
     
     /**
@@ -340,6 +344,7 @@ public class SequentialScan extends Algorithm {
      */
     public void search(QueryOperation<?> operation) throws CloneNotSupportedException, InterruptedException {
         bucket.processQuery(operation);
+        operation.endOperation();
     }
     
     /**
