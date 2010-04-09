@@ -849,24 +849,28 @@ public class CoreApplication {
                 Iterator<?> itAll = ((QueryOperation<?>)operation).getAnswer();
                 while (itAll.hasNext()) {
                     out.print(itAll.next());
-                    out.print(separator);
+                    if (itAll.hasNext())
+                        out.print(separator);
                 }
                 break;
             case 'O':
                 Iterator<AbstractObject> itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
                 while (itObjects.hasNext()) {
                     out.print(itObjects.next());
-                    out.print(separator);
+                    if (itObjects.hasNext())
+                        out.print(separator);
                 }
                 break;
             case 'L':
                 itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
                 while (itObjects.hasNext()) {
                     out.print(itObjects.next().getLocatorURI());
-                    out.print(separator);
+                    if (itObjects.hasNext())
+                        out.print(separator);
                 }
                 break;
         }
+        out.println();
 
         return true;
     }

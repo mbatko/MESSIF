@@ -67,6 +67,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
      *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
      */
+    // This cannot have annotation, since it has also three parameters
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, boolean storeMetaDistances) {
         this(queryObject, radius, AnswerType.NODATA_OBJECTS, Integer.MAX_VALUE, storeMetaDistances);
     }
@@ -77,6 +78,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
      * @param radius the query radius
      * @param answerType the type of objects this operation stores in its answer
      */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType) {
         this(queryObject, radius, answerType, Integer.MAX_VALUE);
     }

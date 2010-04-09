@@ -244,7 +244,7 @@ public final class OperationStatistics implements Serializable {
      * Update this statistics with other operation statistics values.
      * @param sourceStats the operation statistics that are merged with this ones
      * @throws IllegalArgumentException if there was a statistic of the same name
-     *          in both this and {@sourceStats} but with of different class
+     *          in both this and {@code sourceStats} but with of different class
      */
     @SuppressWarnings("unchecked")
     public synchronized void updateFrom(OperationStatistics sourceStats) throws IllegalArgumentException {
