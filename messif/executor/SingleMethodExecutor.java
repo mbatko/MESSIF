@@ -16,14 +16,14 @@
  */
 package messif.executor;
 
-import messif.utility.Convert;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import messif.utility.Convert;
 
 /**
- * A single {@link Exectutable} method.
+ * A single {@link Executable} method.
  * Invokes a single method on given object when {@link #execute() executed}.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
