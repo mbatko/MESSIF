@@ -45,7 +45,7 @@ public class ObjectStringFINLP_Dist extends ObjectString {
     public ObjectStringFINLP_Dist() {
         // each data object is of format: <DOCUMENT_ID>|free text
         // The format of <DOCUMENT_ID> is <DOCUMENT>:<PARAGRAPH>
-        super("foo:1|" + ObjectString.generateRandom());
+        super("foo:1|" + ObjectString.generateRandom(50, 200));
     }
     
     /** Creates a new instance of Object from stream */
@@ -140,16 +140,16 @@ public class ObjectStringFINLP_Dist extends ObjectString {
         return matrix[str1Len][str2Len];*/
     }
 
-    public float getDistanceLowerBound(LocalAbstractObject obj, int accuracy) {
-        return 0;
-/*      counterLowerBoundDistanceComputations.add();
-        return Math.abs(this.text.length() - ((ObjectString)obj).text.length());*/
+    @Override
+    protected float getDistanceLowerBoundImpl(LocalAbstractObject obj, int accuracy) {
+        return super.getDistanceLowerBoundImpl(obj, accuracy);
+/*        return Math.abs(this.text.length() - ((ObjectString)obj).text.length());*/
     }
     
-    public float getDistanceUpperBound(LocalAbstractObject obj, int accuracy) {
-        return 0;
-/*      counterUpperBoundDistanceComputations.add();
-        return Math.abs(this.text.length() + ((ObjectString)obj).text.length());*/
+    @Override
+    protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
+        return super.getDistanceUpperBoundImpl(obj, accuracy);
+/*        return Math.abs(this.text.length() + ((ObjectString)obj).text.length());*/
     }
     
 }

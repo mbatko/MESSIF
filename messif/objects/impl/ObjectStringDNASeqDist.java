@@ -28,40 +28,36 @@ import messif.objects.LocalAbstractObject;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectStringDNASeqDist extends ObjectStringEditDist {
-    
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Constructors ******************/
-    
+
+    //****************** Constructors ******************//
+
     /** Creates a new instance of Object */
     public ObjectStringDNASeqDist(String text) {
         super(text);
-        insertDeleteWeight = 5;
     }
-    
+
     /** Creates a new instance of Object random generated */
     public ObjectStringDNASeqDist() {
         super();
-        insertDeleteWeight = 5;
     }
-    
+
     /** Creates a new instance of Object random generated 
      * with minimal length equal to minLength and maximal 
      * length equal to maxLength */
     public ObjectStringDNASeqDist(int minLength, int maxLength) {
         super(minLength, maxLength);
-        insertDeleteWeight = 5;
     }
-    
+
     /** Creates a new instance of Object from stream */
     public ObjectStringDNASeqDist(BufferedReader stream) throws IOException {
         super(stream);
-        insertDeleteWeight = 5;
     }
-    
 
-    /****************** Metric function ******************/
+
+    //****************** Metric function ******************//
+
     private static int[][] changeMatrix = {
       // A  R  N  D  C  Q  E  G  H  I  L  K  M  F  P  S  T  W  Y  V  X
         {0, 5, 2, 3, 5, 3, 3, 2, 4, 3, 5, 4, 4, 6, 2, 1, 2, 9, 6, 3, 3 },
@@ -86,7 +82,7 @@ public class ObjectStringDNASeqDist extends ObjectStringEditDist {
         {3, 5, 4, 5, 6, 5, 5, 5, 6, 1, 3, 5, 2, 5, 4, 3, 4, 9, 5, 0, 3 },
         {3, 3, 3, 3, 6, 3, 3, 3, 3, 3, 3, 3, 3, 6, 3, 3, 3, 6, 4, 3, 0 }
     };
-    
+
     private int getCharMatrixIndex(char chr) {
         switch (chr) {
             case 'A': return 0;
@@ -111,27 +107,26 @@ public class ObjectStringDNASeqDist extends ObjectStringEditDist {
             case 'V': return 19;
             case 'X': return 20;
         }
-        
+
         return -1;
     }
-    
-    /** Function to obtain weight of changing char1 into char2 during the edit distance computation.
-        The function MUST be symetric. */    
+
+    @Override
+    protected int getInsertDeleteWeight() {
+        return 5;
+    }
+
+    @Override
     protected int getChangeWeight(char chr1, char chr2) {
         try {
             return changeMatrix[getCharMatrixIndex(chr1)][getCharMatrixIndex(chr2)];
         } catch (IndexOutOfBoundsException e) {
-            return insertDeleteWeight;
+            return getInsertDeleteWeight();
         }
     }
-    
-    /** Upper Bound Metric distance function
-     *    Returns upper bound on distance between obj1 and obj2 (supplied as arguments).
-     *    The function can provide several levels of precision which is specified by 
-     *    argument 'accuracy'.
-     */
-    public float getDistanceUpperBound(LocalAbstractObject obj, int accuracy) {
-        counterUpperBoundDistanceComputations.add();
+
+    @Override
+    protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
         return Math.abs(this.text.length() + ((ObjectStringDNASeqDist)obj).text.length())*10;
     }    
 

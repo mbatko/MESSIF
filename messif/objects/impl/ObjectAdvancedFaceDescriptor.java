@@ -17,6 +17,7 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import messif.objects.LocalAbstractObject;
@@ -51,7 +52,7 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
     /** Class id for serialization. */
     private static final long serialVersionUID = 2L;
         
-    /****************** Attributes ******************/
+    //****************** Attributes ******************//
 
     protected int extensionFlag;
     protected int fourierFeature[];
@@ -59,37 +60,39 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
     protected int compositeFeature[];
     protected int centralCompositeFeature[];
 
+    private final static Field[] fields = getFieldsForNames(ObjectAdvancedFaceDescriptor.class,
+            "extensionFlag",
+            "fourierFeature",
+            "centralFourierFeature",
+            "compositeFeature",
+            "centralCompositeFeature");
+
+
+    //****************** Attributes ******************//
+
     public ObjectAdvancedFaceDescriptor(int extensionFlag, int[] fourierFeature, int[] centralFourierFeature, int[] compositeFeature, int[] centralCompositeFeature) {
         this.extensionFlag = extensionFlag;
         
-        this.fourierFeature = new int[fourierFeature.length];
-        System.arraycopy(fourierFeature, 0, this.fourierFeature, 0, fourierFeature.length);
-        this.centralFourierFeature = new int[centralFourierFeature.length];
-        System.arraycopy(centralFourierFeature, 0, this.centralFourierFeature, 0, centralFourierFeature.length);
-        this.compositeFeature = new int[compositeFeature.length];
-        System.arraycopy(compositeFeature, 0, this.compositeFeature, 0, compositeFeature.length);
-        this.centralCompositeFeature = new int[centralCompositeFeature.length];
-        System.arraycopy(centralCompositeFeature, 0, this.centralCompositeFeature, 0, centralCompositeFeature.length);
+        this.fourierFeature = fourierFeature.clone();
+        this.centralFourierFeature = centralFourierFeature.clone();
+        this.compositeFeature = compositeFeature.clone();
+        this.centralCompositeFeature = centralCompositeFeature.clone();
     }
 
     //****************** Text file store/retrieve methods ******************
-
-    private final static Field[] fields = getFieldsForNames(ObjectAdvancedFaceDescriptor.class, "extensionFlag", "fourierFeature", "centralFourierFeature", "compositeFeature", "centralCompositeFeature");
 
     protected Field[] getDataFields() {
         return fields;
     }
 
-    /** Creates a new instance of ObjectHomogeneousTexture from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
-     * Throws NumberFormatException when the line read from given stream does 
-     * not consist of comma-separated or space-separated numbers.
-     * @param stream 
-     * @throws java.io.IOException 
-     * @throws java.lang.NumberFormatException 
+    /**
+     * Creates a new instance of ObjectAdvancedFaceDescriptor from stream.
+     * @param stream the text stream to read one object from
+     * @throws EOFException is thrown when the end-of-file is reached
+     * @throws IOException if there is an error during reading from the given stream;
+     * @throws IllegalArgumentException if the text stream contains invalid values for this object
      */
-    public ObjectAdvancedFaceDescriptor(BufferedReader stream) throws IOException, NumberFormatException {
+    public ObjectAdvancedFaceDescriptor(BufferedReader stream) throws EOFException, IOException, IllegalArgumentException {
         super(stream);
     }
 
