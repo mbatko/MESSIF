@@ -19,10 +19,7 @@ package messif.objects;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.StreamCorruptedException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -33,7 +30,7 @@ import messif.utility.Convert;
  * This class eases the task of implementing data read/write methods.
  * The data fields of the subclass needs to be marked by overriding the {@link #getDataFields} method.
  *
- * If the newly create object cannot be descendant of this class, the static methods for
+ * If the newly created object cannot be descendant of this class, the static methods for
  * reading/writing can be used.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
@@ -46,7 +43,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     private static final long serialVersionUID = 1L;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of LocalAbstractObjectAutoImpl.
@@ -56,16 +53,16 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
 
-    /****************** Text-stream serialization ******************/
+    //****************** Text-stream serialization ******************//
 
     /**
      * Creates a new instance of object from a text stream.
      * @param stream the text stream to read one object from
+     * @throws EOFException is thrown when the end-of-file is reached
      * @throws IOException if there is an error during reading from the given stream;
-     *         EOFException is thrown when the end-of-file is reached
      * @throws IllegalArgumentException if the text stream contains invalid values for this object
      */
-    protected LocalAbstractObjectAutoImpl(BufferedReader stream) throws IOException, IllegalArgumentException {
+    protected LocalAbstractObjectAutoImpl(BufferedReader stream) throws EOFException, IOException, IllegalArgumentException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
 
@@ -73,40 +70,13 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         readAttributesFromStream(line, ';', ' ', this, getDataFields());
     }       
 
-    protected LocalAbstractObjectAutoImpl(ObjectInputStream stream) {
-        super();
-    }
-
-    /**
-     * Store this object's data to a text stream.
-     *
-     * @param stream the stream to store this object to
-     * @throws IOException if there was an error while writing to stream
-     */
     protected void writeData(OutputStream stream) throws IOException {
         writeAttributesToStream(stream, ';', ' ', this, getDataFields());
     }
 
 
-    /****************** Binary serialization ******************/
+    //****************** Size function ******************//
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        writeAttributesToBinaryStream(out, this, getDataFields());
-    }
-
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        readAttributesFromBinaryStream(in, this, getDataFields());
-    }
-
-
-    /****************** Size function ******************/
-
-    /**
-     * Returns the size of this object in bytes.
-     * It is automatically computed from the specified data fields.
-     * @return the size of this object in bytes
-     * @throws IllegalArgumentException if the fields returned by {@link #getDataFields} are invalid
-     */
     public int getSize() throws IllegalArgumentException {
         try {
             int rtv = 0;
@@ -127,14 +97,8 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
 
-    /****************** Equality driven by object data ******************/
+    //****************** Equality driven by object data ******************//
 
-    /** 
-     * Indicates whether some other object has the same data as this one.
-     * @param obj the reference object with which to compare
-     * @return <code>true</code> if this object is the same as the obj
-     *         argument; <code>false</code> otherwise.
-     */
     public boolean dataEquals(Object obj) {
         try {
             for (Field field : getDataFields()) {
@@ -167,11 +131,6 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         }
     }
 
-    /**
-     * Returns a hash code value for the data of this object.
-     * @return a hash code value for the data of this object
-     * @throws IllegalArgumentException if the fields returned by {@link #getDataFields} are invalid
-     */
     public int dataHashCode() throws IllegalArgumentException {
         try {
             int rtv = 0;
@@ -189,7 +148,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /** The clone method reflection accessor */
     private static final Method cloneMethod;
@@ -212,6 +171,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
      * @return a randomly modified clone of this instance.
      * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         // Get a clone of this object
         LocalAbstractObject rtv = clone();
@@ -262,7 +222,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
 
-    /****************** Serialization implementation methods ******************/
+    //****************** Serialization implementation methods ******************//
 
     /**
      * Helper method for writing object primitive/array attributes to a text stream.
@@ -359,80 +319,8 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
             } 
     }
 
-    public static void writeAttributesToBinaryStream(ObjectOutputStream stream, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
-        // Print all specified attributes
-        for (int i = 0; i < dataFields.length; i++) {
-            // Get attribute class for ith field 
-            Class<?> attributeClass = dataFields[i].getType();
 
-            // Get attribute for ith field
-            Object attribute;
-            try {
-                attribute = dataFields[i].get(dataObject);
-            } catch (IllegalAccessException e) {
-                throw new IllegalArgumentException(e.toString());
-            }
-
-            // Store the size and the value
-            if (attribute == null) {
-                // Null values are written as size -1
-                stream.writeInt(-1);
-            } else if (attributeClass.isArray()) {
-                // Arrays are written as their length followed by the respective values
-                int length = Array.getLength(attribute);
-                stream.writeInt(length);
-                // Update attributeClass to be the class of the array's components
-                attributeClass = attributeClass.getComponentType();
-                for (int j = 0; j < length; j++)
-                    Convert.writePrimitiveTypeToDataStream(stream, Array.get(attribute, j), attributeClass);
-            } else {
-                // Normal value (size is 1, but it is ignored...)
-                stream.writeInt(1);
-                Convert.writePrimitiveTypeToDataStream(stream, attribute, attributeClass);
-            }
-        }
-    }
-
-    public static void readAttributesFromBinaryStream(ObjectInputStream stream, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
-        // Print all specified attributes
-        for (int i = 0; i < dataFields.length; i++) {
-            // Get attribute class for ith field 
-            Class<?> attributeClass = dataFields[i].getType();
-
-            // Read the size of the attribute from stream
-            int length;
-            try {
-                length = stream.readInt();
-            } catch (StreamCorruptedException e) {
-                throw new EOFException(e.getMessage());
-            }
-
-            // Read attribute data from binary stream
-            Object attribute;
-            if (length == -1) {
-                // Null value
-                attribute = null;
-            } else if (attributeClass.isArray()) {
-                // Update attributeClass to be the class of the array's components
-                attributeClass = attributeClass.getComponentType(); 
-                attribute = Array.newInstance(attributeClass, length);
-                for (int j = 0; j < length; j++)
-                    Array.set(attribute, j, Convert.readPrimitiveTypeFromDataStream(stream, attributeClass));
-            } else {
-                attribute = Convert.readPrimitiveTypeFromDataStream(stream, attributeClass);
-            }
-            
-            // Set object field to the value read from stream
-            try {
-                dataFields[i].set(dataObject, attribute);
-            } catch (IllegalAccessException e) {
-                throw new IllegalArgumentException(e.toString());
-            }
-        }
-    }
-
-
-    /****************** Data fields handling ******************/
+    //****************** Data fields handling ******************//
 
     /**
      * Returns the list of fields that should be automatically managed by AutoImpl class as data.

@@ -17,6 +17,7 @@
 package messif.algorithms;
 
 /**
+ * Exception that indicates a problem when executing a method on {@link Algorithm}.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz

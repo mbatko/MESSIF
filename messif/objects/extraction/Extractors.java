@@ -186,13 +186,40 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(final Class<? extends T> objectClass, final String command) throws IllegalArgumentException {
+        return createExternalExtractor(objectClass, command, false);
+    }
+
+    /**
+     * Creates an extractor that creates objects from binary data by external command.
+     * The command is executed using the specified {@code cmdarray} and is expected to
+     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
+     * or the data are read from file that is passed as "%s" argument to the external command if
+     * {@code fileAsArgument} is <tt>false</tt>.
+     * The extractor must return the text parsable by the constructor of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param command the external command (including all necessary arguments)
+     * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(final Class<? extends T> objectClass, final String command, final boolean fileAsArgument) throws IllegalArgumentException {
         final Instantiator<? extends T> instantiator = new ConstructorInstantiator<T>(objectClass, BufferedReader.class);
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
-                Process extractorProcess = Runtime.getRuntime().exec(command);
-                OutputStream os = extractorProcess.getOutputStream();
-                dataSource.pipe(os);
-                os.close();
+                Process extractorProcess;
+                if (fileAsArgument) {
+                    Object dataFile = dataSource.getDataSource();
+                    if (!(dataFile instanceof File))
+                        throw new ExtractorException("External extractor requires file");
+                    extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
+                } else {
+                    extractorProcess = Runtime.getRuntime().exec(command);
+                    OutputStream os = extractorProcess.getOutputStream();
+                    dataSource.pipe(os);
+                    os.close();
+                }
                 try {
                     return instantiator.instantiate(new BufferedReader(new InputStreamReader(extractorProcess.getInputStream())));
                 } catch (InvocationTargetException e) {

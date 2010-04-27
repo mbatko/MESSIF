@@ -175,6 +175,14 @@ public class ExtractorDataSource implements Closeable {
     }
 
     /**
+     * Returns the remembered data source (can be {@link File}, {@link InputStream} or {@link URL}).
+     * @return the remembered data source
+     */
+    public Object getDataSource() {
+        return dataSource;
+    }
+
+    /**
      * Return this data source as input stream.
      * <p>Note that the data source is <i>not</i> closed - use {@link InputStream#close()} method instead.</p>
      * @return this data source as input stream

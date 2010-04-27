@@ -252,38 +252,54 @@ public abstract class LocalAbstractObject extends AbstractObject {
     }
 
     /**
-     * Lower bound of a metric distance.
-     *    Returns the lower bound of the distance between this object and the object that is supplied 
-     *    as argument. The function allows several levels of precision (parameter accuracy).
+     * Returns the lower bound of a metric distance.
+     * More precisely, this method returns the lower bound on the distance between
+     * this object and the object that is supplied as argument.
+     * The function allows several levels of precision (parameter accuracy).
      *
-     *  When redefining this method do not forget to add <code>
-     *      counterLowerBoundDistanceComputations.add();
-     *  </code> for statistics to be maintained.
+     * @param obj the object to compute the lower-bound distance to
+     * @param accuracy the level of precision to use for the lower-bound
+     * @return the lower bound of the distance between this object and {@code obj}
+     */
+    public final float getDistanceLowerBound(LocalAbstractObject obj, int accuracy) {
+        counterLowerBoundDistanceComputations.add();
+        return getDistanceLowerBoundImpl(obj, accuracy);
+    }
+
+    /**
+     * Implementation that actually computes the lower bound on the metric distance.
      *
      * @param obj the object to compute lower-bound distance to
      * @param accuracy the level of precision to use for lower-bound
      * @return the lower bound of the distance between this object and <code>obj</code>
      */
-    public float getDistanceLowerBound(LocalAbstractObject obj, int accuracy) {
-        counterLowerBoundDistanceComputations.add();
+    protected float getDistanceLowerBoundImpl(LocalAbstractObject obj, int accuracy) {
         return MIN_DISTANCE;
     }
 
     /**
-     * Upper bound of a metric distance.
-     *    Returns the upper bound of the distance between this object and the object that is supplied 
-     *    as argument. The function allows several levels of precision (parameter accuracy).
+     * Returns the upper bound of a metric distance.
+     * More precisely, this method returns the upper bound on the distance between
+     * this object and the object that is supplied as argument.
+     * The function allows several levels of precision (parameter accuracy).
      *
-     *  When redefining this method do not forget to add <code>
-     *      counterUpperBoundDistanceComputations.add();
-     *  </code> for statistics to be maintained.
+     * @param obj the object to compute the upper-bound distance to
+     * @param accuracy the level of precision to use for the upper-bound
+     * @return the upper bound of the distance between this object and {@code obj}
+     */
+    public final float getDistanceUpperBound(LocalAbstractObject obj, int accuracy) {
+        counterUpperBoundDistanceComputations.add();
+        return getDistanceUpperBoundImpl(obj, accuracy);
+    }
+
+    /**
+     * Implementation that actually computes the upper bound on the metric distance.
      *
      * @param obj the object to compute upper-bound distance to
      * @param accuracy the level of precision to use for upper-bound
      * @return the upper bound of the distance between this object and <code>obj</code>
      */
-    public float getDistanceUpperBound(LocalAbstractObject obj, int accuracy) {
-        counterUpperBoundDistanceComputations.add();
+    protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
         return MAX_DISTANCE;
     }
 

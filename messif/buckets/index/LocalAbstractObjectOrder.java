@@ -86,7 +86,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
 
         public UniqueID extractKey(LocalAbstractObject object) {
-            return object;
+            return object.getObjectID();
         }
 
         public QueryOperation<?> createIndexOperation(Collection<? extends UniqueID> ids) {

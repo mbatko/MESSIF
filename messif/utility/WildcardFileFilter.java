@@ -60,6 +60,12 @@ public class WildcardFileFilter implements FileFilter, FilenameFilter {
         );
     }
 
+    /**
+     * Returns the position of the first glob char in the given filename.
+     * @param name the file name in which to get the glob char
+     * @return the position of the first glob char in the given filename or
+     *          -1 if the {@code name} does not contain any glob char
+     */
     public static int getFilenameGlobPosition(String name) {
         Matcher matcher = filenameGlobPattern.matcher(name);
         if (matcher.find())

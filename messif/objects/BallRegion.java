@@ -17,7 +17,6 @@
 package messif.objects;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -341,6 +340,7 @@ public class BallRegion extends LocalAbstractObject {
      * @return nothing because an exception is thrown
      * @throws UnsupportedOperationException always
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("Can't randomly modify ball region");
     }

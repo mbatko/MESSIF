@@ -45,9 +45,13 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     private static final long serialVersionUID = 1L;
     
     //****************** Counter operation ******************//
+
+    /** Time elapsed between calls to {@link #start()} and {@link #stop()}. */
     protected long time = 0;
+    /** Time of the last call to {@link #start()} of started statistics */
     protected long lastStartTime = 0;
-    private long timeCheckpoint = 0;         /* backup time for checkpoint feature */
+    /** Backup time for checkpoint feature */
+    private long timeCheckpoint = 0;
     
     /** Starts incrementing the timer */
     public void start() {
@@ -75,12 +79,18 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         }
     }
 
+    /**
+     * Time elapsed in msec.
+     * If the statistics has been stopped, the elapsed time is returned, otherwise current time minus start time is returned.
+     * @return time elapsed in msec.
+     */
     public synchronized long get() {
         if (lastStartTime > 0)
             return time + System.currentTimeMillis() - lastStartTime;
         else return time;
     }
 
+    @Override
     protected void addBoundStat(StatisticTimer stat) {
         super.addBoundStat(stat);
         
@@ -89,6 +99,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
             stat.start();
     }
 
+    @Override
     protected void removeBoundStat(StatisticTimer stat) {
         super.removeBoundStat(stat);
         
@@ -100,14 +111,17 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
 
     //****************** Statistics merging ******************//
     
+    @Override
     protected synchronized void updateFrom(StatisticTimer sourceStat) {
         time += sourceStat.get();
     }
     
+    @Override
     protected synchronized void setFrom(StatisticTimer sourceStat) {
         time = sourceStat.get();
     }
     
+    @Override
     public void reset() {
         time = 0;
         lastStartTime = 0;
@@ -116,7 +130,9 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     
     //****************** Constructors ******************//
 
-    /** Creates a new instance of StatisticTimer */
+    /** Creates a new instance of StatisticTimer
+     * @param name requested name of the statitics
+     */
     protected StatisticTimer(String name) {
         super(name);
     }
@@ -124,7 +140,11 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     
     //****************** Creator ******************//
     
-    /** Create new statistic timer with specified name or get the one already existing */
+    /** Factory method for creating a new statistic timer with the specified name or get the one already existing.
+     * @param name requested name of the statistics
+     * @return instance of {@link StatisticTimer} having the passed name.
+     * @throws ClassCastException if the statistics of the given name exists, but is of a different class than {@link StatisticTimer}
+     */
     public static StatisticTimer getStatistics(String name) throws ClassCastException {
         return getStatistics(name, StatisticTimer.class);
     }
@@ -137,6 +157,10 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         return getName() + ": " + get();
     }
 
+    /**
+     * Test whether this statistics has been changed since the last checkpoint.
+     * @return <code>true</code> if it has been changed, otherwise <code>false</code>.
+     */
     public boolean changedSinceCheckpoint() {
         return (time != timeCheckpoint || lastStartTime > 0);
     }

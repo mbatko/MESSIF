@@ -34,26 +34,24 @@ import messif.operations.AbstractOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-@AbstractOperation.OperationName("BulkInsert")
+@AbstractOperation.OperationName("Bulk insert")
 public class BulkInsertOperation extends AbstractOperation {
-    
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Operation request attributes ******************/
-    
+
+    //****************** Attributes ******************//
+
     /** List of objects to insert */
-    protected final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
+    private final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of BulkInsertOperation.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
      */
-    @AbstractOperation.OperationConstructor({"List of objects to insert"})
     public BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = insertedObjects;
     }
@@ -72,11 +70,11 @@ public class BulkInsertOperation extends AbstractOperation {
      *
      * @param insertedObjects a list of objects to be inserted by this operation
      */
+    @AbstractOperation.OperationConstructor({"List of objects to insert"})
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
     }
 
-    
     /**
      * Creates a new instance of BulkInsertOperation.
      * 
@@ -88,6 +86,9 @@ public class BulkInsertOperation extends AbstractOperation {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(stream, count);
     }
 
+
+    //****************** Attribute access method ******************//
+
     /**
      * Returns the list of objects to insert.
      * @return the list of objects to insert
@@ -96,13 +97,9 @@ public class BulkInsertOperation extends AbstractOperation {
         return insertedObjects;
     }
 
-    /**
-     * Returns argument that was passed while constructing instance.
-     * If the argument is not stored within operation, <tt>null</tt> is returned.
-     * @param index index of an argument passed to constructor
-     * @return argument that was passed while constructing instance
-     * @throws IndexOutOfBoundsException if index parameter is out of range
-     */
+
+    //****************** Overrides ******************//
+
     @Override
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         if (index != 0)
@@ -110,21 +107,15 @@ public class BulkInsertOperation extends AbstractOperation {
         return insertedObjects;
     }
 
-    /**
-     * Returns number of arguments that were passed while constructing this instance.
-     * @return number of arguments that were passed while constructing this instance
-     */
     @Override
     public int getArgumentCount() {
         return 1;
     }
 
-    /** Get status of the operation */
     public boolean wasSuccessful() {
         return errValue.equals(BucketErrorCode.OBJECT_INSERTED) || errValue.equals(BucketErrorCode.SOFTCAPACITY_EXCEEDED);
     }
 
-    /** End operation successfully */
     public void endOperation() {
         errValue = BucketErrorCode.OBJECT_INSERTED;
     }
@@ -139,22 +130,12 @@ public class BulkInsertOperation extends AbstractOperation {
         if (!errValue.isSet() || errValue.equals(BucketErrorCode.OBJECT_INSERTED))
             errValue = operation.getErrorCode();
     }
-    
-    /**
-     * Return a string representation of this operation.
-     * @return a string representation of this operation
-     */
+
     @Override
     public String toString() {
         return new StringBuffer().append("BulkInsertOperation: object to be inserted: ").append(insertedObjects.size()).toString();
     }
 
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
@@ -163,24 +144,14 @@ public class BulkInsertOperation extends AbstractOperation {
     }
 
 
-    /****************** Equality driven by operation data ******************/
+    //****************** Equality driven by operation data ******************//
 
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
     @Override
     protected boolean dataEqualsImpl(AbstractOperation obj) {
         // The argument obj is always BulkInsertOperation or its descendant, because it has only abstract ancestors
         return insertedObjects.dataEquals(((BulkInsertOperation)obj).insertedObjects);
     }
 
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
     @Override
     public int dataHashCode() {
         return insertedObjects.dataHashCode();

@@ -26,19 +26,24 @@ import messif.objects.UniqueID;
 
 
 /**
+ * List of objects returned by using {@link ObjectMatcher}.
+ *
+ * @param <E> the class of the objects in this list
+ * @see AbstractObjectIterator#getMatchingObjects(messif.objects.util.ObjectMatcher, boolean, int[])
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap<Integer,AbstractObjectList<E>> implements Serializable, ObjectProvider {
-
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
     //****************** Constructors ******************//
 
-    /** Creates a new instance of MatchingObjectList */
+    /**
+     * Creates a new instance of MatchingObjectList that is empty.
+     */
     public GenericMatchingObjectList() {
     }
 
@@ -52,7 +57,7 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
         getPart(partId, true).addAll(iterator);
     }
 
-    
+
     //****************** Parts ******************//
     
     public Set<Integer> getPartIDs() {

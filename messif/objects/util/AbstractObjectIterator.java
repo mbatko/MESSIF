@@ -41,6 +41,7 @@ import messif.objects.UniqueID;
  * </p>
  * 
  * @param <E> the class of the iterated objects
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
