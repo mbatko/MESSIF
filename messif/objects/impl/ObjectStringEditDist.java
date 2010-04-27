@@ -17,47 +17,79 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
 
 
 /**
+ * Object with string content and <em>edit distance</em> metric function.
+ * See relevant literature (e.g. a book "Similarity Search: The Metric Space Approach")
+ * for a definition of the edit distance function.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectStringEditDist extends ObjectString {
-    
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of Object */
+
+    //****************** Constants ******************//
+
+    /** Default weight of the character insertion, deletion, or change operations during the computation of the metric function */
+    private static int DEFAULT_WEIGHT = 1;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ObjectStringEditDist.
+     * @param text the string content of the new object
+     */
     public ObjectStringEditDist(String text) {
         super(text);
     }
-    
-    /** Creates a new instance of Object random generated */
+
+    /**
+     * Creates a new instance of ObjectStringEditDist with randomly generated string content.
+     */
     public ObjectStringEditDist() {
         super();
     }
     
-    /** Creates a new instance of Object random generated 
-     * with minimal length equal to minLength and maximal 
-     * length equal to maxLength */
+    /**
+     * Creates a new instance of ObjectStringEditDist with randomly generated string content.
+     * The string content is genereated with at least {@code minLength} characters
+     * and at most {@code maxLength} characters.
+     *
+     * @param minLength minimal length of the randomly generated string content
+     * @param maxLength maximal length of the randomly generated string content
+     */
     public ObjectStringEditDist(int minLength, int maxLength) {
         super(minLength, maxLength);
     }
     
-    /** Creates a new instance of Object from stream */
-    public ObjectStringEditDist(BufferedReader stream) throws IOException {
+    /**
+     * Creates a new instance of ObjectString from text stream.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     */
+    public ObjectStringEditDist(BufferedReader stream) throws EOFException, IOException {
         super(stream);
     }
-    
 
-    /****************** Metric function ******************/
+
+    //****************** Metric function ******************//
+
+    /**
+     * Computes a minimum of the three integer values.
+     * @param a first integer value
+     * @param b second integer value
+     * @param c third integer value
+     * @return a minumum of the tree values
+     */
     private static int min(int a, int b, int c) {
         int mi = a;
         if (b < mi) mi = b;
@@ -65,79 +97,33 @@ public class ObjectStringEditDist extends ObjectString {
 
         return mi;
     }
-    
-    /** Function to obtain weight of changing char1 into char2 during the edit distance computation.
-        The function MUST be symetric. */
-    protected int getChangeWeight(char chr1, char chr2) {
-        return (chr1 == chr2)?0:1;
-    }
-    
-    /** Weight of the insert and delete operations during the edit distance computation */
-    protected int insertDeleteWeight = 1;
 
-    /*
-     * Old implementation of the edit distance which uses a matrix. 
-     * This has been superseded by a more economical implementation 
-     * which employes just an array.
-     *
-    public float getDistance(LocalAbstractObject obj) {
-        counterDistanceComputations.add();
-        
-        int str1Len = this.text.length();
-        int str2Len = ((ObjectString)obj).text.length();
-
-        // Singularities
-        if (str1Len == 0) return str2Len;
-        if (str2Len == 0) return str1Len;
-
-        // Initialize matrix
-        int matrix[][] = new int[str1Len + 1][str2Len + 1];
-        for (int i = 0; i <= str1Len; i++) matrix[i][0] = i;
-        for (int j = 0; j <= str2Len; j++) matrix[0][j] = j;
-
-        // Fill matrix
-        for (int i = 1; i <= str1Len; i++) {
-            char str1chr = this.text.charAt(i - 1);
-            
-            for (int j = 1; j <= str2Len; j++) {
-                char str2chr = ((ObjectString)obj).text.charAt(j - 1);
-                
-                // Computation of one edit step
-                matrix[i][j] = min(
-                    matrix[i-1][j]+1, 
-                    matrix[i][j-1]+1, 
-                    matrix[i-1][j-1] + ((str1chr == str2chr)?0:1)
-                );
-            }
-        }
-
-        // Return value    
-        return matrix[str1Len][str2Len];
-    }
-    */
-    
-    /** Metric distance function.
-     *    This method is intended to be used in situations such as:
-     *    We are executing a range query, so all objects distant from the query object up to the query radius
-     *    must be returned. In other words, all objects farther from the query object than the query radius are
-     *    uninteresting. From the distance point of view, during the evaluation process of the distance between 
-     *    a pair of objects we can find out that the distance cannot be lower than a certain value. If this value 
-     *    is greater than the query radius, we can safely abort the distance evaluation since we are dealing with one
-     *    of those uninteresting objects.
-     * @param obj            The object to compute distance to.
-     * @param distThreshold  The threshold value on the distance (the query radius from the example above).
-     * @return Returns the actual distance between obj and this if the distance is lower than distThreshold.
-     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
-     *         must be greater than the threshold distance.
-     *
-     *  When defining this method do not forget to add the following line 
-     *      counterDistanceComputations.add();
-     *  for statistics to be maintained. This is correct because we compute the actual distance but we can end
-     *  prematurely.
+    /**
+     * Returns the weight of changing {@code char1} into {@code char2} during
+     * the edit distance computation. The returned value must be greater than or
+     * equal to zero and must be symetric, that is {@code getChangeWeight(x,y) == getChangeWeight(y,x)}.
+     * @param chr1 the source character
+     * @param chr2 the target character
+     * @return the weight of changing {@code char1} into {@code char2}
      */
+    protected int getChangeWeight(char chr1, char chr2) {
+        return chr1 == chr2 ? 0 : DEFAULT_WEIGHT;
+    }
+
+    /**
+     * Returns the weight of deleting or inserting a character during
+     * the edit distance computation. The returned value must be greater than or
+     * equal to zero.
+     * @return the weight of deleting or inserting a character
+     */
+    protected int getInsertDeleteWeight() {
+        return DEFAULT_WEIGHT;
+    }
+
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         int str1Len = this.text.length();
         int str2Len = ((ObjectString)obj).text.length();
+        int insertDeleteWeight = getInsertDeleteWeight();
 
         // Singularities  (Step 1)
         if (str1Len == 0) 
@@ -150,7 +136,7 @@ public class ObjectStringEditDist extends ObjectString {
 
         // Allocate array
         int[] d = new int[str2Len + 1];
-        
+
         // Initialize the array (Step 2)
         for (int j = 1; j <= str2Len; j++)
             d[j] = j * insertDeleteWeight;                  // Initialing insertion of all characters in the second string???
@@ -172,7 +158,7 @@ public class ObjectStringEditDist extends ObjectString {
 
                 // Update the previous diagonal element
                 prevDiagElem = d[j];
-                
+
                 // Compute the above element (Step 6)
                 int above = d[j] + insertDeleteWeight;
                 int left = d[j-1] + insertDeleteWeight;
@@ -182,34 +168,24 @@ public class ObjectStringEditDist extends ObjectString {
                 if (d[j] < minDist)
                     minDist = d[j];
             }
-            
+
             // Test the condition to end prematurely
             if (minDist > distThreshold)
                 return minDist;
         }
-        
+
         // Return the correct edit distance (Step 7)
         return d[str2Len];
     }
-    
-    /** Lower Bound Metric distance function
-     *    Returns lower bound on distance between obj1 and obj2 (supplied as arguments).
-     *    The function can provide several levels of precision which is specified by 
-     *    argument 'accuracy'.
-     */
-    public float getDistanceLowerBound(LocalAbstractObject obj, int accuracy) {
-        counterLowerBoundDistanceComputations.add();
-        return Math.abs(this.text.length() - ((ObjectString)obj).text.length()) * insertDeleteWeight;
+
+    @Override
+    protected float getDistanceLowerBoundImpl(LocalAbstractObject obj, int accuracy) {
+        return Math.abs(this.text.length() - ((ObjectString)obj).text.length()) * getInsertDeleteWeight();
     }
     
-    /** Upper Bound Metric distance function
-     *    Returns upper bound on distance between obj1 and obj2 (supplied as arguments).
-     *    The function can provide several levels of precision which is specified by 
-     *    argument 'accuracy'.
-     */
-    public float getDistanceUpperBound(LocalAbstractObject obj, int accuracy) {
-        counterUpperBoundDistanceComputations.add();
-        return Math.abs(this.text.length() + ((ObjectString)obj).text.length()) * insertDeleteWeight;
+    @Override
+    protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
+        return Math.abs(this.text.length() + ((ObjectString)obj).text.length()) * getInsertDeleteWeight();
     }
 
 }

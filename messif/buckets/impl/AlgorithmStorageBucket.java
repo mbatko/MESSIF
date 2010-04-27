@@ -141,6 +141,10 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * @return a new DiskBucket instance
      */
     public static AlgorithmStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IllegalArgumentException {
+        // Check parameters
+        if (parameters == null)
+            throw new IllegalArgumentException("No parameters were specified");
+
         // Check the "algorithm" parameter
         try {
             Algorithm alg = (Algorithm)parameters.get("algorithm");

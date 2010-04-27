@@ -117,6 +117,9 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
     public static VirtualStorageBucket<?> getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
+        if (parameters == null)
+            throw new IllegalArgumentException("No parameters specified");
+
         try {
             // Create storage - retrieve class from parameter and use "create" factory method
             Class<? extends Storage> storageClass = null;

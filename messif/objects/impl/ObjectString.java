@@ -22,98 +22,98 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
- *
+ * This object uses {@link String} as its data content.
+ * No implementation of distance function is provided - see {@link ObjectStringEditDist}.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class ObjectString extends LocalAbstractObject {
-
+public abstract class ObjectString extends LocalAbstractObject implements BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-        
-    //****************** Object data ******************
-    
-    protected String text;
-    
-    
-    /** Returns the contents of this object as a new string.
-     *  A copy is returned, so any modifications to the returned string do not affect the original object.
-     */
-    public String getStringData() {
-        return this.text;           // Strings are immutable, so this is safe.
-    }
-    
-    
-    //****************** Constructors ******************
 
-    /** Creates a new instance of Object */
+    //****************** Object data ******************//
+
+    /** Data string */
+    protected String text;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ObjectString.
+     * @param text the string content of the new object
+     */
     public ObjectString(String text) {
         this.text = text;
     }
-    
-    /** Creates a new instance of Object random generated */
+
+    /**
+     * Creates a new instance of ObjectString with randomly generated string content.
+     */
     public ObjectString() {
-        this.text = generateRandom();
+        this(50, 200);
     }
-    
-    /** Creates a new instance of Object random generated 
-     * with minimal length equal to minLength and maximal 
-     * length equal to maxLength */
+
+    /**
+     * Creates a new instance of ObjectString with randomly generated string content.
+     * The string content is genereated with at least {@code minLength} characters
+     * and at most {@code maxLength} characters.
+     *
+     * @param minLength minimal length of the randomly generated string content
+     * @param maxLength maximal length of the randomly generated string content
+     */
     public ObjectString(int minLength, int maxLength) {
         this.text = generateRandom(minLength, maxLength);
     }
-    
-    /** Generate a random text object and return it as a string.
-     * The length of the string is limited by minimum minLength and maximum maxLength.
+
+    /**
+     * Generate a random text.
+     * The generated text has at least {@code minLength} characters
+     * and at most {@code maxLength} characters.
+     *
+     * @param minLength minimal length of the randomly generated text
+     * @param maxLength maximal length of the randomly generated text
+     * @return a random text
      */
     public static String generateRandom(int minLength, int maxLength) {
         int len = minLength + (int)(Math.random() * (maxLength - minLength));
         char[] data = new char[len];
-        
+
         for (int j = 0; j < len; j++) 
             data[j] = getRandomChar();
         return new String(data);
     }
-    
-    /** Generate a random text object and return it as a string */
-    public static String generateRandom() {
-        return generateRandom(50, 200);
-    }
-    
-    
-    //****************** Text file store/retrieve methods ******************
-    
-    /** Creates a new instance of Object from stream.
-     * Throws IOException when an error appears during reading from given stream.
-     * Throws EOFException when eof of the given stream is reached.
+
+
+    //****************** Text file store/retrieve methods ******************//
+
+    /**
+     * Creates a new instance of ObjectString from text stream.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
      */
-    public ObjectString(BufferedReader stream) throws IOException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-        this.text = line;
+    public ObjectString(BufferedReader stream) throws EOFException, IOException {
+        this.text = readObjectComments(stream);
     }
 
-    /** Write object to stream */
     public void writeData(OutputStream stream) throws IOException {
         stream.write(text.getBytes());
         stream.write('\n');
     }
-    
-    
-    /** toString
-     * Converts the object to a string representation
-     */
-    public String toString() {
-        return new StringBuffer(super.toString()).append(" [").append(text).append("]").toString();
-    }
 
-    
+
     //****************** Equality comparing function ******************
-    
+
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectString))
             return false;
@@ -126,22 +126,31 @@ public abstract class ObjectString extends LocalAbstractObject {
         return text.hashCode();
     }
 
-    
-    //****************** Size function ******************
 
-    /** Returns the length of the current string.
+    //****************** Attribute access methods ******************//
+
+    /**
+     * Returns the string that represents the contents of this object.
+     * @return the string that represents the contents of this object
+     */
+    public String getStringData() {
+        return this.text;           // Strings are immutable, so this is safe.
+    }
+
+    /**
+     * Returns the length of the content string.
+     * @return the length of the content string
      */
     public int getStringLength() {
-        return this.text.length();
+        return text.length();
     }
-    
-    /** Returns the size of object in bytes
-     */
+
     public int getSize() {
         return text.length() * Character.SIZE / 8;
     }
 
-    /****************************** Cloning *****************************/
+
+    //****************************** Cloning *****************************//
 
     /**
      * Creates and returns a randomly modified copy of this string.
@@ -150,16 +159,17 @@ public abstract class ObjectString extends LocalAbstractObject {
      * @param  args  expected size of the args array is 1: ObjectString containing all possible chars
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectString rtv = (ObjectString) this.clone();
-        
+
         try {
             ObjectString availChars = (ObjectString) args[0];
             Random random = new Random(System.currentTimeMillis());
-            
+
             // pick a character in random from the available characters
             char randomChar = availChars.text.charAt(random.nextInt(availChars.text.length()));
-            
+
             // substitute it for any char
             int position = random.nextInt(text.length());
             StringBuffer buffer = new StringBuffer(text.length());
@@ -167,9 +177,44 @@ public abstract class ObjectString extends LocalAbstractObject {
             rtv.text = buffer.toString();
         } catch (ArrayIndexOutOfBoundsException ignore) {
         } catch (ClassCastException ignore) { }
-        
+
         return rtv;
     }
-    
-    
+
+
+    //************ String representation ************//
+
+    /**
+     * Converts this object to a string representation.
+     */
+    @Override
+    public String toString() {
+        return new StringBuffer(super.toString()).append(" [").append(text).append("]").toString();
+    }
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectString loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectString from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectString(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        text = serializator.readString(input);
+    }
+
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) +
+               serializator.write(output, text);
+    }
+
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) + serializator.getBinarySize(text);
+    }
 }

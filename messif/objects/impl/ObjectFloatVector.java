@@ -20,7 +20,6 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
@@ -63,7 +62,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     /**
      * Creates a new instance of ObjectFloatVector with randomly generated content data.
      * Content will be generated using normal distribution of random numbers from interval
-     * [min;max].
+     * [min;max).
      *
      * @param dimension number of dimensions to generate
      * @param min lower bound of the random generated values (inclusive)
@@ -88,33 +87,12 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public ObjectFloatVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
-        
-        line = line.trim();
-        
-        // Count separators
-        ArrayList<String> numbers = new ArrayList<String>();
-        int lastPos = 0;
-        
-        if (line.indexOf(',') != -1) {
-            for (int pos = line.indexOf(','); pos != -1; pos = line.indexOf(',', lastPos)) {
-                numbers.add(line.substring(lastPos, pos));
-                lastPos = pos + 1;
-            }
-            numbers.add(line.substring(lastPos));
-        } else {
-            for (int pos = line.indexOf(' '); pos != -1; pos = line.indexOf(' ', lastPos)) {
-                String num = line.substring(lastPos, pos).trim();
-                if (num.length() > 0)
-                    numbers.add(num);
-                lastPos = pos + 1;
-            }
-            numbers.add(line.substring(lastPos));
-        }
-        
-        this.data = new float[numbers.size()];
-        
+
+        String[] numbers = line.trim().split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
+
+        this.data = new float[numbers.length];        
         for (int i = 0; i < this.data.length; i++)
-            this.data[i] = Float.parseFloat(numbers.get(i));
+            this.data[i] = Float.parseFloat(numbers[i]);
     }
 
     public void writeData(OutputStream stream) throws IOException {
@@ -123,7 +101,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
                 stream.write(", ".getBytes());
             stream.write(String.valueOf(this.data[i]).getBytes());
         }
-        
+
         stream.write('\n');
     }
 
@@ -133,7 +111,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectFloatVector))
             return false;
-        
+
         return Arrays.equals(((ObjectFloatVector)obj).data, data);
     }
 
@@ -156,7 +134,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public int getSize() {
         return this.data.length * Float.SIZE / 8;
     }
-    
+
     /**
      * Returns the number of dimensions of this vector.
      * @return the number of dimensions of this vector
@@ -178,9 +156,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public float[] translateToUnitCube(float[][] bounds) {
         if (bounds.length != 2 || data.length != bounds[0].length || data.length != bounds[1].length)
             return null;
-        
+
         float[] outVec = new float[data.length];
-        
+
         for (int i = 0; i < data.length; i++) {
             if (bounds[0][i] == bounds[1][i]) {
                 outVec[i] = 0;
@@ -188,7 +166,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
                 outVec[i] = (data[i] - bounds[0][i]) / (bounds[1][i] - bounds[0][i]);
             }
         }
-        
+
         return outVec;
     }
 
@@ -205,9 +183,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public float[] translateToUnitCube(float[] bounds) {
         if (bounds.length != 2)
             return null;
-        
+
         float[] outVec = new float[data.length];
-        
+
         for (int i = 0; i < data.length; i++) {
             if (bounds[0] == bounds[1]) {
                 outVec[i] = 0;
@@ -215,7 +193,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
                 outVec[i] = (data[i] - bounds[0]) / (bounds[1] - bounds[0]);
             }
         }
-        
+
         return outVec;
     }
 
@@ -229,12 +207,12 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      */
     protected float[] getMinMaxOverCoords(float[] currRange) {
         float[] range;
-        
+
         if (currRange != null)
             range = currRange;
         else
             range = new float[]{Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
-        
+
         for (float val : data) {
             if (val < range[0])         // Test the minimum
                 range[0] = val;
@@ -274,10 +252,10 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     public static float[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
         float[][] range = null;
         int dims = -1;
-        
+
         while (iterator.hasNext()) {
             ObjectFloatVector obj = iterator.next();
-            
+
             if (range == null) {
                 // Allocate result array
                 dims = obj.getDimensionality();
@@ -288,7 +266,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
                     range[1][i] = Float.NEGATIVE_INFINITY;
                 }
             }
-            
+
             float[] vec = obj.data;
             for (int i = 0; i < dims; i++) {
                 if (vec[i] < range[0][i])         // Test the minimum
@@ -312,18 +290,19 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectFloatVector rtv = (ObjectFloatVector) this.clone();
         rtv.data = this.data.clone();
-        
+
         try {
             ObjectFloatVector minVector = (ObjectFloatVector) args[0];
             ObjectFloatVector maxVector = (ObjectFloatVector) args[1];
             Random random = new Random(System.currentTimeMillis());
-            
+
             // pick a vector position in random
             int position = random.nextInt(Math.min(rtv.data.length, Math.min(minVector.data.length, maxVector.data.length)));
-            
+
             // calculate 1/1000 of the possible range of this value and either add or substract it from the origival value
             float smallStep = (maxVector.data[position] - minVector.data[position]) / 1000;
             if (rtv.data[position] + smallStep <= maxVector.data[position])
@@ -331,12 +310,12 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
             else rtv.data[position] -= smallStep;
         } catch (ArrayIndexOutOfBoundsException ignore) {
         } catch (ClassCastException ignore) { }
-        
+
         return rtv;
     }
 
 
-    //************ BinarySerializable interface ************//
+    //************ String representation ************//
 
     /**
      * Converts the object to a string representation.

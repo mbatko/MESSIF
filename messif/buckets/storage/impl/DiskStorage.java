@@ -252,7 +252,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         boolean oneStorage = Convert.getParameterValue(parameters, "oneStorage", Boolean.class, false);
         
         if (oneStorage) {
-            DiskStorage<T> storage = castToDiskStorage(storedObjectsClass, parameters.get("storage"));
+            DiskStorage<T> storage = castToDiskStorage(storedObjectsClass, Convert.getParameterValue(parameters, "storage", DiskStorage.class, null));
             if ((storage != null) && storage.fileChannel.isOpen()) {
                 storage.references++;
                 return storage;
@@ -285,20 +285,21 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
         // Initialize serializator
         BinarySerializator serializator;
-        if (parameters.containsKey("serializator"))
+        if (parameters != null && parameters.containsKey("serializator"))
             serializator = (BinarySerializator)parameters.get("serializator");
         else if (cacheClasses == null)
             serializator = new MultiClassSerializator<T>(storedObjectsClass);
         else
             serializator = new CachingSerializator<T>(storedObjectsClass, cacheClasses);
         // Store serializator into map for further use
-        parameters.put("serializator", serializator);
+        if (parameters != null)
+            parameters.put("serializator", serializator);
 
         // Finally, create the storage
         DiskStorage<T> storage = new DiskStorage<T>(storedObjectsClass, file, readOnly, bufferSize, directBuffer, memoryMap, startPosition, maximalLength, serializator);
 
         // Save the created storage for subsequent calls
-        if (oneStorage)
+        if (oneStorage && parameters != null)
             parameters.put("storage", storage);
 
         return storage;
