@@ -299,8 +299,12 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return new FullScanModifiableSearch<C>(lock(), comparator, from, to);
     }
 
+    @SuppressWarnings("unchecked")
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
-        return new FullScanModifiableSearch<C>(lock(), comparator, keys);
+        if (comparator.equals(comparator()) && keys.size() == 1)
+            return search((K)keys.iterator().next(), true); // This cast IS checked, because the comparators are equal
+        else
+            return new FullScanModifiableSearch<C>(lock(), comparator, keys);
     }
 
 
