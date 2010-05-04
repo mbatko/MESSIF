@@ -17,8 +17,10 @@
 package messif.objects.util;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.ObjectProvider;
 import messif.utility.SortedCollection;
 
 /**
@@ -64,6 +66,27 @@ public class RankedSortedCollection extends SortedCollection<RankedAbstractObjec
      */
     public RankedSortedCollection() throws IllegalArgumentException {
         super();
+    }
+
+    /**
+     * Creates a new collection filled with objects provided by the {@code iterator}.
+     * Objects are ranked by the distance measured from the given {@code referenceObject}.
+     * @param referenceObject the reference object from which the distance is measured
+     * @param iterator the iterator on objects to add to the collection
+     */
+    public RankedSortedCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
+        while (iterator.hasNext())
+            add(new RankedAbstractObject(referenceObject, iterator.next()));
+    }
+
+    /**
+     * Creates a new collection filled with objects provided by the {@code objectProvider}.
+     * Objects are ranked by the distance measured from the given {@code referenceObject}.
+     * @param referenceObject the reference object from which the distance is measured
+     * @param objectProvider the provider of objects to add to the collection
+     */
+    public RankedSortedCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
+        this(referenceObject, (Iterator<? extends LocalAbstractObject>)objectProvider.provideObjects());
     }
 
 

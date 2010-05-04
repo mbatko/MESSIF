@@ -17,6 +17,7 @@
 package messif.objects.util;
 
 import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
 import messif.utility.Clearable;
 
 /**
@@ -36,12 +37,21 @@ public class RankedAbstractObject extends DistanceRankedObject<AbstractObject> i
     //****************** Constructor ******************//
 
     /**
-     * Creates a new instance of RankedAbstractObject for the object its measured distance.
-     * @param object the measured object
-     * @param distance the measured distance
+     * Creates a new instance of RankedAbstractObject for an object and its measured distance.
+     * @param object the ranked object
+     * @param distance the measured distance of the object
      */
     public RankedAbstractObject(AbstractObject object, float distance) {
         super(object, distance);
+    }
+
+    /**
+     * Creates a new instance of RankedAbstractObject by measuring an object's distance from the reference object.
+     * @param referenceObject the reference object from which the distance is measured
+     * @param object the ranked object
+     */
+    public RankedAbstractObject(LocalAbstractObject referenceObject, LocalAbstractObject object) {
+        super(object, referenceObject.getDistance(object));
     }
 
 
