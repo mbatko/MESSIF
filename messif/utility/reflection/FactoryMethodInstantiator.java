@@ -101,7 +101,7 @@ public class FactoryMethodInstantiator<T> implements Instantiator<T> {
      * @return the method found
      * @throws IllegalArgumentException if the there is no method for the given name and prototype
      */
-    private static Method getMethod(Class<?> methodClass, String name, Class<?>... prototype) throws IllegalArgumentException {
+    public static Method getMethod(Class<?> methodClass, String name, Class<?>... prototype) throws IllegalArgumentException {
         try {
             return methodClass.getMethod(name, prototype);
         } catch (NoSuchMethodException e) {
@@ -117,10 +117,10 @@ public class FactoryMethodInstantiator<T> implements Instantiator<T> {
      * @return the method found
      * @throws IllegalArgumentException if the there is no method for the given name and number of arguments
      */
-    private static Method getMethod(Class<?> methodClass, String name, int argumentCount) throws IllegalArgumentException {
+    public static Method getMethod(Class<?> methodClass, String name, int argumentCount) throws IllegalArgumentException {
         Method[] methods = methodClass.getMethods();
         for (int i = 0; i < methods.length; i++)
-            if (methods[i].getParameterTypes().length == argumentCount)
+            if (name.equals(methods[i].getName()) && methods[i].getParameterTypes().length == argumentCount)
                 return methods[i];
         throw new IllegalArgumentException("There is no method " + methodClass.getName() + "." + name + "(...) with " + argumentCount + " arguments");
     }

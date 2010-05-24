@@ -71,7 +71,7 @@ public abstract class Convert {
      * @throws InstantiationException if the type cannot be created from the string value
      */
     public static <E> E stringToType(String string, Class<E> type, Map<String, Object> namedInstances) throws InstantiationException {
-        if (string.equals("null"))
+        if (string == null || string.equals("null"))
             return null;
 
         // Converting string types

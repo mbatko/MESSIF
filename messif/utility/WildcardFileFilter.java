@@ -51,8 +51,9 @@ public class WildcardFileFilter implements FileFilter, FilenameFilter {
         this.pattern = Pattern.compile(
                 // Convert the Glob pattern to Regexp
                 pattern.
-                    replace("*", ".*?").
+                    replace(".", "\\.").
                     replace("?", ".").
+                    replace("*", ".*?").
                     replace("\\[", "[").
                     replace("[!", "[^"),
                 // Make the pattern case insensitive on Windows

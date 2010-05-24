@@ -28,6 +28,7 @@ import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
@@ -59,6 +60,7 @@ import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
+import messif.utility.reflection.FactoryMethodInstantiator;
 import messif.utility.reflection.Instantiators;
 
 
@@ -804,6 +806,60 @@ public class CoreApplication {
     }
 
     /**
+     * Processes the last executed operation by a given method. The method
+     * must be static and must have the {@link AbstractOperation} (or its
+     * descendant) as its first argument. Additional arguments for the method
+     * can be specified. The modified (or the original) operation must be returned
+     * from the method.
+     *
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationProcessByMethod somePackage.someClass someMethod methodArg2 methodArg3
+     * </pre>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the fully specified name of the class where the method is defined, the name of the method and
+     *          any number of additional arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "process the last executed operation by a static method", arguments = {"object class", "method name", "additional arguments for the method (optional) ..."})
+    public boolean operationProcessByMethod(PrintStream out, String... args) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null) {
+            out.println("No operation has been executed yet");
+            return false;
+        }
+
+        try {
+            // Prepare method
+            FactoryMethodInstantiator<AbstractOperation> method = new FactoryMethodInstantiator<AbstractOperation>(AbstractOperation.class, Class.forName(args[1]), args[2], args.length - 2);
+
+            // Prepare arguments
+            String[] stringArgs = args.clone();
+            stringArgs[2] = null;
+            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), 2, namedInstances);
+            methodArgs[0] = lastOperation;
+
+            // Execute method
+            lastOperation = method.instantiate(methodArgs);
+            return true;
+        } catch (ClassNotFoundException e) {
+            out.println("Class not found: " + args[1]);
+            return false;
+        } catch (InstantiationException e) {
+            out.println("Error converting string: " + e.getMessage());
+            return false;
+        } catch (IllegalArgumentException e) {
+            out.println(e.getMessage());
+            return false;
+        } catch (InvocationTargetException e) {
+            logException(e.getCause());
+            out.println("Error executing method " + args[1] + "." + args[2] + ": " + e.getCause());
+            return false;
+        }
+    }
+
+    /**
      * Show the answer of the last executed query operation.
      * Specifically, the information about the operation created by last call to
      * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
@@ -1003,7 +1059,7 @@ public class CoreApplication {
      * @param args regular expression to match statistic names and the display separators for the statistic values
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */ 
-    @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
+    @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)", "final separator (not required)" })
     public boolean statisticsGlobal(PrintStream out, String... args) {
         if (args.length >= 3) {
             String stats = Statistics.printStatistics(args[1], args[2]);
@@ -2006,7 +2062,13 @@ public class CoreApplication {
         }
 
         // Read number of repeats of this method
-        int repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, 2, variables));
+        int repeat;
+        try {
+            repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, 2, variables));
+        } catch (NumberFormatException e) {
+            out.println("Number of repeats specified in action '" + actionName + "' is not a valid integer");
+            return false;
+        }
 
         // Read foreach parameter of this method
         String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, 2, variables);
@@ -2080,8 +2142,6 @@ public class CoreApplication {
             logException(e.getCause());
             out.println(e.getCause());
             out.println(e.getMessage());
-        } catch (NumberFormatException e) {
-            out.println("Number of repeats specified in action '" + actionName + "' is not a valid integer");
         }
 
         return false; // Execution unsuccessful - exception was printed
