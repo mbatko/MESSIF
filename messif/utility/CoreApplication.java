@@ -28,7 +28,6 @@ import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
@@ -812,10 +811,12 @@ public class CoreApplication {
      * can be specified. The modified (or the original) operation must be returned
      * from the method.
      *
+     * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationProcessByMethod somePackage.someClass someMethod methodArg2 methodArg3
      * </pre>
+     * </p>
      *
      * @param out a stream where the application writes information for the user
      * @param args the fully specified name of the class where the method is defined, the name of the method and
@@ -1441,7 +1442,9 @@ public class CoreApplication {
      * Creates a new named instance.
      * An argument specifying the signature of a constructor, a factory method or a static field
      * is required. Additional argument specifies the name for the instance (defaults to
-     * name of the action where this is specified).
+     * name of the action where this is specified). If the instance already exists,
+     * this method fails (use {@link #namedInstanceReplace namedInstanceReplace} instead.
+     *
      * <p>
      * Example of usage for constructor, factory method and static field:
      * <pre>
@@ -1457,10 +1460,37 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "creates a new named instance", arguments = { "instance constructor, factory method or static field signature", "name to register"})
     public boolean namedInstanceAdd(PrintStream out, String... args) {
+        if (namedInstances.containsKey(args[2])) {
+            out.println("Named instance '" + args[2] + "' already exists");
+            return false;
+        } else {
+            return namedInstanceReplace(out, args);
+        }
+    }
+
+    /**
+     * Creates a new named instance or replaces an old one.
+     * An argument specifying the signature of a constructor, a factory method or a static field
+     * is required. Additional argument specifies the name for the instance (defaults to
+     * name of the action where this is specified).
+     * <p>
+     * Example of usage for constructor, factory method and static field:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceReplace messif.objects.impl.ObjectByteVectorL1(1,2,3,4,5,6,7,8,9,10) my_object
+     * MESSIF &gt;&gt;&gt; namedInstanceReplace messif.utility.ExtendedProperties.getProperties(someparameters.cf) my_props
+     * MESSIF &gt;&gt;&gt; namedInstanceReplace messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator my_comparator
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the instance constructor, factory method or static field signature and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "creates a new named instance or replaces old one", arguments = { "instance constructor, factory method or static field signature", "name to register"})
+    public boolean namedInstanceReplace(PrintStream out, String... args) {
         try {
             Object instance = Instantiators.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
-            if (namedInstances.put(args[2], instance) != null)
-                out.println("Previous named instance changed to a new one");
+            namedInstances.put(args[2], instance);
             return true;
         } catch (ClassNotFoundException e) {
             out.println("Error creating named instance for " + args[1] + ": " + e);
