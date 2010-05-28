@@ -300,7 +300,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @see LocalAbstractObject#getDistance
      */
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
         return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
     }
 
