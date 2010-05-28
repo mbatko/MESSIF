@@ -212,7 +212,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
     // ***************************  Distance computation  ******************************* //
 
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectColor castObj = (MetaObjectColor)obj;
 
         float rtv = 0;

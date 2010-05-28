@@ -202,7 +202,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
     // ***************************  Distance computation  ******************************* //
 
     @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectShape castObj = (MetaObjectShape)obj;
 
         float rtv = 0;

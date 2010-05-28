@@ -88,7 +88,7 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
             return super.addToAnswer(queryObject, object, distThreshold);
         if (object == null)
             return null;
-        float distance = queryObject.getDistance(object, null, distThreshold);
+        float distance = queryObject.getDistance(object, distThreshold);
 
         // Create ranked object with new distance
         try {
