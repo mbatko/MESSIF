@@ -132,7 +132,7 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @return the distance between this object and the provided object <code>obj</code>
      */
     public final float getDistance(LocalAbstractObject obj) {
-        return getDistance(obj, null, MAX_DISTANCE);
+        return getDistance(obj, MAX_DISTANCE);
     }
 
     /**
@@ -171,9 +171,9 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * The array <code>metaDistances</code> is filled with the distances
      * of the respective encapsulated objects if this object contains any, i.e.
      * this object is a descendant of {@link MetaObject}.
-     * 
+     *
      * <p>
-     * Note that this method does not use the fast access to the 
+     * Note that this method does not use the fast access to the
      * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
      * even if there is a filter that supports it.
      * </p>

@@ -97,7 +97,7 @@ public abstract class MetaObject extends LocalAbstractObject {
             }
 
             @Override
-            protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+            protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
                 return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
             }
 
@@ -284,7 +284,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see LocalAbstractObject#getDistance
      */
     protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        return getDistanceImpl(obj, null, distThreshold);
+        return getDistanceImpl((MetaObject)obj, null, distThreshold);
     }
 
     /**
@@ -300,8 +300,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    @Override
-    protected abstract float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold);
+    protected abstract float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold);
 
     /**
      * Returns the array that can hold distances to the respective encapsulated objects.
