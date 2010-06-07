@@ -91,6 +91,11 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
     @Override
+    public Object getValue() {
+        return get();
+    }
+
+    @Override
     protected void addBoundStat(StatisticTimer stat) {
         super.addBoundStat(stat);
         

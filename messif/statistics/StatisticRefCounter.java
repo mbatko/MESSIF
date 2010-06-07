@@ -41,7 +41,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
         StatisticCounter rtv = values.get(key);
         return (rtv == null)?0:rtv.get();
     }
-    
+
     public Set<Object> getKeys() {
         return Collections.unmodifiableSet(values.keySet()); 
     }
@@ -54,6 +54,11 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
         return values.containsKey(key);
     }
     
+    @Override
+    public Object getValue() {
+        return Collections.unmodifiableMap(values);
+    }
+
     /** Return the statistic counter associated with the provided key.
      *  @param key the reference key of the retrieved counter
      *  @return either the StatisticsCounter or null if there is no associated counter yet

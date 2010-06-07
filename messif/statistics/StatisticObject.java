@@ -47,6 +47,11 @@ public class StatisticObject extends Statistics<StatisticObject> {
     }
     
     public Object get() { return value; }
+
+    @Override
+    public Object getValue() {
+        return get();
+    }
     
     
     /****************** Statistics merging ******************/

@@ -63,6 +63,11 @@ public final class StatisticCounter extends Statistics<StatisticCounter> {
     
     public long get() { return value; }
 
+    @Override
+    public Object getValue() {
+        return get();
+    }
+
     public void max(long value) {
         if (!canPerformOperation()) return;
         synchronized (this) {

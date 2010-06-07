@@ -158,6 +158,13 @@ public abstract class Statistics<TSelf extends Statistics<TSelf>> implements Ser
     }
 
     /**
+     * Returns the value of this statistic.
+     * The type of the value depends on this statistic class.
+     * @return the value of this statistic
+     */
+    public abstract Object getValue();
+
+    /**
      * Returns the statistic that this stat is bound to.
      * If this statistic is not bound, <tt>null</tt> is returned.
      * @return the statistic that this stat is bound to

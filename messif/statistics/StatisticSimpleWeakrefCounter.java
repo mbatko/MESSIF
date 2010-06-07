@@ -60,6 +60,11 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
         return values.containsKey(key);
     }
 
+    @Override
+    public Object getValue() {
+        return Collections.unmodifiableMap(values);
+    }
+
 
     /****************** Reference counter modification operations ******************/
     

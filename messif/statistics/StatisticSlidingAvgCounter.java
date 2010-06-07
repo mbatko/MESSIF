@@ -228,6 +228,12 @@ public class StatisticSlidingAvgCounter extends Statistics<StatisticSlidingAvgCo
         return max;
     }
     
+    @Override
+    public Object getValue() {
+        return new StringBuilder().append(getMin()).append(", ").append(getMax()).append(", ")
+                .append(getSum()).append(", ").append(getCnt()).toString();
+    }
+
     
     /****************** Creator ******************/
     
