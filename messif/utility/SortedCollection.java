@@ -140,6 +140,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
         private static final long serialVersionUID = 1L;
 
         @SuppressWarnings("unchecked")
+        @Override
         public final int compare(T o1, T o2) {
             return ((Comparable)o1).compareTo(o2); // This is unchecked but a responsibility of the constructor caller
         }
@@ -157,6 +158,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Returns the number of elements in this collection.
      * @return the number of elements in this collection
      */
+    @Override
     public int size() {
         return size;
     }
@@ -165,6 +167,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Returns <tt>true</tt> if this collection contains no elements.
      * @return <tt>true</tt> if this collection contains no elements
      */
+    @Override
     public boolean isEmpty() {
 	return size == 0;
     }
@@ -194,6 +197,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @param o element whose presence in this list is to be tested
      * @return <tt>true</tt> if this list contains the specified element
      */
+    @Override
     public boolean contains(Object o) {
         return indexOf(o) >= 0;
     }
@@ -208,6 +212,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @throws NullPointerException if the specified collection is null
      * @see    #contains(Object)
      */
+    @Override
     public boolean containsAll(Collection<?> c) {
         for (Object item : c)
             if (indexOf(item) < 0)
@@ -223,6 +228,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
     @SuppressWarnings("unchecked")
+    @Override
     protected final T get(int index) {
         return (T)items[index];
     }
@@ -299,6 +305,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @return an array containing all of the elements in this list in
      *         proper sequence
      */
+    @Override
     public Object[] toArray() {
         Object[] ret = new Object[size];
         System.arraycopy(items, 0, ret, 0, size);
@@ -330,6 +337,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      *         this list
      * @throws NullPointerException if the specified array is null
      */
+    @Override
     public <E> E[] toArray(E[] array) {
         if (array.length < size)
             array = Convert.createGenericArray(array, size);
@@ -348,6 +356,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @param e element to be appended to this list
      * @return <tt>true</tt> (as specified by {@link Collection#add})
      */
+    @Override
     public boolean add(T e) {
         modCount++;
         int i = binarySearch(e, 0, size - 1, false);
@@ -404,6 +413,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @param o element to be removed from this list, if present
      * @return <tt>true</tt> if this list contained the specified element
      */
+    @Override
     public boolean remove(Object o) {
         int index = indexOf(o);
         return (index < 0)?false:remove(index);
@@ -434,6 +444,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @return <tt>true</tt> if this list changed as a result of the call
      * @throws NullPointerException if the specified collection is null
      */
+    @Override
     public boolean addAll(Collection<? extends T> c) {
 	boolean ret = false;
         for (T item : c)
@@ -454,6 +465,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    @Override
     public boolean removeAll(Collection<?> c) {
         boolean ret = false;
         Iterator<T> iterator = iterator();
@@ -478,6 +490,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    @Override
     public boolean retainAll(Collection<?> c) {
         boolean ret = false;
         Iterator<T> iterator = iterator();
@@ -495,6 +508,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Removes all of the elements from this list.  The list will
      * be empty after this call returns.
      */
+    @Override
     public void clear() {
 	modCount++;
 
@@ -540,6 +554,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      *
      * @return an iterator over the elements in this collection
      */
+    @Override
     public Iterator<T> iterator() {
         return new Itr(0, size);
     }
@@ -573,7 +588,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 	private int cursor;
 
 	/** Index of the last element to return plus one */
-	private final int iteratorSize;
+	private int iteratorSize;
 
 	/**
 	 * Index of element returned by most recent call to next or
@@ -599,10 +614,12 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
             this.iteratorSize = iteratorSize;
         }
 
+        @Override
 	public boolean hasNext() {
             return cursor < iteratorSize;
 	}
 
+        @Override
 	public T next() {
             checkForComodification();
 	    if (!hasNext())
@@ -612,6 +629,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
             return next;
 	}
 
+        @Override
 	public void remove() {
 	    if (lastRet == -1)
 		throw new IllegalStateException();
@@ -623,6 +641,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 		    cursor--;
 		lastRet = -1;
 		expectedModCount = modCount;
+                iteratorSize--;
 	    } catch (IndexOutOfBoundsException e) {
 		throw new ConcurrentModificationException();
 	    }
