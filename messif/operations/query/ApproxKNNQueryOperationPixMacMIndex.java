@@ -20,8 +20,10 @@ import java.util.Iterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardPowerSortedCollection;
+import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardSortedCollection;
 import messif.objects.util.DoubleSortedCollection;
 import messif.objects.util.RankedAbstractObject;
+import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
@@ -40,7 +42,7 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
     /** Index of the first objects returned from the answer (to simulate an incremental query) */
     private final int from;
     /** Internal collection with keyword reranking */
-    private final DoubleSortedCollection collection;
+    private DoubleSortedCollection collection;
 
     /**
      * Creates a new instance of ApproxKNNQueryOperationPixMacMIndex
@@ -103,6 +105,36 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    //****************** Clonning ******************//
+
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not clonned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public ApproxKNNQueryOperationPixMacMIndex clone() throws CloneNotSupportedException {
+        ApproxKNNQueryOperationPixMacMIndex operation = (ApproxKNNQueryOperationPixMacMIndex)super.clone();
+
+        // Create a new double sorted collection for the answer set
+        if (collection != null) {
+            operation.collection = new KeywordsJaccardPowerSortedCollection(
+                    k + from, collection.getMaximalCapacity(), ((MetaObjectPixMacShapeAndColor) queryObject).getKeyWords(),
+                    ((KeywordsJaccardSortedCollection) collection).getKeywordsWeight()
+            );
+            setAnswerCollection(collection);
+        }
+        return operation;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder(" Pixmac search <from=").append(from).append(", k=").append(getK()).append("> ").
+                append(" approx precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
     }
 
 }

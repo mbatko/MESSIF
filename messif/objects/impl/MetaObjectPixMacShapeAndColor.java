@@ -612,6 +612,14 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             this.queryKeywords = querykeyWords;
         }
 
+        /** 
+         * Return weight for the keywords.
+         * @return weight for the keywords
+         */
+        public float getKeywordsWeight() {
+            return keywordsWeight;
+        }
+
         @Override
         public float getNewDistance(AbstractObject origObject, float origDistance) {
             return origDistance + keywordsWeight *
@@ -639,6 +647,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         public KeywordsJaccardPowerSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntSortedVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
             super(initialCapacity, maximalCapacity, querykeyWords, keywordsWeight);
         }
+
 
         @Override
         public float getNewDistance(AbstractObject origObject, float origDistance) {
