@@ -126,7 +126,7 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
                     k + from, collection.getMaximalCapacity(), ((MetaObjectPixMacShapeAndColor) queryObject).getKeyWords(),
                     ((KeywordsJaccardSortedCollection) collection).getKeywordsWeight()
             );
-            setAnswerCollection(collection);
+            operation.setAnswerCollection(operation.collection);
         }
         return operation;
     }
