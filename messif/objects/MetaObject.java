@@ -123,6 +123,28 @@ public abstract class MetaObject extends LocalAbstractObject {
         };
     }
 
+    /**
+     * Retrieves an {@link LocalAbstractObject object} from the given named map and
+     * returns it or its {@link LocalAbstractObject#clone(messif.objects.keys.AbstractObjectKey) clone}.
+     * 
+     * @param <T> the type of the object to retrieve from the map
+     * @param objects the map of named objects
+     * @param name the name of the object to retrieve
+     * @param objectClass the class of the object to retrieve
+     * @param clone flag whether to clone the retrieved object (<tt>true</tt>) or not (<tt>false</tt>)
+     * @param cloneKey the object key to set for the clonned data
+     * @return the object retrieved from the map or <tt>null</tt> if there was no such object
+     * @throws ClassCastException if there was an object with the given name in the map, but it has a different class
+     * @throws CloneNotSupportedException if the clonning was not supported by the object
+     */
+    protected static <T> T getObjectFromMap(Map<String, ? extends LocalAbstractObject> objects, String name, Class<? extends T> objectClass, boolean clone, AbstractObjectKey cloneKey) throws ClassCastException, CloneNotSupportedException {
+        LocalAbstractObject object = objects.get(name);
+        if (object == null)
+            return null;
+        else
+            return objectClass.cast(clone ? object.clone(cloneKey) : object);
+    }
+
 
     //****************** Attribute access ******************//
 
