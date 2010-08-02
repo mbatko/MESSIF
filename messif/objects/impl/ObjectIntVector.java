@@ -80,13 +80,8 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      * @param max upper bound of the random generated values (exclusive)
      */
     public ObjectIntVector(int dimension, int min, int max) {
-        this.data = new int[dimension];
-        for (; dimension > 0; dimension--)
-            this.data[dimension - 1] = (int)(min + getRandomNormal()*(max - min));
+        this.data = randomData(dimension, min, max);
     }
-
-
-    //****************** Text file store/retrieve methods ******************//
 
     /**
      * Creates a new instance of ObjectFloatVector from text stream.
@@ -98,23 +93,70 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     public ObjectIntVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
+        this.data = parseIntVector(line);
+    }
+
+
+    //****************** Text file store/retrieve methods ******************//
+
+    /**
+     * Parses a vector of integers from the given line of text.
+     *
+     * @param line the text from which to parse vector
+     * @return the parsed vector of integers
+     * @throws NumberFormatException if the given {@code line} does not have comma-separated or space-separated integers
+     * @throws EOFException if a <tt>null</tt> {@code line} is given
+     */
+    public static int[] parseIntVector(String line) throws NumberFormatException, EOFException {
+        if (line == null)
+            throw new EOFException();
 
         String[] numbers = line.trim().split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
 
-        this.data = new int[numbers.length];
+        int[] data = new int[numbers.length];
+        for (int i = 0; i < data.length; i++)
+            data[i] = Integer.parseInt(numbers[i]);
 
-        for (int i = 0; i < this.data.length; i++)
-            this.data[i] = Integer.parseInt(numbers[i]);
+        return data;
+    }
+
+    /**
+     * Writes the given vector of integers to the given output stream as text.
+     * 
+     * @param data the vector of integers to output
+     * @param stream the output stream to write the text to
+     * @throws IOException if there was an I/O error while writing to the stream
+     */
+    public static void writeIntVector(int[] data, OutputStream stream) throws IOException {
+        for (int i = 0; i < data.length; i++) {
+            if (i > 0)
+                stream.write(", ".getBytes());
+            stream.write(String.valueOf(data[i]).getBytes());
+        }
+        stream.write('\n');
     }
 
     public void writeData(OutputStream stream) throws IOException {
-        for (int i = 0; i < this.data.length; i++) {
-            if (i > 0)
-                stream.write(", ".getBytes());
-            stream.write(String.valueOf(this.data[i]).getBytes());
-        }
+        writeIntVector(data, stream);
+    }
 
-        stream.write('\n');
+
+    //****************** Random array generator ******************//
+
+    /**
+     * Generate an array of random integers using normal distribution of numbers
+     * from interval [min;max).
+     *
+     * @param dimension number of dimensions to generate
+     * @param min lower bound of the random generated values (inclusive)
+     * @param max upper bound of the random generated values (exclusive)
+     * @return a new array filled with random integers
+     */
+    public static int[] randomData(int dimension, int min, int max) {
+        int[] data = new int[dimension];
+        for (; dimension > 0; dimension--)
+            data[dimension - 1] = (int)(min + getRandomNormal()*(max - min));
+        return data;
     }
 
 
@@ -135,7 +177,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     //****************** Attribute access methods ******************//
 
     /**
-     * Returns the vector of float values, which represents the contents of this object.
+     * Returns the vector of integer values, which represents the contents of this object.
      * A copy is returned, so any modifications to the returned array do not affect the original object.
      * @return the data contents of this object
      */
