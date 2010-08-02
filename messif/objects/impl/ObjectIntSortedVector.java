@@ -39,7 +39,7 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
     private static final long serialVersionUID = 20401L;
 
 
-    //****************** Constructors ******************
+    //****************** Constructors ******************//
 
     /** 
      * Creates a new instance of object - make sure the data is sorted
@@ -70,13 +70,17 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
         sortData();
     }
 
-    // ******************  Sorting procedure  ************************** //
+    //****************** Sorting procedure ******************//
 
-    private final void sortData() {
+    /**
+     * Sort the internal array with data.
+     */
+    protected void sortData() {
         Arrays.sort(data);
     }
 
-    //****************** Text file store/retrieve methods ******************
+
+    //****************** Text file store/retrieve methods ******************//
 
     /** 
      * Creates a new instance of Object from text stream - it expects that the data is already sorted!
@@ -89,13 +93,12 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
     public ObjectIntSortedVector(BufferedReader stream) throws IOException, NumberFormatException {
         super(stream);
     }
-    
 
-    /** Computes minimum and maximum values over all coordinates of the current vector.
+    /**
+     * Computes minimum and maximum values over all coordinates of the current vector.
      *
      * @param currRange An optional parameter containing current minimum and maximum values. If null is passed
      *                  a new range with minimum and maximum is created, otherwise the passed array is updated.
-     *
      * @return Returns an array of two integer values for the minimum and the maximum, respectively.
      */
     @Override
@@ -114,7 +117,7 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
     }
 
 
-    /****************************** Cloning *****************************/
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a randomly modified copy of this vector.
@@ -125,12 +128,13 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-        throw new CloneNotSupportedException("Clonning with random modification not supported yet for " + ObjectIntSortedVector.class);
+        throw new CloneNotSupportedException("Clonning with random modification is not supported for " + ObjectIntSortedVector.class);
     }
 
 
-    //************ BinarySerializable interface ************//
+    //****************** BinarySerializable interface ******************//
 
     /**
      * Creates a new instance of ObjectIntSortedVector loaded from binary input buffer - it gotta be sorted already.

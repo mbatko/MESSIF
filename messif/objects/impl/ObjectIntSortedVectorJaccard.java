@@ -25,7 +25,8 @@ import messif.objects.nio.BinarySerializator;
 
 /**
  * Implements the Jaccard coeficient distance function. The data is
-     *  expected to be sorted and without duplicites!
+ * expected to be sorted and without duplicities!
+ *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
@@ -36,7 +37,7 @@ public class ObjectIntSortedVectorJaccard extends ObjectIntSortedVector implemen
     private static final long serialVersionUID = 20501L;
 
 
-    //****************** Constructors ******************
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of object - make sure the data is sorted
