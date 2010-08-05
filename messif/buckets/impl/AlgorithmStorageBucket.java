@@ -294,9 +294,9 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             algorithm.executeOperation(operation);
             objectCount += operation.getInsertedObjects().size();
         } catch (NoSuchMethodException e) {
-            super.addObjects(objects);
+            super.addObjects(operation.getInsertedObjects().iterator());
         } catch (AlgorithmMethodException e) {
-            super.addObjects(objects);
+            throw new StorageFailureException(e.getCause());
         }
 
         // Update object counter

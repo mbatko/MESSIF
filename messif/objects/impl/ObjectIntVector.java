@@ -84,7 +84,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     }
 
     /**
-     * Creates a new instance of ObjectFloatVector from text stream.
+     * Creates a new instance of ObjectIntVector from text stream.
      * @param stream the stream from which to read lines of text
      * @throws EOFException if the end-of-file of the given stream is reached
      * @throws IOException if there was an I/O error during reading from the stream
@@ -136,7 +136,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         stream.write('\n');
     }
 
-    public void writeData(OutputStream stream) throws IOException {
+    protected void writeData(OutputStream stream) throws IOException {
         writeIntVector(data, stream);
     }
 
