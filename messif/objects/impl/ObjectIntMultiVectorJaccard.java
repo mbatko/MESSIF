@@ -24,14 +24,13 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * Implements the Jaccard coeficient distance function. The data is
- * expected to be sorted and without duplicities!
+ * Implements the Jaccard coeficient distance function.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements Serializable {
+public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements Serializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -39,54 +38,60 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ObjectIntDualVectorJaccard.
-     * @param data integer vector of the primary data
-     * @param data2 integer vector of the secondary data 
+     * Creates a new instance of ObjectIntMultiVectorJaccard.
+     * If {@code forceSort} is <tt>false</tt>, the provided data are expected to be sorted!
+     *
+     * @param data the data content of the new object
      * @param forceSort if <tt>false</tt>, the data is expected to be sorted
      */
-    public ObjectIntDualVectorJaccard(int[] data, int[] data2, boolean forceSort) {
-        super(data, data2, forceSort);
+    public ObjectIntMultiVectorJaccard(int[][] data, boolean forceSort) {
+        super(data);
+        if (forceSort)
+            sortData();
     }
 
     /**
-     * Creates a new instance of ObjectIntDualVectorJaccard.
-     * @param data integer vector of the primary data
-     * @param data2 integer vector of the secondary data
+     * Creates a new instance of ObjectIntMultiVectorJaccard.
+     * @param data the data content of the new object
      */
-    public ObjectIntDualVectorJaccard(int[] data, int[] data2) {
-        super(data, data2);
+    public ObjectIntMultiVectorJaccard(int[]... data) {
+        this(data, true);
     }
 
     /**
-     * Creates a new instance of randomly generated ObjectIntDualVectorJaccard.
-     * @param dimension the dimensionality of the primary data
-     * @param dimension2 the dimensionality of the secondary data
+     * Creates a new instance of randomly generated ObjectIntMultiVectorJaccard.
+     * Content will be generated using normal distribution of random numbers from interval
+     * [0;1).
+     *
+     * @param arrays the number of vector data arrays to create
+     * @param dimension number of dimensions to generate
      */
-    public ObjectIntDualVectorJaccard(int dimension, int dimension2) {
-        super(dimension, dimension2);
+    public ObjectIntMultiVectorJaccard(int arrays, int dimension) {
+        super(arrays, dimension);
     }
 
 
     /**
-     * Creates a new instance of ObjectIntDualVectorJaccard from stream - it expects that the data is already sorted!
+     * Creates a new instance of ObjectIntMultiVectorJaccard from stream - it expects that the data is already sorted!
      * @param stream text stream to read the data from
+     * @param arrays number of arrays to read from the stream
      * @throws IOException when an error appears during reading from given stream.
      *  or  EOFException when eof of the given stream is reached.
      * @throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectIntDualVectorJaccard(BufferedReader stream) throws IOException, NumberFormatException {
-        super(stream);
+    public ObjectIntMultiVectorJaccard(BufferedReader stream, int arrays) throws IOException, NumberFormatException {
+        super(stream, arrays);
     }
 
     /**
-     * Creates a new instance of ObjectIntDualVectorJaccard loaded from binary input buffer.
+     * Creates a new instance of ObjectIntMultiVectorJaccard loaded from binary input buffer.
      *
      * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    public ObjectIntDualVectorJaccard(BinaryInput input, BinarySerializator serializator) throws IOException {
+    public ObjectIntMultiVectorJaccard(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 
@@ -101,13 +106,13 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         SortedDataIterator iterator = getSortedIterator();
-        SortedDataIterator objIterator = ((ObjectIntDualVectorJaccard)obj).getSortedIterator();
+        SortedDataIterator objIterator = ((ObjectIntMultiVectorJaccard)obj).getSortedIterator();
 
         float intersectCount = 0;
         while (iterator.intersect(objIterator))
             intersectCount++;
 
-        return 1f - intersectCount / (getDimensionality() + ((ObjectIntDualVectorJaccard)obj).getDimensionality() - intersectCount);
+        return 1f - intersectCount / (getDimensionality() + ((ObjectIntMultiVectorJaccard)obj).getDimensionality() - intersectCount);
     }
 
 
@@ -131,7 +136,7 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
          * @param obj the object for which the weights are given
          * @return the total sum of all weights
          */
-        public abstract float getWeightSum(ObjectIntDualVector obj);
+        public abstract float getWeightSum(ObjectIntMultiVector obj);
     }
 
     /**
@@ -143,7 +148,7 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
      * @param weightProviderObj the weight provider for {@code obj}
      * @return the non-metric weighted Jaccard distance between this object and the given {@code obj}
      */
-    public float getWeightedDistance(ObjectIntDualVector obj, WeightProvider weightProviderThis, WeightProvider weightProviderObj) {
+    public float getWeightedDistance(ObjectIntMultiVector obj, WeightProvider weightProviderThis, WeightProvider weightProviderObj) {
         // If weights are not provided, fall back to non-weighted distance
         if (weightProviderThis == null || weightProviderObj == null)
             return getDistanceImpl(obj, MAX_DISTANCE);
@@ -161,58 +166,53 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
     }
 
     /**
-     * Implementation of {@link WeightProvider} that has two weights, one for the
-     * primary and one for the secondary data array of the {@link ObjectIntDualVector}.
+     * Implementation of {@link WeightProvider} that has a single weight for every data array
+     * of the {@link ObjectIntMultiVector}.
      */
-    public static class DualWeightProvider implements WeightProvider {
-        /** Weight for the items in the primary data array */
-        private final float primaryWeight;
-        /** Weight for the items in the secondary data array */
-        private final float secondaryWeight;
+    public static class MultiWeightProvider implements WeightProvider {
+        /** Weights for data arrays - all the items in the respective data array has a single weight */
+        private final float[] weights;
 
         /**
-         * Creates a new instance of DualWeightProvider with the two given weights.
-         * @param primaryWeight the weight for the items in the primary data array
-         * @param secondaryWeight the weight for the items in the secondary data array
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
          */
-        public DualWeightProvider(float primaryWeight, float secondaryWeight) {
-            this.primaryWeight = primaryWeight;
-            this.secondaryWeight = secondaryWeight;
+        public MultiWeightProvider(float[] weights) {
+            this.weights = weights;
         }
 
         public float getWeight(SortedDataIterator iterator) {
-            return iterator.isCurrentPrimary() ? primaryWeight : secondaryWeight;
+            return weights[iterator.getCurrentVectorDataIndex()];
         }
 
-        public float getWeightSum(ObjectIntDualVector obj) {
-            return obj.data.length * primaryWeight + obj.data2.length * secondaryWeight;
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++)
+                sum += obj.data[i].length * weights[i];
+            return sum;
         }
     }
 
     /**
-     * Implementation of {@link WeightProvider} that has given weights for the
-     * primary and one for the secondary data of the {@link ObjectIntDualVector}.
+     * Implementation of {@link WeightProvider} that has a given weight for every
+     * item of every data array of {@link ObjectIntMultiVector}.
      * Note that the number of weights <em>must</em> be equal to the
-     * number of data items in the primary or the secondary data of the
-     * {@link ObjectIntDualVector} respectively.
+     * number of data items in the respective data array of the
+     * {@link ObjectIntMultiVector}.
      */
-    public static class ArrayWeightProvider implements WeightProvider {
+    public static class ArrayMultiWeightProvider implements WeightProvider {
         /** Weights for the items in the primary data array */
-        private final float[] primaryWeight;
-        /** Weights for the items in the secondary data array */
-        private final float[] secondaryWeight;
+        private final float[][] weights;
         /** Sum of the weights in primaryWeight and secondaryWeight */
         private final float weightSum;
 
         /**
          * Creates a new instance of ArrayWeightProvider with the two given weights.
-         * @param primaryWeight the weights for the items in the primary data array
-         * @param secondaryWeight the weights for the items in the secondary data array
+         * @param weights the weights for the items in the data arrays
          */
-        public ArrayWeightProvider(float[] primaryWeight, float[] secondaryWeight) {
-            this.primaryWeight = primaryWeight;
-            this.secondaryWeight = secondaryWeight;
-            this.weightSum = sum(primaryWeight) + sum(secondaryWeight);
+        public ArrayMultiWeightProvider(float[][] weights) {
+            this.weights = weights;
+            this.weightSum = sum(weights);
         }
 
         /**
@@ -220,18 +220,19 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
          * @param array the array for which to compute the sum
          * @return the sum of items in {@code array}
          */
-        private static float sum(float[] array) {
+        private static float sum(float[][] array) {
             float sum = 0;
             for (int i = 0; i < array.length; i++)
-                sum += array[i];
+                for (int j = 0; j < array[i].length; j++)
+                    sum += array[i][j];
             return sum;
         }
 
         public float getWeight(SortedDataIterator iterator) {
-            return (iterator.isCurrentPrimary() ? primaryWeight : secondaryWeight)[iterator.currentIndex()];
+            return weights[iterator.getCurrentVectorDataIndex()][iterator.currentIndex()];
         }
 
-        public float getWeightSum(ObjectIntDualVector obj) {
+        public float getWeightSum(ObjectIntMultiVector obj) {
             return weightSum;
         }
     }

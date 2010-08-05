@@ -23,21 +23,21 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.objects.util.DoubleSortedCollection;
 
 /**
  * Special meta object that stores only the objects required for the PixMac search.
@@ -72,7 +72,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     /** Object for the RegionShapeType */
     protected ObjectXMRegionShape regionShape;
     /** Object for the KeyWordsType */
-    protected ObjectIntDualVectorJaccard keyWords;
+    protected ObjectIntMultiVectorJaccard keyWords;
     /** Value of the AttractivenessType */
     protected short attractiveness;
     /** Value of the CreditsType */
@@ -96,7 +96,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      */
     public MetaObjectPixMacSCT(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure,
             ObjectVectorEdgecomp edgeHistogram, ObjectIntVectorL1 scalableColor, ObjectXMRegionShape regionShape,
-            ObjectIntDualVectorJaccard keyWords, short attractiveness, byte credits) {
+            ObjectIntMultiVectorJaccard keyWords, short attractiveness, byte credits) {
         super(locatorURI);
         this.colorLayout = colorLayout;
         this.colorStructure = colorStructure;
@@ -125,7 +125,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         this.edgeHistogram = getObjectFromMap(objects, descriptorNames[2], ObjectVectorEdgecomp.class, cloneObjects, getObjectKey());
         this.scalableColor = getObjectFromMap(objects, descriptorNames[3], ObjectIntVectorL1.class, cloneObjects, getObjectKey());
         this.regionShape = getObjectFromMap(objects, descriptorNames[4], ObjectXMRegionShape.class, cloneObjects, getObjectKey());
-        this.keyWords = getObjectFromMap(objects, descriptorNames[5], ObjectIntDualVectorJaccard.class, cloneObjects, getObjectKey());
+        this.keyWords = getObjectFromMap(objects, descriptorNames[5], ObjectIntMultiVectorJaccard.class, cloneObjects, getObjectKey());
         this.attractiveness = attractiveness;
         this.credits = credits;
     }
@@ -145,7 +145,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[2]);
         this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[3]);
         this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[4]);
-        this.keyWords = (ObjectIntDualVectorJaccard)objects.get(descriptorNames[5]);
+        this.keyWords = (ObjectIntMultiVectorJaccard)objects.get(descriptorNames[5]);
         this.attractiveness = attractiveness;
         this.credits = credits;
     }
@@ -177,7 +177,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     public MetaObjectPixMacSCT(MetaObject object, short attractiveness, byte credits, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords) {
         this(object, attractiveness, credits);
         if (keyWords != null)
-            this.keyWords = new ObjectIntDualVectorJaccard(
+            this.keyWords = new ObjectIntMultiVectorJaccard(
                     keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex),
                     keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(titleWords)), keyWordIndex)
             );
@@ -207,7 +207,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         regionShape = new ObjectXMRegionShape(stream);
         if (haveKeyWords) {
             if (readKeyWords) {
-                keyWords = new ObjectIntDualVectorJaccard(stream);
+                keyWords = new ObjectIntMultiVectorJaccard(stream, 2);
             } else {
                 stream.readLine(); // Skip the two lines with keywords
                 stream.readLine(); // Skip the two lines with keywords
@@ -238,23 +238,39 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      *
      * @param stream stream to read the data from
      * @param keyWordIndex the index for translating keywords to addresses
+     * @param additionalKeyWords additional keywords added to the encapsulated keyWords object as third array
      * @throws IOException if reading from the stream fails
      */
-    public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
+    public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex, String additionalKeyWords) throws IOException {
         this(stream, false, false, false);
         String kwLine1 = stream.readLine();
         String kwLine2 = stream.readLine();
+        int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
+        Set<String> uniqueKeywords = new HashSet<String>();
         try {
-            keyWords = new ObjectIntDualVectorJaccard(
-                    keywordsToIdentifiers(kwLine1, ';', keyWordIndex),
-                    keywordsToIdentifiers(kwLine2, ';', keyWordIndex)
-            );
+            if (additionalKeyWords != null)
+                data[2] = keywordsToIdentifiers(additionalKeyWords, ';', keyWordIndex, uniqueKeywords);
+            data[0] = keywordsToIdentifiers(kwLine1, ';', keyWordIndex, uniqueKeywords);
+            data[1] = keywordsToIdentifiers(kwLine2, ';', keyWordIndex, uniqueKeywords);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
-            keyWords = new ObjectIntDualVectorJaccard(new int[0], new int[0], false);
+            keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
+        keyWords = new ObjectIntMultiVectorJaccard(data);
         attractiveness = Short.parseShort(stream.readLine());
         credits = Byte.parseByte(stream.readLine());
+    }
+
+    /**
+     * Creates a new instance of MetaObjectPixMacShapeAndColor.
+     * A keyword index is used to translate keywords to addresses.
+     *
+     * @param stream stream to read the data from
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @throws IOException if reading from the stream fails
+     */
+    public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
+        this(stream, keyWordIndex, null);
     }
 
     /**
@@ -272,10 +288,11 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @param keyWordsLine the line that contains the keywords
      * @param separator separates the keywords on the {@code keyWordsLine}
      * @param keyWordIndex the index for translating keywords to addresses
+     * @param addedKeywords set of previously added keywords, if set, no duplicate keywords will be added
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex) {
+    private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex, Set<String> addedKeywords) {
         if (keyWordsLine == null || keyWordsLine.trim().length() == 0)
             return new int[0];
 
@@ -284,10 +301,14 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         int lastPos = -1;
         int nextPos;
         while ((nextPos = keyWordsLine.indexOf(separator, lastPos + 1)) != -1) {
-            processedKeyWords.add(keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase());
+            String keyword = keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase();
+            if (addedKeywords == null || addedKeywords.add(keyword))
+                processedKeyWords.add(keyword);
             lastPos = nextPos;
         }
-        processedKeyWords.add(keyWordsLine.substring(lastPos + 1).trim().toLowerCase());
+        String keyword = keyWordsLine.substring(lastPos + 1).trim().toLowerCase();
+        if (addedKeywords == null || addedKeywords.add(keyword))
+            processedKeyWords.add(keyword);
 
         return keywordsToIdentifiers(processedKeyWords, keyWordIndex);
     }
@@ -339,7 +360,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      */
     @Override
     public int getObjectCount() {
-        return 5;
+        return descriptorNames.length;
     }
 
     /**
@@ -380,7 +401,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * Returns the object that encapsulates the keywords for this metaobject.
      * @return the object that encapsulates the keywords
      */
-    public ObjectIntDualVectorJaccard getKeyWords() {
+    public ObjectIntMultiVectorJaccard getKeyWords() {
         return keyWords;
     }
 
@@ -391,6 +412,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         rtv += edgeHistogram.dataHashCode();
         rtv += scalableColor.dataHashCode();
         rtv += regionShape.dataHashCode();
+        rtv += keyWords.dataHashCode();
         return rtv;
     }
 
@@ -408,6 +430,8 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         if (!scalableColor.dataEquals(castObj.scalableColor))
             return false;
         if (!regionShape.dataEquals(castObj.regionShape))
+            return false;
+        if (!keyWords.dataEquals(castObj.keyWords))
             return false;
         return true;
     }
@@ -509,7 +533,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         if (regionShape != null)
             rtv.regionShape = (ObjectXMRegionShape)regionShape.clone(cloneFilterChain);
         if (keyWords != null)
-            rtv.keyWords = (ObjectIntDualVectorJaccard)keyWords.clone(cloneFilterChain);
+            rtv.keyWords = (ObjectIntMultiVectorJaccard)keyWords.clone(cloneFilterChain);
 
         return rtv;
     }
@@ -528,7 +552,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         if (regionShape != null)
             rtv.regionShape = (ObjectXMRegionShape)regionShape.cloneRandomlyModify(args);
         if (keyWords != null)
-            rtv.keyWords = (ObjectIntDualVectorJaccard)keyWords.cloneRandomlyModify(args);
+            rtv.keyWords = (ObjectIntMultiVectorJaccard)keyWords.cloneRandomlyModify(args);
         return rtv;
     }
 
@@ -589,7 +613,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
         scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         regionShape = serializator.readObject(input, ObjectXMRegionShape.class);
-        keyWords = serializator.readObject(input, ObjectIntDualVectorJaccard.class);
+        keyWords = serializator.readObject(input, ObjectIntMultiVectorJaccard.class);
         attractiveness = serializator.readShort(input);
         credits = serializator.readByte(input);
     }
@@ -620,130 +644,6 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         size += Short.SIZE/8;
         size += Byte.SIZE/8;
         return size;
-    }
-
-
-    //************ Answer sorting support ************//
-
-    /**
-     * This collection sorts the MetaObjectPixMacShapeAndColor data according to
-     *  their   distance + (keywords's jaccard coeficient * weight)
-     */
-    public static class KeywordsJaccardSortedCollection extends DoubleSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 1L;
-
-        /**
-         * Collection of keywords of the query object
-         */
-        protected final ObjectIntDualVectorJaccard queryKeywords;
-
-        /**
-         * Words' Jaccard coefficient weight
-         */
-        protected final float keywordsWeight;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + weighted keywords distance
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @param keywordsWeight weight for the words jaccard coefficient
-         * @throws IllegalArgumentException
-         */
-        public KeywordsJaccardSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntDualVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity);
-            this.keywordsWeight = keywordsWeight;
-            this.queryKeywords = querykeyWords;
-        }
-
-        /** 
-         * Return weight for the keywords.
-         * @return weight for the keywords
-         */
-        public float getKeywordsWeight() {
-            return keywordsWeight;
-        }
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            return origDistance + keywordsWeight *
-                    queryKeywords.getDistance(((MetaObjectPixMacSCT) origObject).keyWords);
-        }
-    }
-
-    /**
-     * This collection sorts the MetaObjectPixMacShapeAndColor data according to
-     *  their   distance + ((keywords's jaccard coeficient^2) * weight)
-     */
-    public static class KeywordsJaccardPowerSortedCollection extends KeywordsJaccardSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 31001L;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + ((keywords's jaccard coeficient^2) weighted)
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @param keywordsWeight weight for the words jaccard coefficient
-         * @throws IllegalArgumentException
-         */
-        public KeywordsJaccardPowerSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntDualVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity, querykeyWords, keywordsWeight);
-        }
-
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            float keywordsDistance = queryKeywords.getDistance(((MetaObjectPixMacSCT) origObject).keyWords);
-            return origDistance + keywordsWeight * (keywordsDistance * keywordsDistance);
-        }
-    }
-
-    /**
-     * This collection sorts the ranked objects in such a way that all objects
-     *  without any keywords common with the query keywords are put to the end of the collection.
-     * In fact, some fixed large value is added to the original distances.
-     */
-    public static class KeywordsIntersectionSortedCollection extends DoubleSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 1L;
-
-        /** Value to be added to object with empty intersection */
-        protected static final float VALUE_TO_ADD = 1000f;
-
-        /**
-         * Collection of keywords of the query object
-         */
-        private final ObjectIntDualVectorJaccard queryKeywords;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + weighted keywords distance
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @throws IllegalArgumentException
-         */
-        public KeywordsIntersectionSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntDualVectorJaccard querykeyWords) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity);
-            this.queryKeywords = querykeyWords;
-        }
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            // if the set of query keywords are empty then return the original distance
-            if (queryKeywords.getSize() <= 0) {
-                return origDistance;
-            }
-            // if there is a word in the intersection
-            if (queryKeywords.getDistance(((MetaObjectPixMacSCT) origObject).keyWords) < 1) {
-                return origDistance;
-            }
-            return origDistance + VALUE_TO_ADD;
-        }
     }
 
 }
