@@ -258,7 +258,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      * @throws IllegalArgumentException if the answer type of this operation requires clonning but the passed object cannot be cloned
      */
-    public final RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
+    public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
         if (object == null)
             return null;
         RankedAbstractObject rankedObject;
