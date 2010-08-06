@@ -314,7 +314,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     }
 
     /**
-     * Transfors a list of keywords into array of addresses.
+     * Transforms a list of keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      * All items from the list are removed during the process, so
      * do not pass an unmodifiable list!
@@ -325,6 +325,9 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @throws IllegalStateException if there was a problem reading the index
      */
     private int[] keywordsToIdentifiers(List<String> processedKeyWords, IntStorageIndexed<String> keyWordIndex) {
+        if (processedKeyWords.isEmpty()) {
+            return new int [0];
+        }
         // Search the index
         int[] ret = new int[processedKeyWords.size()];
         int i;
