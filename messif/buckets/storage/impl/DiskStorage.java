@@ -23,7 +23,6 @@ import java.io.ObjectInputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -105,7 +104,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     protected final File file;
 
     /** The channel on the file with data */
-    protected transient final FileChannel fileChannel;
+    protected transient FileChannel fileChannel;
 
     /** The position in the file where this storage starts (the real data starts at startPosition + headerSize) */
     protected final long startPosition;
@@ -126,10 +125,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     protected transient WeakReference<BufferInputStream> inputStream;
 
     /** Stream for writing data */
-    protected transient final FileChannelOutputStream outputStream;
+    protected transient FileChannelOutputStream outputStream;
 
     /** Flag whether the file is modified */
     protected transient boolean modified;
+
+    /** Flag whether the file is readonly */
+    protected transient boolean readonly;
 
     /** Finalizer thread that writes a modified header */
     protected transient Thread modifiedThread;
@@ -159,8 +161,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         this.startPosition = startPosition;
         this.maximalLength = maximalLength;
         this.serializator = serializator;
-        this.fileChannel = openFileChannel(file, readonly);
-        this.outputStream = readonly?null:openOutputStream();
+        this.readonly = readonly;
     }
 
     /**
@@ -180,8 +181,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         this.startPosition = copyAttributesDiskStorage.startPosition;
         this.maximalLength = copyAttributesDiskStorage.maximalLength;
         this.serializator = copyAttributesDiskStorage.serializator;
-        this.fileChannel = openFileChannel(file, false);
-        this.outputStream = openOutputStream();
+        this.readonly = copyAttributesDiskStorage.readonly;
     }
 
     /**
@@ -192,6 +192,8 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      */
     protected boolean closeFileChannel() throws IOException {
         if (references <= 0) {
+            if (fileChannel == null)
+                return true;
             if (modified) {
                 flush(true);
                 writeHeader(fileChannel, startPosition, FLAG_CLOSED);
@@ -253,7 +255,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         
         if (oneStorage) {
             DiskStorage<T> storage = castToDiskStorage(storedObjectsClass, Convert.getParameterValue(parameters, "storage", DiskStorage.class, null));
-            if ((storage != null) && storage.fileChannel.isOpen()) {
+            if (storage != null) {
                 storage.references++;
                 return storage;
             }
@@ -456,7 +458,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         deletedFragments = 0;
 
         // Read all objects (by seeking)
-        BufferInputStream reader = openInputStream(fileChannel);
+        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
         try {
             // End iterating once a "null" object is found
             for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
@@ -480,11 +482,14 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     /**
      * Create input stream on the specified channel.
-     * @param fileChannel the file channel
      * @return the created input stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BufferInputStream openInputStream(FileChannel fileChannel) throws IOException {
+    protected BufferInputStream openInputStream() throws IOException {
+        // Open file channel if not opened yet
+        if (fileChannel == null)
+            fileChannel = openFileChannel(file, readonly);
+
         if (log.isLoggable(Level.FINE)) {
             // Measure time
             long time = System.currentTimeMillis();
@@ -520,7 +525,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         if (stream == null || (outputStream != null && outputStream.isDirty())) {
             if (outputStream != null)
                 outputStream.flush();
-            stream = openInputStream(fileChannel);
+            stream = openInputStream();
             inputStream = new WeakReference<BufferInputStream>(stream);
         }
 
@@ -529,14 +534,22 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     }
 
     /**
-     * Create output stream over the current file channel.
-     * @return the created output stream
+     * Opens the output stream over the current file channel.
+     * Note that the storage's modification flag is set to <tt>true</tt>.
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected FileChannelOutputStream openOutputStream() throws IOException {
-        FileChannelOutputStream stream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
-        stream.setPosition(startPosition + headerSize + fileOccupation);
-        return stream;
+    protected synchronized void openOutputStream() throws IOException {
+        // Open file channel if not opened yet
+        if (fileChannel == null)
+            fileChannel = openFileChannel(file, readonly);
+
+        // Set modified flag
+        if (!modified)
+            writeHeader(fileChannel, startPosition, 0);
+
+        // Open output stream
+        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+        outputStream.setPosition(startPosition + headerSize + fileOccupation);
     }
 
     /**
@@ -603,28 +616,10 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws ClassNotFoundException if there was an unknown object in the stream
      */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
-        try {
-            // Proceed with standard deserialization first
-            in.defaultReadObject();
+        // Proceed with standard deserialization first
+        in.defaultReadObject();
 
-            boolean readonly = !file.canWrite();
-
-            // Reopen file channel (set it through reflection to overcome the "final" flag)
-            Field field = DiskStorage.class.getDeclaredField("fileChannel");
-            field.setAccessible(true);
-            field.set(this, openFileChannel(file, readonly));
-
-            // Reopen the output stream
-            if (!readonly) {
-                field = DiskStorage.class.getDeclaredField("outputStream");
-                field.setAccessible(true);
-                field.set(this, openOutputStream());
-            }
-        } catch (NoSuchFieldException e) {
-            throw new ClassNotFoundException(e.toString());
-        } catch (IllegalAccessException e) {
-            throw new ClassNotFoundException("This should never happen!", e);
-        }
+        this.readonly = !file.canWrite();
     }
 
 
@@ -677,18 +672,18 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                     outputStream.flush();
                 }
             if (syncPhysical)
-                fileChannel.force(false);
+                fileChannel.force(false); // If output stream is not null, the file channel is open
         }
     }
 
     public synchronized LongAddress<T> store(T object) throws BucketStorageException {
-        if (outputStream == null)
+        if (readonly)
             throw new ReadonlyStorageException();
 
         try {
-            // Set modified flag
-            if (!modified)
-                writeHeader(fileChannel, startPosition, 0);
+            // Open output stream if not opened yet (this statement is never reached if the storage is readonly)
+            if (outputStream == null)
+                openOutputStream();
 
             // Remember address
             LongAddress<T> address = new LongAddress<T>(this, outputStream.getPosition());
@@ -721,13 +716,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws BucketStorageException if there was an error writing to the file
      */
     protected synchronized void remove(long position, int objectSize) throws BucketStorageException {
-        if (outputStream == null)
+        if (readonly)
             throw new ReadonlyStorageException();
 
         try {
-            // Set modified flag
-            if (!modified)
-                writeHeader(fileChannel, startPosition, 0);
+            // Open output stream if not opened yet (this statement is never reached if the storage is readonly)
+            if (outputStream == null)
+                openOutputStream();
 
             // Remember position to be able to restore it after the write
             long currentPosition = outputStream.getPosition();
@@ -806,7 +801,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             super(comparator, keys);
             try {
                 flush(false);
-                this.inputStream = openInputStream(fileChannel);
+                this.inputStream = openInputStream();
             } catch (IOException e) {
                 throw new IllegalStateException("Cannot initialize disk storage search", e);
             }
@@ -822,7 +817,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             super(comparator, fromKey, toKey);
             try {
                 flush(false);
-                this.inputStream = openInputStream(fileChannel);
+                this.inputStream = openInputStream();
             } catch (IOException e) {
                 throw new IllegalStateException("Cannot initialize disk storage search", e);
             }

@@ -61,13 +61,13 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
 
     /**
      * Creates a new instance of ObjectIntVector with randomly generated content data.
-     * Content will be generated using normal distribution of random numbers from interval
-     * [0;1).
+     * Content will be generated using normal distribution of random integer numbers
+     * from interval [0;maxint).
      *
      * @param dimension number of dimensions to generate
      */
     public ObjectIntVector(int dimension) {
-        this(dimension, 0, 1);
+        this(dimension, 0, Integer.MAX_VALUE - 1);
     }
 
     /**
