@@ -646,6 +646,15 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @return the number of objects stored in this storage
      */
     public int size() {
+        // Open file channel if not opened yet
+        if (fileChannel == null) {
+            try {
+                fileChannel = openFileChannel(file, readonly);
+            } catch (IOException e) {
+                throw new IllegalStateException("Error opening disk storage " + file, e);
+            }
+        }
+
         return objectCount;
     }
 
