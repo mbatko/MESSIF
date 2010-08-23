@@ -156,11 +156,9 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * taken.
      *
      * @param object the source metaobject from which to get the data
-     * @param attractiveness value of the atractiveness
-     * @param credits number of credits
      */
-    public MetaObjectPixMacSCT(MetaObject object, short attractiveness, byte credits) {
-        this(object.getLocatorURI(), object.getObjectMap(), attractiveness, credits);
+    public MetaObjectPixMacSCT(MetaObjectPixMacSCT object) {
+        this(object.getLocatorURI(), object.getObjectMap(), object.attractiveness, object.credits);
     }
 
     /**
@@ -168,14 +166,12 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param attractiveness value of the atractiveness
-     * @param credits number of credits
      * @param keyWordIndex the index for translating keywords to addresses
      * @param titleWords the title words to set for the new object
      * @param keyWords the keywords to set for the new object
      */
-    public MetaObjectPixMacSCT(MetaObject object, short attractiveness, byte credits, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords) {
-        this(object, attractiveness, credits);
+    public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords) {
+        this(object);
         if (keyWords != null)
             this.keyWords = new ObjectIntMultiVectorJaccard(
                     keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex),

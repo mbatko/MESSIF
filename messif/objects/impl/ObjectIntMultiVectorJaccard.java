@@ -169,7 +169,10 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
      * Implementation of {@link WeightProvider} that has a single weight for every data array
      * of the {@link ObjectIntMultiVector}.
      */
-    public static class MultiWeightProvider implements WeightProvider {
+    public static class MultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
         /** Weights for data arrays - all the items in the respective data array has a single weight */
         private final float[] weights;
 
@@ -200,7 +203,10 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
      * number of data items in the respective data array of the
      * {@link ObjectIntMultiVector}.
      */
-    public static class ArrayMultiWeightProvider implements WeightProvider {
+    public static class ArrayMultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
         /** Weights for the items in the primary data array */
         private final float[][] weights;
         /** Sum of the weights in primaryWeight and secondaryWeight */
