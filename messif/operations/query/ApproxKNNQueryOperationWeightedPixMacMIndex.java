@@ -20,6 +20,7 @@ import java.util.Iterator;
 import messif.objects.AbstractObject;
 import messif.objects.impl.MetaObjectPixMacSCT;
 import messif.objects.impl.MetaObjectPixMacShapeAndColor;
+import messif.objects.impl.ObjectIntMultiVectorJaccard;
 import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
@@ -63,7 +64,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
      */
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return",
             "Text similarity weight", "Query keywords weight provider", "Database keywords weight provider",
-            "Local search param", "Type of <br/>local search param", "Answer type"})
+            "Local search param", "Type of local search param", "Answer type"})
     public ApproxKNNQueryOperationWeightedPixMacMIndex(MetaObjectPixMacSCT queryObject, int k, int from,
             float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights,
             int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
@@ -108,7 +109,12 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
      * @return the query and database objects' keywords distance
      */
     protected float getKeywordsDistance(MetaObjectPixMacSCT dbObject) {
-        return getQueryObject().getKeyWords().getWeightedDistance(dbObject.getKeyWords(), queryWeights, dbWeights);
+        ObjectIntMultiVectorJaccard queryKeyWords = getQueryObject().getKeyWords();
+        ObjectIntMultiVectorJaccard dbObjectKeyWords = dbObject.getKeyWords();
+        if (queryKeyWords == null || dbObjectKeyWords == null)
+            return 0;
+        else
+            return queryKeyWords.getWeightedDistance(dbObjectKeyWords, queryWeights, dbWeights);
     }
 
     @Override

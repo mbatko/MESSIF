@@ -172,10 +172,10 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      */
     public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords) {
         this(object);
-        if (keyWords != null)
+        if (keyWords != null || titleWords != null)
             this.keyWords = new ObjectIntMultiVectorJaccard(
-                    keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex),
-                    keywordsToIdentifiers(new ArrayList<String>(Arrays.asList(titleWords)), keyWordIndex)
+                    keywordsToIdentifiers(keyWords == null ? null : new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex),
+                    keywordsToIdentifiers(titleWords == null ? null : new ArrayList<String>(Arrays.asList(titleWords)), keyWordIndex)
             );
     }
 
@@ -321,9 +321,9 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @throws IllegalStateException if there was a problem reading the index
      */
     private int[] keywordsToIdentifiers(List<String> processedKeyWords, IntStorageIndexed<String> keyWordIndex) {
-        if (processedKeyWords.isEmpty()) {
-            return new int [0];
-        }
+        if (processedKeyWords == null || processedKeyWords.isEmpty())
+            return new int[0];
+
         // Search the index
         int[] ret = new int[processedKeyWords.size()];
         int i;

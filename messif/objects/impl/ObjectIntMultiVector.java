@@ -148,6 +148,23 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
     }
 
     /**
+     * Returns the vector of all integer values, which represents the contents of all the
+     * respective data array of this object. The respective arrays are concatenated
+     * according to their position.
+     * A copy is returned, so any modifications to the returned array do not affect the original object.
+     * @return the data contents of this object
+     */
+    public int[] getVectorData() {
+        int[] ret = new int[getDimensionality()];
+        int lastPos = 0;
+        for (int i = 0; i < data.length; i++) {
+            System.arraycopy(data[i], 0, ret, lastPos, data[i].length);
+            lastPos += data[i].length;
+        }
+        return ret;
+    }
+
+    /**
      * Returns the number of dimensions of this vector.
      * Note that dimensions in all arrays are summed together.
      * @return the number of dimensions of this vector
@@ -286,7 +303,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
 
             // Read next item from both iterators - it is either at the beggining or after an intersection is found
             int thisInt = nextInt();
-            int itInt = nextInt();
+            int itInt = iterator.nextInt();
 
             // Repeat until an intersection is found or one of the iterators runs out of items
             for (;;) {

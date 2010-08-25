@@ -162,7 +162,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             intersectWeight += weightProviderObj.getWeight(objIterator);
         }
 
-        return 1f - intersectWeight / (weightProviderThis.getWeightSum(this) + weightProviderObj.getWeightSum(obj) - intersectWeight);
+        return 1f - intersectWeight / (weightProviderThis.getWeightSum(this) + weightProviderObj.getWeightSum(obj));
     }
 
     /**
