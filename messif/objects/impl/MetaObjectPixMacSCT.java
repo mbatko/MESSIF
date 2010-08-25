@@ -430,7 +430,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
             return false;
         if (!regionShape.dataEquals(castObj.regionShape))
             return false;
-        if (!keyWords.dataEquals(castObj.keyWords))
+        if (keyWords != null && castObj.keyWords != null && !keyWords.dataEquals(castObj.keyWords))
             return false;
         return true;
     }

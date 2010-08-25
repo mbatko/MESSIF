@@ -100,6 +100,9 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
             distance += keywordsWeight * getKeywordsDistance((MetaObjectPixMacSCT)object);
         }
 
+        if (distance > getAnswerThreshold())
+            return null;
+
         return super.addToAnswer(object, distance, objectDistances);
     }
 
