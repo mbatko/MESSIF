@@ -347,7 +347,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             for (int j = 0; j < data[i].length; j++) {
                 if (j > 0)
                     rtv.append(", ");
-                rtv.append(data[i]);
+                rtv.append(data[i][j]);
             }
             rtv.append(']');
         }

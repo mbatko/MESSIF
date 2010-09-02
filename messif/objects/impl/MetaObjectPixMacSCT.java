@@ -20,11 +20,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -169,14 +168,50 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @param keyWordIndex the index for translating keywords to addresses
      * @param titleWords the title words to set for the new object
      * @param keyWords the keywords to set for the new object
+     * @param searchWords the searched keywords to set for the new object
+     */
+    public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] searchWords) {
+        this(object);
+        if (titleWords != null || keyWords != null || searchWords != null) {
+            Set<String> ignoreWords = new HashSet<String>();
+            int[][] wordIds;
+            if (searchWords != null && searchWords.length > 0) {
+                wordIds = new int[3][];
+                wordIds[2] = keywordsToIdentifiers(searchWords, ignoreWords, keyWordIndex);
+            } else {
+                wordIds = new int[2][];
+            }
+            wordIds[0] = keywordsToIdentifiers(titleWords, ignoreWords, keyWordIndex);
+            wordIds[1] = keywordsToIdentifiers(keyWords, ignoreWords, keyWordIndex);
+            this.keyWords = new ObjectIntMultiVectorJaccard(wordIds);
+        }
+    }
+
+    /**
+     * Creates a new instance of MetaObjectPixMacShapeAndColor from the given {@link MetaObject}
+     * and given set of keywords. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @param titleWords the title words to set for the new object
+     * @param keyWords the keywords to set for the new object
      */
     public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords) {
-        this(object);
-        if (keyWords != null || titleWords != null)
-            this.keyWords = new ObjectIntMultiVectorJaccard(
-                    keywordsToIdentifiers(keyWords == null ? null : new ArrayList<String>(Arrays.asList(keyWords)), keyWordIndex),
-                    keywordsToIdentifiers(titleWords == null ? null : new ArrayList<String>(Arrays.asList(titleWords)), keyWordIndex)
-            );
+        this(object, keyWordIndex, titleWords, keyWords, (String[])null);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectPixMacShapeAndColor from the given {@link MetaObject}
+     * and given set of keywords. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @param titleWords the title words to set for the new object
+     * @param keyWords the keywords to set for the new object
+     * @param searchWords the searched keywords to set for the new object
+     */
+    public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String searchWords) {
+        this(object, keyWordIndex, titleWords, keyWords, (searchWords == null || searchWords.isEmpty()) ? null : searchWords.trim().split("\\s+"));
     }
 
     /**
@@ -242,12 +277,12 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         String kwLine1 = stream.readLine();
         String kwLine2 = stream.readLine();
         int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
-        Set<String> uniqueKeywords = new HashSet<String>();
+        Set<String> ignoreWords = new HashSet<String>();
         try {
             if (additionalKeyWords != null)
-                data[2] = keywordsToIdentifiers(additionalKeyWords, ';', keyWordIndex, uniqueKeywords);
-            data[0] = keywordsToIdentifiers(kwLine1, ';', keyWordIndex, uniqueKeywords);
-            data[1] = keywordsToIdentifiers(kwLine2, ';', keyWordIndex, uniqueKeywords);
+                data[2] = keywordsToIdentifiers(additionalKeyWords.trim().split(";"), ignoreWords, keyWordIndex);
+            data[0] = keywordsToIdentifiers(kwLine1.trim().split(";"), ignoreWords, keyWordIndex);
+            data[1] = keywordsToIdentifiers(kwLine2.trim().split(";"), ignoreWords, keyWordIndex);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
@@ -278,73 +313,53 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     }
 
     /**
-     * Transfors a line with keywords into array of addresses.
-     * Note that unknown keywords are added to the index.
-     *
-     * @param keyWordsLine the line that contains the keywords
-     * @param separator separates the keywords on the {@code keyWordsLine}
-     * @param keyWordIndex the index for translating keywords to addresses
-     * @param addedKeywords set of previously added keywords, if set, no duplicate keywords will be added
-     * @return array of translated addresses
-     * @throws IllegalStateException if there was a problem reading the index
-     */
-    private int[] keywordsToIdentifiers(String keyWordsLine, char separator, IntStorageIndexed<String> keyWordIndex, Set<String> addedKeywords) {
-        if (keyWordsLine == null || keyWordsLine.trim().length() == 0)
-            return new int[0];
-
-        // Parse all key words from the given string (not using String.split)
-        List<String> processedKeyWords = new ArrayList<String>();
-        int lastPos = -1;
-        int nextPos;
-        while ((nextPos = keyWordsLine.indexOf(separator, lastPos + 1)) != -1) {
-            String keyword = keyWordsLine.substring(lastPos + 1, nextPos).trim().toLowerCase();
-            if (addedKeywords == null || addedKeywords.add(keyword))
-                processedKeyWords.add(keyword);
-            lastPos = nextPos;
-        }
-        String keyword = keyWordsLine.substring(lastPos + 1).trim().toLowerCase();
-        if (addedKeywords == null || addedKeywords.add(keyword))
-            processedKeyWords.add(keyword);
-
-        return keywordsToIdentifiers(processedKeyWords, keyWordIndex);
-    }
-
-    /**
      * Transforms a list of keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      * All items from the list are removed during the process, so
      * do not pass an unmodifiable list!
      *
-     * @param processedKeyWords the list of keywords to transform
+     * @param keyWords the list of keywords to transform
+     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
+     *          if <tt>null</tt>, all keywords are added
      * @param keyWordIndex the index for translating keywords to addresses
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private int[] keywordsToIdentifiers(List<String> processedKeyWords, IntStorageIndexed<String> keyWordIndex) {
-        if (processedKeyWords == null || processedKeyWords.isEmpty())
+    private int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, IntStorageIndexed<String> keyWordIndex) {
+        if (keyWords == null || keyWords.length == 0)
             return new int[0];
+
+        // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
+        Set<String> processedKeyWords = new HashSet<String>(keyWords.length);
+        for (int i = 0; i < keyWords.length; i++)
+            if (ignoreWords == null || ignoreWords.add(keyWords[i]))
+                processedKeyWords.add(keyWords[i]);
 
         // Search the index
         int[] ret = new int[processedKeyWords.size()];
-        int i;
         IntStorageSearch<String> search = keyWordIndex.search(LocalAbstractObjectOrder.trivialObjectComparator, processedKeyWords);
-        for (i = 0; search.next(); i++) {
+        int retIndex;
+        for (retIndex = 0; search.next(); retIndex++) {
             processedKeyWords.remove(search.getCurrentObject());
-            ret[i] = search.getCurrentObjectIntAddress();
+            ret[retIndex] = search.getCurrentObjectIntAddress();
         }
-        for (; !processedKeyWords.isEmpty(); i++) {
-            String keyWord = processedKeyWords.remove(processedKeyWords.size() - 1);
+
+        // Add all missing keywords
+        for (Iterator<String> it = processedKeyWords.iterator(); it.hasNext();) {
+            String keyWord = it.next();
             try {
-                ret[i] = keyWordIndex.store(keyWord).getAddress();
+                ret[retIndex] = keyWordIndex.store(keyWord).getAddress();
+                retIndex++;
             } catch (BucketStorageException e) {
                 Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot insert '" + keyWord + "' for object '" + getLocatorURI() + "': " + e.toString());
-                i--;
             }
         }
-        if (i != ret.length) {
+
+        // Resize the array if some keywords could not be added to the database
+        if (retIndex != ret.length) {
             int[] saved = ret;
-            ret = new int[i];
-            System.arraycopy(saved, 0, ret, 0, i);
+            ret = new int[retIndex];
+            System.arraycopy(saved, 0, ret, 0, retIndex);
         }
 
         return ret;
