@@ -269,13 +269,20 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      *
      * @param stream stream to read the data from
      * @param keyWordIndex the index for translating keywords to addresses
-     * @param additionalKeyWords additional keywords added to the encapsulated keyWords object as third array
+     * @param readAdditionalKeyWords if <tt>true</tt>, the additional keywords are read from the stream and encapsulated in the keyWords object as third array
      * @throws IOException if reading from the stream fails
      */
-    public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex, String additionalKeyWords) throws IOException {
+    public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex, boolean readAdditionalKeyWords) throws IOException {
         this(stream, false, false, false);
+        // Read all data from the stream
         String kwLine1 = stream.readLine();
         String kwLine2 = stream.readLine();
+        attractiveness = Short.parseShort(stream.readLine());
+        credits = Byte.parseByte(stream.readLine());
+        // The additional keywords are added AS THE LAST LINE OF THE OBJECT!
+        String additionalKeyWords = readAdditionalKeyWords ? stream.readLine() : null;
+
+        // Process the keywords (transformation to identifiers)
         int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
         Set<String> ignoreWords = new HashSet<String>();
         try {
@@ -288,8 +295,6 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
         keyWords = new ObjectIntMultiVectorJaccard(data);
-        attractiveness = Short.parseShort(stream.readLine());
-        credits = Byte.parseByte(stream.readLine());
     }
 
     /**
@@ -301,7 +306,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectPixMacSCT(BufferedReader stream, IntStorageIndexed<String> keyWordIndex) throws IOException {
-        this(stream, keyWordIndex, null);
+        this(stream, keyWordIndex, false);
     }
 
     /**
