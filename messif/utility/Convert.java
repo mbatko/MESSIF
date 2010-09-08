@@ -85,6 +85,10 @@ public abstract class Convert {
             throw new InstantiationException(e.toString());
         }
 
+        // Wrap primitive types, so that a named-instance object or the 'valueOf' method can be used
+        if (type.isPrimitive())
+            type = wrapPrimitiveType(type);
+
         // Named instances of objects
         if (namedInstances != null) {
             Object instance = namedInstances.get(string);
@@ -92,10 +96,10 @@ public abstract class Convert {
                 // Return named object as-is
                 if (type.isInstance(instance))
                     return type.cast(instance);
-
-                // Try iterator
-                if (instance instanceof Iterator)
+                else if (instance instanceof Iterator) // Try iterator
                     return type.cast(((Iterator<?>)instance).next());
+                else if (!type.isArray()) // If type is array, the result is a single-value static array and will be called from below
+                    throw new InstantiationException("Named instance '" + string + "' exists, but cannot be converted to '" + type.getName() + "'");
             }
         }
 
@@ -118,10 +122,6 @@ public abstract class Convert {
                 Array.set(array, i, stringToType(items[i], componentType, namedInstances));
             return type.cast(array);
         }
-
-        // Wrap primitive types, so that their 'valueOf' method can be used
-        if (type.isPrimitive())
-            type = wrapPrimitiveType(type);
 
         // Try string public constructor
         if (!Modifier.isAbstract(type.getModifiers())) {

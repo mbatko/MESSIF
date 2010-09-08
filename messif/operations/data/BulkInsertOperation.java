@@ -52,6 +52,7 @@ public class BulkInsertOperation extends AbstractOperation {
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
      */
+    @AbstractOperation.OperationConstructor({"List of objects to insert"})
     public BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = insertedObjects;
     }
@@ -67,23 +68,22 @@ public class BulkInsertOperation extends AbstractOperation {
 
     /**
      * Creates a new instance of BulkInsertOperation.
-     *
+     * 
      * @param insertedObjects a list of objects to be inserted by this operation
      */
-    @AbstractOperation.OperationConstructor({"List of objects to insert"})
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
-     * 
-     * @param stream a stream from which to read the list of objects to be inserted
-     * @param count the number of objects to read from the stream
+     *
+     * @param objectsIterator an iterator from which to get the list of objects to be inserted
+     * @param count the number of objects to read from the iterator
      */
-    @AbstractOperation.OperationConstructor({"Stream to read objects to insert from, Number of objects to read"})
-    public BulkInsertOperation(AbstractStreamObjectIterator<LocalAbstractObject> stream, int count) {
-        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(stream, count);
+    @AbstractOperation.OperationConstructor({"Iterator (e.g. object stream) to read the objects to insert from", "Number of objects to read"})
+    public BulkInsertOperation(Iterator<LocalAbstractObject> objectsIterator, int count) {
+        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(objectsIterator, count);
     }
 
 
