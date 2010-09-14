@@ -90,7 +90,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @param scalableColor scalable color descriptor
      * @param regionShape region shape descriptor
      * @param keyWords key words descriptor
-     * @param attractiveness value of the atractiveness
+     * @param attractiveness value of the attractiveness
      * @param credits number of credits
      */
     public MetaObjectPixMacSCT(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure,
@@ -211,7 +211,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @param searchWords the searched keywords to set for the new object
      */
     public MetaObjectPixMacSCT(MetaObjectPixMacSCT object, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String searchWords) {
-        this(object, keyWordIndex, titleWords, keyWords, (searchWords == null || searchWords.isEmpty()) ? null : searchWords.trim().split("\\s+"));
+        this(object, keyWordIndex, titleWords, keyWords, (searchWords == null || searchWords.isEmpty()) ? null : searchWords.split("\\s+"));
     }
 
     /**
@@ -287,9 +287,9 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         Set<String> ignoreWords = new HashSet<String>();
         try {
             if (additionalKeyWords != null)
-                data[2] = keywordsToIdentifiers(additionalKeyWords.trim().split(";"), ignoreWords, keyWordIndex);
-            data[0] = keywordsToIdentifiers(kwLine1.trim().split(";"), ignoreWords, keyWordIndex);
-            data[1] = keywordsToIdentifiers(kwLine2.trim().split(";"), ignoreWords, keyWordIndex);
+                data[2] = keywordsToIdentifiers(additionalKeyWords.split(";"), ignoreWords, keyWordIndex);
+            data[0] = keywordsToIdentifiers(kwLine1.split(";"), ignoreWords, keyWordIndex);
+            data[1] = keywordsToIdentifiers(kwLine2.split(";"), ignoreWords, keyWordIndex);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
@@ -331,14 +331,20 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @throws IllegalStateException if there was a problem reading the index
      */
     private int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, IntStorageIndexed<String> keyWordIndex) {
-        if (keyWords == null || keyWords.length == 0)
+        if (keyWords == null)
             return new int[0];
 
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
         Set<String> processedKeyWords = new HashSet<String>(keyWords.length);
-        for (int i = 0; i < keyWords.length; i++)
-            if (ignoreWords == null || ignoreWords.add(keyWords[i]))
-                processedKeyWords.add(keyWords[i]);
+        for (int i = 0; i < keyWords.length; i++) {
+            String keyWord = keyWords[i].trim().toLowerCase();
+            if (ignoreWords == null || ignoreWords.add(keyWord))
+                processedKeyWords.add(keyWord);
+        }
+
+        // If the keywords list is empty after ignored words, return
+        if (processedKeyWords.isEmpty())
+            return new int[0];
 
         // Search the index
         int[] ret = new int[processedKeyWords.size()];
