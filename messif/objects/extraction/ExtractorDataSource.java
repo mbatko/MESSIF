@@ -89,7 +89,7 @@ public class ExtractorDataSource implements Closeable {
         URLConnection conn = url.openConnection();
 
         // Check content type
-        if (mimeTypeRegexp != null && conn.getContentType() != null && !mimeTypeRegexp.matches(conn.getContentType()))
+        if (mimeTypeRegexp != null && conn.getContentType() != null && !conn.getContentType().matches(mimeTypeRegexp))
             throw new IOException("Cannot read '" + conn.getContentType() + "' data");
 
         this.name = url.toString();
