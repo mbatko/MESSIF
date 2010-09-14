@@ -17,6 +17,9 @@
 package messif.utility;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.ConsoleHandler;
@@ -37,6 +40,7 @@ import java.util.logging.XMLFormatter;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public abstract class Logging {
+
     /** Internal map of opened file log handlers */
     private static Map<String, FileHandler> handlers = new HashMap<String, FileHandler>();
 
@@ -44,6 +48,7 @@ public abstract class Logging {
      * Enumeration of possible regexp matcher targets for {@link #addLogFile}.
      */
     public static enum RegexpFilterAgainst {
+
         /** The regular expression is matched against the record's text (the message that is logged) */
         MESSAGE,
         /** The regular expression is matched against the name of the logger that was used to dispatch the log record */
@@ -55,13 +60,14 @@ public abstract class Logging {
     };
 
     /**
-     * This is a supplementory class providing the functionality of filtering
-     *  log messages according to a regular experssion
+     * This is a supplementary class providing the functionality of filtering
+     *  log messages according to a regular expression
      */
     private static class RegexpFilter implements java.util.logging.Filter {
 
         /** Regular expression to match the message */
         private final String regexp;
+
         /** Target to match the regexp against */
         private final RegexpFilterAgainst regexpAgainst;
 
@@ -111,7 +117,7 @@ public abstract class Logging {
      * Set global logging level.
      *  Every message, that has higher level is discarded.
      *  Note that higher level messages will show neither on console nor in any log file,
-     *  eventhoug they migh have higher log level set.
+     *  even though they might have higher log level set.
      * @param level New global logging level
      */
     public static void setLogLevel(Level level) {
@@ -131,7 +137,7 @@ public abstract class Logging {
      * Set logging level for an opened log file.
      * @param fileName the name of the log file
      * @param level the new logging level to set
-     * @return <tt>true</tt> if the logging level was successfuly set for the specified file
+     * @return <tt>true</tt> if the logging level was successfully set for the specified file
      */
     public static boolean setLogFileLevel(String fileName, Level level) {
         FileHandler handler = handlers.get(fileName);
@@ -148,9 +154,10 @@ public abstract class Logging {
      * @param level the new logging level for console
      */
     public static void setConsoleLevel(Level level) {
-        for (Handler handler : getRootLogger().getHandlers())
+        for (Handler handler : getRootLogger().getHandlers()) {
             if (handler instanceof ConsoleHandler)
                 handler.setLevel(level);
+        }
     }
 
     /**
@@ -158,7 +165,7 @@ public abstract class Logging {
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
      * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
      * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
-     * @param formatter the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
+     * @param formatter the formatter instance that will format messages sent to the file; default formatter will be used if <tt>null</tt>
      * @param regexp the regular expression used to filter the messages stored to this log file; if <tt>null</tt> all messages are stored
      * @param regexpAgainst the part of the log record to match the regexp against
      * @param maxSize the maximum number of bytes to write to a logging file before it is rotated (zero means unlimited)
@@ -181,7 +188,7 @@ public abstract class Logging {
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
      * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
      * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
-     * @param formatter the name of the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
+     * @param formatter the name of the formatter instance that will format messages sent to the file; default formatter will be used if <tt>null</tt>
      * @param regexp the regular expression used to filter the messages stored to this log file; if <tt>null</tt> all messages are stored
      * @param regexpAgainst the part of the log record to match the regexp against
      * @param maxSize the maximum number of bytes to write to a logging file before it is rotated (zero means unlimited)
@@ -200,7 +207,7 @@ public abstract class Logging {
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
      * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
      * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
-     * @param formatter the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
+     * @param formatter the formatter instance that will format messages sent to the file; default formatter will be used if <tt>null</tt>
      * @throws IOException if there were problems opening the file
      */
     public static void addLogFile(String fileName, Level level, boolean append, Formatter formatter) throws IOException {
@@ -233,7 +240,7 @@ public abstract class Logging {
     /**
      * Close a log file and remove it from logging.
      * @param fileName the name of the log file to remove
-     * @return <tt>true</tt> if the logging file was successfuly removed
+     * @return <tt>true</tt> if the logging file was successfully removed
      */
     public static boolean removeLogFile(String fileName) {
         FileHandler handler = handlers.get(fileName);
@@ -241,6 +248,26 @@ public abstract class Logging {
             getRootLogger().removeHandler(handler);
             handler.close();
             return true;
-        } else return false;
+        } else
+            return false;
     }
+
+    /**
+     * Formatter for log messages that prints only date/time + message on a single line
+     */
+    public static final Formatter oneLineFormatter = new Formatter() {
+
+        private final DateFormat df = new SimpleDateFormat("MMM dd, yyyy hh:mm:ss.SSS");
+
+        @Override
+        public String format(LogRecord record) {
+            StringBuilder builder = new StringBuilder(512);
+            builder.append(df.format(new Date(record.getMillis()))).append(" ")
+                    .append(record.getLevel()).append(": ")
+                    .append(formatMessage(record))
+                    .append("\n");
+            
+            return builder.toString();
+        }
+    };
 }
