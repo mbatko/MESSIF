@@ -161,10 +161,12 @@ public abstract class Logging {
      * @param formatter the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
      * @param regexp the regular expression used to filter the messages stored to this log file; if <tt>null</tt> all messages are stored
      * @param regexpAgainst the part of the log record to match the regexp against
+     * @param maxSize the maximum number of bytes to write to a logging file before it is rotated (zero means unlimited)
+     * @param maxCount the number of logging files to use when rotating
      * @throws IOException if there were problems opening the file
      */
-    public static void addLogFile(String fileName, Level level, boolean append, Formatter formatter, String regexp, RegexpFilterAgainst regexpAgainst) throws IOException {
-        FileHandler handler = new FileHandler(fileName, append);
+    public static void addLogFile(String fileName, Level level, boolean append, Formatter formatter, String regexp, RegexpFilterAgainst regexpAgainst, int maxSize, int maxCount) throws IOException {
+        FileHandler handler = new FileHandler(fileName, maxSize, maxCount, append);
         handler.setLevel(level);
         if (formatter != null)
             handler.setFormatter(formatter);
@@ -179,39 +181,53 @@ public abstract class Logging {
      * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
      * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
      * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
+     * @param formatter the name of the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
+     * @param regexp the regular expression used to filter the messages stored to this log file; if <tt>null</tt> all messages are stored
+     * @param regexpAgainst the part of the log record to match the regexp against
+     * @param maxSize the maximum number of bytes to write to a logging file before it is rotated (zero means unlimited)
+     * @param maxCount the number of logging files to use when rotating
+     * @param namedInstances the named instances in which to look for a formatter
+     * @throws IOException if there were problems opening the file
+     */
+    public static void addLogFile(String fileName, Level level, boolean append, String formatter, String regexp, RegexpFilterAgainst regexpAgainst, int maxSize, int maxCount, Map<String, Object> namedInstances) throws IOException {
+        addLogFile(fileName, level, append, createFormatter(formatter, namedInstances), regexp, regexpAgainst, maxSize, maxCount);
+    }
+
+    /**
+     * Adds a new logging file.
+     * No log rotation is applied.
+     *
+     * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
+     * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
+     * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
      * @param formatter the formatter instance that will format messages sent to the file; default formater will be used if <tt>null</tt>
      * @throws IOException if there were problems opening the file
      */
     public static void addLogFile(String fileName, Level level, boolean append, Formatter formatter) throws IOException {
-        addLogFile(fileName, level, append, formatter, null, RegexpFilterAgainst.MESSAGE);
+        addLogFile(fileName, level, append, formatter, null, RegexpFilterAgainst.MESSAGE, 0, 1);
     }
 
     /**
-     * Adds a new logging file.
-     * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
-     * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
-     * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
-     * @param useSimpleFormatter controls whether the {@link java.util.logging.SimpleFormatter} (if <tt>true</tt>)
-     *                           or {@link java.util.logging.XMLFormatter} (if <tt>false</tt>) is used to format messages sent to the file
-     * @param regexp the regular expression used to filter the messages stored to this log file; if <tt>null</tt> all messages are stored
-     * @param regexpAgainst the part of the log record to match the regexp against
-     * @throws IOException if there were problems opening the file
+     * Creates a formatter for logging files.
+     *
+     * @param value string "true" represents a {@link SimpleFormatter},
+     *              string "false" is translated as {@link XMLFormatter}, and
+     *              any other string is looked up in the given {@code namedInstances}
+     * @param namedInstances the named instances in which to look for a formatter
+     * @return a new instance of formatter
+     * @throws IllegalArgumentException if there was no formatter found for the given {@code value}
      */
-    public static void addLogFile(String fileName, Level level, boolean append, boolean useSimpleFormatter, String regexp, RegexpFilterAgainst regexpAgainst) throws IOException {
-        addLogFile(fileName, level, append, useSimpleFormatter?new SimpleFormatter():new XMLFormatter(), regexp, regexpAgainst);
-    }
-
-    /**
-     * Adds a new logging file.
-     * @param fileName the path of the newly opened logging file - can be absolute or relative to the current working directory
-     * @param level the logging level of the file - only messages with lower level will be stored in the file; can be changed by calls to {@link #setLogFileLevel}
-     * @param append the flag whether the target file should be truncated prior to writing (<tt>false</tt>) or not
-     * @param useSimpleFormatter controls whether the {@link java.util.logging.SimpleFormatter} (if <tt>true</tt>)
-     *                           or {@link java.util.logging.XMLFormatter} (if <tt>false</tt>) is used to format messages sent to the file
-     * @throws IOException if there were problems opening the file
-     */
-    public static void addLogFile(String fileName, Level level, boolean append, boolean useSimpleFormatter) throws IOException {
-        addLogFile(fileName, level, append, useSimpleFormatter, null, RegexpFilterAgainst.MESSAGE);
+    public static Formatter createFormatter(String value, Map<String, Object> namedInstances) throws IllegalArgumentException {
+        if (value == null || value.length() == 0 || value.equals("true")) {
+            return new SimpleFormatter();
+        } else if (value.equals("false")) {
+            return new XMLFormatter();
+        } else {
+            Object namedFormatter = namedInstances != null ? namedInstances.get(value) : null;
+            if (namedFormatter != null && namedFormatter instanceof Formatter)
+                return (Formatter)namedFormatter;
+            throw new IllegalArgumentException("No named instance for '" + value + "' was not found");
+        }
     }
 
     /**

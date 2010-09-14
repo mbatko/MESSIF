@@ -1649,16 +1649,20 @@ public class CoreApplication {
      * @param args the file name, logging level, append to file flag, simple/xml format selector, regular expression and which part of the message is matched
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (t) or XML (f)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME" })
+    @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (true), XML (false) or given formatter (named instance)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME", "maximal log size", "number of rotated logs" })
     public boolean loggingFileAdd(PrintStream out, String... args) {
         try {
             Logging.addLogFile(
-                    args[1], 
-                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logging.getLogLevel(),
-                    (args.length > 3)?Convert.stringToType(args[3], boolean.class):true,
-                    (args.length > 4)?Convert.stringToType(args[4], boolean.class):true,
-                    (args.length > 5)?args[5]:null,
-                    (args.length > 6)?Logging.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logging.RegexpFilterAgainst.MESSAGE
+                    args[1],                                                                    // fileName
+                    (args.length > 2)?Level.parse(args[2].toUpperCase()):Logging.getLogLevel(), // level
+                    (args.length > 3)?Convert.stringToType(args[3], boolean.class):true,        // append
+                    (args.length > 4)?args[4]:null,                                             // formatter
+                    (args.length > 5)?args[5]:null,                                             // regexp
+                    (args.length > 6)?                                                          // regexp against
+                        Logging.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logging.RegexpFilterAgainst.MESSAGE,
+                    (args.length > 7)?Convert.stringToType(args[7], int.class):0,               // maxSize
+                    (args.length > 8)?Convert.stringToType(args[8], int.class):10,              // maxCount
+                    namedInstances
             );
             return true;
         } catch (IOException e) {
