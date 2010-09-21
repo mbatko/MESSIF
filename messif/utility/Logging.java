@@ -257,7 +257,8 @@ public abstract class Logging {
      */
     public static final Formatter oneLineFormatter = new Formatter() {
 
-        private final DateFormat df = new SimpleDateFormat("MMM dd, yyyy hh:mm:ss.SSS");
+        /** Date & format: Sep 21, 2010 08:51:16.142 */
+        private final DateFormat df = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss.SSS");
 
         @Override
         public String format(LogRecord record) {
