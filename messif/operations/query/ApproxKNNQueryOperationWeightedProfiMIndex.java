@@ -18,7 +18,7 @@ package messif.operations.query;
 
 import java.util.Iterator;
 import messif.objects.AbstractObject;
-import messif.objects.impl.MetaObjectPixMacSCT;
+import messif.objects.impl.MetaObjectProfiSCT;
 import messif.objects.impl.ObjectIntMultiVectorJaccard;
 import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
@@ -27,13 +27,13 @@ import messif.operations.AnswerType;
 import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
 
 /**
- * Special query for {@link MetaObjectPixMacSCT} objects with keywords.
+ * Special query for {@link MetaObjectProfiSCT} objects with keywords.
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-@AbstractOperation.OperationName("Approximate kNN Query parametrized for Metric Index using PixMac text data")
-public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryOperationMIndex {
+@AbstractOperation.OperationName("Approximate kNN Query parametrized for Metric Index using Profi text data")
+public class ApproxKNNQueryOperationWeightedProfiMIndex extends ApproxKNNQueryOperationMIndex {
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -48,7 +48,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     private final WeightProvider dbWeights;
 
     /**
-     * Creates a new instance of ApproxKNNQueryOperationPixMacMIndex
+     * Creates a new instance of ApproxKNNQueryOperationWeightedProfiMIndex
      * with specified parameters for centralized approximation.
      *
      * @param queryObject query object
@@ -64,7 +64,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return",
             "Text similarity weight", "Query keywords weight provider", "Database keywords weight provider",
             "Local search param", "Type of local search param", "Answer type"})
-    public ApproxKNNQueryOperationWeightedPixMacMIndex(MetaObjectPixMacSCT queryObject, int k, int from,
+    public ApproxKNNQueryOperationWeightedProfiMIndex(MetaObjectProfiSCT queryObject, int k, int from,
             float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights,
             int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
     ) {
@@ -88,15 +88,15 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     }
 
     @Override
-    public MetaObjectPixMacSCT getQueryObject() {
-        return (MetaObjectPixMacSCT)super.getQueryObject();
+    public MetaObjectProfiSCT getQueryObject() {
+        return (MetaObjectProfiSCT)super.getQueryObject();
     }
 
     @Override
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        if (keywordsWeight != 0 && object != null && object instanceof MetaObjectPixMacSCT) {
+        if (keywordsWeight != 0 && object != null && object instanceof MetaObjectProfiSCT) {
             // Compute new distance
-            distance += keywordsWeight * getKeywordsDistance((MetaObjectPixMacSCT)object);
+            distance += keywordsWeight * getKeywordsDistance((MetaObjectProfiSCT)object);
         }
 
         if (distance > getAnswerThreshold())
@@ -110,7 +110,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
      * @param dbObject the database object for which to get the distance
      * @return the query and database objects' keywords distance
      */
-    protected float getKeywordsDistance(MetaObjectPixMacSCT dbObject) {
+    protected float getKeywordsDistance(MetaObjectProfiSCT dbObject) {
         ObjectIntMultiVectorJaccard queryKeyWords = getQueryObject().getKeyWords();
         ObjectIntMultiVectorJaccard dbObjectKeyWords = dbObject.getKeyWords();
         if (queryKeyWords == null || dbObjectKeyWords == null)
@@ -121,7 +121,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
 
     @Override
     public String toString() {
-        return new StringBuilder(" Pixmac search <from=").append(from).append(", k=").append(getK()).append("> ").
+        return new StringBuilder(" Profi search <from=").append(from).append(", k=").append(getK()).append("> ").
                 append(" approx precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
     }
 
