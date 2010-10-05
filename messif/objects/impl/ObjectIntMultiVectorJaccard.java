@@ -163,7 +163,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         }
 
         float sumWeight = weightProviderThis.getWeightSum(this) + weightProviderObj.getWeightSum(obj);
-        return 1f - ((sumWeight == 0) ? 0 : intersectWeight / sumWeight);
+        return (intersectWeight == 0 && sumWeight == 0) ? 0 : (1f - intersectWeight / sumWeight);
     }
 
     /**
