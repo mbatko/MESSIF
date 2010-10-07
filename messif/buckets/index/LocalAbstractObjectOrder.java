@@ -170,7 +170,10 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     };
 
-    /** */
+    /**
+     * Index order defined by the object itself via {@link Comparable} interface.
+     * Note that the compare methods can throw {@link ClassCastException}s.
+     */
     public static IndexComparator<Comparable, Object> trivialObjectComparator = new IndexComparator<Comparable, Object>() {
         private static final long serialVersionUID = 25105L;
 

@@ -45,12 +45,11 @@ public class JavaToBinarySerializable extends ByteArrayOutputStream implements B
     }
 
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-        serializator.write(output, buf, 0, count);
-        return count;
+        return serializator.write(output, buf, 0, count);
     }
 
     public int getBinarySize(BinarySerializator serializator) {
-        return size();
+        return serializator.getBinarySize(buf, 0, count);
     }
 
 

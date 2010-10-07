@@ -485,6 +485,17 @@ public abstract class BinarySerializator {
     }
 
     /**
+     * Writes an {@link Enum} to the specified output.
+     * @param output the buffer to write the enum into
+     * @param enumInstance the enum to be written
+     * @return the number of bytes written
+     * @throws IOException if there was an I/O error
+     */
+    public int write(BinaryOutput output, Enum enumInstance) throws IOException {
+        return write(output, enumInstance == null ? -1 : enumInstance.ordinal());
+    }
+
+    /**
      * Writes <code>object</code> to the provided output buffer.
      * If the object implements {@link BinarySerializable} interface, it
      * is binary-serialized. Otherwise, a standard Java {@link java.io.Serializable serialization} is used.
@@ -864,6 +875,25 @@ public abstract class BinarySerializator {
     }
 
     /**
+     * Returns an {@link Enum} read from the specified input.
+     * @param <E> the enum class that is expected to be in the input
+     * @param input the buffer to read the enum from
+     * @param enumClass the enum class that is expected to be in the input
+     * @return an {@link Enum} read from the input
+     * @throws IOException if there was an I/O error
+     */
+    public final <E extends Enum> E readEnum(BinaryInput input, Class<E> enumClass) throws IOException {
+        int ordinal = readInt(input);
+        if (ordinal == -1)
+            return null;
+        try {
+            return enumClass.getEnumConstants()[ordinal];
+        } catch (RuntimeException e) {
+            throw new IOException("Cannot read enum '" + enumClass.getName() + "' for ordinal value " + ordinal + ": " + e);
+        }
+    }
+
+    /**
      * Reads an instance from the <code>input</code> using this serializator.
      *
      * @param <E> the class that is expected to be in the input
@@ -944,107 +974,299 @@ public abstract class BinarySerializator {
     //************************ Binary size methods ************************//
 
     /**
-     * Returns the size of the (binary) serialized <code>boolean</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>boolean</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(boolean value) {
+        return 1;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>boolean</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(boolean[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 1);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>byte</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>boolean</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(boolean[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + length;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>byte</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(byte value) {
+        return 1;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>byte</code> array in bytes.
+     * The exact size including all overhead is returned.
+     *
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(byte[] array) {
-        if (array == null)
-            return 4;
-        return 4 + array.length;
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>short</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>byte</code> array in bytes.
+     * The exact size including all overhead is returned.
+     *
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(byte[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + length;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>short</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(short value) {
+        return 2;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>short</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(short[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 1);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>char</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>short</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(short[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + (length << 1);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>char</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(char value) {
+        return 2;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>char</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(char[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 1);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>int</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>char</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(char[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + (length << 1);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>int</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(int value) {
+        return 4;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>int</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(int[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 2);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>long</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>int</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(int[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + (length << 2);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>long</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(long value) {
+        return 8;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>long</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(long[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 3);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>float</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>long</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(long[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + (length << 3);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>float</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(float value) {
+        return 4;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>float</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(float[] array) {
-        if (array == null)
-            return 4;
-        return 4 + (array.length << 2);
+        return getBinarySize(array, 0, array.length);
     }
 
     /**
-     * Returns the size of the (binary) serialized <code>double</code>array in bytes.
+     * Returns the size of the (binary) serialized <code>float</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(float[] array, int index, int length) {
+        if (array == null)
+            return 4;
+        return 4 + (length << 2);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>double</code> in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(double value) {
+        return 8;
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>double</code> array in bytes.
      * The exact size including all overhead is returned.
      * 
      * @param array the array to get the size for
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(double[] array) {
+        return getBinarySize(array, 0, array.length);
+    }
+
+    /**
+     * Returns the size of the (binary) serialized <code>double</code> array in bytes.
+     * The exact size including all overhead is returned.
+     * 
+     * @param array the array to get the size for
+     * @param index the start index in the array
+     * @param length the number of array items to write
+     * @return the size of the binary-serialized array
+     */
+    public int getBinarySize(double[] array, int index, int length) {
         if (array == null)
             return 4;
-        return 4 + (array.length << 3);
+        return 4 + (length << 3);
     }
 
     /**
@@ -1058,6 +1280,17 @@ public abstract class BinarySerializator {
         if (string == null)
             return 4;
         return 4 + 2 * string.length();
+    }
+
+    /**
+     * Returns the size of the (binary) serialized {@link Enum} in bytes.
+     * The exact size including all overhead is returned.
+     *
+     * @param enumInstance the enum to get the size for
+     * @return the size of the binary-serialized enum
+     */
+    public int getBinarySize(Enum enumInstance) {
+        return 4;
     }
 
     /**

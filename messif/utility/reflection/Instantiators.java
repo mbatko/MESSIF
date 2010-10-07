@@ -468,6 +468,55 @@ public abstract class Instantiators {
     }
 
     /**
+     * Retrieves a getter method for a given property on a given bean class.
+     *
+     * @param clazz the bean class to use
+     * @param propertyName the name of the property
+     * @return a getter method
+     * @throws IllegalArgumentException if there was no public getter method for the given property name
+     */
+    public static Method getPropertyGetterMethod(Class<?> clazz, String propertyName) throws IllegalArgumentException {
+        Method method;
+        if (propertyName != null && !propertyName.isEmpty()) {
+            String baseName = Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+            try {
+                method = clazz.getMethod("is" + baseName);
+            } catch (NoSuchMethodException e) {
+                try {
+                    method = clazz.getMethod("get" + baseName);
+                } catch (NoSuchMethodException ex) {
+                    method = null;
+                }
+            }
+        } else {
+            method = null;
+        }
+
+        if (method == null || method.getReturnType() == Void.TYPE)
+            throw new IllegalArgumentException("Cannot get a getter method for property '" + propertyName + "' on " + clazz);
+        return method;
+    }
+
+    /**
+     * Retrieves a setter method for a given property on a given bean class.
+     *
+     * @param clazz the bean class to use
+     * @param propertyName the name of the property
+     * @param propertyClass the class of the property
+     * @return a setter method
+     * @throws IllegalArgumentException if there was no public getter method for the given property name
+     */
+    public static Method getPropertySetterMethod(Class<?> clazz, String propertyName, Class<?> propertyClass) throws IllegalArgumentException {
+        if (propertyName == null || propertyName.isEmpty())
+            throw new IllegalArgumentException("Cannot get a setter method for property '" + propertyName + "' on " + clazz);
+        try {
+            return clazz.getMethod("set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1), propertyClass);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Cannot get a getter method for property '" + propertyName + "' on " + clazz);
+        }
+    }
+
+    /**
      * Test argument array, if it is compatible with the provided prototype.
      * That is, the number of arguments must be equal and each argument
      * (an item from the <code>methodTypes</code>) must be assignable
