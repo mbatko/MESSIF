@@ -20,24 +20,31 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
+import messif.buckets.storage.impl.DatabaseStorage;
+import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConvertor;
+import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.nio.MultiClassSerializator;
 
 /**
  * Special meta object that stores only the objects required for the Profi search.
@@ -97,11 +104,17 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         SK,
         /** Hungary */
         HU,
+        /** Finland */
         FI,
+        /** Morocco */
         MA,
+        /** English */
         EN,
+        /** Suriname */
         SR,
+        /** Sierra Leone */
         SL,
+        /** Croatia */
         HR
     }
 
@@ -126,7 +139,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     protected int added;
     /** ID of the archive from which this object was added */
     protected int archiveID;
-    /** List of attractiveness values for the territories */
+    /** List of attractiveness values for all existing territories */
     protected int[] attractiveness;
     /** Object for the KeyWordsType */
     protected ObjectIntMultiVectorJaccard keyWords;
@@ -447,6 +460,63 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
 
+    //****************** Attribute access methods ******************//
+
+    /**
+     * Returns the rights for this object.
+     * @return the rights for this object
+     */
+    public String getRights() {
+        return rights != null && rights != Rights.EMPTY ? rights.toString() : null;
+    }
+
+    /**
+     * Returns the comma-separated list of territories associated with this object.
+     * @return the comma-separated list of territories
+     */
+    public String getTerritories() {
+        if (territories == null || territories.isEmpty())
+            return "";
+        StringBuilder str = new StringBuilder();
+        for (Territory territory : territories) {
+            if (str.length() > 0)
+                str.append(',');
+            str.append(territory);
+        }
+        return str.toString();
+    }
+
+    /**
+     * Returns the date that this object was added to the collection.
+     * @return the date that this object was added to the collection
+     */
+    public int getAdded() {
+        return added;
+    }
+
+    /**
+     * Returns the ID of the archive from which this object was added.
+     * @return the ID of the archive from which this object was added
+     */
+    public int getArchiveID() {
+        return archiveID;
+    }
+
+    /**
+     * Returns the coma-separated list of attractiveness values for all existing territories.
+     * @return the coma-separated list of attractiveness values for all existing territories
+     */
+    public String getAttractiveness() {
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < attractiveness.length; i++) {
+            if (i > 0)
+                str.append(',');
+            str.append(attractiveness[i]);
+        }
+        return str.toString();
+    }
+
+
     //****************** MetaObject overrides ******************//
 
     /**
@@ -663,42 +733,45 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list
-        if (colorLayout != null)
+        if (colorLayout != null) {
             colorLayout.writeData(stream);
-        else
-            stream.write('\n');
-
-        if (colorStructure != null)
-            colorStructure.writeData(stream);
-        else
-            stream.write('\n');
-
-        if (edgeHistogram != null)
-            edgeHistogram.writeData(stream);
-        else
-            stream.write('\n');
-
-        if (scalableColor != null)
-            scalableColor.writeData(stream);
-        else
-            stream.write('\n');
-
-        if (regionShape != null)
-            regionShape.writeData(stream);
-        else
-            stream.write('\n');
-
-        if (rights != null)
-            stream.write(rights.toString().getBytes());
-        else
-            stream.write('\n');
-
-        if (territories != null) {
-            String str = territories.toString();
-            stream.write(str.substring(1,str.length() - 1).getBytes());
         } else {
             stream.write('\n');
         }
+
+        if (colorStructure != null) {
+            colorStructure.writeData(stream);
+        } else {
+            stream.write('\n');
+        }
+
+        if (edgeHistogram != null) {
+            edgeHistogram.writeData(stream);
+        } else {
+            stream.write('\n');
+        }
+
+        if (scalableColor != null) {
+            scalableColor.writeData(stream);
+        } else {
+            stream.write('\n');
+        }
+
+        if (regionShape != null) {
+            regionShape.writeData(stream);
+        } else {
+            stream.write('\n');
+        }
+
+        if (rights != null && !rights.equals(Rights.EMPTY)) {
+            stream.write(getRights().getBytes());
+        }
+        stream.write('\n');
+
+        if (territories != null) {
+            stream.write(getTerritories().getBytes());
+        }
+        stream.write('\n');
 
         stream.write(Integer.toString(added).getBytes());
         stream.write('\n');
@@ -707,11 +780,68 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         stream.write('\n');
 
         ObjectIntVector.writeIntVector(attractiveness, stream);
+        stream.write('\n');
 
-        if (keyWords != null)
+        if (keyWords != null) {
             keyWords.writeData(stream);
-        else
+        } else {
             stream.write('\n');
+            stream.write('\n');
+        }
+    }
+
+
+    //************ Column setup for DatabaseStorage ************//
+
+    /**
+     * Creates a database storage that allows to store/retrieve instances of this class.
+     *
+     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param tableName the name of the table in the database
+     * @return a new instance of database storage
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    public static DatabaseStorage<MetaObjectProfiSCT> openDatabaseStorage(String dbConnUrl, Properties dbConnInfo, String tableName) throws SQLException {
+        String[] columnNames = {
+            "binobj",
+            "locator",
+            "color_layout",
+            "color_structure",
+            "edge_histogram",
+            "scalable_color",
+            "region_shape",
+            "keyword_id_multivector",
+            "rights",
+            "added",
+            "archivID",
+            "attractiveness",
+            "territories"
+        };
+        BinarySerializator serializator = new MultiClassSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class);
+
+        @SuppressWarnings("unchecked")
+        ColumnConvertor<MetaObjectProfiSCT>[] columnConvertors = new ColumnConvertor[] {
+            new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, serializator),
+            DatabaseStorage.locatorColumnConvertor,
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"),
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"),
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"),
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"),
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"),
+            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"),
+            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true),
+            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true),
+            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true),
+            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true),
+            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true)
+        };
+
+        return new DatabaseStorage<MetaObjectProfiSCT>(
+                MetaObjectProfiSCT.class,
+                dbConnUrl, dbConnInfo, tableName,
+                "id", columnNames, columnConvertors
+        );
     }
 
 
@@ -732,8 +862,17 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
         scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         regionShape = serializator.readObject(input, ObjectXMRegionShape.class);
-        rights = serializator.readObject(input, Rights.class);
-        territories = serializator.readObject(input, EnumSet.class);
+        rights = serializator.readEnum(input, Rights.class);
+
+        // Read territories
+        int territoriesCount = serializator.readInt(input);
+        Collection<Territory> territoriesRead = new LinkedList<Territory>();
+        while (territoriesCount > 0) {
+            territoriesRead.add(serializator.readEnum(input, Territory.class));
+            territoriesCount--;
+        }
+        territories = EnumSet.copyOf(territoriesRead);
+
         added = serializator.readInt(input);
         archiveID = serializator.readInt(input);
         attractiveness = serializator.readIntArray(input);
@@ -749,7 +888,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         size += serializator.write(output, scalableColor);
         size += serializator.write(output, regionShape);
         size += serializator.write(output, rights);
-        size += serializator.write(output, territories);
+
+        // Territories
+        size += serializator.write(output, territories.size());
+        for (Territory territory : territories)
+            size += serializator.write(output, territory);
+
         size += serializator.write(output, added);
         size += serializator.write(output, archiveID);
         size += serializator.write(output, attractiveness);
@@ -766,9 +910,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         size += serializator.getBinarySize(scalableColor);
         size += serializator.getBinarySize(regionShape);
         size += serializator.getBinarySize(rights);
-        size += serializator.getBinarySize(territories);
-        size += Integer.SIZE/8;
-        size += Integer.SIZE/8;
+
+        // Territories
+        size += serializator.getBinarySize(territories.size());
+        size += territories.size() * serializator.getBinarySize(Territory.CZ);
+
+        size += serializator.getBinarySize(added);
+        size += serializator.getBinarySize(archiveID);
         size += serializator.getBinarySize(attractiveness);
         size += serializator.getBinarySize(keyWords);
         return size;
