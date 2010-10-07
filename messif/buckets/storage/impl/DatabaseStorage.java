@@ -16,8 +16,15 @@
  */
 package messif.buckets.storage.impl;
 
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -38,6 +45,7 @@ import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.InvalidAddressException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
@@ -81,6 +89,15 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         public Object convertToColumnValue(T instance) throws BucketStorageException;
 
         /**
+         * Returns whether the {@link #convertToColumnValue(java.lang.Object) convertToColumnValue}
+         * method should be used when writing the object to database.
+         * @return whether this column convertor is used (<tt>true</tt>)
+         *          or should be skipped (<tt>false</tt>) when the object is
+         *          stored into the storage
+         */
+        public boolean isConvertToColumnUsed();
+
+        /**
          * Returns an instance of object from the database column value.
          * A value created by previous columns is provided in {@code value}, which can
          * be either replaced by a new value, modified by this method or left intact.
@@ -91,6 +108,15 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
          * @throws BucketStorageException if the value cannot be converted
          */
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException;
+
+        /**
+         * Returns whether the {@link #convertFromColumnValue(T, java.lang.Object) convertFromColumnValue}
+         * method should be used when reading the object from the database.
+         * @return whether this column convertor is used (<tt>true</tt>)
+         *          or should be skipped (<tt>false</tt>) when the object is
+         *          retrieved from the storage
+         */
+        public boolean isConvertFromColumnUsed();
 
         /**
          * Returns <tt>true</tt> if the instance created by this convertor is compatible
@@ -163,8 +189,9 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @param columnConvertors the convertors that convert between the storage instances and database column;
      *          there must be one convertor for every data column name from {@code columnNames}
      * @throws IllegalArgumentException if the column names and column convertors do not match
+     * @throws SQLException if there was a problem connecting to the database
      */
-    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException {
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
         // Check provided values
         if (dbConnUrl == null)
             throw new IllegalArgumentException("Database connection cannot be null");
@@ -183,32 +210,40 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         this.columnNames = columnNames;
 
         // Prepare SQL commands
-        StringBuilder columnList = new StringBuilder();
-        StringBuilder columnQList = new StringBuilder();
+        StringBuilder columnReadList = new StringBuilder();
+        StringBuilder columnWriteList = new StringBuilder();
+        StringBuilder columnQuestionMarkList = new StringBuilder();
+        StringBuilder columnDataWhereList = new StringBuilder();
         for (int i = 0; i < columnNames.length; i++) {
-            if (i > 0) {
-                columnList.append(',');
-                columnQList.append(',');
+            if (columnConvertors[i].isConvertFromColumnUsed()) {
+                if (columnReadList.length() > 0)
+                    columnReadList.append(',');
+                columnReadList.append(columnNames[i]);
             }
-            columnList.append(columnNames[i]);
-            columnQList.append('?');
+            if (columnConvertors[i].isConvertToColumnUsed()) {
+                if (columnWriteList.length() > 0)
+                    columnWriteList.append(',');
+                if (columnQuestionMarkList.length() > 0)
+                    columnQuestionMarkList.append(',');
+                columnWriteList.append(columnNames[i]);
+                columnQuestionMarkList.append('?');
+                columnDataWhereList.append(columnDataWhereList.length() > 0 ? " where " : " and ").
+                        append(columnNames[i]).append(" = ?");
+            }
         }
 
         // Size
         sizeSQL = "select count(*) from " + tableName;
         // Insert
         StringBuilder sql = new StringBuilder("insert into ").append(tableName);
-        sql.append('(').append(columnList).append(") values (").append(columnQList).append(')');
+        sql.append('(').append(columnWriteList).append(") values (").append(columnQuestionMarkList).append(')');
         insertSQL = sql.toString();
         // Select
-        sql = new StringBuilder("select ").append(primaryKeyColumn).append(',').append(columnList);
+        sql = new StringBuilder("select ").append(primaryKeyColumn).append(',').append(columnReadList);
         sql.append(" from ").append(tableName);
         selectSQL = sql.toString();
         // Read by data
-        StringBuilder sqlByData = new StringBuilder(sql);
-        for (int i = 0; i < columnNames.length; i++)
-            sqlByData.append(i == 0 ? " where " : " and ").append(columnNames[i]).append(" = ?");
-        readByDataSQL = sqlByData.toString();
+        readByDataSQL = columnDataWhereList.insert(0, sql).toString();
         // Read
         sql.append(" where ").append(primaryKeyColumn).append(" = ?");
         readSQL = sql.toString();
@@ -218,6 +253,9 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         deleteSQL = sql.toString();
         // Delete all
         deleteAllSQL = "delete from " + tableName;
+
+        // Connect to the database to fail fast if the URL is invalid
+        getConnection();
     }
 
     @Override
@@ -272,8 +310,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      */
     private T toValue(ResultSet resultSet) throws SQLException, BucketStorageException {
         T ret = null;
+        int col = 2; // First column is primary key (and getObject is numbered from 1)
         for (int i = 0; i < columnConvertors.length; i++)
-            ret = columnConvertors[i].convertFromColumnValue(ret, resultSet.getObject(i + 2)); // First column is primary key (and getObject is numbered from 1)
+            if (columnConvertors[i].isConvertFromColumnUsed())
+                ret = columnConvertors[i].convertFromColumnValue(ret, resultSet.getObject(col++));
         return ret;
     }
 
@@ -302,8 +342,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             if (primaryKey != null)
                 statement.setObject(1, primaryKey);
             if (object != null) {
+                int col = 1;
                 for (int i = 0; i < columnConvertors.length; i++)
-                    statement.setObject(i + 1, columnConvertors[i].convertToColumnValue(object));
+                    if (columnConvertors[i].isConvertToColumnUsed())
+                        statement.setObject(col++, columnConvertors[i].convertToColumnValue(object));
             }
 
             // Execute query and handle recoverable exception
@@ -338,8 +380,9 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @param parameters list of named parameters (see above)
      * @return a new database storage instance
      * @throws IllegalArgumentException if the parameters specified are invalid (null values, etc.)
+     * @throws SQLException if there was a problem connecting to the database
      */
-    public static <T> DatabaseStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IllegalArgumentException {
+    public static <T> DatabaseStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IllegalArgumentException, SQLException {
         String dbConnUrl = Convert.getParameterValue(parameters, "connectionURL", String.class, null);
         String tableName = Convert.getParameterValue(parameters, "tableName", String.class, null);
         String primaryKeyColumn = Convert.getParameterValue(parameters, "primaryKeyColumn", String.class, null);
@@ -661,6 +704,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         private final Class<? extends T> storedObjectsClass;
         /** Serializator that is used for storing/restoring the data into the database */
         private final BinarySerializator serializator;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage */
+        private final boolean usedToRead;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage */
+        private final boolean usedToWrite;
 
 
         //****************** Constructor ******************//
@@ -670,11 +717,30 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
          *
          * @param storedObjectsClass the class of instances that are serialized by this column convertor
          * @param serializator the serializator that is used for storing/restoring the data into the database
+         * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+         * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
          */
-        public BinarySerializableColumnConvertor(Class<? extends T> storedObjectsClass, BinarySerializator serializator) {
+        public BinarySerializableColumnConvertor(Class<? extends T> storedObjectsClass, BinarySerializator serializator, boolean usedToRead, boolean usedToWrite) {
             this.storedObjectsClass = storedObjectsClass;
             this.serializator = serializator;
+            this.usedToRead = usedToRead;
+            this.usedToWrite = usedToWrite;
         }
+
+        /**
+         * Creates a new instance of BinarySerializableColumnConvertor.
+         * Flags {@link #usedToRead usedToRead} and {@link #usedToWrite usedToWrite}
+         * are both set to <tt>true</tt>.
+         *
+         * @param storedObjectsClass the class of instances that are serialized by this column convertor
+         * @param serializator the serializator that is used for storing/restoring the data into the database
+         */
+        public BinarySerializableColumnConvertor(Class<? extends T> storedObjectsClass, BinarySerializator serializator) {
+            this(storedObjectsClass, serializator, true, true);
+        }
+
+
+        //****************** Implementation of ColumnConvertor interface ******************//
 
         public Object convertToColumnValue(T instance) throws BucketStorageException {
             try {
@@ -684,6 +750,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             }
         }
 
+        public boolean isConvertToColumnUsed() {
+            return usedToWrite;
+        }
+        
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
             try {
                 return serializator.readObject(new BufferInputStream((byte[])column), storedObjectsClass);
@@ -692,8 +762,262 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             }
         }
 
+        public boolean isConvertFromColumnUsed() {
+            return usedToRead;
+        }
+
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return false;
+        }
+    }
+
+    /**
+     * Column convertor that uses a database String into which instances of {@code T} are
+     * serialized using {@link LocalAbstractObject#write(java.io.OutputStream) write}
+     * method and deserialized using {@link LocalAbstractObject#create(java.lang.Class, java.lang.String)}.
+     *
+     * @param <T> the class of instances that are serialized into the database
+     */
+    public static class LocalAbstractObjectTextStreamColumnConvertor<T extends LocalAbstractObject> implements ColumnConvertor<T> {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Attributes ******************//
+
+        /** Class of instances serialized into the database */
+        private final Class<? extends T> storedObjectsClass;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage */
+        private final boolean usedToRead;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage */
+        private final boolean usedToWrite;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of LocalAbstractObjectTextStreamColumnConvertor.
+         *
+         * @param storedObjectsClass the class of instances that are serialized by this column convertor
+         * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+         * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
+         */
+        public LocalAbstractObjectTextStreamColumnConvertor(Class<? extends T> storedObjectsClass, boolean usedToRead, boolean usedToWrite) {
+            this.storedObjectsClass = storedObjectsClass;
+            this.usedToRead = usedToRead;
+            this.usedToWrite = usedToWrite;
+        }
+
+        /**
+         * Creates a new instance of LocalAbstractObjectTextStreamColumnConvertor.
+         * Flags {@link #usedToRead usedToRead} and {@link #usedToWrite usedToWrite}
+         * are both set to <tt>true</tt>.
+         *
+         * @param storedObjectsClass the class of instances that are serialized by this column convertor
+         */
+        public LocalAbstractObjectTextStreamColumnConvertor(Class<? extends T> storedObjectsClass) {
+            this(storedObjectsClass, true, true);
+        }
+
+
+        //****************** Implementation of ColumnConvertor interface ******************//
+
+        public Object convertToColumnValue(LocalAbstractObject instance) throws BucketStorageException {
+            try {
+                ByteArrayOutputStream data = new ByteArrayOutputStream();
+                instance.write(data);
+                data.close();
+                return data.toString();
+            } catch (IOException e) {
+                throw new StorageFailureException(e);
+            } catch (RuntimeException e) {
+                throw new StorageFailureException(e);
+            }
+        }
+
+        public boolean isConvertToColumnUsed() {
+            return usedToWrite;
+        }
+
+        public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+            try {
+                return LocalAbstractObject.create(storedObjectsClass, (String)column);
+            } catch (InvocationTargetException e) {
+                throw new StorageFailureException(e.getCause());
+            } catch (RuntimeException e) {
+                throw new StorageFailureException(e);
+            }
+        }
+
+        public boolean isConvertFromColumnUsed() {
+            return usedToRead;
+        }
+
+        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+            return false;
+        }
+    }
+
+    /**
+     * Column convertor that uses a database String into which instances of
+     * an {@link LocalAbstractObject} encapsulated in {@code T} are
+     * serialized using {@link LocalAbstractObject#write(java.io.OutputStream) write}
+     * method and deserialized using {@link LocalAbstractObject#create(java.lang.Class, java.lang.String)}.
+     *
+     * Note that this convertor can be used only to writing.
+     *
+     * @param <T> the class of instances that are serialized into the database
+     */
+    public static class MetaObjectTextStreamColumnConvertor<T extends MetaObject> extends LocalAbstractObjectTextStreamColumnConvertor<T> {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Attributes ******************//
+
+        /** Name of the {@link LocalAbstractObject} encapsulated in the {@link MetaObject} */
+        private final String encapsulatedObjectName;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of MetaObjectTextStreamColumnConvertor.
+         * @param storedObjectsClass the class of instances that are serialized by this column convertor
+         * @param encapsulatedObjectName the name of the {@link LocalAbstractObject} encapsulated in the {@link MetaObject}
+         */
+        public MetaObjectTextStreamColumnConvertor(Class<? extends T> storedObjectsClass, String encapsulatedObjectName) {
+            super(storedObjectsClass, false, true);
+            this.encapsulatedObjectName = encapsulatedObjectName;
+        }
+
+
+        //****************** Implementation of ColumnConvertor interface ******************//
+
+        @Override
+        public Object convertToColumnValue(T instance) throws BucketStorageException {
+            return super.convertToColumnValue(instance.getObject(encapsulatedObjectName));
+        }
+
+        @Override
+        public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+            throw new UnsupportedOperationException("MetaObjectTextStreamColumnConvertor should never be used when retrieving object from storage");
+        }
+
+    }
+
+    /**
+     * Column convertor that uses a bean property to decompose/restore
+     * a given object to/from a database storage. Typically, a bean is decomposed
+     * into several primitive columns in the database by using property getter method
+     * and the restored by using setter methods.
+     *
+     * @param <T> the class of instances that are serialized into the database
+     */
+    public static class BeanPropertyColumnConvertor<T> implements ColumnConvertor<T> {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Attributes ******************//
+
+        /** Class of instances serialized into the database */
+        private final Class<? extends T> storedObjectsClass;
+        /** Method used to read the value of the object's property */
+        private final Method getterMethod;
+        /** Method used to write the value of the object's property */
+        private final Method setterMethod;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of BeanPropertyColumnConvertor.
+         *
+         * @param propertyName the name of the property of the {@code storedObjectsClass} to use
+         * @param storedObjectsClass the class of instances that are serialized by this column convertor
+         * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+         * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
+         * @throws IllegalArgumentException if there was no property of the given name in {@code storedObjectsClass}
+         */
+        public BeanPropertyColumnConvertor(String propertyName, Class<? extends T> storedObjectsClass, boolean usedToRead, boolean usedToWrite) throws IllegalArgumentException {
+            this.storedObjectsClass = storedObjectsClass;
+            PropertyDescriptor propertyDescriptor = null;
+            try {
+                BeanInfo beanInfo = Introspector.getBeanInfo(storedObjectsClass);
+                for (PropertyDescriptor pd : beanInfo.getPropertyDescriptors()) {
+                    if (propertyName.equals(pd.getName()))
+                        propertyDescriptor = pd;
+                }
+            } catch (IntrospectionException e) {
+                throw new IllegalArgumentException("Property '" + propertyName + "' on " + storedObjectsClass + " cannot be used", e);
+            }
+            if (propertyDescriptor == null)
+                throw new IllegalArgumentException("Property '" + propertyName + "' on " + storedObjectsClass + " was not found");
+
+            if (usedToRead) {
+                setterMethod = propertyDescriptor.getWriteMethod();
+                if (setterMethod == null)
+                    throw new IllegalArgumentException("Property '" + propertyName + "' on " + storedObjectsClass + " cannot be used when reading the object from the database");
+            } else {
+                setterMethod = null;
+            }
+
+            if (usedToWrite) {
+                getterMethod = propertyDescriptor.getReadMethod();
+                if (getterMethod == null)
+                    throw new IllegalArgumentException("Property '" + propertyName + "' on " + storedObjectsClass + " cannot be used when storing the object to the database");
+            } else {
+                getterMethod = null;
+            }
+        }
+
+        /**
+         * Returns a String which capitalizes the first letter of the string.
+         */
+        public static String capitalize(String name) {
+            if (name == null || name.length() == 0) {
+                return name;
+            }
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
+        }
+
+
+        //****************** Implementation of ColumnConvertor interface ******************//
+
+        public Object convertToColumnValue(T instance) throws BucketStorageException {
+            try {
+                return getterMethod.invoke(instance);
+            } catch (InvocationTargetException e) {
+                throw new StorageFailureException(e.getCause());
+            } catch (Exception e) {
+                throw new StorageFailureException(e);
+            }
+        }
+
+        public boolean isConvertToColumnUsed() {
+            return getterMethod != null;
+        }
+
+        public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+            try {
+                // Create a new bean instance if it does not exist yet
+                if (value == null)
+                    value = storedObjectsClass.newInstance();
+                setterMethod.invoke(value, column);
+                return value;
+            } catch (InvocationTargetException e) {
+                throw new StorageFailureException(e.getCause());
+            } catch (Exception e) {
+                throw new StorageFailureException(e);
+            }
+        }
+
+        public boolean isConvertFromColumnUsed() {
+            return setterMethod != null;
+        }
+
+        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+            return indexComparator != null &&
+                    indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator) &&
+                    Comparable.class.isAssignableFrom(setterMethod.getReturnType());
         }
     }
 
@@ -709,20 +1033,30 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             return instance.getLocatorURI();
         }
 
+        public boolean isConvertFromColumnUsed() {
+            return true;
+        }
+
         public LocalAbstractObject convertFromColumnValue(LocalAbstractObject value, Object column) throws BucketStorageException {
             if (value != null && column != null && value.getObjectKey() == null)
                 value.setObjectKey(new AbstractObjectKey(column.toString()));
             return value;
         }
 
+        public boolean isConvertToColumnUsed() {
+            return true;
+        }
+
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-            return indexComparator == LocalAbstractObjectOrder.locatorToLocalObjectComparator;
+            return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.locatorToLocalObjectComparator);
         }
     };
 
     /**
      * Column convertor that stores/restores instances supported directly by the database.
      * For example, numbers can be accessed as {@link Integer}s or {@link Double}s, BLOBs as byte[] arrays, etc.
+     * Note that this convertor states a compatibility with {@link LocalAbstractObjectOrder#trivialObjectComparator}
+     * since practically all database types are inherently {@link Comparable}.
      */
     public static final ColumnConvertor<Object> trivialColumnConvertor = new ColumnConvertor<Object>() {
         private static final long serialVersionUID = 1L;
@@ -731,12 +1065,20 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             return instance;
         }
 
+        public boolean isConvertFromColumnUsed() {
+            return true;
+        }
+
         public Object convertFromColumnValue(Object value, Object column) throws BucketStorageException {
             return column;
         }
 
+        public boolean isConvertToColumnUsed() {
+            return true;
+        }
+
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-            return indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
+            return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
         }
     };
 }
