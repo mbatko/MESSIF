@@ -807,8 +807,8 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
 
         //****************** Attributes ******************//
 
-        /** Class of instances serialized into the database */
-        private final Class<? extends T> storedObjectsClass;
+        /** Factory for reading objects from database */
+        private final LocalAbstractObject.TextStreamFactory<? extends T> factory;
         /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage */
         private final boolean usedToRead;
         /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage */
@@ -823,9 +823,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
          * @param storedObjectsClass the class of instances that are serialized by this column convertor
          * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
          * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
+         * @param additionalArguments additional arguments for the constructor
          */
-        public LocalAbstractObjectTextStreamColumnConvertor(Class<? extends T> storedObjectsClass, boolean usedToRead, boolean usedToWrite) {
-            this.storedObjectsClass = storedObjectsClass;
+        public LocalAbstractObjectTextStreamColumnConvertor(Class<? extends T> storedObjectsClass, boolean usedToRead, boolean usedToWrite, Object... additionalArguments) {
+            this.factory = new LocalAbstractObject.TextStreamFactory<T>(storedObjectsClass, additionalArguments);
             this.usedToRead = usedToRead;
             this.usedToWrite = usedToWrite;
         }
@@ -863,11 +864,9 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
 
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
             try {
-                return LocalAbstractObject.create(storedObjectsClass, (String)column);
+                return factory.create((String)column);
             } catch (InvocationTargetException e) {
                 throw new StorageFailureException(e.getCause());
-            } catch (RuntimeException e) {
-                throw new StorageFailureException(e);
             }
         }
 
