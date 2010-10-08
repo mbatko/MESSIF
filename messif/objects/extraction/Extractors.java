@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import messif.objects.LocalAbstractObject;
@@ -141,34 +140,21 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object... additionalArguments) throws IllegalArgumentException {
-        // Prepare instantiator and argument array
-        final Instantiator<? extends T> instantiator;
-        final Object[] arguments;
-        if (additionalArguments == null || additionalArguments.length == 0) {
-            instantiator = new ConstructorInstantiator<T>(objectClass, BufferedReader.class);
-            arguments = new Object[1];
-        } else {
-            arguments = new Object[1 + additionalArguments.length];
-            arguments[0] = new BufferedReader(new StringReader(""));
-            System.arraycopy(additionalArguments, 0, arguments, 1, additionalArguments.length);
-            instantiator = new ConstructorInstantiator<T>(objectClass, arguments);
-        }
+        final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
-                    Object[] args = arguments.clone();
-                    args[0] = dataSource.getBufferedReader();
-                    return instantiator.instantiate(args);
+                    return factory.create(dataSource.getBufferedReader());
                 } catch (InvocationTargetException e) {
                     if (e.getCause() instanceof IOException)
                         throw (IOException)e.getCause();
                     else
-                        throw new ExtractorException("Cannot create instance using " + instantiator + ": " + e.getCause(), e.getCause());
+                        throw new ExtractorException("Cannot create instance using " + factory + ": " + e.getCause(), e.getCause());
                 }
             }
             public Class<? extends T> getExtractedClass() {
-                return instantiator.getInstantiatorClass();
+                return factory.getCreatedClass();
             }
         };
     }

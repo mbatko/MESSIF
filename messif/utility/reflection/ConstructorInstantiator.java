@@ -140,13 +140,11 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @throws IllegalArgumentException if there was no constructor for the specified list of arguments
      */
     private static <T> Constructor<T> getConstructor(Class<T> constructorClass, Object[] arguments) throws IllegalArgumentException {
-        @SuppressWarnings("unchecked")
-        Constructor<T>[] constructors = (Constructor<T>[])constructorClass.getConstructors();
-        for (int i = 0; i < constructors.length; i++) {
-            if (Instantiators.isPrototypeMatching(constructors[i].getParameterTypes(), arguments, false, null))
-                return constructors[i];
+        try {
+            return Instantiators.getConstructor(constructorClass, false, true, null, arguments);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(e.getMessage());
         }
-        throw new IllegalArgumentException("There is no constructor " + constructorClass.getName() + "(...) with " + arguments.length + " arguments");
     }
 
 

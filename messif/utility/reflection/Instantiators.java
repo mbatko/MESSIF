@@ -299,7 +299,7 @@ public abstract class Instantiators {
      */
     public static <E> E createInstanceWithInheritableArgs(Class<E> instanceClass, Object... arguments) throws NoSuchMethodException, InvocationTargetException {
         try {
-            return getConstructor(instanceClass, false, null, arguments).newInstance(arguments);
+            return getConstructor(instanceClass, false, false, null, arguments).newInstance(arguments);
         } catch (IllegalAccessException e) {
             throw new NoSuchMethodException(e.getMessage());
         } catch (InstantiationException e) {
@@ -403,14 +403,15 @@ public abstract class Instantiators {
      * @param <E> the class the constructor will create
      * @param clazz the class for which to get the constructor
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the constructor
      * @return a constructor for the specified class
      * @throws NoSuchMethodException if there was no constructor for the specified list of arguments
      */
     @SuppressWarnings("unchecked")
-    public static <E> Constructor<E> getConstructor(Class<E> clazz, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchMethodException {
-        for (Constructor<E> constructor : (Constructor<E>[])clazz.getDeclaredConstructors()) {
+    public static <E> Constructor<E> getConstructor(Class<E> clazz, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchMethodException {
+        for (Constructor<E> constructor : (Constructor<E>[])(publicOnlyConstructors ? clazz.getConstructors() : clazz.getDeclaredConstructors())) {
             if (isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances))
                 return constructor;
         }

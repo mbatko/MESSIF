@@ -20,15 +20,12 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
-import messif.utility.Convert;
 import messif.utility.DirectoryInputStream;
-import messif.utility.reflection.Instantiators;
 
 /**
  * This class represents an iterator on {@link LocalAbstractObject}s that are read from a file.
@@ -54,31 +51,12 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     protected E currentObject;
     /** Number of objects read from the stream */
     protected int objectsRead;
-    /** Class instance of objects of type E needed for instantiating objects read from a stream */
-    protected final Constructor<? extends E> constructor;
-    /** Arguments for the constructor (first will always be the stream) */
-    protected final Object[] constructorArgs;
+    /** Factory for instantiating objects read from a stream */
+    protected final LocalAbstractObject.TextStreamFactory<? extends E> factory;
 
 
     //****************** Constructors ******************//
 
-
-    /**
-     * Creates a new instance of StreamGenericAbstractObjectIterator.
-     * The constructor args must be compatible with the constructor and the first
-     * argument must be a {@link BufferedReader}.
-     *
-     * @param constructor the constructor used to create instances of objects in this stream
-     * @param constructorArgs constructor arguments
-     */
-    public StreamGenericAbstractObjectIterator(Constructor<? extends E> constructor, Object[] constructorArgs) {
-        this.constructor = constructor;
-        this.stream = (BufferedReader)constructorArgs[0];
-        this.constructorArgs = constructorArgs;
-
-        // Read first object from the stream (hasNext is set automatically)
-        this.nextObject = nextStreamObject();
-    }
 
     /**
      * Creates a new instance of StreamGenericAbstractObjectIterator.
@@ -96,16 +74,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
         this.stream = stream;
-
-        // Read constructor arguments
-        this.constructorArgs = convertArguments(constructorArgs, stream);
-
-        // Get constructor for arguments
-        try {
-            this.constructor = Instantiators.getConstructor(objClass, true, namedInstances, this.constructorArgs);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Object " + objClass + " lacks proper constructor: " + e.getMessage());
-        }
+        this.factory = new LocalAbstractObject.TextStreamFactory<E>(objClass, true, namedInstances, constructorArgs == null ? null : constructorArgs.toArray());
 
         // Read first object from the stream (hasNext is set automatically)
         this.nextObject = nextStreamObject();
@@ -162,33 +131,6 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     }
 
 
-    //****************** Constructor helper method ******************//
-
-    /**
-     * Convert the constructor arguments from collection to array.
-     * The {@code stream} is added as the first argument in any case.
-     *
-     * @param constructorArgs the additional arguments
-     * @param stream the stream argument
-     * @return the resulting argument array
-     */
-    private static Object[] convertArguments(Collection<?> constructorArgs, BufferedReader stream) {
-        // Read constructor arguments
-        Object[] ret = new Object[(constructorArgs == null)?1:(1+constructorArgs.size())];
-
-        // First argument of the prototype is always BufferedReader
-        ret[0] = stream;
-
-        // Next arguments
-        if (constructorArgs != null) {
-            int i = 1;
-            for (Object arg : constructorArgs)
-                ret[i++] = arg;
-        }
-
-        return ret;
-    }
-
     //****************** Attribute access methods ******************//
 
     /**
@@ -202,16 +144,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
      */
     public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
-        if (index++ < 0 || index >= constructorArgs.length) // index is incremented because the first argument is always the stream
-            throw new IndexOutOfBoundsException("Invalid index (" + index + ") for " + constructor.toString());
-        Class<?>[] argTypes = constructor.getParameterTypes();
-        if (!argTypes[index].isInstance(paramValue)) {
-            if (paramValue instanceof String)
-                paramValue = Convert.stringToType((String)paramValue, argTypes[index]);
-            else
-                throw new IllegalArgumentException("Supplied object must be instance of " + argTypes[index].getName());
-        }
-        constructorArgs[index] = paramValue;
+        factory.setConstructorParameter(index, paramValue);
     }
 
     /**
@@ -227,7 +160,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     @Override
     public String toString() {
         StringBuilder str = new StringBuilder("Stream of '");
-        str.append(constructor.getDeclaringClass().getName());
+        str.append(factory.getCreatedClass().getName());
         str.append("' from ");
         if (fileName == null)
             str.append(stream);
@@ -301,13 +234,9 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      */
     protected E nextStreamObject() throws IllegalArgumentException, IllegalStateException {
         try {
-            E ret = constructor.newInstance(constructorArgs);
+            E ret = factory.create(stream);
             objectsRead++;
             return ret;
-        } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException("Constructor " + constructor + " is unaccessible (permission denied)");
-        } catch (InstantiationException e) {
-            throw new IllegalArgumentException("Constructor " + constructor + " is unaccessible (abstract class)");
         } catch (InvocationTargetException e) {
             // End of file is normal exit
             if (e.getCause() instanceof EOFException)
@@ -316,7 +245,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
             // Exception while reading the object from the stream
             throw new IllegalStateException(
                     "Cannot read instance #" + (objectsRead + 1) + " of " +
-                    constructor.getDeclaringClass().getName() + " from " +
+                    factory.getCreatedClass().getName() + " from " +
                     ((fileName == null) ? "STDIN" : fileName) + ": " +
                     e.getCause());
         }
@@ -348,7 +277,6 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
         // Reset current stream
         stream.close();
         stream = newStream;
-        constructorArgs[0] = stream;
         objectsRead = 0;
 
         nextObject = nextStreamObject();

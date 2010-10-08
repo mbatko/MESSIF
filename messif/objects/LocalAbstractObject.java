@@ -21,7 +21,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.util.Map;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -30,6 +33,7 @@ import messif.objects.nio.BinarySerializator;
 import messif.statistics.StatisticCounter;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
+import messif.utility.reflection.Instantiators;
 
 
 /**
@@ -517,7 +521,129 @@ public abstract class LocalAbstractObject extends AbstractObject {
     }
 
 
-    //****************** Factory method ******************//
+    //****************** Factory ******************//
+
+    /**
+     * Provides a factory for creating instances of T from a given
+     * {@link BufferedReader text stream}.
+     * @param <T> the type of {@link LocalAbstractObject} to create by this factory
+     */
+    public static class TextStreamFactory<T extends LocalAbstractObject> {
+        /** Arguments used for instantiating the object */
+        private final Object[] arguments;
+        /** Constructor objects of type T needed for instantiating objects */
+        private final Constructor<? extends T> constructor;
+
+        /**
+         * Creates a new factory for creating instances of T from text.
+         * Note that additional
+         * @param objectClass the type of {@link LocalAbstractObject} to create
+         * @param convertStringArguments if <tt>true</tt> the string values from the additional arguments are converted using {@link Convert#stringToType}
+         * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+         * @param additionalArguments additional arguments for the constructor of T (excluding the first {@link BufferedReader})
+         */
+        public TextStreamFactory(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] additionalArguments) {
+            if (Modifier.isAbstract(objectClass.getModifiers()))
+                throw new IllegalArgumentException("Cannot create abstract " + objectClass);
+            try {
+                if (additionalArguments == null || additionalArguments.length == 0) {
+                    arguments = null;
+                    constructor = objectClass.getConstructor(BufferedReader.class);
+                } else {
+                    arguments = new Object[1 + additionalArguments.length];
+                    arguments[0] = new BufferedReader(new StringReader(""));
+                    System.arraycopy(additionalArguments, 0, arguments, 1, additionalArguments.length);
+                    constructor = Instantiators.getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments);
+                }
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("Cannot get text stream constructor for " + objectClass + ": " + e);
+            }
+        }
+
+        /**
+         * Creates a new factory for creating instances of T from text.
+         * @param objectClass the type of {@link LocalAbstractObject} to create
+         * @param additionalArguments additional arguments for the constructor of T (excluding the first {@link BufferedReader})
+         */
+        public TextStreamFactory(Class<? extends T> objectClass, Object... additionalArguments) {
+            this(objectClass, false, null, additionalArguments);
+        }
+
+        /**
+         * Creates a new factory for creating instances of T from text.
+         * The string values from the additional arguments are converted using {@link Convert#stringToType}.
+         * @param objectClass the type of {@link LocalAbstractObject} to create
+         * @param namedInstances map of named instances for the {@link Convert#stringToType} conversion
+         * @param additionalArguments additional arguments for the constructor of T (excluding the first {@link BufferedReader})
+         */
+        public TextStreamFactory(Class<? extends T> objectClass, Map<String, Object> namedInstances, String... additionalArguments) {
+            this(objectClass, true, namedInstances, additionalArguments);
+        }
+
+        /**
+         * Sets the value of this factory's constructor argument.
+         * This method can be used to change object passed to <code>additionalArguments</code>.
+         *
+         * @param index the parameter index to change (zero-based)
+         * @param paramValue the changed value to pass to the constructor
+         * @throws IllegalArgumentException when the passed object is incompatible with the constructor's parameter
+         * @throws IndexOutOfBoundsException if the index parameter is out of bounds
+         * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
+         */
+        public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
+            if (arguments == null || index++ < 0 || index >= arguments.length) // index is incremented because the first argument is always the stream
+                throw new IndexOutOfBoundsException("Invalid index (" + index + ") for " + constructor.toString());
+            Class<?>[] argTypes = constructor.getParameterTypes();
+            if (!argTypes[index].isInstance(paramValue)) {
+                if (paramValue instanceof String)
+                    paramValue = Convert.stringToType((String)paramValue, argTypes[index]);
+                else
+                    throw new IllegalArgumentException("Supplied object must be instance of " + argTypes[index].getName());
+            }
+            arguments[index] = paramValue;
+        }
+
+        /**
+         * Creates a new instance of T using the text data read from the {@code dataReader}.
+         * @param dataReader the text stream from which to read object's data
+         * @return a new instance of T
+         * @throws InvocationTargetException if there was an exception while creating the object
+         */
+        public T create(BufferedReader dataReader) throws InvocationTargetException {
+            Object[] args = (arguments == null) ? new Object[1] : arguments.clone();
+            args[0] = dataReader;
+            try {
+                return constructor.newInstance(args);
+            } catch (InstantiationException e) {
+                throw new InternalError("This should never happen: " + e);
+            } catch (IllegalAccessException e) {
+                throw new InternalError("This should never happen: " + e);
+            }
+        }
+
+        /**
+         * Creates a new instance of T using the text {@code data}.
+         * @param data the text from which create the object
+         * @return a new instance of T
+         * @throws InvocationTargetException if there was an exception while creating the object
+         */
+        public T create(String data) throws InvocationTargetException {
+            return create(new BufferedReader(new StringReader(data)));
+        }
+
+        /**
+         * Returns the class created by this factory.
+         * @return the created class
+         */
+        public Class<? extends T> getCreatedClass() {
+            return constructor.getDeclaringClass();
+        }
+
+        @Override
+        public String toString() {
+            return constructor.toString();
+        }
+    }
 
     /**
      * Creates a new instance of {@code objectClass} from the {@code dataReader}.
@@ -527,21 +653,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @param <T> the class of the object to create
      * @param objectClass the class of the object to create
      * @param dataReader the buffered reader of the object data
+     * @param additionalArguments more constructor arguments (in addition to first {@link BufferedReader})
      * @return a new instance of {@code objectClass}
      * @throws IllegalArgumentException if the class has is no stream constructor
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
-    public static <T extends LocalAbstractObject> T create(Class<T> objectClass, BufferedReader dataReader) throws IllegalArgumentException, InvocationTargetException {
-        try {
-            // Create instance of the specified object
-            return objectClass.getConstructor(BufferedReader.class).newInstance(dataReader);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException(e);
-        } catch (InstantiationException e) {
-            throw new IllegalArgumentException(e);
-        }
+    public static <T extends LocalAbstractObject> T create(Class<T> objectClass, BufferedReader dataReader, Object... additionalArguments) throws IllegalArgumentException, InvocationTargetException {
+        return new TextStreamFactory<T>(objectClass, additionalArguments).create(dataReader);
     }
 
     /**
@@ -551,12 +669,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
      * @param <E> the class of the object to create
      * @param objectClass the class of the object to create
      * @param objectData the string that contains object's data
+     * @param additionalArguments more constructor arguments (in addition to first {@link BufferedReader})
      * @return a new instance of the specified class
      * @throws IllegalArgumentException if the specified class lacks a public <tt>BufferedReader</tt> constructor
      * @throws InvocationTargetException if there was an error during creating a new object instance
      */
-    public static <E extends LocalAbstractObject> E create(Class<E> objectClass, String objectData) throws IllegalArgumentException, InvocationTargetException {
-        return create(objectClass, new BufferedReader(new StringReader(objectData)));
+    public static <E extends LocalAbstractObject> E create(Class<E> objectClass, String objectData, Object... additionalArguments) throws IllegalArgumentException, InvocationTargetException {
+        return create(objectClass, new BufferedReader(new StringReader(objectData)), additionalArguments);
     }
 
 
