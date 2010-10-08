@@ -20,15 +20,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
@@ -44,7 +44,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.objects.nio.MultiClassSerializator;
+import messif.objects.nio.CachingSerializator;
 
 /**
  * Special meta object that stores only the objects required for the Profi search.
@@ -141,6 +141,10 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     protected int archiveID;
     /** List of attractiveness values for all existing territories */
     protected int[] attractiveness;
+    /** Title of this object as string (this is not serialized!) */
+    protected transient String titleString;
+    /** Keywords of this object as string (this is not serialized!) */
+    protected transient String keywordString;
     /** Object for the KeyWordsType */
     protected ObjectIntMultiVectorJaccard keyWords;
 
@@ -173,12 +177,14 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         this.edgeHistogram = edgeHistogram;
         this.scalableColor = scalableColor;
         this.regionShape = regionShape;
-        this.keyWords = keyWords;
         this.rights = rights;
         this.territories = EnumSet.copyOf(territories);
         this.added = added;
         this.archiveID = archiveID;
         this.attractiveness = attractiveness;
+        this.titleString = null;
+        this.keywordString = null;
+        this.keyWords = keyWords;
     }
 
 
@@ -215,6 +221,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public MetaObjectProfiSCT(MetaObjectProfiSCT object) {
         this(object.getLocatorURI(), object.getObjectMap(),
                 object.rights, object.territories, object.added, object.archiveID, object.attractiveness);
+        this.titleString = object.titleString;
+        this.keywordString = object.keywordString;
     }
 
     /**
@@ -241,6 +249,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             }
             wordIds[0] = keywordsToIdentifiers(titleWords, ignoreWords, stemmer, keyWordIndex);
             wordIds[1] = keywordsToIdentifiers(keyWords, ignoreWords, stemmer, keyWordIndex);
+            this.titleString = joinString(titleWords, " ");
+            this.keywordString = joinString(keyWords, ",");
             this.keyWords = new ObjectIntMultiVectorJaccard(wordIds);
         }
     }
@@ -300,6 +310,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         added = Integer.valueOf(stream.readLine());
         archiveID = Integer.valueOf(stream.readLine());
         attractiveness = ObjectIntVector.parseIntVector(stream.readLine());
+        titleString = null;
+        keywordString = null;
         if (haveWords) {
             if (readWords) {
                 keyWords = new ObjectIntMultiVectorJaccard(stream, 2);
@@ -333,8 +345,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, boolean readAdditionalKeyWords) throws IOException {
         this(stream, false, false);
         // Read all data from the stream
-        String kwLine1 = stream.readLine();
-        String kwLine2 = stream.readLine();
+        titleString = stream.readLine();
+        keywordString = stream.readLine();
         // The additional keywords are added AS THE LAST LINE OF THE OBJECT!
         String additionalKeyWords = readAdditionalKeyWords ? stream.readLine() : null;
 
@@ -344,8 +356,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         try {
             if (additionalKeyWords != null)
                 data[2] = keywordsToIdentifiers(additionalKeyWords.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
-            data[0] = keywordsToIdentifiers(kwLine1.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
-            data[1] = keywordsToIdentifiers(kwLine2.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
+            data[0] = keywordsToIdentifiers(titleString.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
+            data[1] = keywordsToIdentifiers(keywordString.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
@@ -366,13 +378,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         this(stream, stemmer, keyWordIndex, false);
     }
 
-    /**
-     * Returns list of supported visual descriptor types that this object recognizes in XML.
-     * @return list of supported visual descriptor types
-     */
-    public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
-    }
+
+    //****************** Conversion methods ******************//
 
     /**
      * Transforms a list of keywords into array of addresses.
@@ -459,8 +466,51 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         return ret;
     }
 
+    /**
+     * Returns a string joined from the given {@code values} by the given {@code separator}.
+     * @param values the list of strings to join
+     * @param separator the separator between strings to use
+     * @return a joined string
+     */
+    private static String joinString(String[] values, String separator) {
+        if (values == null)
+            return null;
+        if (values.length == 0)
+            return "";
+        StringBuilder str = new StringBuilder(values[0]);
+        for (int i = 1; i < values.length; i++)
+            str.append(separator).append(values[i]);
+        return str.toString();
+    }
+
 
     //****************** Attribute access methods ******************//
+
+    /**
+     * Returns list of supported visual descriptor types that this object recognizes.
+     * @return list of supported visual descriptor types
+     */
+    public static String[] getSupportedVisualDescriptorTypes() {
+        return descriptorNames;
+    }
+
+    /**
+     * Returns the title of this object.
+     * Note that <tt>null</tt> is returned if the title was already transformed to {@link #keyWords}.
+     * @return the title of this object
+     */
+    public String getTitle() {
+        return titleString;
+    }
+
+    /**
+     * Returns the coma-separated list of keywords for this object.
+     * Note that <tt>null</tt> is returned if the title was already transformed to {@link #keyWords}.
+     * @return the keywords of this object
+     */
+    public String getKeywords() {
+        return keywordString;
+    }
 
     /**
      * Returns the rights for this object.
@@ -780,9 +830,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         stream.write('\n');
 
         ObjectIntVector.writeIntVector(attractiveness, stream);
-        stream.write('\n');
 
-        if (keyWords != null) {
+        if (titleString != null && keywordString != null) {
+            stream.write(titleString.getBytes());
+            stream.write('\n');
+            stream.write(keywordString.getBytes());
+            stream.write('\n');
+        } else if (keyWords != null) {
             keyWords.writeData(stream);
         } else {
             stream.write('\n');
@@ -793,55 +847,35 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
     //************ Column setup for DatabaseStorage ************//
 
-    /**
-     * Creates a database storage that allows to store/retrieve instances of this class.
-     *
-     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
-     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
-     * @param tableName the name of the table in the database
-     * @return a new instance of database storage
-     * @throws SQLException if there was a problem connecting to the database
-     */
-    public static DatabaseStorage<MetaObjectProfiSCT> openDatabaseStorage(String dbConnUrl, Properties dbConnInfo, String tableName) throws SQLException {
-        String[] columnNames = {
-            "binobj",
-            "locator",
-            "color_layout",
-            "color_structure",
-            "edge_histogram",
-            "scalable_color",
-            "region_shape",
-            "keyword_id_multivector",
-            "rights",
-            "added",
-            "archivID",
-            "attractiveness",
-            "territories"
-        };
-        BinarySerializator serializator = new MultiClassSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class);
-
-        @SuppressWarnings("unchecked")
-        ColumnConvertor<MetaObjectProfiSCT>[] columnConvertors = new ColumnConvertor[] {
-            new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, serializator),
-            DatabaseStorage.locatorColumnConvertor,
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"),
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"),
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"),
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"),
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"),
-            new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"),
-            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true),
-            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true),
-            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true),
-            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true),
-            new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true)
-        };
-
-        return new DatabaseStorage<MetaObjectProfiSCT>(
-                MetaObjectProfiSCT.class,
-                dbConnUrl, dbConnInfo, tableName,
-                "id", columnNames, columnConvertors
+    /** Database column definitions for this object */
+    public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
+    static {
+        Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
+        BinarySerializator serializator = new CachingSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class,
+                messif.objects.keys.AbstractObjectKey.class,
+                ObjectColorLayout.class,
+                ObjectShortVectorL1.class,
+                ObjectVectorEdgecomp.class,
+                ObjectIntVectorL1.class,
+                ObjectXMRegionShape.class,
+                ObjectIntMultiVectorJaccard.class
         );
+        map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, serializator));
+        map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
+        map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
+        map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
+        map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
+        map.put("scalable_color", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"));
+        map.put("region_shape", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"));
+        map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
+        map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
+        map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
+        map.put("rights", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true));
+        map.put("added", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true));
+        map.put("archivID", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true));
+        map.put("attractiveness", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true));
+        map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true));
+        dbColumns = Collections.unmodifiableMap(map);
     }
 
 
@@ -876,6 +910,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         added = serializator.readInt(input);
         archiveID = serializator.readInt(input);
         attractiveness = serializator.readIntArray(input);
+        titleString = null; // Title is not serialized
+        keywordString = null; // Keywords are not serialized
         keyWords = serializator.readObject(input, ObjectIntMultiVectorJaccard.class);
     }
 

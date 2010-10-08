@@ -106,7 +106,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
     //****************** Text file store/retrieve methods ******************//
 
     protected void writeData(OutputStream stream) throws IOException {
-        for (int i = 1; i < data.length; i++)
+        for (int i = 0; i < data.length; i++)
             ObjectIntVector.writeIntVector(data[i], stream);
     }
 
