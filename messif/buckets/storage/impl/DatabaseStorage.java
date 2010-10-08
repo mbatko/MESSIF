@@ -258,6 +258,29 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         getConnection();
     }
 
+    /**
+     * Constructs an empty database storage.
+     * Note that the connection is established when the first manipulation-method is called.
+     *
+     * @param storedObjectsClass the class of objects that the storage will work with
+     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param tableName the name of the table in the database
+     * @param primaryKeyColumn the name of the column that is the primary key of the table
+     * @param columns a map with the names of columns in keys and the convertors that convert
+     *          between the storage instances and database column in values (note
+     *          that the map's keyset and values collection should return the data ordered)
+     * @throws IllegalArgumentException if the column names and column convertors do not match
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    @SuppressWarnings("unchecked")
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, Map<String, ColumnConvertor<T>> columns) throws IllegalArgumentException, SQLException {
+        this(storedObjectsClass, dbConnUrl, dbConnInfo, tableName, primaryKeyColumn,
+                columns.keySet().toArray(new String[columns.size()]),
+                columns.values().toArray(new ColumnConvertor[columns.size()])
+        );
+    }
+
     @Override
     public void finalize() throws Throwable {
         closeConnection();
@@ -1041,6 +1064,19 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.locatorToLocalObjectComparator);
         }
     };
+
+    /**
+     * Returns a column convertor that stores/restores a {@link LocalAbstractObject#getLocatorURI() locator URI}
+     * of {@link LocalAbstractObject}s stored in the database. In fact, this method
+     * just returns the generic-typed {@link #locatorColumnConvertor}.
+     * @param <T> the class of object for which to get the locator column convertor
+     * @param objectClass the class of object for which to get the locator column convertor
+     * @return a column convertor
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends LocalAbstractObject> ColumnConvertor<T> getLocatorColumnConvertor(Class<T> objectClass) {
+        return (ColumnConvertor)locatorColumnConvertor;
+    }
 
     /**
      * Column convertor that stores/restores instances supported directly by the database.
