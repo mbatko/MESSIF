@@ -451,18 +451,19 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return the set of parsed territories
      */
     private EnumSet<Territory> stringToTerritories(String line) {
-        if (line == null || line.isEmpty())
-            return null;
         EnumSet<Territory> ret = EnumSet.noneOf(Territory.class);
-        for (String territory : line.toUpperCase().split("\\W+")) {
-            if (territory.isEmpty())
-                continue;
-            try {
-                ret.add(Territory.valueOf(territory));
-            } catch (IllegalArgumentException e) {
-                Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot read territory '" + territory + "' for object '" + getLocatorURI() + "': " + e.toString());
+        if (line != null && !line.isEmpty()) {
+            for (String territory : line.toUpperCase().split("\\W+")) {
+                if (territory.isEmpty())
+                    continue;
+                try {
+                    ret.add(Territory.valueOf(territory));
+                } catch (IllegalArgumentException e) {
+                    Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot read territory '" + territory + "' for object '" + getLocatorURI() + "': " + e.toString());
+                }
             }
         }
+
         return ret;
     }
 
@@ -900,12 +901,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
         // Read territories
         int territoriesCount = serializator.readInt(input);
-        Collection<Territory> territoriesRead = new LinkedList<Territory>();
-        while (territoriesCount > 0) {
-            territoriesRead.add(serializator.readEnum(input, Territory.class));
-            territoriesCount--;
+        if (territoriesCount == -1) {
+            territories = null;
+        } else {
+            Collection<Territory> territoriesRead = new LinkedList<Territory>();
+            while (territoriesCount > 0) {
+                territoriesRead.add(serializator.readEnum(input, Territory.class));
+                territoriesCount--;
+            }
+            territories = EnumSet.copyOf(territoriesRead);
         }
-        territories = EnumSet.copyOf(territoriesRead);
 
         added = serializator.readInt(input);
         archiveID = serializator.readInt(input);
@@ -926,9 +931,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         size += serializator.write(output, rights);
 
         // Territories
-        size += serializator.write(output, territories.size());
-        for (Territory territory : territories)
-            size += serializator.write(output, territory);
+        if (territories == null) {
+            size += serializator.write(output, -1);
+        } else {
+            size += serializator.write(output, territories.size());
+            for (Territory territory : territories)
+                size += serializator.write(output, territory);
+        }
 
         size += serializator.write(output, added);
         size += serializator.write(output, archiveID);
@@ -948,8 +957,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         size += serializator.getBinarySize(rights);
 
         // Territories
-        size += serializator.getBinarySize(territories.size());
-        size += territories.size() * serializator.getBinarySize(Territory.CZ);
+        if (territories == null) {
+            size += serializator.getBinarySize(-1);
+        } else {
+            size += serializator.getBinarySize(territories.size());
+            size += territories.size() * serializator.getBinarySize(Territory.CZ);
+        }
 
         size += serializator.getBinarySize(added);
         size += serializator.getBinarySize(archiveID);
