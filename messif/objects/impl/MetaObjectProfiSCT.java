@@ -57,7 +57,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
-    //****************** The list of supported names ******************//
+    //****************** Constants ******************//
 
     /** The list of the names for the encapsulated objects */
     protected static final String[] descriptorNames = {
@@ -67,6 +67,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
     /** Weights for the visual descriptors */
     protected static float[] visualWeights = { 2.0f, 2.0f, 5.0f, 2.0f, 4.0f };
+
+    /** Regular expression used to split title */
+    protected static final String TITLE_SPLIT_REGEXP = "\\W+";
+    /** Regular expression used to split keywords */
+    protected static final String KEYWORDS_SPLIT_REGEXP = "\\W+";
 
 
     //****************** Stemmer interface ******************//
@@ -94,6 +99,17 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         RM,
         /** RF right */
         RF;
+
+        /**
+         * Convert the given string to Rights enum value.
+         * Similar to {@link #valueOf(java.lang.String)} except for the fact
+         * that <tt>null</tt> or empty string is converted to {@link #EMPTY}.
+         * @param string the string to convert
+         * @return a converted enum value
+         */
+        public static Rights valueOfWithEmpty(String string) {
+            return (string == null || string.isEmpty()) ? Rights.EMPTY : valueOf(string);
+        }
     }
 
     /** List of territories */
@@ -115,7 +131,26 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         /** Sierra Leone */
         SL,
         /** Croatia */
-        HR
+        HR;
+
+        /**
+         * Convert a line with comma-separated territories to {@link EnumSet}.
+         * @param string the string with territories
+         * @return the set of parsed territories
+         * @throws IllegalArgumentException if there was a problem converting a string to territory enum value
+         */
+        public static EnumSet<Territory> stringToTerritories(String string) throws IllegalArgumentException {
+            EnumSet<Territory> ret = EnumSet.noneOf(Territory.class);
+            if (string != null && !string.isEmpty()) {
+                for (String territory : string.toUpperCase().split("\\W+")) {
+                    if (territory.isEmpty())
+                        continue;
+                    ret.add(Territory.valueOf(territory));
+                }
+            }
+
+            return ret;
+        }
     }
 
 
@@ -238,21 +273,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] searchWords) {
         this(object);
-        if (titleWords != null || keyWords != null || searchWords != null) {
-            Set<String> ignoreWords = new HashSet<String>();
-            int[][] wordIds;
-            if (searchWords != null && searchWords.length > 0) {
-                wordIds = new int[3][];
-                wordIds[2] = keywordsToIdentifiers(searchWords, ignoreWords, stemmer, keyWordIndex);
-            } else {
-                wordIds = new int[2][];
-            }
-            wordIds[0] = keywordsToIdentifiers(titleWords, ignoreWords, stemmer, keyWordIndex);
-            wordIds[1] = keywordsToIdentifiers(keyWords, ignoreWords, stemmer, keyWordIndex);
-            this.titleString = joinString(titleWords, " ");
-            this.keywordString = joinString(keyWords, ",");
-            this.keyWords = new ObjectIntMultiVectorJaccard(wordIds);
-        }
+        if (titleWords != null || keyWords != null || searchWords != null)
+            this.keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleWords, keyWords, searchWords);
     }
 
     /**
@@ -292,11 +314,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      *
      * @param stream the stream from which the data are read
      * @param haveWords flag whether the data contains titlewords and keywords lines
-     * @param readWords flag whether to read the titlewords and keywords lines(<tt>true</tt>) or
-     *          skip them (<tt>false</tt>)
+     * @param wordsConverted flag whether to read the titlewords and keywords lines
+     *                          as integer vectors (<tt>true</tt>) or strings (<tt>false</tt>)
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectProfiSCT(BufferedReader stream, boolean haveWords, boolean readWords) throws IOException {
+    public MetaObjectProfiSCT(BufferedReader stream, boolean haveWords, boolean wordsConverted) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
         colorLayout = new ObjectColorLayout(new BufferedReader(new StringReader(line)));
@@ -304,20 +326,20 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         edgeHistogram = new ObjectVectorEdgecomp(stream);
         scalableColor = new ObjectIntVectorL1(stream);
         regionShape = new ObjectXMRegionShape(stream);
-        String rightsStr = stream.readLine();
-        rights = rightsStr.isEmpty() ? Rights.EMPTY : Rights.valueOf(rightsStr);
-        territories = stringToTerritories(stream.readLine());
+        rights = Rights.valueOfWithEmpty(stream.readLine());
+        territories = Territory.stringToTerritories(stream.readLine());
         added = Integer.valueOf(stream.readLine());
         archiveID = Integer.valueOf(stream.readLine());
         attractiveness = ObjectIntVector.parseIntVector(stream.readLine());
-        titleString = null;
-        keywordString = null;
         if (haveWords) {
-            if (readWords) {
+            if (wordsConverted) {
+                titleString = null;
+                keywordString = null;
                 keyWords = new ObjectIntMultiVectorJaccard(stream, 2);
             } else {
-                stream.readLine(); // Skip the line with titlewords
-                stream.readLine(); // Skip the line with keywords
+                titleString = stream.readLine();
+                keywordString = stream.readLine();
+                keyWords = null;
             }
         }
     }
@@ -343,26 +365,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, boolean readAdditionalKeyWords) throws IOException {
-        this(stream, false, false);
-        // Read all data from the stream
-        titleString = stream.readLine();
-        keywordString = stream.readLine();
-        // The additional keywords are added AS THE LAST LINE OF THE OBJECT!
-        String additionalKeyWords = readAdditionalKeyWords ? stream.readLine() : null;
-
-        // Process the keywords (transformation to identifiers)
-        int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
-        Set<String> ignoreWords = new HashSet<String>();
-        try {
-            if (additionalKeyWords != null)
-                data[2] = keywordsToIdentifiers(additionalKeyWords.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
-            data[0] = keywordsToIdentifiers(titleString.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
-            data[1] = keywordsToIdentifiers(keywordString.split("\\W+"), ignoreWords, stemmer, keyWordIndex);
-        } catch (Exception e) {
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
-            keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
-        }
-        keyWords = new ObjectIntMultiVectorJaccard(data);
+        this(stream, true, false);
+        // Note that the additional words are added AS THE LAST LINE OF THE OBJECT!
+        keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORDS_SPLIT_REGEXP), readAdditionalKeyWords ? stream.readLine().split(KEYWORDS_SPLIT_REGEXP) : null);
     }
 
     /**
@@ -380,6 +385,52 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
 
     //****************** Conversion methods ******************//
+
+    /**
+     * Convert the given title, key and additional words to a int multi-vector
+     * object with Jaccard distance function.
+     *
+     * @param stemmer the stemmer to use for stemming of the words
+     * @param keyWordIndex the index used to transform the words into integers
+     * @param titleWords the title words to convert
+     * @param keyWords the key words to convert
+     * @param additionalWords the additional words to convert
+     * @return a new instance of int multi-vector object with Jaccard distance function
+     */
+    private ObjectIntMultiVectorJaccard convertKeywordsToIntegers(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] additionalWords) {
+        try {
+            int[][] data = new int[additionalWords != null ? 3 : 2][];
+            Set<String> ignoreWords = new HashSet<String>();
+            if (additionalWords != null)
+                data[2] = keywordsToIdentifiers(additionalWords, ignoreWords, stemmer, keyWordIndex);
+            data[0] = keywordsToIdentifiers(titleWords, ignoreWords, stemmer, keyWordIndex);
+            data[1] = keywordsToIdentifiers(keyWords, ignoreWords, stemmer, keyWordIndex);
+            return new ObjectIntMultiVectorJaccard(data);
+        } catch (Exception e) {
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
+            return new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
+        }
+    }
+
+    /**
+     * Convert the given array of word ids to words using the given storage.
+     * @param keyWordIndex the index used to transform the integers to words
+     * @param ids the array of integers to convert
+     * @return an array of converted words
+     */
+    private String[] convertIntegersToKeywords(IntStorageIndexed<String> keyWordIndex, int[] ids) {
+        if (ids == null)
+            return null;
+        try {
+            String[] ret = new String[ids.length];
+            for (int i = 0; i < ids.length; i++)
+                ret[i] = keyWordIndex.read(ids[i]);
+            return ret;
+        } catch (Exception e) {
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot convert ids to strings in object '" + getLocatorURI() + "': " + e);
+            return new String[0];
+        }
+    }
 
     /**
      * Transforms a list of keywords into array of addresses.
@@ -445,45 +496,6 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         return ret;
     }
 
-    /**
-     * Convert a line with comma-separated territories to {@link EnumSet}.
-     * @param line the line with territories
-     * @return the set of parsed territories
-     */
-    private EnumSet<Territory> stringToTerritories(String line) {
-        EnumSet<Territory> ret = EnumSet.noneOf(Territory.class);
-        if (line != null && !line.isEmpty()) {
-            for (String territory : line.toUpperCase().split("\\W+")) {
-                if (territory.isEmpty())
-                    continue;
-                try {
-                    ret.add(Territory.valueOf(territory));
-                } catch (IllegalArgumentException e) {
-                    Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot read territory '" + territory + "' for object '" + getLocatorURI() + "': " + e.toString());
-                }
-            }
-        }
-
-        return ret;
-    }
-
-    /**
-     * Returns a string joined from the given {@code values} by the given {@code separator}.
-     * @param values the list of strings to join
-     * @param separator the separator between strings to use
-     * @return a joined string
-     */
-    private static String joinString(String[] values, String separator) {
-        if (values == null)
-            return null;
-        if (values.length == 0)
-            return "";
-        StringBuilder str = new StringBuilder(values[0]);
-        for (int i = 1; i < values.length; i++)
-            str.append(separator).append(values[i]);
-        return str.toString();
-    }
-
 
     //****************** Attribute access methods ******************//
 
@@ -505,12 +517,44 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
+     * Returns the title words of this object.
+     * Note that if the title is already transformed to {@link #keyWords},
+     * the {@code keyWordIndex} is used to transform it back.
+     * @param keyWordIndex the index used to transform the integers to words
+     * @return the title words of this object
+     */
+    public String[] getTitleWords(IntStorageIndexed<String> keyWordIndex) {
+        if (titleString != null)
+            return titleString.split(TITLE_SPLIT_REGEXP);
+        else if (keyWords != null)
+            return convertIntegersToKeywords(keyWordIndex, keyWords.getVectorData(0));
+        else
+            return null;
+    }
+
+    /**
      * Returns the coma-separated list of keywords for this object.
      * Note that <tt>null</tt> is returned if the title was already transformed to {@link #keyWords}.
      * @return the keywords of this object
      */
     public String getKeywords() {
         return keywordString;
+    }
+
+    /**
+     * Returns the key words of this object.
+     * Note that if the key words are already transformed to {@link #keyWords},
+     * the {@code keyWordIndex} is used to transform them back.
+     * @param keyWordIndex the index used to transform the integers to words
+     * @return the key words of this object
+     */
+    public String[] getKeyWords(IntStorageIndexed<String> keyWordIndex) {
+        if (keywordString != null)
+            return keywordString.split(KEYWORDS_SPLIT_REGEXP);
+        else if (keyWords != null)
+            return convertIntegersToKeywords(keyWordIndex, keyWords.getVectorData(1));
+        else
+            return null;
     }
 
     /**
@@ -848,11 +892,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
     //************ Column setup for DatabaseStorage ************//
 
-    /** Database column definitions for this object */
-    public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
-    static {
-        Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
-        BinarySerializator serializator = new CachingSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class,
+    /** Binary serializator for this object with default caching classes */
+    public static final BinarySerializator defaultBinarySerializator = new CachingSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class,
                 messif.objects.keys.AbstractObjectKey.class,
                 ObjectColorLayout.class,
                 ObjectShortVectorL1.class,
@@ -861,21 +902,26 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 ObjectXMRegionShape.class,
                 ObjectIntMultiVectorJaccard.class
         );
-        map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, serializator));
+
+    /** Database column definitions for this object */
+    public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
+    static {
+        Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
+        map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
         map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
         map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
         map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
         map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
         map.put("scalable_color", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"));
         map.put("region_shape", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"));
-        map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
-        map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
-        map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
         map.put("rights", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true));
+        map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true));
         map.put("added", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true));
         map.put("archivID", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true));
         map.put("attractiveness", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true));
-        map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true));
+        map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
+        map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
+        map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
         dbColumns = Collections.unmodifiableMap(map);
     }
 
