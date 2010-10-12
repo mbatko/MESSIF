@@ -17,23 +17,19 @@
 package messif.buckets;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.Set;
 import messif.buckets.index.Index;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableIndex;
 import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.Search;
+import messif.buckets.index.SearchAbstractObjectIterator;
 import messif.objects.UniqueID;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.AbstractObjectList;
 import messif.statistics.StatisticRefCounter;
 import messif.utility.Convert;
-import messif.utility.SortedCollection;
 
 /**
  * This class represents the <tt>Bucket</tt> that is maintained locally (i.e. on the current computer).
@@ -517,79 +513,17 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         if (StatisticRefCounter.isEnabledGlobally())
             counterBucketRead.add(this);
 
-        return new AbstractObjectIterator<LocalAbstractObject>() {
-            private int hasNext = -1;
-            private ModifiableSearch<LocalAbstractObject> search;
-
+        return new SearchAbstractObjectIterator<LocalAbstractObject>(getModifiableIndex(), 0) {
             @Override
-            public LocalAbstractObject getCurrentObject() {
-                if (search == null)
-                    throw new NoSuchElementException("There is no current object");
-                return search.getCurrentObject();
-            }
-
-            public boolean hasNext() {
-                // If the next was called, thus hasNext is not decided yet
-                if (hasNext == -1) {
-                    if (search == null)
-                        search = getModifiableIndex().search();
-                    hasNext = search.next()?1:0; // Perform search
-                }
-
-                return hasNext == 1;
-            }
-
-            public LocalAbstractObject next() {
-                if (!hasNext())
-                    throw new NoSuchElementException("There are no more objects");
-                hasNext = -1;
-                return search.getCurrentObject();
-            }
-
             public void remove() {
                 if (search == null)
                     throw new NoSuchElementException("There is no current object");
                 try {
-                    deleteObject(search);
+                    deleteObject((ModifiableSearch<LocalAbstractObject>)search);
                 } catch (BucketStorageException e) {
                     throw new IllegalStateException(e);
                 }
             }
-
-            @Override
-            public LocalAbstractObject getObjectByAnyLocator(Set<String> locatorURIs, boolean removeFound) throws NoSuchElementException {
-                if (search == null)
-                    search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locatorURIs);
-                return super.getObjectByAnyLocator(locatorURIs, removeFound);
-            }
-
-            @Override
-            public AbstractObjectList<LocalAbstractObject> getRandomObjects(int count, boolean unique) {
-                if (search != null)
-                    return super.getRandomObjects(count, unique);
-
-                // No search yet, get full search on the whole index
-                int size = getModifiableIndex().size();
-                AbstractObjectList<LocalAbstractObject> ret = new AbstractObjectList<LocalAbstractObject>(count);
-                search = getModifiableIndex().search();
-                try {
-                    Random generator = new Random();
-                    Collection<Integer> positions = new SortedCollection<Integer>(count);
-                    while (positions.size() < count)
-                        positions.add(generator.nextInt(size));
-                    int lastpos = 0;
-                    for (Integer position : positions) {
-                        search.skip(position - lastpos);
-                        ret.add(search.getCurrentObject());
-                        lastpos = position;
-                    }
-                } finally {
-                    search.close();
-                    search = null;
-                }
-                return ret;
-            }
-
         };
     }
 
