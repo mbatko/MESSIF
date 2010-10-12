@@ -55,7 +55,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
     //****************** Constructor ******************//
 
     /**
-     * Constructs a new MemoryStorageBucket instance
+     * Creates a new instance of VirtualStorageBucket.
      * 
      * @param capacity maximal capacity of the bucket - cannot be exceeded
      * @param softCapacity maximal soft capacity of the bucket

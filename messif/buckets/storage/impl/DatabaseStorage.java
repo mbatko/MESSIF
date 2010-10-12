@@ -156,6 +156,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     private final String insertSQL;
     /** Cached prepared statement for insert SQL */
     private transient PreparedStatement insertStatement;
+    /** Update a single object (by primary key) SQL command */
+    private final String updateSQL;
+    /** Cached prepared statement for update SQL */
+    private transient PreparedStatement updateStatement;
     /** Delete a single object (by primary key) SQL command */
     private final String deleteSQL;
     /** Cached prepared statement for delete SQL */
@@ -212,6 +216,7 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         // Prepare SQL commands
         StringBuilder columnReadList = new StringBuilder();
         StringBuilder columnWriteList = new StringBuilder();
+        StringBuilder columnUpdateList = new StringBuilder();
         StringBuilder columnQuestionMarkList = new StringBuilder();
         StringBuilder columnDataWhereList = new StringBuilder();
         for (int i = 0; i < columnNames.length; i++) {
@@ -223,9 +228,12 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             if (columnConvertors[i].isConvertToColumnUsed()) {
                 if (columnWriteList.length() > 0)
                     columnWriteList.append(',');
+                if (columnUpdateList.length() > 0)
+                    columnUpdateList.append(',');
                 if (columnQuestionMarkList.length() > 0)
                     columnQuestionMarkList.append(',');
                 columnWriteList.append(columnNames[i]);
+                columnUpdateList.append(columnNames[i]).append(" = ?");
                 columnQuestionMarkList.append('?');
                 columnDataWhereList.append(columnDataWhereList.length() > 0 ? " where " : " and ").
                         append(columnNames[i]).append(" = ?");
@@ -251,6 +259,8 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         sql = new StringBuilder("delete from ").append(tableName);
         sql.append(" where ").append(primaryKeyColumn).append(" = ?");
         deleteSQL = sql.toString();
+        columnUpdateList.insert(0, new StringBuilder("update ").append(tableName).append(" set "));
+        updateSQL = columnUpdateList.append(" where ").append(primaryKeyColumn).append(" = ?").toString();
         // Delete all
         deleteAllSQL = "delete from " + tableName;
 
@@ -362,13 +372,15 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
                 statement = getConnection().prepareStatement(sql);
 
             // Map parameters
-            if (primaryKey != null)
+            if (primaryKey != null && object == null)
                 statement.setObject(1, primaryKey);
             if (object != null) {
                 int col = 1;
                 for (int i = 0; i < columnConvertors.length; i++)
                     if (columnConvertors[i].isConvertToColumnUsed())
                         statement.setObject(col++, columnConvertors[i].convertToColumnValue(object));
+                if (primaryKey != null)
+                    statement.setObject(col, primaryKey);
             }
 
             // Execute query and handle recoverable exception
@@ -511,6 +523,23 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     public synchronized void remove(int address) throws BucketStorageException, UnsupportedOperationException {
         try {
             deleteStatement = execute(deleteStatement, deleteSQL, address, null);
+        } catch (SQLException e) {
+            throw new StorageFailureException(e);
+        }
+    }
+
+    /**
+     * Updates the object on address {@code address} with data from {@code object}.
+     * Note that some storages may not support in-place update - the
+     * {@link UnsupportedOperationException} is thrown when calling this method.
+     * @param address the address of the object in the storage that is to be updated
+     * @param object the new object data
+     * @throws BucketStorageException if there was a problem storing the object
+     * @throws UnsupportedOperationException if this operation is not supported by this storage
+     */
+    public synchronized void update(int address, T object) throws BucketStorageException, UnsupportedOperationException {
+        try {
+            updateStatement = execute(updateStatement, updateSQL, address, object);
         } catch (SQLException e) {
             throw new StorageFailureException(e);
         }
@@ -850,7 +879,9 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
                 instance.write(data);
                 data.close();
-                return data.toString();
+                // Remove trailing newline
+                String ret = data.toString();
+                return ret.charAt(ret.length() - 1) == '\n' ? ret.substring(0, ret.length() - 1) : ret;
             } catch (IOException e) {
                 throw new StorageFailureException(e);
             } catch (RuntimeException e) {
