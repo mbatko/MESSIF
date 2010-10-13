@@ -26,6 +26,7 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -182,11 +183,11 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
 
     /**
      * Constructs an empty database storage.
-     * Note that the connection is established when the first manipulation-method is called.
      *
      * @param storedObjectsClass the class of objects that the storage will work with
      * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
      * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
      * @param tableName the name of the table in the database
      * @param primaryKeyColumn the name of the column that is the primary key of the table
      * @param columnNames the names of columns where the data are stored
@@ -195,7 +196,7 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @throws IllegalArgumentException if the column names and column convertors do not match
      * @throws SQLException if there was a problem connecting to the database
      */
-    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
         // Check provided values
         if (dbConnUrl == null)
             throw new IllegalArgumentException("Database connection cannot be null");
@@ -205,6 +206,12 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
             throw new IllegalArgumentException("Primary key column name cannot be null");
         if (columnNames == null || columnConvertors == null || columnNames.length != columnConvertors.length)
             throw new IllegalArgumentException("Values of dataColumnNames and dataToColumnConvertors are incompatible or invalid");
+        if (dbDriverClass != null)
+            try {
+                DriverManager.registerDriver(Convert.getClassForName(dbDriverClass, Driver.class).newInstance());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Cannot register database driver " + dbDriverClass + ": " + e, e);
+            }
 
         // Set values
         this.storedObjectsClass = storedObjectsClass;
@@ -265,16 +272,53 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         deleteAllSQL = "delete from " + tableName;
 
         // Connect to the database to fail fast if the URL is invalid
-        getConnection();
+        if (this.dbConnUrl != null)
+            getConnection();
     }
 
     /**
      * Constructs an empty database storage.
-     * Note that the connection is established when the first manipulation-method is called.
      *
      * @param storedObjectsClass the class of objects that the storage will work with
      * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
      * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param tableName the name of the table in the database
+     * @param primaryKeyColumn the name of the column that is the primary key of the table
+     * @param columnNames the names of columns where the data are stored
+     * @param columnConvertors the convertors that convert between the storage instances and database column;
+     *          there must be one convertor for every data column name from {@code columnNames}
+     * @throws IllegalArgumentException if the column names and column convertors do not match
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+        this(storedObjectsClass, dbConnUrl, dbConnInfo, null, tableName, primaryKeyColumn, columnNames, columnConvertors);
+    }
+
+    /**
+     * Constructs an empty database storage.
+     *
+     * @param storedObjectsClass the class of objects that the storage will work with
+     * @param dbConnection an existing database connection (note that the connection cannot be automatically re-established)
+     * @param tableName the name of the table in the database
+     * @param primaryKeyColumn the name of the column that is the primary key of the table
+     * @param columnNames the names of columns where the data are stored
+     * @param columnConvertors the convertors that convert between the storage instances and database column;
+     *          there must be one convertor for every data column name from {@code columnNames}
+     * @throws IllegalArgumentException if the column names and column convertors do not match
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, Connection dbConnection, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+        this(storedObjectsClass, null, null, null, tableName, primaryKeyColumn, columnNames, columnConvertors);
+        this.dbConnection = dbConnection;
+    }
+
+    /**
+     * Constructs an empty database storage.
+     *
+     * @param storedObjectsClass the class of objects that the storage will work with
+     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
      * @param tableName the name of the table in the database
      * @param primaryKeyColumn the name of the column that is the primary key of the table
      * @param columns a map with the names of columns in keys and the convertors that convert
@@ -284,8 +328,8 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @throws SQLException if there was a problem connecting to the database
      */
     @SuppressWarnings("unchecked")
-    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, Map<String, ColumnConvertor<T>> columns) throws IllegalArgumentException, SQLException {
-        this(storedObjectsClass, dbConnUrl, dbConnInfo, tableName, primaryKeyColumn,
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, Map<String, ColumnConvertor<T>> columns) throws IllegalArgumentException, SQLException {
+        this(storedObjectsClass, dbConnUrl, dbConnInfo, dbDriverClass, tableName, primaryKeyColumn,
                 columns.keySet().toArray(new String[columns.size()]),
                 columns.values().toArray(new ColumnConvertor[columns.size()])
         );
@@ -402,6 +446,7 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * the following recognized key names:
      * <ul>
      *   <li><em>connectionURL</em> - the database connection URL (e.g. "jdbc:mysql://localhost/somedb")</li>
+     *   <li><em>driverClass</em> - the class of the database driver to use
      *   <li><em>tableName</em> - the name of the table in the database</li>
      *   <li><em>primaryKeyColumn</em> - the name of the column that is the primary key of the table</li>
      *   <li><em>columnNames</em> - the names of columns where the data are stored</li>
@@ -419,6 +464,7 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      */
     public static <T> DatabaseStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IllegalArgumentException, SQLException {
         String dbConnUrl = Convert.getParameterValue(parameters, "connectionURL", String.class, null);
+        String driverClass = Convert.getParameterValue(parameters, "driverClass", String.class, null);
         String tableName = Convert.getParameterValue(parameters, "tableName", String.class, null);
         String primaryKeyColumn = Convert.getParameterValue(parameters, "primaryKeyColumn", String.class, null);
         String[] columnNames = Convert.getParameterValue(parameters, "columnNames", String[].class, null);
@@ -430,7 +476,7 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
                 properties.setProperty(entry.getKey(), (String)entry.getValue());
         }
         DatabaseStorage<T> storage = new DatabaseStorage<T>(
-                storedObjectsClass, dbConnUrl, properties, tableName, primaryKeyColumn, columnNames, columnConvertors);
+                storedObjectsClass, dbConnUrl, properties, driverClass, tableName, primaryKeyColumn, columnNames, columnConvertors);
         return storage;
     }
 
@@ -711,6 +757,24 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
                 return toValue(resultSet);
             } catch (SQLException e) {
                 throw new StorageFailureException(e);
+            }
+        }
+
+        @Override
+        public boolean skip(int count) throws IllegalStateException {
+            // If there is a comparator defined, we must check keys
+            if (getComparator() != null)
+                return super.skip(count);
+
+            // No comparator, we can seek faster
+            try {
+                if (count < 0 && resultSet.relative(count + 1)) // Skip backwards
+                    return previous();
+                else if (count > 0 && resultSet.relative(count - 1)) // Skip forward
+                    return next();
+                return true;
+            } catch (SQLException e) {
+                throw new IllegalStateException("Error skipping " + count + " objects from the underlying storage", e);
             }
         }
 
