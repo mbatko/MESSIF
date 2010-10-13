@@ -53,7 +53,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
     /**
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
      * @param search the {@link Search} instance to wrap by this iterator
-     * @param limit limit the number of iterations (zero means unlimited)
+     * @param limit limit the number of iterations (use -1 for unlimited number of iterations)
      */
     public SearchAbstractObjectIterator(Search<T> search, int limit) {
         if (search == null)
@@ -61,14 +61,14 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         this.index = null;
         this.search = search;
         this.hasNext = -1;
-        this.limit = limit <= 0 ? Integer.MAX_VALUE : limit;
+        this.limit = limit;
         this.count = 0;
     }
 
     /**
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Index} instance.
      * @param index the {@link Index} instance the search of which is wrapped by this iterator
-     * @param limit limit the number of iterations (zero means unlimited)
+     * @param limit limit the number of iterations (use -1 for unlimited number of iterations)
      */
     public SearchAbstractObjectIterator(Index<T> index, int limit) {
         if (index == null)
@@ -76,7 +76,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         this.index = index;
         this.search = null;
         this.hasNext = -1;
-        this.limit = limit <= 0 ? Integer.MAX_VALUE : limit;
+        this.limit = limit;
         this.count = 0;
     }
 
@@ -85,7 +85,15 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
      * @param search the {@link Search} instance to wrap by this iterator
      */
     public SearchAbstractObjectIterator(Search<T> search) {
-        this(search, Integer.MAX_VALUE);
+        this(search, -1);
+    }
+
+    /**
+     * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Index} instance.
+     * @param index the {@link Index} instance the search of which is wrapped by this iterator
+     */
+    public SearchAbstractObjectIterator(Index<T> index) {
+        this(index, -1);
     }
 
 
@@ -100,12 +108,11 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
     }
 
     /**
-     * Returns the maximal number of iterations.
-     * Zero means unlimited.
+     * Returns the maximal number of iterations; -1 means unlimited.
      * @return the maximal number of iterations
      */
     public int getLimit() {
-        return (limit == Integer.MAX_VALUE)?0:limit;
+        return limit;
     }
 
     /**
@@ -113,7 +120,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
      * @return <tt>true</tt> if the current number of iterations has reached its maximum
      */
     public final boolean isLimitReached() {
-        return (count > limit);
+        return (limit != -1) && (count > limit);
     }
 
 

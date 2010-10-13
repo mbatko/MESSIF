@@ -16,6 +16,7 @@
  */
 package messif.operations;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
@@ -92,7 +93,28 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * @return number of objects satisfying the query
      */
     public abstract int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects);
-    
+
+    /**
+     * Execute query operation on the given objects iterator and return the answer.
+     * The operation to execute is created according to the given class and arguments.
+     * This is a shortcut method for calling {@link AbstractOperation#createOperation(java.lang.Class, java.lang.Object[])},
+     * {@link #evaluate} and {@link #getAnswer()}.
+     *
+     * @param <T> the type of query operation answer
+     * @param objects the collection of objects on which to evaluate this query
+     * @param operationClass the class of the operation to execute on this algorithm
+     * @param arguments the arguments for the operation constructor
+     * @return iterator for the answer of the executed query
+     * @throws IllegalArgumentException if the argument count or their types don't match the specified operation class constructor
+     * @throws InvocationTargetException if the operation constructor has thrown an exception
+     * @throws NoSuchMethodException if the operation is unknown or unsupported by this algorithm
+     */
+    public static <T> Iterator<? extends T> getQueryAnswer(AbstractObjectIterator<? extends LocalAbstractObject> objects, Class<? extends QueryOperation<? extends T>> operationClass, Object... arguments) throws IllegalArgumentException, InvocationTargetException, NoSuchMethodException {
+        QueryOperation<? extends T> queryOperation = AbstractOperation.createOperation(operationClass, arguments);
+        queryOperation.evaluate(objects);
+        return queryOperation.getAnswer();
+    }
+
 
     //****************** Answer methods ******************//
 
