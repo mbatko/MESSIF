@@ -121,6 +121,15 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     }
 
     /**
+     * Returns the keys that this search currently searches for.
+     * Note that a copy of the array is returned.
+     * @return the array of keys
+     */
+    protected Object[] getKeys() {
+        return keys.clone();
+    }
+
+    /**
      * Returns the key with specified index.
      * The index must be greater than or equal to 0 and less than {@link #getKeyCount()}.
      * @param index the index of the key to return

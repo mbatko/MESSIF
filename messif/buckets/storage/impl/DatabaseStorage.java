@@ -25,15 +25,14 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import messif.buckets.BucketStorageException;
@@ -51,6 +50,7 @@ import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
 import messif.utility.Convert;
+import messif.utility.ExtendedDatabaseConnection;
 
 /**
  * Database-based storage.
@@ -69,9 +69,9 @@ import messif.utility.Convert;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
+public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements IntStorageIndexed<T>, Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** Column convertor interface ******************//
 
@@ -129,22 +129,10 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
 
-    //****************** Constants ******************//
-
-    /** Number of miliseconds to sleep when an SQL command fail before another one is tried */
-    private static final int connectionRetryTime = 500;
-
-
     //****************** Attributes ******************//
 
     /** Class of objects that the this storage works with */
     private final Class<? extends T> storedObjectsClass;
-    /** Database connection URL */
-    private final String dbConnUrl;
-    /** Properties with database connection info */
-    private final Properties dbConnInfo;
-    /** Connection to database (according to {@link #dbConnUrl}) */
-    private transient Connection dbConnection;
     /** List of column convertors */
     private final ColumnConvertor<T>[] columnConvertors;
     /** List of additional column names (same size as columnConvertors) */
@@ -197,26 +185,18 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @throws SQLException if there was a problem connecting to the database
      */
     public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+        super(dbConnUrl, dbConnInfo, dbDriverClass);
+
         // Check provided values
-        if (dbConnUrl == null)
-            throw new IllegalArgumentException("Database connection cannot be null");
         if (tableName == null)
             throw new IllegalArgumentException("Table name cannot be null");
         if (primaryKeyColumn == null)
             throw new IllegalArgumentException("Primary key column name cannot be null");
         if (columnNames == null || columnConvertors == null || columnNames.length != columnConvertors.length)
             throw new IllegalArgumentException("Values of dataColumnNames and dataToColumnConvertors are incompatible or invalid");
-        if (dbDriverClass != null)
-            try {
-                DriverManager.registerDriver(Convert.getClassForName(dbDriverClass, Driver.class).newInstance());
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Cannot register database driver " + dbDriverClass + ": " + e, e);
-            }
 
         // Set values
         this.storedObjectsClass = storedObjectsClass;
-        this.dbConnUrl = dbConnUrl;
-        this.dbConnInfo = dbConnInfo;
         this.columnConvertors = columnConvertors;
         this.columnNames = columnNames;
 
@@ -270,10 +250,6 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
         updateSQL = columnUpdateList.append(" where ").append(primaryKeyColumn).append(" = ?").toString();
         // Delete all
         deleteAllSQL = "delete from " + tableName;
-
-        // Connect to the database to fail fast if the URL is invalid
-        if (this.dbConnUrl != null)
-            getConnection();
     }
 
     /**
@@ -292,24 +268,6 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      */
     public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
         this(storedObjectsClass, dbConnUrl, dbConnInfo, null, tableName, primaryKeyColumn, columnNames, columnConvertors);
-    }
-
-    /**
-     * Constructs an empty database storage.
-     *
-     * @param storedObjectsClass the class of objects that the storage will work with
-     * @param dbConnection an existing database connection (note that the connection cannot be automatically re-established)
-     * @param tableName the name of the table in the database
-     * @param primaryKeyColumn the name of the column that is the primary key of the table
-     * @param columnNames the names of columns where the data are stored
-     * @param columnConvertors the convertors that convert between the storage instances and database column;
-     *          there must be one convertor for every data column name from {@code columnNames}
-     * @throws IllegalArgumentException if the column names and column convertors do not match
-     * @throws SQLException if there was a problem connecting to the database
-     */
-    public DatabaseStorage(Class<? extends T> storedObjectsClass, Connection dbConnection, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
-        this(storedObjectsClass, null, null, null, tableName, primaryKeyColumn, columnNames, columnConvertors);
-        this.dbConnection = dbConnection;
     }
 
     /**
@@ -343,38 +301,35 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
 
     public void destroy() throws Throwable {
         // Delete all records from the database
-        getConnection().prepareStatement(deleteAllSQL).execute();
+        prepareAndExecute(null, deleteAllSQL);
         closeConnection();
     }
 
-    //****************** SQL connection ******************//
 
-    /**
-     * Returns the database connection of this storage.
-     * @return the database connection
-     * @throws SQLException if there was a problem connecting to the database
-     */
-    protected final Connection getConnection() throws SQLException {
-        if (dbConnection != null && !dbConnection.isClosed())
-            return dbConnection;
-        return dbConnection = DriverManager.getConnection(dbConnUrl, dbConnInfo);
-    }
+    //****************** Column conversion support ******************//
 
     /**
      * Closes connection to the database.
      * @throws SQLException if there was an error while closing the connection
      */
+    @Override
     protected void closeConnection() throws SQLException {
-        if (sizeStatement != null)
-            sizeStatement.close();
-        if (insertStatement != null)
-            insertStatement.close();
-        if (deleteStatement != null)
-            deleteStatement.close();
-        if (readStatement != null)
-            readStatement.close();
-        if (dbConnection != null)
-            dbConnection.close();
+        try {
+            if (sizeStatement != null)
+                sizeStatement.close();
+            if (insertStatement != null)
+                insertStatement.close();
+            if (deleteStatement != null)
+                deleteStatement.close();
+            if (updateStatement != null)
+                updateStatement.close();
+            if (readStatement != null)
+                readStatement.close();
+            if (readByDataStatement != null)
+                readByDataStatement.close();
+        } catch (Exception ignore) {
+        }
+        super.closeConnection();
     }
 
     /**
@@ -410,32 +365,20 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
      * @throws BucketStorageException if there was an error converting a column value
      */
     protected final PreparedStatement execute(PreparedStatement statement, String sql, Integer primaryKey, T object) throws SQLException, BucketStorageException {
-        for (;;) {
-            // Prepare statement
-            if (statement == null || statement.isClosed())
-                statement = getConnection().prepareStatement(sql);
+        List<Object> parameters = new ArrayList<Object>(columnConvertors.length);
 
-            // Map parameters
-            if (primaryKey != null && object == null)
-                statement.setObject(1, primaryKey);
-            if (object != null) {
-                int col = 1;
-                for (int i = 0; i < columnConvertors.length; i++)
-                    if (columnConvertors[i].isConvertToColumnUsed())
-                        statement.setObject(col++, columnConvertors[i].convertToColumnValue(object));
-                if (primaryKey != null)
-                    statement.setObject(col, primaryKey);
-            }
-
-            // Execute query and handle recoverable exception
-            try {
-                statement.execute();
-                return statement;
-            } catch (SQLRecoverableException e) {
-                closeConnection();
-                try { Thread.sleep(connectionRetryTime); } catch (InterruptedException ignore) {}
-            }
+        // Map parameters
+        if (primaryKey != null && object == null)
+            parameters.add(primaryKey);
+        if (object != null) {
+            for (int i = 0; i < columnConvertors.length; i++)
+                if (columnConvertors[i].isConvertToColumnUsed())
+                    parameters.add(columnConvertors[i].convertToColumnValue(object));
+            if (primaryKey != null)
+                parameters.add(primaryKey);
         }
+
+        return prepareAndExecute(statement, sql, parameters.toArray());
     }
 
 
@@ -691,33 +634,23 @@ public class DatabaseStorage<T> implements IntStorageIndexed<T>, Serializable {
          * @throws SQLException if there was a problem executing the query
          */
         private ResultSet executeQuery() throws SQLException {
-            do {
-                // Prepare the statement
-                PreparedStatement statement;
-                if (columnName == null) {
-                    statement = getConnection().prepareStatement(selectSQL);
-                } else if (isKeyBounds()) {
-                    statement = getConnection().prepareStatement(selectSQL + " where " + columnName + " between ? and ?");
-                    statement.setObject(1, getKey(0));
-                    statement.setObject(2, getKey(1));
-                } else {
-                    StringBuilder sql = new StringBuilder(selectSQL);
-                    sql.append(" where ").append(columnName).append(" in (");
-                    for (int i = 0; i < getKeyCount(); i++)
-                        sql.append(i == 0 ? "?" : ",?");
-                    sql.append(')');
-                    statement = getConnection().prepareStatement(sql.toString());
-                    for (int i = 0; i < getKeyCount(); i++)
-                        statement.setObject(i + 1, getKey(i));
-                }
-
-                // Execute the query
-                try {
-                    return statement.executeQuery();
-                } catch (SQLRecoverableException e) {
-                    closeConnection();
-                }
-            } while (true);
+            StringBuilder sql;
+            Object[] parameters;
+            if (columnName == null) {
+                sql = new StringBuilder(selectSQL);
+                parameters = null;
+            } else if (isKeyBounds()) {
+                sql = new StringBuilder(selectSQL).append(" where ").append(columnName).append(" between ? and ?");
+                parameters = new Object[] { getKey(0), getKey(1) };
+            } else {
+                sql = new StringBuilder(selectSQL);
+                sql.append(" where ").append(columnName).append(" in (");
+                for (int i = 0; i < getKeyCount(); i++)
+                    sql.append(i == 0 ? "?" : ",?");
+                sql.append(')');
+                parameters = getKeys();
+            }
+            return prepareAndExecute(sizeStatement, sql.toString(), parameters).getResultSet();
         }
 
         @Override
