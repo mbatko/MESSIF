@@ -293,12 +293,6 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         );
     }
 
-    @Override
-    public void finalize() throws Throwable {
-        closeConnection();
-        super.finalize();
-    }
-
     public void destroy() throws Throwable {
         // Delete all records from the database
         prepareAndExecute(null, deleteAllSQL);
