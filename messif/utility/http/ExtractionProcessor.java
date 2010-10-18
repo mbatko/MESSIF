@@ -42,27 +42,22 @@ import messif.utility.reflection.Instantiators;
 public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpApplicationProcessor<T> {
     /** Extractor for the object created from the input stream */
     protected final Extractor<? extends T> extractor;
-    /** Name of the HTTP parameter that contains the name for the extracted object */
-    protected final String nameParameter;
 
     /**
      * Create a new instance of extraction processor.
      *
-     * @param nameParameter the name of the HTTP parameter that contains the name for the extracted object
      * @param extractor the extractor for objects to create
      * @throws IllegalArgumentException if the specified {@code objectClass} is not valid
      */
-    public ExtractionProcessor(String nameParameter, Extractor<? extends T> extractor) throws IllegalArgumentException {
+    public ExtractionProcessor(Extractor<? extends T> extractor) throws IllegalArgumentException {
         this.extractor = extractor;
-        this.nameParameter = nameParameter;
     }
 
     /**
      * Create a new instace of extraction processor.
      * Extractor is given as method signature that is parsed using {@link Instantiators#createInstanceWithStringArgs}.
-     * If the signature starts with a quoted name, it is used as HTTP parameter passed to the data source.
      * Example: <pre>
-     *      "id" messif.objects.extraction.Extractors.createExternalExtractor(messif.objects.impl.MetaObjectMap, some_extractor_binary)
+     *      messif.objects.extraction.Extractors.createExternalExtractor(messif.objects.impl.MetaObjectMap, some_extractor_binary)
      * </pre>
      *
      * @param extractorSignature the signature of the extractor (constructor, factory method or named instance)
@@ -72,17 +67,6 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
      */
     public ExtractionProcessor(String extractorSignature, Class<? extends T> extractedClass, Map<String, Object> namedInstances) throws IllegalArgumentException {
         try {
-            // Parse quoted start
-            String[] parsedSignature = extractorSignature.startsWith("\"") ?
-                extractorSignature.substring(1).split("\\s*\"\\s*", 2) :
-                null;
-            if (parsedSignature != null && parsedSignature.length == 2) {
-                this.nameParameter = parsedSignature[0];
-                extractorSignature = parsedSignature[1];
-            } else {
-                this.nameParameter = null;
-            }
-
             // Try to get named instance first
             Object instance = namedInstances.get(extractorSignature);
             if (instance != null && instance instanceof Extractor) {
@@ -114,7 +98,7 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
             String contentEncoding = httpExchange.getRequestHeaders().getFirst("content-encoding");
             if (contentEncoding != null && contentEncoding.equalsIgnoreCase("gzip"))
                 input = new GZIPInputStream(input);
-            return new ExtractorDataSource(input, httpParams.get(nameParameter));
+            return new ExtractorDataSource(input, httpParams);
         } catch (IOException e) {
             throw new IllegalArgumentException("There was a problem reading the HTTP body: " + e.getMessage(), e);
         }
