@@ -71,6 +71,12 @@ public class ExtendedDatabaseConnection implements Serializable {
         this.dbConnection = createConnection(dbConnUrl, dbConnInfo, dbDriverClass);
     }
 
+    @Override
+    public void finalize() throws Throwable {
+        closeConnection();
+        super.finalize();
+    }
+
 
     //****************** SQL connection ******************//
 

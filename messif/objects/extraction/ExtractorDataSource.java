@@ -26,6 +26,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Provides a data source for {@link Extractor}s.
@@ -55,8 +57,8 @@ public class ExtractorDataSource implements Closeable {
 
     /** Remembered data source (can be {@link File}, {@link InputStream} or {@link URL}) */
     private final Object dataSource;
-    /** Name of the data source */
-    private final String name;
+    /** Additional parameters for this data source */
+    private final Map<String, ? extends Object> additionalParameters;
     /** Input stream that provides data for this data source */
     private InputStream inputStream;
     /** Number of bytes available in the input stream or zero if this is unknown in advance */
@@ -70,12 +72,40 @@ public class ExtractorDataSource implements Closeable {
     /**
      * Create new instance of ExtractorDataSource using data from {@link InputStream}.
      * @param inputStream the input stream from which to download the data
-     * @param name the name of this data source
+     * @param additionalParameters the additional parameters for this data source
      */
-    public ExtractorDataSource(InputStream inputStream, String name) {
-        this.name = name;
+    public ExtractorDataSource(InputStream inputStream, Map<String, ? extends Object> additionalParameters) {
         this.dataSource = inputStream;
+        this.additionalParameters = additionalParameters;
         openDataSource(inputStream);
+    }
+
+    /**
+     * Create new instance of ExtractorDataSource using data from {@link InputStream}.
+     * @param inputStream the input stream from which to download the data
+     */
+    public ExtractorDataSource(InputStream inputStream) {
+        this(inputStream, null);
+    }
+
+    /**
+     * Create new instance of ExtractorDataSource using data downloaded from {@link URL}.
+     * @param url the URL from which to download the data
+     * @param mimeTypeRegexp regular expression for the mimetype of the data on the given {@code url}
+     * @param additionalParameters the additional parameters for this data source
+     * @throws IOException if there was an error reading the data
+     */
+    public ExtractorDataSource(URL url, String mimeTypeRegexp, Map<String, ? extends Object> additionalParameters) throws IOException {
+        // Open url connection
+        URLConnection conn = url.openConnection();
+
+        // Check content type
+        if (mimeTypeRegexp != null && conn.getContentType() != null && !conn.getContentType().matches(mimeTypeRegexp))
+            throw new IOException("Cannot read '" + conn.getContentType() + "' data");
+
+        this.dataSource = url;
+        this.additionalParameters = additionalParameters;
+        openDataSource(conn);
     }
 
     /**
@@ -85,16 +115,19 @@ public class ExtractorDataSource implements Closeable {
      * @throws IOException if there was an error reading the data
      */
     public ExtractorDataSource(URL url, String mimeTypeRegexp) throws IOException {
-        // Open url connection
-        URLConnection conn = url.openConnection();
+        this(url, mimeTypeRegexp, null);
+    }
 
-        // Check content type
-        if (mimeTypeRegexp != null && conn.getContentType() != null && !conn.getContentType().matches(mimeTypeRegexp))
-            throw new IOException("Cannot read '" + conn.getContentType() + "' data");
-
-        this.name = url.toString();
-        this.dataSource = url;
-        openDataSource(conn);
+    /**
+     * Create new instance of ExtractorDataSource using data from {@link File}.
+     * @param file the file from which to download the data
+     * @param additionalParameters the additional parameters for this data source
+     * @throws IOException if there was an error opening the file
+     */
+    public ExtractorDataSource(File file, Map<String, ? extends Object> additionalParameters) throws IOException {
+        this.dataSource = file;
+        this.additionalParameters = additionalParameters;
+        openDataSource(file);
     }
 
     /**
@@ -103,9 +136,7 @@ public class ExtractorDataSource implements Closeable {
      * @throws IOException if there was an error opening the file
      */
     public ExtractorDataSource(File file) throws IOException {
-        this.name = file.getPath();
-        this.dataSource = file;
-        openDataSource(file);
+        this(file, null);
     }
 
 
@@ -167,11 +198,52 @@ public class ExtractorDataSource implements Closeable {
     //****************** Data access methods *************//
 
     /**
-     * Returns the name of this data source.
-     * @return the name of this data source
+     * Returns an additional parameter of this data source with the given {@code name}.
+     * @param name the name of the additional parameter to get
+     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
      */
-    public String getName() {
-        return name;
+    public Object getParameter(String name) {
+        return additionalParameters != null ? additionalParameters.get(name) : null;
+    }
+
+    /**
+     * Returns an additional parameter of this data source with the given {@code name}.
+     * If the parameter is not set or is not instance of {@code parameterClass},
+     * the {@code defaultValue} is returned instead.
+     *
+     * @param <T> the class of the parameter
+     * @param name the name of the additional parameter to get
+     * @param parameterClass the class of the parameter to get
+     * @param defaultValue the default value to use if the parameter is <tt>null</tt>
+     * @return the parameter value
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
+        Object value = getParameter(name);
+        return value != null && parameterClass.isInstance(value) ? (T)value : defaultValue; // This cast IS checked by isInstance
+    }
+
+    /**
+     * Returns an additional parameter of this data source with the given {@code name}.
+     * If the parameter {@code name} exists but it is not an instance of
+     * {@code parameterClass}, <tt>null</tt> is returned.
+     *
+     * @param <T> the class of the parameter
+     * @param name the name of the additional parameter to get
+     * @param parameterClass the class of the parameter to get
+     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
+     */
+    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
+        return getParameter(name, parameterClass, null);
+    }
+
+    /**
+     * Returns the map of additional parameters of this data source.
+     * Note that the map is not modifiable.
+     * @return the map of additional parameters
+     */
+    public Map<String, ? extends Object> getAdditionalParameters() {
+        return Collections.unmodifiableMap(additionalParameters);
     }
 
     /**

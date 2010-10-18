@@ -16,17 +16,15 @@
  */
 package messif.objects.extraction;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import messif.objects.LocalAbstractObject;
-import messif.utility.reflection.ConstructorInstantiator;
-import messif.utility.reflection.Instantiator;
 
 /**
  * Collection of utility methods for {@link Extractor}s.
@@ -45,7 +43,9 @@ public abstract class Extractors {
      * If the {@code maxBytes} parameter is greater than zero, then no more than
      * {@code maxBytes} will be read from the input stream. Otherwise, the buffer
      * will contain all the data from the input stream until the end-of-stream.
-     * <p>Note that the stream is not closed</p>.
+     * <p>
+     * Note that the stream is not closed.
+     * </p>
      *
      * @param inputStream the stream from which to read the data
      * @param maxBytes maximal number of bytes to read from the stream (unlimited if less or equal to zero)
@@ -76,6 +76,44 @@ public abstract class Extractors {
         }
 
         return buffer;
+    }
+
+    /**
+     * Read data from the string reader into a string builder.
+     * Note that the reader {@code data} is {@link Reader#close() closed} after
+     * the data are read.
+     * @param data the reader to retrieve the data from
+     * @param str the buffer to store the data to
+     * @return the string buffer with data (i.e. the {@code str} or,
+     *          if {@code str} was <tt>null</tt>, a new instance of {@link StringBuilder})
+     * @throws IOException if there was a problem reading the data
+     */
+    public static StringBuilder readStringData(Reader data, StringBuilder str) throws IOException {
+        if (str == null)
+            str = new StringBuilder();
+        try {
+            char[] buf = new char[1024];
+            int len = 0;
+            while ((len = data.read(buf)) != -1)
+                str.append(buf, 0, len);
+        } finally {
+            data.close();
+        }
+        return str;
+    }
+
+    /**
+     * Read data from the input stream into a string builder.
+     * Note that the input stream {@code data} is {@link InputStream#close() closed} after
+     * the data are read.
+     * @param data the stream to retrieve the data from
+     * @param str the buffer to store the data to
+     * @return the string buffer with data (i.e. the {@code str} or,
+     *          if {@code str} was <tt>null</tt>, a new instance of {@link StringBuilder})
+     * @throws IOException if there was a problem reading the data
+     */
+    public static StringBuilder readStringData(InputStream data, StringBuilder str) throws IOException {
+        return readStringData(new InputStreamReader(data), str);
     }
 
     /**
@@ -160,8 +198,37 @@ public abstract class Extractors {
     }
 
     /**
+     * Calls an external extractor command and returns its output.
+     * If {@code fileAsArgument} is <tt>true</tt>, the {@code dataSource} must
+     * represent a valid file, which is passed in place of %s parameter in the {@code command}.
+     * Otherwise, the external extractor receives the data from the {@code dataSource}
+     * on its standard input.
+     * 
+     * @param command the external command (including all necessary arguments)
+     * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+     * @param dataSource the source of binary data for the extraction
+     * @return the extracted data read from the standard output of the {@code command}
+     * @throws IOException if there was a problem calling the external command or passing arguments to it
+     */
+    public static InputStream callExternalExtractor(String command, boolean fileAsArgument, ExtractorDataSource dataSource) throws IOException {
+        Process extractorProcess;
+        if (fileAsArgument) {
+            Object dataFile = dataSource.getDataSource();
+            if (!(dataFile instanceof File))
+                throw new IOException("External extractor requires file");
+            extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
+        } else {
+            extractorProcess = Runtime.getRuntime().exec(command);
+            OutputStream os = extractorProcess.getOutputStream();
+            dataSource.pipe(os);
+            os.close();
+        }
+        return extractorProcess.getInputStream();
+    }
+
+    /**
      * Creates an extractor that creates objects from binary data by external command.
-     * The command is executed using the specified {@code cmdarray} and is expected to
+     * The command is executed using the specified {@code command} and is expected to
      * receive the binary data on its standard input and return the text parsable by
      * the constructor of {@code objectClass} on its standard output.
      *
@@ -171,13 +238,13 @@ public abstract class Extractors {
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(final Class<? extends T> objectClass, final String command) throws IllegalArgumentException {
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, String command) throws IllegalArgumentException {
         return createExternalExtractor(objectClass, command, false);
     }
 
     /**
      * Creates an extractor that creates objects from binary data by external command.
-     * The command is executed using the specified {@code cmdarray} and is expected to
+     * The command is executed using the specified {@code command} and is expected to
      * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
      * or the data are read from file that is passed as "%s" argument to the external command if
      * {@code fileAsArgument} is <tt>false</tt>.
@@ -187,36 +254,21 @@ public abstract class Extractors {
      * @param objectClass the class of object that is created by the extractor
      * @param command the external command (including all necessary arguments)
      * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+     * @param additionalArguments additional arguments for the constructor
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(final Class<? extends T> objectClass, final String command, final boolean fileAsArgument) throws IllegalArgumentException {
-        final Instantiator<? extends T> instantiator = new ConstructorInstantiator<T>(objectClass, BufferedReader.class);
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, Object... additionalArguments) throws IllegalArgumentException {
+        final Extractor<T> textExtractor = createTextExtractor(objectClass, additionalArguments);
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
-                Process extractorProcess;
-                if (fileAsArgument) {
-                    Object dataFile = dataSource.getDataSource();
-                    if (!(dataFile instanceof File))
-                        throw new ExtractorException("External extractor requires file");
-                    extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
-                } else {
-                    extractorProcess = Runtime.getRuntime().exec(command);
-                    OutputStream os = extractorProcess.getOutputStream();
-                    dataSource.pipe(os);
-                    os.close();
-                }
-                try {
-                    return instantiator.instantiate(new BufferedReader(new InputStreamReader(extractorProcess.getInputStream())));
-                } catch (InvocationTargetException e) {
-                    if (e.getCause() instanceof IOException)
-                        throw (IOException)e.getCause();
-                    else
-                        throw new ExtractorException("Cannot create instance using " + instantiator + ": " + e.getCause(), e.getCause());
-                }
+                return textExtractor.extract(new ExtractorDataSource(
+                        callExternalExtractor(command, fileAsArgument, dataSource),
+                        dataSource.getAdditionalParameters()
+                ));
             }
             public Class<? extends T> getExtractedClass() {
-                return instantiator.getInstantiatorClass();
+                return textExtractor.getExtractedClass();
             }
         };
     }
