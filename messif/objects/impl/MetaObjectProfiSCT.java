@@ -20,6 +20,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,7 +31,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
@@ -40,11 +47,17 @@ import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConve
 import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.extraction.Extractor;
+import messif.objects.extraction.ExtractorDataSource;
+import messif.objects.extraction.ExtractorException;
+import messif.objects.extraction.Extractors;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
+import messif.utility.ExtendedDatabaseConnection;
 
 /**
  * Special meta object that stores only the objects required for the Profi search.
@@ -361,13 +374,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param stream stream to read the data from
      * @param stemmer instances that provides a {@link Stemmer} for word transformation
      * @param keyWordIndex the index for translating keywords to addresses
-     * @param readAdditionalKeyWords if <tt>true</tt>, the additional keywords are read from the stream and encapsulated in the keyWords object as third array
+     * @param additionalKeyWords the additional keywords that will be encapsulated in the keyWords object as the third array
      * @throws IOException if reading from the stream fails
      */
-    public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, boolean readAdditionalKeyWords) throws IOException {
+    public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String additionalKeyWords) throws IOException {
         this(stream, true, false);
         // Note that the additional words are added AS THE LAST LINE OF THE OBJECT!
-        keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORDS_SPLIT_REGEXP), readAdditionalKeyWords ? stream.readLine().split(KEYWORDS_SPLIT_REGEXP) : null);
+        keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORDS_SPLIT_REGEXP), additionalKeyWords != null ? stream.readLine().split(KEYWORDS_SPLIT_REGEXP) : null);
     }
 
     /**
@@ -380,7 +393,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @throws IOException if reading from the stream fails
      */
     public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IOException {
-        this(stream, stemmer, keyWordIndex, false);
+        this(stream, stemmer, keyWordIndex, null);
     }
 
 
@@ -579,6 +592,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             str.append(territory);
         }
         return str.toString();
+    }
+
+    /**
+     * Returns whether this object contains the given territory.
+     * @param territory the territory to check
+     * @return <tt>true</tt>, if this object contains the given territory or <tt>false</tt>, if it does not
+     */
+    public boolean containsTerritory(Territory territory) {
+        return territories != null && territories.contains(territory);
     }
 
     /**
@@ -889,40 +911,270 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
     }
 
+    //****************** Database storage and extraction support ******************//
 
-    //************ Column setup for DatabaseStorage ************//
+    /**
+     * Utility class that allows to read/store the necessary data of the Profi objects
+     * in a database.
+     */
+    public static class DatabaseSupport extends ExtendedDatabaseConnection {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
 
-    /** Binary serializator for this object with default caching classes */
-    public static final BinarySerializator defaultBinarySerializator = new CachingSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class,
-                messif.objects.keys.AbstractObjectKey.class,
-                ObjectColorLayout.class,
-                ObjectShortVectorL1.class,
-                ObjectVectorEdgecomp.class,
-                ObjectIntVectorL1.class,
-                ObjectXMRegionShape.class,
-                ObjectIntMultiVectorJaccard.class
-        );
+        //****************** Database column definition ******************//
 
-    /** Database column definitions for this object */
-    public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
-    static {
-        Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
-        map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
-        map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
-        map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
-        map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
-        map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
-        map.put("scalable_color", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"));
-        map.put("region_shape", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"));
-        map.put("rights", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true));
-        map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true));
-        map.put("added", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true));
-        map.put("archivID", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true));
-        map.put("attractiveness", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true));
-        map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
-        map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
-        map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
-        dbColumns = Collections.unmodifiableMap(map);
+        /** Database column definitions for this object */
+        public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
+        static {
+            Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
+            // id -- primary key
+            map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
+            // thumbfile -- location of the thumbnail image file
+            map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
+            map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
+            map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
+            map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
+            map.put("scalable_color", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ScalableColorType"));
+            map.put("region_shape", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "RegionShapeType"));
+            map.put("rights", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCT.class, false, true));
+            map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCT.class, false, true));
+            map.put("added", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCT.class, false, true));
+            map.put("archivID", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCT.class, false, true));
+            map.put("attractiveness", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCT.class, false, true));
+            map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
+            map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
+            map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
+            dbColumns = Collections.unmodifiableMap(map);
+        }
+
+
+        //****************** Attributes ******************//
+
+        /** Random number generator for {@link #randomLocators(int)} */
+        private final Random randomGenerator;
+        /** Instance that provides a {@link Stemmer} for word transformation */
+        private final Stemmer stemmer;
+        /** Index for translating keywords to addresses */
+        private final IntStorageIndexed<String> keyWordIndex;
+        /** SQL command to retrieve the thumbnail path for the given locator */
+        private final String locatorToThumbnailSQL;
+        /** SQL command to retrieve the locator for the given id */
+        private final String locatorByIdSQL;
+        /** SQL command to retrieve the current maximal id */
+        private final String maxIdSQL;
+        /** SQL command to retrieve the object's text representation for the given locator */
+        private final String metaobjectSQL;
+
+        /**
+         * Creates a new instance of DatabaseStorageExtractor.
+         * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+         * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+         * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+         * @param tableName the name of the table in the database
+         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex the index for translating keywords to addresses
+         * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
+            super(dbConnUrl, dbConnInfo, dbDriverClass);
+            this.randomGenerator = new Random();
+            this.stemmer = stemmer;
+            this.keyWordIndex = keyWordIndex;
+            this.locatorToThumbnailSQL = "select thumbfile from " + tableName + " where locator = ?";
+            this.locatorByIdSQL = "select locator from " + tableName + " where id > ? limit 1";
+            this.maxIdSQL = "select max(id) from " + tableName;
+            this.metaobjectSQL = "select metaobject from " + tableName + " where locator = ?";
+        }
+
+        /**
+         * Returns the first column of the first row returned by the given SQL command.
+         * @param sql the SQL command to execute
+         * @param parameters parameters for the "?" placeholders inside the SQL command
+         * @return the value in the first column of the first row
+         * @throws NoSuchElementException if the SQL command does not return any row
+         * @throws SQLException if there was a problem parsing or executing the SQL command
+         */
+        private Object executeSingleValue(String sql, Object... parameters) throws NoSuchElementException, SQLException {
+            ResultSet rs = prepareAndExecute(null, sql, parameters).getResultSet();
+            try {
+                if (!rs.next())
+                    throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
+                return rs.getObject(1);
+            } finally {
+                rs.close();
+            }
+        }
+
+        /**
+         * Returns the thumbnail path of the object with the given locator.
+         * @param locator the locator of the object for which to get the thumbnail
+         * @return the thumbnail path
+         * @throws SQLException if there was a problem executing the SQL command
+         */
+        public String locatorToThumbnail(String locator) throws SQLException {
+            return (String)executeSingleValue(locatorToThumbnailSQL, locator);
+        }
+
+        /**
+         * Returns a list of randomly generated locators from the database.
+         * @param count the number of random locators to retrieve
+         * @return a list of randomly generated locators
+         * @throws SQLException if there was a problem executing the SQL command
+         */
+        public synchronized List<String> randomLocators(int count) throws SQLException {
+            List<String> ret = new ArrayList<String>(count);
+            int maxid = ((Number)executeSingleValue(maxIdSQL)).intValue();
+            while (ret.size() < count) {
+                try {
+                    ret.add((String)executeSingleValue(locatorByIdSQL, randomGenerator.nextInt(maxid + 1)));
+                } catch (NoSuchElementException ignore) {
+                }
+            }
+            return ret;
+        }
+
+        /**
+         * Returns the object with given {@code locator}.
+         * The object is retrieved from the database.
+         * @param locator the locator of the object to return
+         * @param additionalKeyWords the additional keywords that will be encapsulated in the keyWords object as the third array
+         * @return the created instance of the object
+         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         */
+        public MetaObjectProfiSCT locatorToObject(String locator, String additionalKeyWords) throws ExtractorException {
+            try {
+                String metaobject = (String)executeSingleValue(metaobjectSQL, locator);
+                return new MetaObjectProfiSCT(new BufferedReader(new StringReader(metaobject)), stemmer, keyWordIndex, additionalKeyWords);
+            } catch (Exception e) {
+                throw new ExtractorException("Cannot read object '" + locator + "' from database", e);
+            }
+        }
+
+        /**
+         * Returns the object with given {@code locator}.
+         * The object is retrieved from the database.
+         * @param locator the locator of the object to return
+         * @return the created instance of the object
+         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         */
+        public MetaObjectProfiSCT locatorToObject(String locator) throws ExtractorException {
+            return locatorToObject(locator, null);
+        }
+
+        /**
+         * Creates a new extractor that uses locator parameter of the
+         * {@link ExtractorDataSource} to get the respective object from the database.
+         * @param locatorParamName the name of the {@link ExtractorDataSource} parameter that contains the locator
+         * @param additionalKeyWordsParamName the name of the {@link ExtractorDataSource} parameter that contains the additional keywords
+         * @return a new extractor instance
+         */
+        public Extractor<? extends MetaObjectProfiSCT> createLocatorExtractor(String locatorParamName, String additionalKeyWordsParamName) {
+            return new LocatorExtractor(locatorParamName, additionalKeyWordsParamName);
+        }
+
+        /**
+         * Creates a new extractor that uses external image extractor and additional parameters
+         * to create instances of {@link MetaObjectProfiSCT}.
+         * @param extractorCommand the external extractor command for extracting binary images
+         * @param dataLineParameterNames a list of names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors
+         * @return a new extractor instance
+         */
+        public Extractor<? extends MetaObjectProfiSCT> createImageExtractor(String extractorCommand, String[] dataLineParameterNames) {
+            return new ImageExtractor(extractorCommand, dataLineParameterNames);
+        }
+
+        /**
+         * Internal class that provides object extractor that uses locator
+         * parameter of the {@link ExtractorDataSource} to get the respective
+         * object from the database. Note that additional keywords can be
+         * added to the object.
+         */
+        private class LocatorExtractor implements Extractor<MetaObjectProfiSCT> {
+            /** Name of the {@link ExtractorDataSource} parameter that contains the locator */
+            private final String locatorParamName;
+            /** Name of the {@link ExtractorDataSource} parameter that contains the additional keywords */
+            private final String additionalKeyWordsParamName;
+
+            /**
+             * Creates a new instance of LocatorExtractor.
+             * @param locatorParamName the name of the {@link ExtractorDataSource} parameter that contains the locator
+             * @param additionalKeyWordsParamName the name of the {@link ExtractorDataSource} parameter that contains the additional keywords
+             */
+            public LocatorExtractor(String locatorParamName, String additionalKeyWordsParamName) {
+                this.locatorParamName = locatorParamName;
+                this.additionalKeyWordsParamName = additionalKeyWordsParamName;
+            }
+
+            public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                String locator = dataSource.getParameter(locatorParamName, String.class);
+                if (locator == null)
+                    return null;
+                return locatorToObject(locator, dataSource.getParameter(additionalKeyWordsParamName, String.class));
+            }
+
+            public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
+                return MetaObjectProfiSCT.class;
+            }
+        }
+
+        /**
+         * Internal class that provides external image extractor and additional parameters
+         * to create instances of {@link MetaObjectProfiSCT}.
+         */
+        private class ImageExtractor implements Extractor<MetaObjectProfiSCT> {
+            /** External extractor command */
+            private final String extractorCommand;
+            /** Names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors */
+            private final String[] dataLineParameterNames;
+
+            /**
+             * Creates a new instance of ImageExtractor.
+             * @param extractorCommand the external extractor command for extracting binary images
+             * @param dataLineParameterNames a list of names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors
+             */
+            public ImageExtractor(String extractorCommand, String[] dataLineParameterNames) {
+                this.extractorCommand = extractorCommand;
+                this.dataLineParameterNames = dataLineParameterNames;
+            }
+
+            public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                StringBuilder str;
+
+                // Read data from the extractor
+                if (extractorCommand != null) {
+                    str = Extractors.readStringData(Extractors.callExternalExtractor(extractorCommand, false, dataSource), null);
+                    if (str.charAt(str.length() - 1) != '\n')
+                        str.append('\n');
+                } else {
+                    str = new StringBuilder();
+                }
+
+                // Add data from the parameters
+                if (dataLineParameterNames != null)
+                    for (int i = 0; i < dataLineParameterNames.length; i++)
+                        str.append(dataSource.getParameter(dataLineParameterNames[i], String.class, "")).append('\n');
+
+                // Create the object
+                try {
+                    MetaObjectProfiSCT obj = new MetaObjectProfiSCT(new BufferedReader(new StringReader(str.toString())), stemmer, keyWordIndex);
+
+                    // Set object key
+                    String key = dataSource.getParameter("key", String.class);
+                    if (key != null)
+                        obj.setObjectKey(new AbstractObjectKey(key));
+
+                    return obj;
+                } catch (Exception e) {
+                    throw new ExtractorException("Cannot extract the input data", e);
+                }
+            }
+
+            public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
+                return MetaObjectProfiSCT.class;
+            }
+        }
+
     }
 
 
@@ -1016,5 +1268,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         size += serializator.getBinarySize(keyWords);
         return size;
     }
+
+    /** Binary serializator for this object with default caching classes */
+    public static final BinarySerializator defaultBinarySerializator = new CachingSerializator<MetaObjectProfiSCT>(MetaObjectProfiSCT.class,
+                messif.objects.keys.AbstractObjectKey.class,
+                ObjectColorLayout.class,
+                ObjectShortVectorL1.class,
+                ObjectVectorEdgecomp.class,
+                ObjectIntVectorL1.class,
+                ObjectXMRegionShape.class,
+                ObjectIntMultiVectorJaccard.class
+        );
 
 }
