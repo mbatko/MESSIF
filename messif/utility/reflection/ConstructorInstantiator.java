@@ -19,6 +19,8 @@ package messif.utility.reflection;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.Map;
+import messif.utility.Convert;
 
 /**
  * This class allows to create instances of a given class.
@@ -49,11 +51,11 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * {@code objectClass} via the specified constructor.
      *
      * @param constructor the constructor using which the instances will be created
-     * @throws IllegalArgumentException if the provided class does not have a proper constructor
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Constructor<? extends T> constructor) throws IllegalArgumentException {
+    public ConstructorInstantiator(Constructor<? extends T> constructor) throws NoSuchInstantiatorException {
         if (Modifier.isAbstract(constructor.getDeclaringClass().getModifiers()))
-            throw new IllegalArgumentException("Cannot create abstract " + constructor.getDeclaringClass());
+            throw new NoSuchInstantiatorException("Cannot create abstract " + constructor.getDeclaringClass());
         this.constructor = constructor;
     }
 
@@ -63,10 +65,10 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      *
      * @param objectClass the class the instances of which will be created
      * @param prototype the types of constructor arguments
-     * @throws IllegalArgumentException if the provided class does not have a proper constructor
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Class<? extends T> objectClass, Class<?>... prototype) throws IllegalArgumentException {
-        this(getConstructor(objectClass, prototype));
+    public ConstructorInstantiator(Class<? extends T> objectClass, Class<?>... prototype) throws NoSuchInstantiatorException {
+        this(getConstructor(objectClass, true, prototype));
     }
 
     /**
@@ -77,10 +79,24 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      *
      * @param objectClass the class the instances of which will be created
      * @param argumentCount the number of arguments that the constructor should have
-     * @throws IllegalArgumentException if the provided class does not have a proper constructor
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Class<? extends T> objectClass, int argumentCount) throws IllegalArgumentException {
-        this(getConstructor(objectClass, argumentCount));
+    public ConstructorInstantiator(Class<? extends T> objectClass, int argumentCount) throws NoSuchInstantiatorException {
+        this(getConstructor(objectClass, true, argumentCount));
+    }
+
+    /**
+     * Creates a new instance of ConstructorInstantiator for creating instances of
+     * {@code objectClass} that accepts the given arguments.
+     *
+     * @param objectClass the class the instances of which will be created
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link messif.utility.Convert#stringToType}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param arguments the arguments for the constructor
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
+     */
+    public ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+        this(getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments));
     }
 
     /**
@@ -89,62 +105,174 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      *
      * @param objectClass the class the instances of which will be created
      * @param arguments the arguments for the constructor
-     * @throws IllegalArgumentException if the provided class does not have a proper constructor
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Class<? extends T> objectClass, Object... arguments) throws IllegalArgumentException {
-        this(getConstructor(objectClass, arguments));
+    public ConstructorInstantiator(Class<? extends T> objectClass, Object... arguments) throws NoSuchInstantiatorException {
+        this(objectClass, false, null, arguments);
     }
 
     /**
      * Retrieves a public constructor with the given prototype from the given class.
      * @param <T> the class in which to search for the constructor
      * @param constructorClass the class in which to search for the constructor
+     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
      * @param prototype the constructor prototype
      * @return the constructor found
-     * @throws IllegalArgumentException if the there is no constructor for the given prototype
+     * @throws NoSuchInstantiatorException if the there is no constructor for the given prototype
      */
-    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, Class<?>... prototype) throws IllegalArgumentException {
+    public static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean publicOnlyConstructors, Class<?>... prototype) throws NoSuchInstantiatorException {
         try {
-            return constructorClass.getConstructor(prototype);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("There is no constructor " + e.getMessage(), e);
+            return publicOnlyConstructors ? constructorClass.getConstructor(prototype) : constructorClass.getDeclaredConstructor(prototype);
+        } catch (NoSuchMethodException ignore) {
+            throw new NoSuchInstantiatorException(constructorClass, null, prototype);
         }
     }
 
     /**
      * Retrieves a public constructor with the given number of arguments from the given class.
      * @param <T> the class in which to search for the constructor
-     * @param constructorClass the class in which to search for the constructor
+     * @param constructors the list of constructors to search
      * @param argumentCount the number of arguments that the method should have
      * @return the constructor found
-     * @throws IllegalArgumentException if the there is no constructor for the given prototype
+     * @throws NoSuchInstantiatorException if the there is no constructor for the given prototype
      */
-    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, int argumentCount) throws IllegalArgumentException {
-        @SuppressWarnings("unchecked")
-        Constructor<T>[] constructors = (Constructor<T>[])constructorClass.getConstructors();
-        for (int i = 0; i < constructors.length; i++)
-            if (constructors[i].getParameterTypes().length == argumentCount)
-                return constructors[i];
-        throw new IllegalArgumentException("There is no constructor " + constructorClass.getName() + "(...) with " + argumentCount + " arguments");
+    public static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, int argumentCount) throws NoSuchInstantiatorException {
+        if (constructors.length == 0)
+            throw new NoSuchInstantiatorException("There are no constructors available");
+        for (Constructor<T> constructor : constructors)
+            if (constructor.getParameterTypes().length == argumentCount)
+                return constructor;
+        throw new NoSuchInstantiatorException(constructors[0].getDeclaringClass(), null, argumentCount);
     }
 
     /**
-     * Retrieves a public constructor for the specified class that accepts the specified arguments.
-     * The <code>constructorClass</code>'s public constructors are searched for the one that
+     * Retrieves a public constructor with the given number of arguments from the given class.
+     * @param <T> the class in which to search for the constructor
+     * @param constructorClass the class in which to search for the constructor
+     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param argumentCount the number of arguments that the method should have
+     * @return the constructor found
+     * @throws NoSuchInstantiatorException if the there is no constructor for the given prototype
+     */
+    public static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean publicOnlyConstructors, int argumentCount) throws NoSuchInstantiatorException {
+        return getConstructor(Convert.getConstructors(constructorClass, publicOnlyConstructors), argumentCount);
+    }
+
+    /**
+     * Returns a constructor for the specified class that accepts the specified arguments.
+     * The <code>constructorClass</code>'s declared constructors are searched for the one that
      * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper constructor is found. Their types then will be
+     * compatible with the constructor.
      *
-     * @param <T> the class the constructor will create
-     * @param constructorClass the class for which to get the constructor
+     * @param <T> the class in which to search for the constructor
+     * @param constructors the list of constructors to search
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the constructor
      * @return a constructor for the specified class
-     * @throws IllegalArgumentException if there was no constructor for the specified list of arguments
+     * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
      */
-    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, Object[] arguments) throws IllegalArgumentException {
-        try {
-            return Instantiators.getConstructor(constructorClass, false, true, null, arguments);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage());
+    public static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+        if (constructors.length == 0)
+            throw new NoSuchInstantiatorException("There are no constructors available");
+        for (Constructor<T> constructor : constructors) {
+            if (Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances))
+                return constructor;
         }
+
+        throw new NoSuchInstantiatorException(constructors[0].getDeclaringClass(), null, convertStringArguments, arguments);
+    }
+
+    /**
+     * Returns a constructor for the specified class that accepts the specified arguments.
+     * The <code>constructorClass</code>'s declared constructors are searched for the one that
+     * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper constructor is found. Their types then will be
+     * compatible with the constructor.
+     *
+     * @param <T> the class in which to search for the constructor
+     * @param constructorClass the class for which to get the constructor
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param arguments the arguments for the constructor
+     * @return a constructor for the specified class
+     * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
+     */
+    public static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+        return getConstructor(Convert.getConstructors(constructorClass, publicOnlyConstructors), convertStringArguments, namedInstances, arguments);
+    }
+
+    /**
+     * Creates a new instance of a class using string arguments for its constructor.
+     * The list of constructors of the desired class must be provided as <code>constructors</code> argument.
+     * The constructors are tried one by one from this list and if the <code>arguments</code>
+     * are convertible to the arguments of that constructor, a new instance is created.
+     * <p>
+     * Note that only constructors with the number of arguments equal to <code>argEndIndex - argStartIndex + 1</code>
+     * are tried. If there are several constructors with the same number of arguments, the first (in the order
+     * of the list) constructor that succeeds in converting string arguments will be used.
+     * </p>
+     * <p>
+     * Note also that only types convertible by {@link Convert#stringToType} method can be used in constructors.
+     * </p>
+     *
+     * @param <T> the type of the instantiated object
+     * @param constructors the list of constructors of the desired class to try
+     * @param arguments the string arguments for the constructor that will be converted to correct types
+     * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
+     * @param argEndIndex index in the string arguments array to which to expect arguments (all the following items are ignored)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return a new instance of the class the constructors were specified for
+     * @throws NoSuchInstantiatorException if the constructor can't be found for the specified arguments or the argument string-to-type convertion has failed
+     * @throws InvocationTargetException if there was an exception when calling the constructor
+     */
+    public static <T> T createInstanceWithStringArgs(Constructor<? extends T>[] constructors, Object[] arguments, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
+        Object[] args = new Object[argEndIndex - argStartIndex + 1];
+        System.arraycopy(arguments, argStartIndex, args, 0, args.length);
+        Constructor<? extends T> constructor = getConstructor(constructors, true, namedInstances, args);
+        try {
+            return constructor.newInstance(args);
+        } catch (InstantiationException e) {
+            throw new NoSuchInstantiatorException("Cannot create abstract class using " + constructor);
+        } catch (IllegalAccessException e) {
+            throw new NoSuchInstantiatorException("Cannot access " + constructor);
+        } catch (IllegalArgumentException e) {
+            throw new InternalError("String arguments should be converted but they are not");
+        }
+    }
+
+    /**
+     * Creates a new instance of a class using string arguments for its constructor.
+     * All the public constructors of the given {@code clazz} are tried one by one and
+     * if the {@code arguments} are convertible to the arguments of that constructor,
+     * a new instance is created.
+     * <p>
+     * Note that only constructors with the number of arguments equal to <code>argEndIndex - argStartIndex + 1</code>
+     * are tried. If there are several constructors with the same number of arguments,
+     * the first constructor that succeeds in converting string arguments will be used.
+     * </p>
+     * <p>
+     * Note also that only types convertible by {@link Convert#stringToType} method can be used in constructors.
+     * </p>
+     *
+     * @param <T> the type of the instantiated object
+     * @param clazz the class of the instantiated object
+     * @param arguments the string arguments for the constructor that will be converted to correct types
+     * @param argStartIndex index in the string arguments array from which to expect arguments (all the previous items are ignored)
+     * @param argEndIndex index in the string arguments array to which to expect arguments (all the following items are ignored)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return a new instance of the class the constructors were specified for
+     * @throws NoSuchInstantiatorException if the constructor can't be found for the specified arguments or the argument string-to-type convertion has failed
+     * @throws InvocationTargetException if there was an exception when calling the constructor
+     */
+    public static <T> T createInstanceWithStringArgs(Class<? extends T> clazz, Object[] arguments, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
+        return createInstanceWithStringArgs(Convert.getConstructors(clazz, true), arguments, argStartIndex, argEndIndex, namedInstances);
     }
 
 

@@ -16,6 +16,10 @@
  */
 package messif.utility.reflection;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
+import messif.utility.Convert;
+
 /**
  * Parse a given string signature and provide methods for creating
  * {@link Instantiator}s that match the signature or instances directly.
@@ -28,6 +32,8 @@ public class InstantiatorSignature {
     private final String[] args;
     /** Parsed class of the constructor/method/field */
     private final Class<?> objectClass;
+    /** Parsed named instance of the method/field */
+    private final Object instance;
     /** Parsed name of the constructor/method/field */
     private final String name;
 
@@ -35,8 +41,9 @@ public class InstantiatorSignature {
      * Creates a new instance of ParsedSignature.
      * The internal information about arguments and names are initialized.
      * @param signature a fully specified constructor/method/field signature
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      */
-    public InstantiatorSignature(String signature) {
+    public InstantiatorSignature(String signature, Map<String, Object> namedInstances) {
         // Find left parenthesis
         int leftParenthesis = signature.indexOf('(');
         Class<?> constructorClass = null;
@@ -57,7 +64,7 @@ public class InstantiatorSignature {
             signature = signature.substring(0, leftParenthesis);
             try {
                 // Parse signature as constructor
-                constructorClass = Class.forName(signature.substring(0, leftParenthesis));
+                constructorClass = Class.forName(signature);
             } catch (ClassNotFoundException ignore) {
             }
         }
@@ -68,15 +75,21 @@ public class InstantiatorSignature {
             int dotPos = signature.lastIndexOf('.');
             if (dotPos == -1)
                 throw new IllegalArgumentException("Class not found: " + signature);
-            try {
-                this.objectClass = Class.forName(signature.substring(0, dotPos));
-            } catch (ClassNotFoundException ignore) {
-                throw new IllegalArgumentException("Class not found: " + signature.substring(0, dotPos));
+            this.instance = namedInstances == null ? null : namedInstances.get(signature.substring(0, dotPos));
+            if (this.instance == null) {
+                try {
+                    this.objectClass = Class.forName(signature.substring(0, dotPos));
+                } catch (ClassNotFoundException ignore) {
+                    throw new IllegalArgumentException("Class not found: " + signature.substring(0, dotPos));
+                }
+            } else {
+                this.objectClass = null;
             }
             this.name = signature.substring(dotPos + 1);
         } else {
             // We have parsed constructor class
             this.objectClass = constructorClass;
+            this.instance = null;
             this.name = null;
         }
     }
@@ -148,20 +161,88 @@ public class InstantiatorSignature {
     }
 
     /**
+     * Creates an instance for the parsed signature.
+     * @param <T> the class of the instance that will be created
+     * @param checkClass the class of the instance that will be created
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return a new instance for the parsed signature
+     * @throws NoSuchInstantiatorException if the instantiator cannot be created
+     * @throws InvocationTargetException if there was an exception during instantiation
+     */
+    public <T> T create(Class<? extends T> checkClass, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
+        if (isFieldSignature()) {
+            if (instance == null)
+                return new FieldInstantiator<T>(checkClass, objectClass, name).instantiate();
+            else
+                return new FieldInstantiator<T>(checkClass, instance, name).instantiate();
+        } else {
+            Object[] objArgs = new Object[args.length];
+            System.arraycopy(args, 0, objArgs, 0, args.length);
+            if (isMethodSignature()) {
+                if (instance == null)
+                    return new MethodInstantiator<T>(checkClass, objectClass, name, true, namedInstances, objArgs).instantiate(objArgs);
+                else
+                    return new MethodInstantiator<T>(checkClass, instance, name, true, namedInstances, objArgs).instantiate(objArgs);
+            } else {
+                return new ConstructorInstantiator<T>(getParsedClass(checkClass), true, namedInstances, objArgs).instantiate(objArgs);
+            }
+        }
+    }
+
+    /**
      * Creates instantiator for the parsed signature.
      * @param <T> the class of instances that will be created by the returned instantiator
      * @param checkClass the class of instances that will be created by the returned instantiator
      * @return a new instantiator for the parsed signature
-     * @throws IllegalArgumentException if the instantiator cannot be created
+     * @throws NoSuchInstantiatorException if the instantiator cannot be created
      */
-    public <T> Instantiator<T> createInstantiator(Class<? extends T> checkClass) throws IllegalArgumentException {
-        if (args == null) {
-            return new FieldInstantiator<T>(checkClass, objectClass, name);
-        } else if (name == null) {
-            return new ConstructorInstantiator<T>(getParsedClass(checkClass), args.length);
+    public <T> Instantiator<T> createInstantiator(Class<? extends T> checkClass) throws NoSuchInstantiatorException {
+        if (isFieldSignature()) {
+            if (instance == null)
+                return new FieldInstantiator<T>(checkClass, objectClass, name);
+            else
+                return new FieldInstantiator<T>(checkClass, instance, name);
+        } else if (isMethodSignature()) {
+            if (instance == null)
+                return new MethodInstantiator<T>(checkClass, objectClass, name, args.length);
+            else
+                return new MethodInstantiator<T>(checkClass, instance, name, args.length);
         } else {
-            return new FactoryMethodInstantiator<T>(checkClass, objectClass, name, args.length);
+            return new ConstructorInstantiator<T>(getParsedClass(checkClass), args.length);
         }
     }
 
+    /**
+     * Creates a new instance of a class with a string constructor/factory-method/static-field signature.
+     * The string must contain a fully specified name of constructor optionally with arguments enclosed by parenthesis, e.g.:
+     * <pre>
+     *      messif.pivotselection.StreamSequencePivotChooser(messif.objects.impl.MetaObjectMap, file)
+     * </pre>
+     * Or the string can be a fully specified name of a factory method (package.class.methodName)
+     * with arguments enclosed by parenthesis, e.g.:
+     * <pre>
+     *      messif.utility.ExtendedProperties.getProperties(file)
+     * </pre>
+     * Or the string can be a fully specified name of a public static field (package.class.fieldName), e.g.:
+     * <pre>
+     *     messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator
+     * </pre>
+     * <p>
+     * Note that only types convertible by {@link Convert#stringToType} method can be used in arguments.
+     * </p>
+     *
+     * @param <E> the type of the instantiated object
+     * @param signature constructor or factory method call with string arguments or a static field
+     * @param checkClass the superclass of (or the same class as) the instantiated object
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return a new instance of the specified object
+     * @throws InvocationTargetException
+     *              if the constructor/factory-method/static-field can't be found for the specified arguments,
+     *              the argument string-to-type convertion has failed or
+     *              there was an error during instantiation
+     * @throws NoSuchInstantiatorException if the class in the constructor signature was not found or is not a descendant of checkClass
+     */
+    public static <E> E createInstanceWithStringArgs(String signature, Class<E> checkClass, Map<String, Object> namedInstances) throws InvocationTargetException, NoSuchInstantiatorException {
+        return new InstantiatorSignature(signature, namedInstances).create(checkClass, namedInstances);
+    }
 }

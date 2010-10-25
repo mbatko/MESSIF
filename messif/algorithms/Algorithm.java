@@ -652,7 +652,7 @@ public abstract class Algorithm implements Serializable {
      * @param algorithmClass the class of an algorithm for which to get constructors
      * @return all annotated constructors of the provided algorithm class
      */
-    public static <E extends Algorithm> List<Constructor<E>> getAnnotatedConstructors(Class<E> algorithmClass) {
+    public static <E extends Algorithm> List<Constructor<E>> getAnnotatedConstructors(Class<? extends E> algorithmClass) {
         List<Constructor<E>> rtv = new ArrayList<Constructor<E>>();
         
         // Search all its constructors for proper annotation
@@ -661,6 +661,17 @@ public abstract class Algorithm implements Serializable {
                 rtv.add(constructor);
         
         return rtv;
+    }
+
+    /**
+     * Returns all annotated constructors of the provided algorithm class as array.
+     * @param <E> class of algorithm for which to get constructors
+     * @param algorithmClass the class of an algorithm for which to get constructors
+     * @return all annotated constructors of the provided algorithm class
+     */
+    @SuppressWarnings("unchecked")
+    public static <E extends Algorithm> Constructor<E>[] getAnnotatedConstructorsArray(Class<? extends E> algorithmClass) {
+        return getAnnotatedConstructors(algorithmClass).toArray(new Constructor[0]);
     }
 
     /**

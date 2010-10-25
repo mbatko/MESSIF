@@ -35,7 +35,6 @@ import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -59,8 +58,10 @@ import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
-import messif.utility.reflection.FactoryMethodInstantiator;
-import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.ConstructorInstantiator;
+import messif.utility.reflection.InstantiatorSignature;
+import messif.utility.reflection.MethodInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 
 /**
@@ -245,14 +246,14 @@ public class CoreApplication {
         }
 
         // Get all constructors of the specified algorithm class
-        List<Constructor<Algorithm>> constructors = Algorithm.getAnnotatedConstructors(algorithmClass);
+        Constructor<Algorithm>[] constructors = Algorithm.getAnnotatedConstructorsArray(algorithmClass);
         try {
             // Create a new instance of the algorithm
-            algorithm = Instantiators.createInstanceWithStringArgs(constructors, args, 2, namedInstances);
+            algorithm = ConstructorInstantiator.createInstanceWithStringArgs(constructors, args, 2, args.length - 1, namedInstances);
             algorithms.add(algorithm);
             return true;
-        } catch (InvocationTargetException e) {
-            Throwable ex = e.getCause();
+        } catch (Exception e) {
+            Throwable ex = e;
             while (ex instanceof InvocationTargetException)
                 ex = ex.getCause();
             logException((ex != null)?ex:e);
@@ -788,8 +789,7 @@ public class CoreApplication {
             Class<? extends RankedSortedCollection> clazz = Convert.getClassForName(args[1], RankedSortedCollection.class);
 
             // Create new instance of sorted collection
-            @SuppressWarnings("unchecked")
-            RankedSortedCollection newAnswerCollection = Instantiators.createInstanceWithStringArgs(Arrays.asList((Constructor<RankedSortedCollection>[])clazz.getConstructors()), args, 2);
+            RankedSortedCollection newAnswerCollection = ConstructorInstantiator.createInstanceWithStringArgs(Convert.getConstructors(clazz), args, 2, args.length - 1, namedInstances);
 
             // Set the instance in the operation
             ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);
@@ -797,6 +797,9 @@ public class CoreApplication {
             return true;
         } catch (ClassNotFoundException e) {
             out.println(e);
+            return false;
+        } catch (NoSuchInstantiatorException e) {
+            out.println(e.getMessage());
             return false;
         } catch (InvocationTargetException e) {
             out.println(e.getCause());
@@ -833,7 +836,7 @@ public class CoreApplication {
 
         try {
             // Prepare method
-            FactoryMethodInstantiator<AbstractOperation> method = new FactoryMethodInstantiator<AbstractOperation>(AbstractOperation.class, Class.forName(args[1]), args[2], args.length - 2);
+            MethodInstantiator<AbstractOperation> method = new MethodInstantiator<AbstractOperation>(AbstractOperation.class, Class.forName(args[1]), args[2], args.length - 2);
 
             // Prepare arguments
             String[] stringArgs = args.clone();
@@ -850,7 +853,7 @@ public class CoreApplication {
         } catch (InstantiationException e) {
             out.println("Error converting string: " + e.getMessage());
             return false;
-        } catch (IllegalArgumentException e) {
+        } catch (NoSuchInstantiatorException e) {
             out.println(e.getMessage());
             return false;
         } catch (InvocationTargetException e) {
@@ -1099,10 +1102,9 @@ public class CoreApplication {
     @ExecutableMethod(description = "get/create global statistic", arguments = { "statistic name", "statistic class" })
     public boolean statisticsGlobalGet(PrintStream out, String... args) {
         try {
-            out.println(Instantiators.createInstanceUsingFactoryMethod(Convert.getClassForName(args[2], Statistics.class), "getStatistics", args[1]));
-        } catch (InvocationTargetException e) {
-            out.println("Cannot get global statistics: " + e.getCause());
-            return false;
+            @SuppressWarnings("unchecked")
+            Class<Statistics<?>> statClass = (Class)Convert.getClassForName(args[2], Statistics.class);
+            out.println(Statistics.getStatistics(args[1], statClass));
         } catch (Exception e) {
             out.println("Cannot get global statistics: " + e);
             return false;
@@ -1489,10 +1491,10 @@ public class CoreApplication {
     @ExecutableMethod(description = "creates a new named instance or replaces old one", arguments = { "instance constructor, factory method or static field signature", "name to register"})
     public boolean namedInstanceReplace(PrintStream out, String... args) {
         try {
-            Object instance = Instantiators.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+            Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
             namedInstances.put(args[2], instance);
             return true;
-        } catch (ClassNotFoundException e) {
+        } catch (NoSuchInstantiatorException e) {
             out.println("Error creating named instance for " + args[1] + ": " + e);
             return false;
         } catch (InvocationTargetException e) {

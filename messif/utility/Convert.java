@@ -485,7 +485,33 @@ public abstract class Convert {
             return rtv;
         throw new ClassCastException("Class '" + classObject + "' is not subclass of " + checkClass.getName());
     }
-    
+
+    /**
+     * Convert the provided object to Class with generics typing. The specified
+     * {@code classObject} should be either instance of {@link String} or {@link Class}.
+     * If the generics type check fails, the <code>ClassCastException</code> is thrown
+     * even if the provided <code>classObject</code> is a valid <code>Class</code>.
+     * 
+     * @param <E> the type of the returned object
+     * @param classObject the class object to be cast
+     * @param checkClass the generics typed class that is returned
+     * @return the generics-typed <code>Class</code> object
+     * @throws ClassCastException if passed <code>classObject</code> is not subclass of <code>checkClass</code>
+     */
+    public static <E> Class<E> toGenericClass(Object classObject, Class<E> checkClass) throws ClassCastException {
+        if (classObject == null)
+            return null;
+
+        try {
+            if (classObject instanceof String)
+                return getClassForName((String)classObject, checkClass);
+            else
+                return genericCastToClass(classObject, checkClass);
+        } catch (ClassNotFoundException e) {
+            throw new ClassCastException("Class '" + classObject + "' was not found or is not a subclass of " + checkClass.getName());
+        }
+    }
+
     /**
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
      * Only parameters from <code>argStartIndex</code> to <code>argEndIndex</code> of <code>strings</code>
@@ -624,14 +650,25 @@ public abstract class Convert {
     }
     
     /**
+     * Returns type-safe constructors of the given class.
+     * @param <E> the class for which to get the constructors
+     * @param objectClass the class for which to get the constructors
+     * @param publicOnlyConstructors flag wheter to return all declared constructors (<tt>false</tt>) or only the public ones (<tt>true</tt>)
+     * @return a list of constructors of the given class
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> Constructor<E>[] getConstructors(Class<? extends E> objectClass, boolean publicOnlyConstructors) {
+        return (Constructor<E>[])(publicOnlyConstructors ? objectClass.getConstructors() : objectClass.getDeclaredConstructors());  // This IS A STUPID unchecked !!!
+    }
+
+    /**
      * Returns type-safe public constructors of the given class.
      * @param <E> the class for which to get the constructors
      * @param objectClass the class for which to get the constructors
      * @return all public constructors of the given class
      */
-    @SuppressWarnings("unchecked")
     public static <E> Constructor<E>[] getConstructors(Class<? extends E> objectClass) {
-        return (Constructor<E>[])objectClass.getConstructors();  // This IS A STUPID unchecked !!!
+        return getConstructors(objectClass, true);
     }
 
     /**
