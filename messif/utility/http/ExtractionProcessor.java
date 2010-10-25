@@ -28,7 +28,9 @@ import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
+import messif.utility.reflection.InstantiatorSignature;
 import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Processor that creates {@link LocalAbstractObject} instances
@@ -74,10 +76,10 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
                 this.extractor = Extractors.cast(instance, extractedClass);
             } else {
                 // Create extractor from signature
-                this.extractor = Extractors.cast(Instantiators.createInstanceWithStringArgs(extractorSignature, Extractor.class, namedInstances), extractedClass);
+                this.extractor = Extractors.cast(InstantiatorSignature.createInstanceWithStringArgs(extractorSignature, Extractor.class, namedInstances), extractedClass);
             }
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Cannot create " + extractorSignature + ": class not found");
+        } catch (NoSuchInstantiatorException e) {
+            throw new IllegalArgumentException("Cannot create " + extractorSignature + ": " + e.getMessage());
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Cannot create " + extractorSignature + ": " + e.getCause(), e.getCause());
         }

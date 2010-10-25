@@ -21,6 +21,7 @@ import java.util.Map;
 import messif.algorithms.Algorithm;
 import messif.utility.reflection.Instantiator;
 import messif.utility.reflection.InstantiatorSignature;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Processor that returns a value created by a given {@link Instantiator}.
@@ -54,8 +55,12 @@ public class InstantiatorProcessor<T> implements HttpApplicationProcessor<T> {
      *              if any of the provided {@code args} cannot be converted to the type specified in the operation's constructor
      */
     public InstantiatorProcessor(Algorithm algorithm, String signature, Class<? extends T> returnClass, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
-        InstantiatorSignature instantiatorSignature = new InstantiatorSignature(signature);
-        this.instantiator = instantiatorSignature.createInstantiator(returnClass);
+        InstantiatorSignature instantiatorSignature = new InstantiatorSignature(signature, namedInstances);
+        try {
+            this.instantiator = instantiatorSignature.createInstantiator(returnClass);
+        } catch (NoSuchInstantiatorException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        }
         Class<?>[] prototype = instantiator.getInstantiatorPrototype();
 
         this.processors = new HttpApplicationProcessor<?>[prototype.length];

@@ -29,7 +29,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.utility.Clearable;
-import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.MethodInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Encapsulates an algorithm with an RMI server.
@@ -113,13 +114,13 @@ public class AlgorithmRMIServer extends Thread {
                                     break;
                                 }
                                 try {
-                                    Object retVal = Instantiators.getMethod(algorithmClass, methodName, false, null, methodArguments).invoke(algorithm, methodArguments);
+                                    Object retVal = MethodInstantiator.getMethod(algorithmClass, methodName, false, false, null, methodArguments).invoke(algorithm, methodArguments);
                                     if (retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
                                     out.writeUnshared(retVal);
                                 } catch (InvocationTargetException e) {
                                     out.writeUnshared(e.getCause());
-                                } catch (NoSuchMethodException e) {
+                                } catch (NoSuchInstantiatorException e) {
                                     out.writeUnshared(e);
                                 } catch (IllegalAccessException e) {
                                     out.writeUnshared(e);
