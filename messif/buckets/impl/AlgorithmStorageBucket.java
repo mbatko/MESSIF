@@ -52,7 +52,8 @@ import messif.operations.AnswerType;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
-import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.ConstructorInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * This is a LocalBucket that allows to create buckets backed by an Algorithm.
@@ -153,30 +154,24 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         } catch (ClassCastException e) {
             throw new IllegalArgumentException("The parameter map contains key 'algorithm', but it is not an instance of Algorithm");
         }
-
-        // Create the algorithm
-        Algorithm alg;
-        Object classParam = parameters.get("class");
-        if (classParam == null)
-            throw new IllegalArgumentException("The parameter map must contain key 'class' for the encapsulated algorithm");
-        if (classParam instanceof String) {
-            alg = createAlgorithmFromParams((String)classParam, parameters);
-        } else if (classParam instanceof Class) {
-            alg = createAlgorithmFromParams(Convert.genericCastToClass(classParam, Algorithm.class), parameters);
-        } else throw new IllegalArgumentException("The 'class' parameter must be a valid class name");
                 
-        return new AlgorithmStorageBucket(alg, capacity, softCapacity, lowOccupation, occupationAsBytes);
+        return new AlgorithmStorageBucket(createAlgorithmFromParams(parameters), capacity, softCapacity, lowOccupation, occupationAsBytes);
     }    
 
     /**
      * Creates an algorithm of the specified class with map of parameters.
      * The map should have keys of the format "param.1", "param.2", etc.
-     * @param algClass the class of the algorithm that is created
+     * The map also must contain a "class" parameter with the algorithm class.
      * @param parameters the parameters for the algorithm constructor
      * @return a new instance of algorithm
      * @throws IllegalArgumentException if the parameter map contains invalid values or the instantiation of algorithm fails
      */
-    protected static Algorithm createAlgorithmFromParams(Class<? extends Algorithm> algClass, Map<String, Object> parameters) throws IllegalArgumentException {
+    protected static Algorithm createAlgorithmFromParams(Map<String, Object> parameters) throws IllegalArgumentException {
+        // Get the algorithm class from parameters
+        Class<? extends Algorithm> algClass = Convert.toGenericClass(parameters.get("class"), Algorithm.class);
+        if (algClass == null)
+            throw new IllegalArgumentException("The parameter map must contain key 'class' for the encapsulated algorithm");
+
         // Transform mapped parameters into list
         List<Object> algParams = new ArrayList<Object>(parameters.size() - 1);
         Object param;
@@ -185,49 +180,10 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
 
         // Create new instance of algorithm
         try {
-            return Instantiators.createInstanceWithInheritableArgs(algClass, algParams.toArray());
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("The class " + algClass.getName() + " does not contain constructor for given parameters " + algParams + ": " + e.getMessage());
-        } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException("Can't create algorithm '" + algClass.getName() + "' for AlgorithmStorageBucket", e.getCause());
-        }
-    }
-
-    /**
-     * Creates an algorithm of the specified class with map of parameters.
-     * The map should have keys of the format "param.1", "param.2", etc.
-     * @param algClassName the name of the class of the algorithm that is created
-     * @param parameters the parameters for the algorithm constructor
-     * @return a new instance of algorithm
-     * @throws IllegalArgumentException if the parameter map contains invalid values or the instantiation of algorithm fails
-     */
-    protected static Algorithm createAlgorithmFromParams(String algClassName, Map<String, Object> parameters) throws IllegalArgumentException {
-        // Check validity of the passed class argument
-        Class<Algorithm> algClass;
-        try {
-            algClass = Convert.getClassForName(algClassName, Algorithm.class);
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("The parameter map must contain key 'class' as subtype of Algorithm: " + e.getMessage());
-        }
-
-        // Transform mapped parameters into list
-        List<String> algParams = new ArrayList<String>(parameters.size() - 1);
-        try {
-            Object param;
-            while ((param = parameters.get("param."+(algParams.size()+1))) != null)
-                algParams.add((String)param);
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException("The parameter map contained string class, but object parameters: " + e.getMessage());
-        }
-
-        // Create new instance of algorithm
-        try {
             Map<String, Object> namedInstances = Convert.safeGenericCastMap(parameters.get("namedInstances"), String.class, Object.class);
-            return Instantiators.createInstanceWithStringArgs(
-                    Algorithm.getAnnotatedConstructors(algClass),
-                    algParams.toArray(new String[algParams.size()]),
-                    namedInstances
-            );
+            return ConstructorInstantiator.createInstanceWithStringArgs(algClass, algParams.toArray(), 0, algParams.size() -1, namedInstances);
+        } catch (NoSuchInstantiatorException e) {
+            throw new IllegalArgumentException("The class " + algClass.getName() + " does not contain constructor for given parameters " + algParams + ": " + e.getMessage());
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Can't create algorithm '" + algClass.getName() + "' for AlgorithmStorageBucket", e.getCause());
         }

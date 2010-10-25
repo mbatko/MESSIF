@@ -24,7 +24,8 @@ import messif.buckets.index.ModifiableIndex;
 import messif.buckets.storage.StorageIndexed;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
-import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.MethodInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Encapsulating bucket for a plain storage.
@@ -114,13 +115,13 @@ public final class PlainStorageBucket extends LocalBucket {
                 storageClass = Convert.getClassForName((String) parameters.get("storageClass"), StorageIndexed.class);
             }
             @SuppressWarnings("unchecked")
-            StorageIndexed<LocalAbstractObject> storage = Instantiators.createInstanceUsingFactoryMethod(storageClass, "create", LocalAbstractObject.class, (Object)parameters);
+            StorageIndexed<LocalAbstractObject> storage = MethodInstantiator.callFactoryMethod(storageClass, "create", false, true, null, LocalAbstractObject.class, (Object)parameters);
 
             // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
             return new PlainStorageBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage);
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(e.toString());
-        } catch (NoSuchMethodException e) {
+        } catch (NoSuchInstantiatorException e) {
             throw new IllegalArgumentException(e.toString());
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException(e.getCause().toString());
