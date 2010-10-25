@@ -513,7 +513,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         if (StatisticRefCounter.isEnabledGlobally())
             counterBucketRead.add(this);
 
-        return new SearchAbstractObjectIterator<LocalAbstractObject>(getModifiableIndex(), 0) {
+        return new SearchAbstractObjectIterator<LocalAbstractObject>(getModifiableIndex()) {
             @Override
             public void remove() {
                 if (search == null)
