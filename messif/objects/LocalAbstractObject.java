@@ -33,7 +33,8 @@ import messif.objects.nio.BinarySerializator;
 import messif.statistics.StatisticCounter;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
-import messif.utility.reflection.Instantiators;
+import messif.utility.reflection.ConstructorInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 
 /**
@@ -548,14 +549,14 @@ public abstract class LocalAbstractObject extends AbstractObject {
             try {
                 if (additionalArguments == null || additionalArguments.length == 0) {
                     arguments = null;
-                    constructor = objectClass.getConstructor(BufferedReader.class);
+                    constructor = ConstructorInstantiator.getConstructor(objectClass, true, BufferedReader.class);
                 } else {
                     arguments = new Object[1 + additionalArguments.length];
                     arguments[0] = new BufferedReader(new StringReader(""));
                     System.arraycopy(additionalArguments, 0, arguments, 1, additionalArguments.length);
-                    constructor = Instantiators.getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments);
+                    constructor = ConstructorInstantiator.getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments);
                 }
-            } catch (NoSuchMethodException e) {
+            } catch (NoSuchInstantiatorException e) {
                 throw new IllegalArgumentException("Cannot get text stream constructor for " + objectClass + ": " + e);
             }
         }
