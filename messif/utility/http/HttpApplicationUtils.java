@@ -18,6 +18,8 @@ package messif.utility.http;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -144,7 +146,11 @@ public abstract class HttpApplicationUtils {
         Matcher matcher = paramParser.matcher(query);
         Map<String, String> parameters = new HashMap<String, String>();
         while (matcher.find())
-            parameters.put(matcher.group(1), matcher.group(2));
+            try {
+                parameters.put(matcher.group(1), URLDecoder.decode(matcher.group(2), "utf-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new InternalError("Charset utf-8 should be always supported, but there was " + e);
+            }
         return parameters;
     }
 

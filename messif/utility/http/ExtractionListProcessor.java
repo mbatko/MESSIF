@@ -20,6 +20,7 @@ import com.sun.net.httpserver.HttpExchange;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.extraction.ExtractorDataSource;
+import messif.objects.extraction.ExtractorException;
 import messif.objects.util.AbstractObjectList;
 
 /**
@@ -54,7 +55,7 @@ public class ExtractionListProcessor implements HttpApplicationProcessor<Abstrac
         this.extractionProcessor = new ExtractionProcessor<LocalAbstractObject>(extractorSignature, LocalAbstractObject.class, namedInstances);
     }
 
-    public AbstractObjectList<LocalAbstractObject> processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
+    public AbstractObjectList<LocalAbstractObject> processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
         AbstractObjectList<LocalAbstractObject> objects = new AbstractObjectList<LocalAbstractObject>();
         ExtractorDataSource dataSource = extractionProcessor.getExtractorDataSource(httpExchange, httpParams);
         LocalAbstractObject object = extractionProcessor.extractObject(dataSource);

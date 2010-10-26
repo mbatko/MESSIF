@@ -113,20 +113,19 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
      * @param dataSource the data source to use for extraction
      * @return a new extracted instance
      * @throws IllegalArgumentException if there was a problem reading data from the data source or extracting the object
+     * @throws ExtractorException if there was a problem calling extractor
      */
-    protected final T extractObject(ExtractorDataSource dataSource) throws IllegalArgumentException {
+    protected final T extractObject(ExtractorDataSource dataSource) throws IllegalArgumentException, ExtractorException {
         try {
             return extractor.extract(dataSource);
         } catch (EOFException e) {
             return null;
         } catch (IOException e) {
             throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
-        } catch (ExtractorException e) {
-            throw new IllegalArgumentException("There was a problem extracting descriptors from the object: " + e.getMessage(), e);
         }
     }
 
-    public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
+    public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
         return extractObject(getExtractorDataSource(httpExchange, httpParams));
     }
 
