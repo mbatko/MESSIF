@@ -35,7 +35,9 @@ public interface HttpApplicationResponse {
     /** Constant holding a HTTP error code of successful operation */
     public static final int ERROR_CODE_SUCCESS = 200;
     /** Constant holding a HTTP error code of internal error */
-    public static final int ERROR_CODE_INTERNAL_ERROR = 400;
+    public static final int ERROR_CODE_INTERNAL_ERROR = 500;
+    /** Constant holding a HTTP error code of invalid argument error */
+    public static final int ERROR_CODE_INVALID_ARGUMENT = 400;
 
     /**
      * Returns the content type of this response.

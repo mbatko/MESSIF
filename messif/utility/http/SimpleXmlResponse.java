@@ -66,9 +66,12 @@ public final class SimpleXmlResponse extends SimpleResponse {
     /**
      * Creates a new instance of SimpleXmlResponse.
      * <p>
-     * If {@code data} is instance of {@link Throwable}, {@link #ERROR_CODE_INTERNAL_ERROR}
-     * is set and the {@link Throwable} is converted to XML by taking
-     * the {@link Throwable#toString() string representation} and wrapping it into
+     * If {@code data} is instance of {@link IllegalArgumentException}, the
+     * {@link #ERROR_CODE_INVALID_ARGUMENT invalid argument} error code is set.
+     * If {@code data} is instance of {@link Throwable}, the
+     * {@link #ERROR_CODE_INTERNAL_ERROR internal error} code is set.
+     * In both cases, the throwables are converted to XML by taking
+     * their {@link Throwable#toString() string representation} and wrapping them into
      * {@link #THROWABLE_TAG_OPEN} and {@link #THROWABLE_TAG_CLOSE}.
      * </p>
      * <p>
@@ -82,8 +85,12 @@ public final class SimpleXmlResponse extends SimpleResponse {
      * @param charset the charset used to convert the string data to binary data
      */
     public SimpleXmlResponse(Object data, Charset charset) {
-        this(data instanceof Throwable ? ERROR_CODE_INTERNAL_ERROR : ERROR_CODE_SUCCESS,
-                createXmlData(data, charset), charset);
+        this(
+                data instanceof IllegalArgumentException ? ERROR_CODE_INVALID_ARGUMENT :
+                    (data instanceof Throwable ? ERROR_CODE_INTERNAL_ERROR : ERROR_CODE_SUCCESS),
+                createXmlData(data, charset),
+                charset
+        );
     }
 
     /**

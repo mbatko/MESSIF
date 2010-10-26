@@ -51,9 +51,12 @@ public class SimpleTextResponse extends SimpleResponse {
 
     /**
      * Creates a new instance of SimpleResponse.
-     * If {@code data} is instance of {@link Throwable}, {@link #ERROR_CODE_INTERNAL_ERROR}
-     * will be set. Otherwise, {@link #ERROR_CODE_SUCCESS} is set.
-     * In both cases the {@code data} are converted to binary data using
+     * If {@code data} is instance of {@link IllegalArgumentException}, the
+     * {@link #ERROR_CODE_INVALID_ARGUMENT invalid argument} error code is set.
+     * If {@code data} is instance of {@link Throwable}, the
+     * {@link #ERROR_CODE_INTERNAL_ERROR internal error} code is set.
+     * Otherwise, {@link #ERROR_CODE_SUCCESS} is set.
+     * In all the cases the {@code data} are converted to binary data using
      * {@link Object#toString()} and the given {@code charset}.
      *
      * @param data the data written by the new response (will be converted to
@@ -61,7 +64,12 @@ public class SimpleTextResponse extends SimpleResponse {
      * @param charset the charset used to convert the string data to binary data
      */
     public SimpleTextResponse(Object data, Charset charset) {
-        this(data instanceof Throwable ? ERROR_CODE_INTERNAL_ERROR : ERROR_CODE_SUCCESS, data.toString(), charset);
+        this(
+                data instanceof IllegalArgumentException ? ERROR_CODE_INVALID_ARGUMENT :
+                    (data instanceof Throwable ? ERROR_CODE_INTERNAL_ERROR : ERROR_CODE_SUCCESS),
+                data.toString(),
+                charset
+        );
     }
 
     /**
