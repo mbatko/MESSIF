@@ -29,27 +29,54 @@ import messif.utility.Convert;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ParameterProcessor<T> implements HttpApplicationProcessor<T> {
-    /** Type to convert the http request parameter to */
-    private final Class<? extends T> parameterClass;
-    /** Collection of named instances that are used when converting string parameters */
-    private final Map<String, Object> namedInstances;
     /** Name of the HTTP parameter to process */
     private final String parameterName;
+    /** Type to convert the http request parameter to */
+    private final Class<? extends T> parameterClass;
+    /** Default value for the parameter (if not specified via HTTP parameter) */
+    private final String parameterDefault;
+    /** Collection of named instances that are used when converting string parameters */
+    private final Map<String, Object> namedInstances;
+
+    /**
+     * Creates a new instance of parameter value processor.
+     * @param parameterNameAndDefault the name of the HTTP parameter to process optionally
+     *          with a default value appended after colon
+     * @param parameterClass the class of parameter value
+     * @param namedInstances collection of named instances that are used when converting string parameters
+     * @throws IllegalArgumentException if there was a problem converting the default value to type
+     */
+    public ParameterProcessor(String parameterNameAndDefault, Class<? extends T> parameterClass, Map<String, Object> namedInstances) throws IllegalArgumentException{
+        int colonPos = parameterNameAndDefault.indexOf(':');
+        if (colonPos == -1) {
+            this.parameterName = parameterNameAndDefault;
+            this.parameterDefault = null;
+        } else {
+            this.parameterName = parameterNameAndDefault.substring(0, colonPos);
+            this.parameterDefault = parameterNameAndDefault.substring(colonPos + 1);
+        }
+        this.parameterClass = parameterClass;
+        this.namedInstances = namedInstances;
+    }
 
     /**
      * Creates a new instance of parameter value processor.
      * @param parameterName the name of the HTTP parameter to process
+     * @param parameterDefault default value for the parameter
      * @param parameterClass the class of parameter value
      * @param namedInstances collection of named instances that are used when converting string parameters
      */
-    public ParameterProcessor(String parameterName, Class<? extends T> parameterClass, Map<String, Object> namedInstances) {
+    public ParameterProcessor(String parameterName, String parameterDefault, Class<? extends T> parameterClass, Map<String, Object> namedInstances) {
         this.parameterName = parameterName;
+        this.parameterDefault = parameterDefault;
         this.parameterClass = parameterClass;
         this.namedInstances = namedInstances;
     }
 
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
         String parameter = httpParams.get(parameterName);
+        if (parameter == null)
+            parameter = parameterDefault;
         if (parameter == null)
             throw new IllegalArgumentException("Parameter '" + parameterName + "' was not specified");
         try {
