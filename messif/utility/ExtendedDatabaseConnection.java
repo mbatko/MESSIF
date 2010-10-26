@@ -141,8 +141,9 @@ public class ExtendedDatabaseConnection implements Serializable {
                 statement = getConnection().prepareStatement(sql);
 
             // Map parameters
-            for (int i = 0; i < parameters.length; i++)
-                statement.setObject(i + 1, parameters[i]);
+            if (parameters != null)
+                for (int i = 0; i < parameters.length; i++)
+                    statement.setObject(i + 1, parameters[i]);
 
             // Execute query and handle recoverable exception
             try {

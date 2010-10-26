@@ -208,6 +208,20 @@ public class ExtractorDataSource implements Closeable {
 
     /**
      * Returns an additional parameter of this data source with the given {@code name}.
+     * If the parameter with the given {@code name} is not set, an exception is thrown.
+     * @param name the name of the additional parameter to get
+     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
+     * @throws IllegalArgumentException if the parameter with the given {@code name} is not set
+     */
+    public Object getRequiredParameter(String name) throws IllegalArgumentException {
+        Object parameter = getParameter(name);
+        if (parameter == null)
+            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
+        return parameter;
+    }
+
+    /**
+     * Returns an additional parameter of this data source with the given {@code name}.
      * If the parameter is not set or is not instance of {@code parameterClass},
      * the {@code defaultValue} is returned instead.
      *
