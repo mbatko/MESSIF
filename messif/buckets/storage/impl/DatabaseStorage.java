@@ -644,7 +644,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
                 sql.append(')');
                 parameters = getKeys();
             }
-            return prepareAndExecute(sizeStatement, sql.toString(), parameters).getResultSet();
+            return prepareAndExecute(null, sql.toString(), parameters).getResultSet();
         }
 
         @Override
@@ -798,6 +798,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
         
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+            if (column == null)
+                return null;
             try {
                 return serializator.readObject(new BufferInputStream((byte[])column), storedObjectsClass);
             } catch (IOException e) {
@@ -1128,4 +1130,43 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
         }
     };
+
+    /**
+     * Wraps a column convertor while changing its read/write capabilities.
+     *
+     * @param <T> the column convertor class
+     * @param convertor the convertor to wrap
+     * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+     * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
+     * @param skipReadIfNotNull a flag whether this column convertor is used to convert the value from database even if there was a value already provided (<tt>true</tt>) or not (<tt>false</tt>)
+     * @return a wrapped convertor with changed read/write/skip flags
+     * @throws IllegalArgumentException if a read/write flag was set for a convertor that does not support reading/writing
+     */
+    public static <T> ColumnConvertor<T> wrapConvertor(final ColumnConvertor<T> convertor, final boolean usedToRead, final boolean usedToWrite, final boolean skipReadIfNotNull) throws IllegalArgumentException {
+        if (usedToRead && !convertor.isConvertFromColumnUsed())
+            throw new IllegalArgumentException("Cannot set used-to-read flag on convertor that does not support reading");
+        if (usedToWrite && !convertor.isConvertToColumnUsed())
+            throw new IllegalArgumentException("Cannot set used-to-write flag on convertor that does not support writing");
+        return new ColumnConvertor<T>() {
+            /** class serial id for serialization */
+            private static final long serialVersionUID = 1L;
+            public Object convertToColumnValue(T instance) throws BucketStorageException {
+                return convertor.convertToColumnValue(instance);
+            }
+            public boolean isConvertToColumnUsed() {
+                return usedToWrite;
+            }
+            public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+                if (skipReadIfNotNull && value != null)
+                    return value;
+                return convertor.convertFromColumnValue(value, column);
+            }
+            public boolean isConvertFromColumnUsed() {
+                return usedToRead;
+            }
+            public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+                return convertor.isColumnCompatible(indexComparator);
+            }
+        };
+    }
 }
