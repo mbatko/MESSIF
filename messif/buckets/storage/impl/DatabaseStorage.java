@@ -574,6 +574,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         private final String columnName;
         /** Query result set that provides data for this search */
         private ResultSet resultSet;
+        /** Statement that needs to be closed along with the result */
+        private PreparedStatement resultSetStatement;
 
         /**
          * Creates a new instance of DatabaseStorageSearch.
@@ -644,7 +646,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
                 sql.append(')');
                 parameters = getKeys();
             }
-            return prepareAndExecute(null, sql.toString(), parameters).getResultSet();
+            resultSetStatement = prepareAndExecute(null, sql.toString(), parameters);
+            return resultSetStatement.getResultSet();
         }
 
         @Override
@@ -724,6 +727,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         public void close() {
             try {
                 resultSet.close();
+                resultSetStatement.close();
             } catch (SQLException ignore) {
             }
         }
