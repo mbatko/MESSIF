@@ -20,12 +20,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
+import messif.buckets.StorageFailureException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
@@ -267,8 +268,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param object the source metaobject from which to get the data
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object) {
-        this(object.getLocatorURI(), object.getObjectMap(),
-                object.rights, object.territories, object.added, object.archiveID, object.attractiveness);
+        this(object.getLocatorURI(), object.colorLayout, object.colorStructure, object.edgeHistogram,
+                object.scalableColor, object.regionShape, object.keyWords, object.rights,
+                object.territories, object.added, object.archiveID, object.attractiveness);
         this.titleString = object.titleString;
         this.keywordString = object.keywordString;
     }
@@ -317,6 +319,19 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String searchWords) {
         this(object, stemmer, keyWordIndex, titleWords, keyWords, (searchWords == null || searchWords.isEmpty()) ? null : searchWords.split("\\s+"));
+    }
+
+    /**
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}
+     * and given set of keywords. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param keyWordIndex the index for translating keywords to addresses
+     * @param searchWords the searched keywords to set for the new object
+     */
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String searchWords) {
+        this(object, stemmer, keyWordIndex, object.titleString.split(TITLE_SPLIT_REGEXP), object.keywordString.split(KEYWORDS_SPLIT_REGEXP), (searchWords == null || searchWords.isEmpty()) ? null : searchWords.split("\\s+"));
     }
 
     /**
@@ -380,7 +395,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String additionalKeyWords) throws IOException {
         this(stream, true, false);
         // Note that the additional words are added AS THE LAST LINE OF THE OBJECT!
-        keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORDS_SPLIT_REGEXP), additionalKeyWords != null ? stream.readLine().split(KEYWORDS_SPLIT_REGEXP) : null);
+        keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORDS_SPLIT_REGEXP), additionalKeyWords != null ? additionalKeyWords.split(KEYWORDS_SPLIT_REGEXP) : null);
     }
 
     /**
@@ -459,7 +474,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+    private static int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
         if (keyWords == null)
             return new int[0];
 
@@ -487,6 +502,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             processedKeyWords.remove(search.getCurrentObject());
             ret[retIndex] = search.getCurrentObjectIntAddress();
         }
+        search.close();
 
         // Add all missing keywords
         for (Iterator<String> it = processedKeyWords.iterator(); it.hasNext();) {
@@ -495,7 +511,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 ret[retIndex] = keyWordIndex.store(keyWord).getAddress();
                 retIndex++;
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot insert '" + keyWord + "' for object '" + getLocatorURI() + "': " + e.toString());
+                Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot insert '" + keyWord + "': " + e.toString());
             }
         }
 
@@ -923,14 +939,27 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
         //****************** Database column definition ******************//
 
-        /** Database column definitions for this object */
-        public static final Map<String, ColumnConvertor<MetaObjectProfiSCT>> dbColumns;
-        static {
+        /**
+         * Returns the database column definitions for the {@link MetaObjectProfiSCT} object.
+         * @param addTextStreamColumn flag whether to add the metaobject stream column to the resulting map
+         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex the index for translating keywords to addresses
+         * @return the database column definitions for the {@link MetaObjectProfiSCT} object
+         */
+        public static Map<String, ColumnConvertor<MetaObjectProfiSCT>> getDBColumnMap(boolean addTextStreamColumn, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
             Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
             // id -- primary key
-            map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
             // thumbfile -- location of the thumbnail image file
             map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
+            if (addTextStreamColumn)
+                map.put(
+                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)",
+                    DatabaseStorage.wrapConvertor(
+                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
+                        true, false, true
+                    )
+                );
+            map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
             map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
             map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
             map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
@@ -944,7 +973,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCT.class, false, true));
             map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCT.class, false, true));
             map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "KeyWordsType"));
-            dbColumns = Collections.unmodifiableMap(map);
+
+            return map;
         }
 
 
@@ -962,8 +992,47 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         private final String locatorByIdSQL;
         /** SQL command to retrieve the current maximal id */
         private final String maxIdSQL;
-        /** SQL command to retrieve the object's text representation for the given locator */
-        private final String metaobjectSQL;
+        /** SQL command to insert word links */
+        private final String insertWordLinkSQL;
+        /** SQL command to delete word links */
+        private final String deleteObjectWordLinksSQL;
+        /** Database storage used to add objects extracted by image extractor */
+        private final DatabaseStorage<MetaObjectProfiSCT> databaseStorage;
+
+        /**
+         * Creates a new instance of DatabaseStorageExtractor.
+         * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+         * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+         * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+         * @param tableName the name of the table in the database
+         * @param wordLinkTable the name of the table in the database that the word links are inserted into
+         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex the index for translating keywords to addresses
+         * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        @SuppressWarnings("unchecked")
+        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
+            super(dbConnUrl, dbConnInfo, dbDriverClass);
+            this.randomGenerator = new Random();
+            this.stemmer = stemmer;
+            this.keyWordIndex = keyWordIndex;
+            this.locatorToThumbnailSQL = "select thumbfile from " + tableName + " where locator = ?";
+            this.locatorByIdSQL = "select locator from " + tableName + " where id > ? limit 1";
+            this.maxIdSQL = "select max(id) from " + tableName;
+            this.databaseStorage = new DatabaseStorage<MetaObjectProfiSCT>(
+                    MetaObjectProfiSCT.class,
+                    dbConnUrl, dbConnInfo, dbDriverClass,
+                    tableName, "id", getDBColumnMap(true, stemmer, keyWordIndex)
+            );
+            if (wordLinkTable != null) {
+                this.insertWordLinkSQL = "insert into " + wordLinkTable + "(object_id, keyword_id) values (?, ?)";
+                this.deleteObjectWordLinksSQL = "delete from " + wordLinkTable + " where object_id = ?";
+            } else {
+                this.insertWordLinkSQL = null;
+                this.deleteObjectWordLinksSQL = null;
+            }
+        }
 
         /**
          * Creates a new instance of DatabaseStorageExtractor.
@@ -977,14 +1046,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws SQLException if there was a problem connecting to the database
          */
         public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
-            super(dbConnUrl, dbConnInfo, dbDriverClass);
-            this.randomGenerator = new Random();
-            this.stemmer = stemmer;
-            this.keyWordIndex = keyWordIndex;
-            this.locatorToThumbnailSQL = "select thumbfile from " + tableName + " where locator = ?";
-            this.locatorByIdSQL = "select locator from " + tableName + " where id > ? limit 1";
-            this.maxIdSQL = "select max(id) from " + tableName;
-            this.metaobjectSQL = "select metaobject from " + tableName + " where locator = ?";
+            this(dbConnUrl, dbConnInfo, dbDriverClass, tableName, null, stemmer, keyWordIndex);
         }
 
         /**
@@ -1044,8 +1106,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          */
         public MetaObjectProfiSCT locatorToObject(String locator, String additionalKeyWords) throws ExtractorException {
             try {
-                String metaobject = (String)executeSingleValue(metaobjectSQL, locator);
-                return new MetaObjectProfiSCT(new BufferedReader(new StringReader(metaobject)), stemmer, keyWordIndex, additionalKeyWords);
+                IntStorageSearch<MetaObjectProfiSCT> search = databaseStorage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
+                if (search.next()) {
+                    MetaObjectProfiSCT object = search.getCurrentObject();
+                    if (additionalKeyWords != null)
+                        object = new MetaObjectProfiSCT(object, stemmer, keyWordIndex, additionalKeyWords);
+                    return object;
+                } else {
+                    throw new ExtractorException("Cannot find object '" + locator + "' in the database");
+                }
+                //return textToObject((String)executeSingleValue(metaobjectSQL, locator), additionalKeyWords);
             } catch (Exception e) {
                 throw new ExtractorException("Cannot read object '" + locator + "' from database", e);
             }
@@ -1060,6 +1130,121 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          */
         public MetaObjectProfiSCT locatorToObject(String locator) throws ExtractorException {
             return locatorToObject(locator, null);
+        }
+/*
+        public Iterator<RankedAbstractObject> searchByText(String text) {
+            if (text == null || text.isEmpty())
+                return null;
+            int[] keywordIds = keywordsToIdentifiers(text.split(TITLE_SPLIT_REGEXP), null, stemmer, keyWordIndex);
+            StringBuilder str = new StringBuilder("select locator from ")
+        }
+*/
+        /**
+         * Insert words link for the given object id.
+         * This method does nothing if the {@link #insertWordLinkSQL} is <tt>null</tt>.
+         * @param objectId the identifier of the object with the keywords
+         * @param wordIds the identifiers of the keywords in the object
+         * @throws SQLException if there was an error inserting word links
+         */
+        protected void insertWordLinks(int objectId, ObjectIntMultiVector wordIds) throws SQLException {
+            if (insertWordLinkSQL == null)
+                return;
+
+            PreparedStatement insertWordLink = getConnection().prepareStatement(insertWordLinkSQL);
+            try {
+                insertWordLink.setInt(1, objectId);
+                for (int kwVectorId = 0; kwVectorId < wordIds.getVectorDataCount(); kwVectorId++) {
+                    int[] kwVectorData = wordIds.getVectorData(kwVectorId);
+                    for (int i = 0; i < kwVectorData.length; i++) {
+                        insertWordLink.setInt(2, kwVectorData[i]);
+                        insertWordLink.execute();
+                    }
+                }
+            } finally {
+                insertWordLink.close();
+            }
+        }
+
+        /**
+         * Delete all word links for the given object id.
+         * This method does nothing if the {@link #deleteObjectWordLinksSQL} is <tt>null</tt>.
+         * @param objectId the identifier of the object with the keywords
+         * @throws SQLException if there was an error deleting word links
+         */
+        protected void deleteWordLinks(int objectId) throws SQLException {
+            if (deleteObjectWordLinksSQL == null)
+                return;
+
+            prepareAndExecute(null, deleteObjectWordLinksSQL, objectId).close();
+        }
+
+        /**
+         * Store the object into the database storage.
+         *
+         * @param object the object to store
+         * @return the identifier of the stored object
+         * @throws BucketStorageException if there was an error adding the object to storage
+         */
+        public int storeObject(MetaObjectProfiSCT object) throws BucketStorageException {
+            int id = databaseStorage.store(object).getAddress();
+            try {
+                insertWordLinks(id, object.getKeyWords());
+                return id;
+            } catch (SQLException e) {
+                throw new StorageFailureException("Cannot insert word links for " + object + ": " + e, e);
+            }
+        }
+
+        /**
+         * Updates the object stored in the database storage.
+         *
+         * @param objectId the identifier of the object with the keywords
+         * @param object the object to store
+         * @throws BucketStorageException if there was an error adding the object to storage
+         */
+        public void updateObject(int objectId, MetaObjectProfiSCT object) throws BucketStorageException {
+            databaseStorage.update(objectId, object);
+            try {
+                deleteWordLinks(objectId);
+                insertWordLinks(objectId, object.getKeyWords());
+            } catch (SQLException e) {
+                throw new StorageFailureException("Cannot update word links for " + object + ": " + e, e);
+            }
+        }
+
+        /**
+         * Remove the object from the database storage.
+         *
+         * @param objectId the identifier of the object with the keywords
+         * @throws BucketStorageException if there was an error adding the object to storage
+         */
+        public void removeObject(int objectId) throws BucketStorageException {
+            try {
+                deleteWordLinks(objectId);
+            } catch (SQLException e) {
+                throw new StorageFailureException("Cannot insert word links for " + objectId + ": " + e, e);
+            }
+            databaseStorage.remove(objectId);
+        }
+
+        /**
+         * Returns a search over all objects in the storage.
+         * @return a search over all objects in the storage
+         */
+        public IntStorageSearch<MetaObjectProfiSCT> getAllObjects() {
+            return databaseStorage.search();
+        }
+
+        /**
+         * Returns a search over all objects in the storage.
+         * @param fromId identifier of the starting object
+         * @param toId identifier of the ending object
+         * @return a search over all objects in the storage
+         */
+        public IntStorageSearch<MetaObjectProfiSCT> getAllObjects(Integer fromId, Integer toId) {
+            if (fromId == null || toId == null)
+                return getAllObjects();
+            return databaseStorage.search(null, fromId, toId);
         }
 
         /**
@@ -1077,11 +1262,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * Creates a new extractor that uses external image extractor and additional parameters
          * to create instances of {@link MetaObjectProfiSCT}.
          * @param extractorCommand the external extractor command for extracting binary images
+         * @param storeObjects if <tt>true</tt> every object successfully extracted by this extractor
+         *          is added to the encapsulated storage via {@link #storeObject(messif.objects.impl.MetaObjectProfiSCT)}
          * @param dataLineParameterNames a list of names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors
          * @return a new extractor instance
          */
-        public Extractor<? extends MetaObjectProfiSCT> createImageExtractor(String extractorCommand, String[] dataLineParameterNames) {
-            return new ImageExtractor(extractorCommand, dataLineParameterNames);
+        public Extractor<? extends MetaObjectProfiSCT> createImageExtractor(String extractorCommand, boolean storeObjects, String[] dataLineParameterNames) {
+            return new ImageExtractor(extractorCommand, dataLineParameterNames, storeObjects);
         }
 
         /**
@@ -1107,10 +1294,10 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             }
 
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
-                String locator = dataSource.getParameter(locatorParamName, String.class);
-                if (locator == null)
-                    return null;
-                return locatorToObject(locator, dataSource.getParameter(additionalKeyWordsParamName, String.class));
+                return locatorToObject(
+                        dataSource.getRequiredParameter(locatorParamName).toString(),
+                        dataSource.getParameter(additionalKeyWordsParamName, String.class)
+                );
             }
 
             public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
@@ -1127,46 +1314,55 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             private final String extractorCommand;
             /** Names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors */
             private final String[] dataLineParameterNames;
+            /** Flag whether to store successfully extracted objects to database */
+            private final boolean storeObjects;
 
             /**
              * Creates a new instance of ImageExtractor.
              * @param extractorCommand the external extractor command for extracting binary images
              * @param dataLineParameterNames a list of names of the {@link ExtractorDataSource} parameters that are appended to the extracted descriptors
+             * @param storeObjects if <tt>true</tt> every object successfully extracted by this extractor
+             *          is added to the encapsulated storage via {@link #storeObject(messif.objects.impl.MetaObjectProfiSCT)}
              */
-            public ImageExtractor(String extractorCommand, String[] dataLineParameterNames) {
+            public ImageExtractor(String extractorCommand, String[] dataLineParameterNames, boolean storeObjects) {
                 this.extractorCommand = extractorCommand;
                 this.dataLineParameterNames = dataLineParameterNames;
+                this.storeObjects = storeObjects;
             }
 
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
-                StringBuilder str;
+                StringBuilder str = new StringBuilder();
 
                 // Read data from the extractor
                 if (extractorCommand != null) {
-                    str = Extractors.readStringData(Extractors.callExternalExtractor(extractorCommand, false, dataSource), null);
+                    str = Extractors.readStringData(Extractors.callExternalExtractor(extractorCommand, false, dataSource), str);
+                    if (str.length() == 0)
+                        throw new IllegalArgumentException("There were no data extracted");
                     if (str.charAt(str.length() - 1) != '\n')
                         str.append('\n');
-                } else {
-                    str = new StringBuilder();
                 }
 
                 // Add data from the parameters
                 if (dataLineParameterNames != null)
                     for (int i = 0; i < dataLineParameterNames.length; i++)
-                        str.append(dataSource.getParameter(dataLineParameterNames[i], String.class, "")).append('\n');
+                        str.append(dataSource.getRequiredParameter(dataLineParameterNames[i]).toString()).append('\n');
 
                 // Create the object
                 try {
                     MetaObjectProfiSCT obj = new MetaObjectProfiSCT(new BufferedReader(new StringReader(str.toString())), stemmer, keyWordIndex);
 
                     // Set object key
-                    String key = dataSource.getParameter("key", String.class);
+                    String key = dataSource.getRequiredParameter("key").toString();
                     if (key != null)
                         obj.setObjectKey(new AbstractObjectKey(key));
 
+                    // Store object into database
+                    if (storeObjects)
+                        storeObject(obj);
+
                     return obj;
                 } catch (Exception e) {
-                    throw new ExtractorException("Cannot extract the input data", e);
+                    throw new ExtractorException("Cannot extract the input data: " + e, e);
                 }
             }
 
@@ -1201,6 +1397,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         int territoriesCount = serializator.readInt(input);
         if (territoriesCount == -1) {
             territories = null;
+        } else if (territoriesCount == 0) {
+            territories = EnumSet.noneOf(Territory.class);
         } else {
             Collection<Territory> territoriesRead = new LinkedList<Territory>();
             while (territoriesCount > 0) {
