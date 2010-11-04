@@ -17,6 +17,7 @@
 package messif.objects.util;
 
 import java.io.Serializable;
+import messif.objects.DistanceFunction;
 
 /**
  * Ranked object where the rank is based on distances.
@@ -51,6 +52,20 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
     public DistanceRankedObject(T object, float distance) {
         this.object = object;
         this.distance = distance;
+    }
+
+    /**
+     * Creates a new instance of DistanceRankedObject that encapsulates a given object
+     * and measures the distance using {@code distanceFunction} from the given reference object.
+     *
+     * @param <O> the type of object used to measure the distance
+     * @param object the encapsulated object
+     * @param distanceFunction the distance function used for the measuring
+     * @param referenceObject the reference object from which the distance is measured
+     * @throws NullPointerException if the distance function is <tt>null</tt>
+     */
+    public <O extends T> DistanceRankedObject(O object, DistanceFunction<? super O> distanceFunction, O referenceObject) throws NullPointerException {
+        this(object, distanceFunction.getDistance(referenceObject, object));
     }
 
 

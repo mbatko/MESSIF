@@ -58,7 +58,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class LocalAbstractObject extends AbstractObject {
+public abstract class LocalAbstractObject extends AbstractObject implements DistanceFunction<LocalAbstractObject> {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 4L;
@@ -344,6 +344,14 @@ public abstract class LocalAbstractObject extends AbstractObject {
             return distanceFilter.includeUsingPrecompDist(obj.distanceFilter, radius);
 
         return false;
+    }
+
+    /**
+     * Returns the distance between object {@code o1} and object {@code o2}.
+     * Simple implementation using {@link #getDistance(messif.objects.LocalAbstractObject)}.
+     */
+    public float getDistance(LocalAbstractObject o1, LocalAbstractObject o2) {
+        return o1.getDistance(o2);
     }
 
 

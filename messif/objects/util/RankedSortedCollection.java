@@ -19,6 +19,8 @@ package messif.objects.util;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import messif.objects.AbstractObject;
+import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.utility.SortedCollection;
@@ -70,13 +72,39 @@ public class RankedSortedCollection extends SortedCollection<RankedAbstractObjec
 
     /**
      * Creates a new collection filled with objects provided by the {@code iterator}.
+     * Objects are ranked by the distance measured by the {@code distanceFunction}
+     * from the given {@code referenceObject}.
+     * @param <T> the type of object used to measure the distance
+     * @param distanceFunction the distance function used for the measuring
+     * @param referenceObject the reference object from which the distance is measured
+     * @param iterator the iterator on objects to add to the collection
+     */
+    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
+        while (iterator.hasNext())
+            add(new RankedAbstractObject(iterator.next(), distanceFunction, referenceObject));
+    }
+
+    /**
+     * Creates a new collection filled with objects provided by the {@code objectProvider}.
+     * Objects are ranked by the distance measured by the {@code distanceFunction}
+     * from the given {@code referenceObject}.
+     * @param <T> the type of object used to measure the distance
+     * @param distanceFunction the distance function used for the measuring
+     * @param referenceObject the reference object from which the distance is measured
+     * @param objectProvider the provider of objects to add to the collection
+     */
+    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
+        this(distanceFunction, referenceObject, (Iterator<? extends T>)objectProvider.provideObjects());
+    }
+
+    /**
+     * Creates a new collection filled with objects provided by the {@code iterator}.
      * Objects are ranked by the distance measured from the given {@code referenceObject}.
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
     public RankedSortedCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
-        while (iterator.hasNext())
-            add(new RankedAbstractObject(referenceObject, iterator.next()));
+        this(referenceObject, referenceObject, iterator);
     }
 
     /**
@@ -86,7 +114,7 @@ public class RankedSortedCollection extends SortedCollection<RankedAbstractObjec
      * @param objectProvider the provider of objects to add to the collection
      */
     public RankedSortedCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
-        this(referenceObject, (Iterator<? extends LocalAbstractObject>)objectProvider.provideObjects());
+        this(referenceObject, referenceObject, objectProvider);
     }
 
 
