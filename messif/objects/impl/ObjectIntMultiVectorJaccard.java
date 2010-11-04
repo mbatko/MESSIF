@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
+import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
@@ -140,6 +141,30 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     }
 
     /**
+     * Computes a distance between two {@link ObjectIntMultiVector}s using
+     * a non-metric weighted Jaccard coeficient.
+     * @param o1 the object to compute distance from
+     * @param weightProviderO1 the weight provider for object {@code o1}
+     * @param o2 the object to compute distance to
+     * @param weightProviderO2 the weight provider for object {@code o2}
+     * @return the non-metric weighted Jaccard distance between object {@code o1} and object {@code o2}
+     * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
+     */
+    public static float getWeightedDistance(ObjectIntMultiVector o1, WeightProvider weightProviderO1, ObjectIntMultiVector o2, WeightProvider weightProviderO2) throws NullPointerException {
+        SortedDataIterator o1Iterator = o1.getSortedIterator();
+        SortedDataIterator o2Iterator = o2.getSortedIterator();
+
+        float intersectWeight = 0;
+        while (o1Iterator.intersect(o2Iterator)) {
+            intersectWeight += weightProviderO1.getWeight(o1Iterator);
+            intersectWeight += weightProviderO2.getWeight(o2Iterator);
+        }
+
+        float sumWeight = weightProviderO1.getWeightSum(o1) + weightProviderO2.getWeightSum(o2);
+        return (intersectWeight == 0 && sumWeight == 0) ? 0 : (1f - intersectWeight / sumWeight);
+    }
+
+    /**
      * Implements a non-metric weighted Jaccard coeficient distance function.
      * If either {@code weightProviderThis} or {@code weightProviderObj} is <tt>null</tt>,
      * the normal Jaccard {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) distance} is returned.
@@ -152,18 +177,53 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         // If weights are not provided, fall back to non-weighted distance
         if (weightProviderThis == null || weightProviderObj == null)
             return getDistanceImpl(obj, MAX_DISTANCE);
+        return getWeightedDistance(this, weightProviderThis, obj, weightProviderObj);
+    }
 
-        SortedDataIterator iterator = getSortedIterator();
-        SortedDataIterator objIterator = obj.getSortedIterator();
+    /**
+     * Class for distance functions that compute distances between two
+     * {@link ObjectIntMultiVector}s using a non-metric weighted Jaccard coeficient.
+     *
+     * @return a distance function instance
+     */
+    public static class WeightedJaccardDistanceFunction implements DistanceFunction<ObjectIntMultiVector> {
+        /** Weight provider for the first object */
+        private final WeightProvider weightProviderO1;
+        /** Weight provider for the second object */
+        private final WeightProvider weightProviderO2;
 
-        float intersectWeight = 0;
-        while (iterator.intersect(objIterator)) {
-            intersectWeight += weightProviderThis.getWeight(iterator);
-            intersectWeight += weightProviderObj.getWeight(objIterator);
+        /**
+         * Creates a new instance of weighted jaccard distance function.
+         * @param weightProviderO1 the weight provider for the first object
+         * @param weightProviderO2 the weight provider for the second object
+         * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
+         */
+        public WeightedJaccardDistanceFunction(WeightProvider weightProviderO1, WeightProvider weightProviderO2) throws NullPointerException {
+            if (weightProviderO1 == null || weightProviderO2 == null)
+                throw new NullPointerException();
+            this.weightProviderO1 = weightProviderO1;
+            this.weightProviderO2 = weightProviderO2;
         }
 
-        float sumWeight = weightProviderThis.getWeightSum(this) + weightProviderObj.getWeightSum(obj);
-        return (intersectWeight == 0 && sumWeight == 0) ? 0 : (1f - intersectWeight / sumWeight);
+        /**
+         * Returns the encapsulated weight provider for the first object.
+         * @return the encapsulated weight provider for the first object
+         */
+        public WeightProvider getWeightProviderO1() {
+            return weightProviderO1;
+        }
+
+        /**
+         * Returns the encapsulated weight provider for the second object.
+         * @return the encapsulated weight provider for the second object
+         */
+        public WeightProvider getWeightProviderO2() {
+            return weightProviderO2;
+        }
+
+        public float getDistance(ObjectIntMultiVector o1, ObjectIntMultiVector o2) {
+            return getWeightedDistance(o1, weightProviderO1, o2, weightProviderO2);
+        }
     }
 
     /**

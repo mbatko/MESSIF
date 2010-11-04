@@ -92,6 +92,27 @@ public class ApproxKNNQueryOperationWeightedProfiMIndex extends ApproxKNNQueryOp
         return getAnswer(from, getK() - from);
     }
 
+    /**
+     * Returns an iterator for keyword objects from the answer.
+     * @return an iterator for keyword objects from the answer
+     */
+    public Iterator<ObjectIntMultiVectorJaccard> getAnswerKeywordObjects() {
+        final Iterator<RankedAbstractObject> iterator = getAnswer();
+        return new Iterator<ObjectIntMultiVectorJaccard>() {
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            public ObjectIntMultiVectorJaccard next() {
+                return ((MetaObjectProfiSCT)iterator.next().getObject()).getKeyWords();
+            }
+
+            public void remove() {
+                iterator.remove();
+            }
+        };
+    }
+
     @Override
     public MetaObjectProfiSCT getQueryObject() {
         return (MetaObjectProfiSCT)super.getQueryObject();
