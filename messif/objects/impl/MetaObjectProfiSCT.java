@@ -48,16 +48,20 @@ import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConve
 import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.NoDataObject;
 import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
+import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
+import messif.objects.util.RankedAbstractObject;
+import messif.objects.util.RankedSortedCollection;
 import messif.utility.ExtendedDatabaseConnection;
 
 /**
@@ -83,9 +87,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     protected static float[] visualWeights = { 2.0f, 2.0f, 5.0f, 2.0f, 4.0f };
 
     /** Regular expression used to split title */
-    protected static final String TITLE_SPLIT_REGEXP = "\\W+";
+    protected static final String TITLE_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
     /** Regular expression used to split keywords */
-    protected static final String KEYWORDS_SPLIT_REGEXP = "\\W+";
+    protected static final String KEYWORDS_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
 
 
     //****************** Stemmer interface ******************//
@@ -461,6 +465,28 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
+     * Return a set of stemmed, non-duplicate, non-ignored words.
+     * @param keyWords the list of keywords to transform
+     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
+     *          if <tt>null</tt>, all keywords are added
+     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @return a set of stemmed, non-duplicate, non-ignored words
+     */
+    private static Set<String> unifyKeywords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer) {
+        Set<String> processedKeyWords = new HashSet<String>(keyWords.length);
+        for (int i = 0; i < keyWords.length; i++) {
+            String keyWord = keyWords[i].trim().toLowerCase();
+            if (keyWord.isEmpty())
+                continue;
+            if (stemmer != null)
+                keyWord = stemmer.stem(keyWord);
+            if (ignoreWords == null || ignoreWords.add(keyWord))
+                processedKeyWords.add(keyWord);
+        }
+        return processedKeyWords;
+    }
+
+    /**
      * Transforms a list of keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      * All items from the list are removed during the process, so
@@ -479,16 +505,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             return new int[0];
 
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
-        Set<String> processedKeyWords = new HashSet<String>(keyWords.length);
-        for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = keyWords[i].trim().toLowerCase();
-            if (keyWord.isEmpty())
-                continue;
-            if (stemmer != null)
-                keyWord = stemmer.stem(keyWord);
-            if (ignoreWords == null || ignoreWords.add(keyWord))
-                processedKeyWords.add(keyWord);
-        }
+        Set<String> processedKeyWords = unifyKeywords(keyWords, ignoreWords, stemmer);
 
         // If the keywords list is empty after ignored words, return
         if (processedKeyWords.isEmpty())
@@ -998,6 +1015,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         private final String deleteObjectWordLinksSQL;
         /** Database storage used to add objects extracted by image extractor */
         private final DatabaseStorage<MetaObjectProfiSCT> databaseStorage;
+        /** Weight provider that computes weights based on keyword frequencies */
+        private final ObjectIntMultiVectorJaccard.WeightProvider keywordWeightProvider;
+
 
         /**
          * Creates a new instance of DatabaseStorageExtractor.
@@ -1028,9 +1048,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             if (wordLinkTable != null) {
                 this.insertWordLinkSQL = "insert into " + wordLinkTable + "(object_id, keyword_id) values (?, ?)";
                 this.deleteObjectWordLinksSQL = "delete from " + wordLinkTable + " where object_id = ?";
+                this.keywordWeightProvider = new KeywordWeightProvider(wordLinkTable);
             } else {
                 this.insertWordLinkSQL = null;
                 this.deleteObjectWordLinksSQL = null;
+                this.keywordWeightProvider = null;
             }
         }
 
@@ -1131,14 +1153,77 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         public MetaObjectProfiSCT locatorToObject(String locator) throws ExtractorException {
             return locatorToObject(locator, null);
         }
-/*
-        public Iterator<RankedAbstractObject> searchByText(String text) {
+
+        /**
+         * Returns an iterator over objects found by the text search.
+         * @param text the text to search for
+         * @param count the number of objects to retrieve
+         * @return an iterator over objects found by the text search
+         * @throws SQLException if there was a problem executing the search on the database
+         */
+        public Iterator<RankedAbstractObject> searchByText(String text, int count) throws SQLException {
             if (text == null || text.isEmpty())
                 return null;
-            int[] keywordIds = keywordsToIdentifiers(text.split(TITLE_SPLIT_REGEXP), null, stemmer, keyWordIndex);
-            StringBuilder str = new StringBuilder("select locator from ")
+            return searchByText(text.split(TITLE_SPLIT_REGEXP), count);
         }
-*/
+
+        /**
+         * Returns an iterator over objects found by the text search.
+         * Note that the keywords are automatically {@link #unifyKeywords unified} using
+         * the stemmer and also duplicate keywords are removed.
+         *
+         * @param keywords the keywords to search for
+         * @param count the number of objects to retrieve
+         * @return an iterator over objects found by the text search
+         * @throws SQLException if there was a problem executing the search on the database
+         */
+        public Iterator<RankedAbstractObject> searchByText(String[] keywords, int count) throws SQLException {
+            Set<String> processedKeyWords = unifyKeywords(keywords, null, stemmer);
+            if (processedKeyWords.isEmpty())
+                return null;
+            StringBuilder str = new StringBuilder();
+            str.append("select locator, rank from (select keyword_links.object_id, sum((1/kwcount)*idf)/");
+            str.append(processedKeyWords.size());
+            str.append(" as rank from (select id, log((select count(*) from profimedia)/count(*)) as idf from profimedia_keywords left outer join profimedia_keyword_links on (profimedia_keywords.id = profimedia_keyword_links.keyword_id) where profimedia_keywords.keyword in ('");
+            Iterator<String> it = processedKeyWords.iterator();
+            while (it.hasNext()) {
+                str.append(it.next());
+                if (it.hasNext())
+                    str.append("','");
+            }
+            str.append("') group by id) keywords inner join profimedia_keyword_links as keyword_links on (keywords.id = keyword_links.keyword_id) left outer join profimedia_kwcount on (keyword_links.object_id = profimedia_kwcount.object_id) group by keyword_links.object_id order by rank desc limit ");
+            str.append(count);
+            str.append(") oids inner join profimedia on (oids.object_id = profimedia.id)");
+
+            Collection<RankedAbstractObject> ret = new ArrayList<RankedAbstractObject>(count);
+            PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), (Object[])null);
+            ResultSet rs = objectsCursor.getResultSet();
+            while (rs.next()) {
+                ret.add(new RankedAbstractObject(new NoDataObject(rs.getString(1)), rs.getFloat(2)));
+            }
+            objectsCursor.close();
+            return ret.iterator();
+        }
+
+        /**
+         * Returns a collection of ranked objects given by {@code iterator} with
+         * the distances provided by the weighted Jaccard keyword distance
+         * with word-frequency weights.
+         * @param queryObject the query object from which to get the keywords
+         * @param iterator the iterator with the original ranked objects
+         * @return a collection of newly ranked objects
+         */
+        public Collection<RankedAbstractObject> sortByKeywords(MetaObjectProfiSCT queryObject, Iterator<? extends RankedAbstractObject> iterator) {
+            RankedSortedCollection ret = new RankedSortedCollection();
+            while (iterator.hasNext()) {
+                RankedAbstractObject rankedObject = iterator.next();
+                MetaObjectProfiSCT object = (MetaObjectProfiSCT)rankedObject.getObject();
+                float newDistance = queryObject.getKeyWords().getWeightedDistance(object.getKeyWords(), keywordWeightProvider, keywordWeightProvider);
+                ret.add((RankedAbstractObject)rankedObject.clone(newDistance)); // This should never throw class cast since it is clonning
+            }
+            return ret;
+        }
+
         /**
          * Insert words link for the given object id.
          * This method does nothing if the {@link #insertWordLinkSQL} is <tt>null</tt>.
@@ -1371,6 +1456,65 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             }
         }
 
+        /**
+         * Implements a database provider for keyword weights.
+         */
+        private class KeywordWeightProvider implements ObjectIntMultiVectorJaccard.WeightProvider {
+            /** SQL command for retrieving the keyword frequency */
+            private final String frequencySQL;
+            /** Prepared statement for the {@link #frequencySQL} */
+            private PreparedStatement frequencyStatement;
+
+            /**
+             * Creates a new weight provider that reads the keyword weights from database.
+             * @param wordLinkTable the name of the table in the database that the word links are inserted into
+             */
+            public KeywordWeightProvider(String wordLinkTable) {
+                this.frequencySQL = "select log((select count(*) from profimedia)/count(*)) as idf from " + wordLinkTable + " where keyword_id ";
+            }
+
+            public float getWeight(SortedDataIterator iterator) {
+                try {
+                    frequencyStatement = prepareAndExecute(frequencyStatement, frequencySQL + " = ?", iterator.currentInt());
+                    ResultSet rs = frequencyStatement.getResultSet();
+                    if (!rs.next())
+                        throw new InternalError("count(*) query should never return zero rows");
+                    float idf = rs.getFloat(1);
+                    rs.close();
+                    return idf/iterator.getIteratedObject().getDimensionality();
+                } catch (SQLException e) {
+                    throw new IllegalStateException("Error getting weight for " + iterator.getIteratedObject() + ": " + e, e);
+                }
+            }
+
+            public float getWeightSum(ObjectIntMultiVector obj) {
+                StringBuilder sql = new StringBuilder(frequencySQL);
+                sql.append(" in (");
+                int count = 0;
+                for (int i = 0; i < obj.getVectorDataCount(); i++) {
+                    int[] vector = obj.getVectorData(i);
+                    count += vector.length;
+                    for (int j = 0; j < vector.length; j++) {
+                        sql.append(vector[j]).append(',');
+                    }
+                }
+                sql.deleteCharAt(sql.length() - 1).append(')');
+                try {
+                    PreparedStatement statement = prepareAndExecute(null, sql.toString(), (Object[])null);
+                    ResultSet rs = statement.getResultSet();
+                    float sum = 0;
+                    while (rs.next()) {
+                        sum += rs.getFloat(1) / count;
+                    }
+                    rs.close();
+                    statement.close();
+                    return sum;
+                } catch (SQLException e) {
+                    throw new IllegalStateException("Error getting weight sum for " + obj + ": " + e, e);
+                }
+            }
+            
+        }
     }
 
 
