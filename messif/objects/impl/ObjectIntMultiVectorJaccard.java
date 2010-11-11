@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Map;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -131,7 +132,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         public abstract float getWeight(SortedDataIterator iterator);
         /**
          * Returns the sum of all weights for the given object.
-         * Note that this value must be consistent with {@link #getWeight(messif.objects.impl.ObjectIntDualVector.SortedDataIterator)},
+         * Note that this value must be consistent with {@link #getWeight(messif.objects.impl.ObjectIntMultiVector.SortedDataIterator)},
          * i.e. the returned sum is the sum of the weight retrieved by iterating over
          * all items from the {@code obj.getSortedIterator()}.
          * @param obj the object for which the weights are given
@@ -302,5 +303,57 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         public float getWeightSum(ObjectIntMultiVector obj) {
             return weightSum;
         }
+    }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a map of weights for
+     * based on items of {@link ObjectIntMultiVector}.
+     * Note that the map <em>must</em> contain a weight for every value in the
+     * respective {@link ObjectIntMultiVector}.
+     */
+    public static class MapMultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** Map with weights for the values */
+        private final Map<Integer, Float> dataToWeightMap;
+
+        /**
+         * Creates a new weight provider with a map of weights.
+         * The key for the map is a value from the {@link ObjectIntMultiVector}.
+         * @param dataToWeightMap the map of weights
+         */
+        public MapMultiWeightProvider(Map<Integer, Float> dataToWeightMap) {
+            this.dataToWeightMap = dataToWeightMap;
+        }
+
+        /**
+         * Returns the weight from the data weight map.
+         * @param value the value for which to get the weight
+         * @return the weight for the given value
+         * @throws IllegalArgumentException if the map does not contain a weight for the given value
+         */
+        protected float getWeight(Integer value) throws IllegalArgumentException {
+            Float weight = dataToWeightMap.get(value);
+            if (weight == null)
+                throw new IllegalArgumentException("Weight map has no value for value " + value);
+            return weight.floatValue();
+        }
+
+        public float getWeight(SortedDataIterator iterator) {
+            return getWeight(iterator.currentInt());
+        }
+
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                int[] data = obj.data[i];
+                for (int j = 0; j < data.length; j++) {
+                    sum += getWeight(data[j]);
+                }
+            }
+            return sum;
+        }
+
     }
 }

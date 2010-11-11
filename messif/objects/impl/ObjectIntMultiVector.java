@@ -204,17 +204,40 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
     /**
      * Internal iterator that provides sorted access to the vector data arrays of integers.
      */
-    public class SortedDataIterator implements Iterator<Integer> {
-        /** Current index in the respective data array */
+    public final class SortedDataIterator implements Iterator<Integer> {
+        /** Current index in the respective data array (all are set to zero from the start) */
         private int[] dataIndex = new int[data.length];
         /** Index of the data array from which the last value was returned */
         private int which = -1;
+        /** Index of the data array from which the next value will be returned */
+        private int nextWhich;
+
+        /**
+         * Creates a new instance of the sorted iterator.
+         * The iterator finds the next data array to return the item from.
+         */
+        protected SortedDataIterator() {
+            nextWhich = getNextDataArrayIndex();
+        }
+
+        /**
+         * Returns the index of the data array that has the smallest next value.
+         * @return the index of the data array or -1 if all the data array indexes are exhausted
+         */
+        private int getNextDataArrayIndex() {
+            int nextInt = Integer.MAX_VALUE;
+            int ret = -1;
+            for (int i = 0; i < dataIndex.length; i++) {
+                if (dataIndex[i] < data[i].length && data[i][dataIndex[i]] < nextInt) {
+                    ret = i;
+                    nextInt = data[i][dataIndex[i]];
+                }
+            }
+            return ret;
+        }
 
         public boolean hasNext() {
-            for (int i = 0; i < dataIndex.length; i++)
-                if (dataIndex[i] < data[i].length)
-                    return true;
-            return false;
+            return nextWhich != -1;
         }
 
         /**
@@ -265,18 +288,23 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
          * @throws NoSuchElementException if there are no more items in this iterator
          */
         public int nextInt() throws NoSuchElementException {
-            int nextInt = Integer.MAX_VALUE;
-            which = -1;
-            for (int i = 0; i < dataIndex.length; i++) {
-                if (dataIndex[i] < data[i].length && data[i][dataIndex[i]] < nextInt) {
-                    which = i;
-                    nextInt = data[i][dataIndex[i]];
-                }
-            }
-            if (which == -1)
+            if (nextWhich == -1)
                 throw new NoSuchElementException();
-            dataIndex[which]++;
-            return nextInt;
+            which = nextWhich;
+            dataIndex[nextWhich]++;
+            nextWhich = getNextDataArrayIndex();
+            return data[which][dataIndex[which] - 1];
+        }
+
+        /**
+         * Returns the next value as integer, but does not advance the iterator.
+         * @return the next value as integer
+         * @throws NoSuchElementException if there are no more items in this iterator
+         */
+        public int peekNextInt() throws NoSuchElementException {
+            if (nextWhich == -1)
+                throw new NoSuchElementException();
+            return data[nextWhich][dataIndex[nextWhich]];
         }
 
         public Integer next() {
@@ -285,6 +313,22 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
 
         public void remove() {
             throw new UnsupportedOperationException("SortedDataIterator does not support removal");
+        }
+
+        /**
+         * Returns <tt>true</tt> (and advances this iterator) if the next value in this iterator
+         * is equal to the current value of the given iterator.
+         * This method is used in intersection to correctly handle duplicate values.
+         * @param iterator the iterator the current value of which to check
+         * @return <tt>true</tt> if this iterator was advanced to the next value or <tt>false</tt> otherwise.
+         */
+        private boolean nextIntEqual(SortedDataIterator iterator) {
+            if (which == -1 || iterator.which == -1 || nextWhich == -1)
+                return false;
+            if (peekNextInt() != iterator.currentInt())
+                return false;
+            nextInt();
+            return true;
         }
 
         /**
@@ -300,6 +344,10 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             // If there are no items in either iterator, exit
             if (!hasNext() || !iterator.hasNext())
                 return false;
+
+            // If the other iterator has the same next value as this iterator current value or vice versa (duplicate objects)
+            if (nextIntEqual(iterator) || iterator.nextIntEqual(this))
+                return true;
 
             // Read next item from both iterators - it is either at the beggining or after an intersection is found
             int thisInt = nextInt();

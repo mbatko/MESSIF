@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -46,10 +47,8 @@ import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.impl.DatabaseStorage;
 import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConvertor;
 import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
-import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.NoDataObject;
 import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
@@ -63,7 +62,7 @@ import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
-import messif.operations.query.ApproxKNNQueryOperationWeightedProfiMIndex;
+import messif.utility.Convert;
 import messif.utility.ExtendedDatabaseConnection;
 
 /**
@@ -962,6 +961,29 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         //****************** Database column definition ******************//
 
         /**
+         * Returns the database column name for creating the {@link MetaObjectProfiSCT} object
+         * from the text stream.
+         * @return the database column name
+         */
+        public static String getTextStreamColumnName() {
+            return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
+        }
+
+        /**
+         * Returns the database column convertor for creating the {@link MetaObjectProfiSCT} object
+         * from the text stream.
+         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex the index for translating keywords to addresses
+         * @return the database column convertor
+         */
+        public static ColumnConvertor<MetaObjectProfiSCT> getTextStreamColumnConvertor(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+            return DatabaseStorage.wrapConvertor(
+                    new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
+                    true, false, true
+            );
+        }
+
+        /**
          * Returns the database column definitions for the {@link MetaObjectProfiSCT} object.
          * @param addTextStreamColumn flag whether to add the metaobject stream column to the resulting map
          * @param stemmer an instance that provides a {@link Stemmer} for word transformation
@@ -974,13 +996,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             // thumbfile -- location of the thumbnail image file
             map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
             if (addTextStreamColumn)
-                map.put(
-                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)",
-                    DatabaseStorage.wrapConvertor(
-                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
-                        true, false, true
-                    )
-                );
+                map.put(getTextStreamColumnName(), getTextStreamColumnConvertor(stemmer, keyWordIndex));
             map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
             map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
             map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
@@ -1018,10 +1034,10 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         private final String insertWordLinkSQL;
         /** SQL command to delete word links */
         private final String deleteObjectWordLinksSQL;
+        /** SQL command for retrieving keyword weights */
+        private final String keywordWeightSQL;
         /** Database storage used to add objects extracted by image extractor */
         private final DatabaseStorage<MetaObjectProfiSCT> databaseStorage;
-        /** Distance function for keywords */
-        private final DistanceFunction<ObjectIntMultiVector> keywordDistanceFunction;
 
 
         /**
@@ -1033,12 +1049,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param wordLinkTable the name of the table in the database that the word links are inserted into
          * @param stemmer an instance that provides a {@link Stemmer} for word transformation
          * @param keyWordIndex the index for translating keywords to addresses
-         * @param keyWordWeights the weights for different layers of keywords (title, etc.)
          * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
          * @throws SQLException if there was a problem connecting to the database
          */
         @SuppressWarnings("unchecked")
-        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, float[] keyWordWeights) throws IllegalArgumentException, SQLException {
+        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
             super(dbConnUrl, dbConnInfo, dbDriverClass);
             this.randomGenerator = new Random();
             this.stemmer = stemmer;
@@ -1054,12 +1069,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             if (wordLinkTable != null) {
                 this.insertWordLinkSQL = "insert into " + wordLinkTable + "(object_id, keyword_id) values (?, ?)";
                 this.deleteObjectWordLinksSQL = "delete from " + wordLinkTable + " where object_id = ?";
-                ObjectIntMultiVectorJaccard.WeightProvider keywordWeightProvider = new KeywordWeightProvider(wordLinkTable, keyWordWeights);
-                this.keywordDistanceFunction = new ObjectIntMultiVectorJaccard.WeightedJaccardDistanceFunction(keywordWeightProvider, keywordWeightProvider);
+                this.keywordWeightSQL = "log((select count(*) from " + tableName + ")/count(*)) as idf from " + wordLinkTable;
             } else {
                 this.insertWordLinkSQL = null;
                 this.deleteObjectWordLinksSQL = null;
-                this.keywordDistanceFunction = null;
+                this.keywordWeightSQL = null;
             }
         }
 
@@ -1075,26 +1089,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws SQLException if there was a problem connecting to the database
          */
         public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
-            this(dbConnUrl, dbConnInfo, dbDriverClass, tableName, null, stemmer, keyWordIndex, null);
-        }
-
-        /**
-         * Returns the first column of the first row returned by the given SQL command.
-         * @param sql the SQL command to execute
-         * @param parameters parameters for the "?" placeholders inside the SQL command
-         * @return the value in the first column of the first row
-         * @throws NoSuchElementException if the SQL command does not return any row
-         * @throws SQLException if there was a problem parsing or executing the SQL command
-         */
-        private Object executeSingleValue(String sql, Object... parameters) throws NoSuchElementException, SQLException {
-            ResultSet rs = prepareAndExecute(null, sql, parameters).getResultSet();
-            try {
-                if (!rs.next())
-                    throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
-                return rs.getObject(1);
-            } finally {
-                rs.close();
-            }
+            this(dbConnUrl, dbConnInfo, dbDriverClass, tableName, null, stemmer, keyWordIndex);
         }
 
         /**
@@ -1162,91 +1157,145 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         /**
-         * Returns an iterator over objects found by the text search.
+         * Returns a collection of objects found by the text search.
          * @param text the text to search for
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
          * @throws SQLException if there was a problem executing the search on the database
          */
-        public Iterator<RankedAbstractObject> searchByText(String text, int count) throws SQLException {
+        public Collection<RankedAbstractObject> searchByText(String text, int count) throws SQLException {
             if (text == null || text.isEmpty())
                 return null;
             return searchByText(text.split(TITLE_SPLIT_REGEXP), count);
         }
 
         /**
-         * Returns an iterator over objects found by the text search.
+         * Returns a collection of objects found by the text search.
          * Note that the keywords are automatically {@link #unifyKeywords unified} using
          * the stemmer and also duplicate keywords are removed.
          *
          * @param keywords the keywords to search for
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
-         * @throws SQLException if there was a problem executing the search on the database
+         * @throws IllegalArgumentException if there was a problem executing the search on the database
          */
-        public Iterator<RankedAbstractObject> searchByText(String[] keywords, int count) throws SQLException {
+        public Collection<RankedAbstractObject> searchByText(String[] keywords, int count) throws IllegalArgumentException {
             Collection<String> processedKeyWords = unifyKeywords(keywords, null, stemmer);
             if (processedKeyWords.isEmpty())
                 return null;
             StringBuilder str = new StringBuilder();
-            str.append("select locator, rank from (select keyword_links.object_id, sum((1/kwcount)*idf)/");
+            str.append("select locator, ");
+            str.append(getTextStreamColumnName());
+            str.append(" as metaobject, rank from (select keyword_links.object_id, sum((1/kwcount)*idf)/");
             str.append(processedKeyWords.size());
-            str.append(" as rank from (select id, log((select count(*) from profimedia)/count(*)) as idf from profimedia_keywords left outer join profimedia_keyword_links on (profimedia_keywords.id = profimedia_keyword_links.keyword_id) where profimedia_keywords.keyword in ('");
-            Iterator<String> it = processedKeyWords.iterator();
-            while (it.hasNext()) {
-                str.append(it.next());
-                if (it.hasNext())
-                    str.append("','");
-            }
+            str.append(" as rank from (select profimedia_keywords.id, ");
+            str.append(keywordWeightSQL);
+            str.append(" links right outer join profimedia_keywords on (profimedia_keywords.id = links.keyword_id) where profimedia_keywords.keyword in ('");
+            str.append(Convert.iterableToString(processedKeyWords.iterator(), "','"));
             str.append("') group by id) keywords inner join profimedia_keyword_links as keyword_links on (keywords.id = keyword_links.keyword_id) left outer join profimedia_kwcount on (keyword_links.object_id = profimedia_kwcount.object_id) group by keyword_links.object_id order by rank desc limit ");
             str.append(count);
             str.append(") oids inner join profimedia on (oids.object_id = profimedia.id)");
 
             Collection<RankedAbstractObject> ret = new ArrayList<RankedAbstractObject>(count);
-            PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), (Object[])null);
-            ResultSet rs = objectsCursor.getResultSet();
-            while (rs.next()) {
-                ret.add(new RankedAbstractObject(new NoDataObject(rs.getString(1)), rs.getFloat(2)));
+            try {
+                PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), (Object[])null);
+                ColumnConvertor<MetaObjectProfiSCT> textStreamColumnConvertor = getTextStreamColumnConvertor(stemmer, keyWordIndex);
+                ResultSet rs = objectsCursor.getResultSet();
+                while (rs.next()) {
+                    MetaObjectProfiSCT obj = textStreamColumnConvertor.convertFromColumnValue(null, rs.getObject(2));
+                    obj.setObjectKey(new AbstractObjectKey(rs.getString(1)));
+                    ret.add(new RankedAbstractObject(obj, rs.getFloat(3)));
+                }
+                objectsCursor.close();
+            } catch (BucketStorageException e) {
+                throw new IllegalArgumentException("Error reading the data: " + e.getMessage(), e);
+            } catch (SQLException e) {
+                throw new IllegalArgumentException("Error reading the data: " + e, e);
             }
-            objectsCursor.close();
-            return ret.iterator();
+            return ret;
+        }
+
+        /**
+         * Computes the weighted Jaccard keyword distance with word-frequency weights.
+         * The {@code keyWordWeights} array provides additional weights for the
+         * different layers of the keywords (title, etc.).
+         *
+         * @param o1 the first keyword object to compare
+         * @param o2 the first keyword object to compare
+         * @param keyWordWeights the weights for different layers of keywords (title, etc.)
+         * @return the keywords distance
+         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         */
+        private float keywordDistanceTfIdf(ObjectIntMultiVector o1, ObjectIntMultiVector o2, float[] keyWordWeights) throws SQLException {
+            return ObjectIntMultiVectorJaccard.getWeightedDistance(o1, new KeywordWeightProvider(o1, keyWordWeights), o2, new KeywordWeightProvider(o2, keyWordWeights));
         }
 
         /**
          * Returns a collection of ranked objects given by the {@code iterator} with
          * the distances provided by the weighted Jaccard keyword distance
          * with word-frequency weights.
-         * @param referenceKeywords the reference keywords using which the objects in the collection are ranked
+         * An iterator of already ranked objects is provided and a weight for combining the original weight can be provided.
+         * @param queryObject the query object with keywords using which the objects in the collection are ranked
+         * @param keyWordWeights the weights for different layers of keywords (title, etc.)
+         * @param originalRankWeight weight of the original object distance rank (if zero, only the new ranking based on tf-idf is used)
          * @param iterator the iterator that provides the objects to rank
          * @return a collection of ranked objects
+         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
          */
-        public RankedSortedCollection rankByKeywords(ObjectIntMultiVector referenceKeywords, Iterator<? extends ObjectIntMultiVector> iterator) {
-            return new RankedSortedCollection(keywordDistanceFunction, referenceKeywords, iterator);
+        public Collection<RankedAbstractObject> rerankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, float originalRankWeight, Iterator<? extends RankedAbstractObject> iterator) throws SQLException {
+            RankedSortedCollection ret = new RankedSortedCollection();
+            while (iterator.hasNext()) {
+                RankedAbstractObject rankedObj = iterator.next();
+                float kwdist = keywordDistanceTfIdf(queryObject.getKeyWords(), ((MetaObjectProfiSCT)rankedObj.getObject()).getKeyWords(), keyWordWeights);
+                ret.add(rankedObj.clone(kwdist + rankedObj.getDistance() * originalRankWeight));
+            }
+            return ret;
+        }
+
+        /**
+         * Returns a collection of ranked objects given by the {@code iterator} with
+         * the distances provided by the weighted Jaccard keyword distance
+         * with word-frequency weights.
+         * @param queryObject the query object with keywords using which the objects in the collection are ranked
+         * @param keyWordWeights the weights for different layers of keywords (title, etc.)
+         * @param iterator the iterator that provides the objects to rank
+         * @return a collection of ranked objects
+         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         */
+        public Collection<RankedAbstractObject> rankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws SQLException {
+            RankedSortedCollection ret = new RankedSortedCollection();
+            while (iterator.hasNext()) {
+                MetaObjectProfiSCT obj = iterator.next();
+                ret.add(new RankedAbstractObject(obj, keywordDistanceTfIdf(queryObject.getKeyWords(), obj.getKeyWords(), keyWordWeights)));
+            }
+            return ret;
         }
 
         /**
          * Returns a collection of ranked objects given by {@code iterator} with
          * the distances provided by the weighted Jaccard keyword distance
          * with word-frequency weights.
+         * The given reference keywords are provided in different layers (title, etc.)
+         * in the respective subarrays. Note that the size of the outer array should
+         * not be bigger than the size of the {@code keyWordWeights}.
+         *
          * @param referenceKeywords the reference keywords using which the objects in the collection are ranked
+         * @param keyWordWeights the weights for different layers of keywords (title, etc.)
          * @param iterator the iterator that provides the objects to rank
          * @return a collection of newly ranked objects
+         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
          */
-        public RankedSortedCollection rankByKeywords(String[] referenceKeywords, Iterator<? extends ObjectIntMultiVector> iterator) {
-            int[] keywordIds = keywordsToIdentifiers(referenceKeywords, null, stemmer, keyWordIndex);
-            return rankByKeywords(new ObjectIntMultiVectorJaccard(new int[][] { new int[0], new int[0], keywordIds }), iterator);
-        }
-
-        /**
-         * Returns a collection of ranked objects given by {@code iterator} with
-         * the distances provided by the weighted Jaccard keyword distance
-         * with word-frequency weights.
-         * @param queryObject the reference object with keywords that are used for ranking
-         * @param operation the operation the answer of which provides the objects to rank
-         * @return a collection of newly ranked objects
-         */
-        public RankedSortedCollection rankByKeywords(MetaObjectPixMacSCT queryObject, ApproxKNNQueryOperationWeightedProfiMIndex operation) {
-            return rankByKeywords(queryObject.getKeyWords(), operation.getAnswerKeywordObjects());
+        public Collection<RankedAbstractObject> rankByKeywords(String[][] referenceKeywords, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws SQLException {
+            int[][] keywordIds = new int[referenceKeywords.length][];
+            for (int i = 0; i < referenceKeywords.length; i++)
+                keywordIds[i] = keywordsToIdentifiers(referenceKeywords[i], null, stemmer, keyWordIndex);
+            ObjectIntMultiVectorJaccard queryObject = new ObjectIntMultiVectorJaccard(keywordIds);
+            RankedSortedCollection ret = new RankedSortedCollection();
+            while (iterator.hasNext()) {
+                MetaObjectProfiSCT obj = iterator.next();
+                ret.add(new RankedAbstractObject(obj, keywordDistanceTfIdf(queryObject, obj.getKeyWords(), keyWordWeights)));
+            }
+            return ret;
         }
 
         /**
@@ -1485,63 +1534,69 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * Implements a database provider for keyword weights.
          */
         private class KeywordWeightProvider implements ObjectIntMultiVectorJaccard.WeightProvider {
-            /** SQL command for retrieving the keyword frequency */
-            private final String frequencySQL;
-            /** Prepared statement for the {@link #frequencySQL} */
-            private PreparedStatement frequencyStatement;
+            /** Weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
+            private final Map<Integer, Float> keywordWeights;
             /** Weights for different layers of keywords */
-            private float[] weights;
+            private final float[] weights;
 
             /**
              * Creates a new weight provider that reads the keyword weights from database.
-             * @param wordLinkTable the name of the table in the database that the word links are inserted into
+             * @param keywords the keywords to read the weights for
              * @param weights the weights for different layers of keywords (title, etc.)
+             * @throws SQLException if there was an error reading the keyword weights from the database
              */
-            public KeywordWeightProvider(String wordLinkTable, float[] weights) {
-                this.frequencySQL = "select log((select count(*) from profimedia)/count(*)) as idf from " + wordLinkTable + " where keyword_id = ?";
+            public KeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
+                // Prepare SQL statement
+                StringBuilder sql = new StringBuilder("select ");
+                sql.append(keywordWeightSQL).append(" where keyword_id in (");
+                for (int i = 0; i < keywords.getVectorDataCount(); i++) {
+                    int[] vector = keywords.getVectorData(i);
+                    for (int j = 0; j < vector.length; j++)
+                        sql.append(vector[j]).append(",");
+                }
+                sql.setCharAt(sql.length() -1, ')'); // Replace last coma
+
+                // Execute SQL and get weight for the keywords
+                PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
+                ResultSet rs = crs.getResultSet();
+                keywordWeights = new HashMap<Integer, Float>();
+                while (rs.next())
+                    keywordWeights.put(rs.getInt(1), rs.getFloat(2));
+                crs.close();
+
                 this.weights = weights;
             }
 
             /**
-             * Returns the weight of the keyword using database and tf-idf algorithm.
+             * Returns the weight of the keyword using the tf-idf algorithm.
              * @param keywordId the id of the keyword in the database
              * @param documentKwCount the number of keywords in the respective document
              * @param dataVectorIndex the index into {@link #weights} array
              * @return the weight
-             * @throws SQLException if there was a problem executing the SQL on the database
              */
-            private float getWeight(int keywordId, int documentKwCount, int dataVectorIndex) throws SQLException {
-                frequencyStatement = prepareAndExecute(frequencyStatement, frequencySQL, keywordId);
-                ResultSet rs = frequencyStatement.getResultSet();
-                if (!rs.next())
-                    throw new InternalError("count(*) query should never return zero rows");
-                float weight = rs.getFloat(1)/documentKwCount;
-                rs.close();
-                return weights != null ? weights[dataVectorIndex] * weight : weight;
+            private float getWeight(int keywordId, int documentKwCount, int dataVectorIndex) {
+                Float kwWeight = keywordWeights.get(keywordId);
+                if (kwWeight == null)
+                    throw new IllegalArgumentException("Unknown keyword ID " + keywordId);
+                if (weights != null)
+                    return kwWeight.floatValue() * weights[dataVectorIndex] / documentKwCount;
+                else
+                    return kwWeight.floatValue() / documentKwCount;
             }
 
             public float getWeight(SortedDataIterator iterator) {
-                try {
-                    return getWeight(iterator.currentInt(), iterator.getCurrentVectorDataIndex(), iterator.getIteratedObject().getDimensionality());
-                } catch (SQLException e) {
-                    throw new IllegalStateException("Error getting weight for " + iterator.getIteratedObject() + ": " + e, e);
-                }
+                return getWeight(iterator.currentInt(), iterator.getIteratedObject().getDimensionality(), iterator.getCurrentVectorDataIndex());
             }
 
             public float getWeightSum(ObjectIntMultiVector obj) {
-                try {
-                    float sum = 0;
-                    int documentKwCount = obj.getDimensionality();
-                    for (int i = 0; i < obj.getVectorDataCount(); i++) {
-                        int[] vector = obj.getVectorData(i);
-                        for (int j = 0; j < vector.length; j++) {
-                            sum += getWeight(vector[j], documentKwCount, i);
-                        }
-                    }
-                    return sum;
-                } catch (SQLException e) {
-                    throw new IllegalStateException("Error getting weight sum for " + obj + ": " + e, e);
+                float sum = 0;
+                int documentKwCount = obj.getDimensionality();
+                for (int i = 0; i < obj.getVectorDataCount(); i++) {
+                    int[] vector = obj.getVectorData(i);
+                    for (int j = 0; j < vector.length; j++)
+                        sum += getWeight(vector[j], documentKwCount, i);
                 }
+                return sum;
             }
         }
     }
