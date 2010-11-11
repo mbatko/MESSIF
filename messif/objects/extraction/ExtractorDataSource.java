@@ -257,6 +257,8 @@ public class ExtractorDataSource implements Closeable {
      * @return the map of additional parameters
      */
     public Map<String, ? extends Object> getAdditionalParameters() {
+        if (additionalParameters == null)
+            return null;
         return Collections.unmodifiableMap(additionalParameters);
     }
 

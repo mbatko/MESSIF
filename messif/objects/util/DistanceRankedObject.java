@@ -17,6 +17,7 @@
 package messif.objects.util;
 
 import java.io.Serializable;
+import java.util.Iterator;
 import messif.objects.DistanceFunction;
 
 /**
@@ -147,6 +148,36 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
         } catch (CloneNotSupportedException e) {
             throw new InternalError(e.toString());
         }
+    }
+
+
+    //****************** Iterator support ******************//
+
+    /**
+     * Converts an iterator on {@link DistanceRankedObject distance-ranked objects}
+     * to an iterator on the objects themselves.
+     * Note that the remove method is passed on the original iterator, so
+     * the returned iterator supports removal if and only if the given
+     * {@code iterator} supports removal.
+     *
+     * @param <T> the type of objects the distance-ranked object encapsulates
+     * @param iterator the original iterator on the distance-ranked objects
+     * @return an iterator on the encapsulated objects
+     */
+    public static <T> Iterator<T> getObjectsIterator(final Iterator<? extends DistanceRankedObject<T>> iterator) {
+        return new Iterator<T>() {
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            public T next() {
+                return iterator.next().getObject();
+            }
+
+            public void remove() {
+                iterator.remove();
+            }
+        };
     }
 
 

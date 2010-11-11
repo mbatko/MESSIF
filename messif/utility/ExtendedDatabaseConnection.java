@@ -24,6 +24,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 
 /**
@@ -159,4 +161,24 @@ public class ExtendedDatabaseConnection implements Serializable {
             }
         }
     }
+
+    /**
+     * Returns the first column of the first row returned by the given SQL command.
+     * @param sql the SQL command to execute
+     * @param parameters parameters for the "?" placeholders inside the SQL command
+     * @return the value in the first column of the first row
+     * @throws NoSuchElementException if the SQL command does not return any row
+     * @throws SQLException if there was a problem parsing or executing the SQL command
+     */
+    protected final Object executeSingleValue(String sql, Object... parameters) throws NoSuchElementException, SQLException {
+        ResultSet rs = prepareAndExecute(null, sql, parameters).getResultSet();
+        try {
+            if (!rs.next())
+                throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
+            return rs.getObject(1);
+        } finally {
+            rs.close();
+        }
+    }
+
 }

@@ -170,7 +170,7 @@ public abstract class Extractors {
 
     /**
      * Creates an extractor that creates objects from text InputStream using the
-     * constructor that takes {@link BufferedReader} as argument.
+     * constructor that takes {@link java.io.BufferedReader} as argument.
      * @param <T> the class of object that is created by the extractor
      * @param objectClass the class of object that is created by the extractor
      * @param additionalArguments additional arguments for the constructor

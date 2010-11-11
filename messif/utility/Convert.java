@@ -782,6 +782,59 @@ public abstract class Convert {
     }
 
     /**
+     * Converts the values of the given iterator to string by separating
+     * all the values by the given separator.
+     * @param iterator the iterator with the values
+     * @param separator the separator string inserted in between the values
+     * @return the string with all values returned by the {@code iterator} separated by the {@code separator}
+     */
+    public static String iterableToString(Iterator<?> iterator, String separator) {
+        if (iterator == null)
+            return null;
+        if (!iterator.hasNext())
+            return "";
+        StringBuilder str = new StringBuilder();
+        while (true) {
+            str.append(iterator.next());
+            if (!iterator.hasNext())
+                return str.toString();
+            str.append(separator);
+        }
+    }
+
+    /**
+     * Converts the values of the given iterable instance to string by separating
+     * all the values by the given separator.
+     * This method can process either static arrays (of any type including primitive ones)
+     * or any {@link Iterable}.
+     * @param iterable the iterable with the values
+     * @param separator the separator string inserted in between the values
+     * @return the string with all values returned by the {@code iterable} separated by the {@code separator}
+     */
+    public static String iterableToString(Object iterable, String separator) {
+        if (iterable == null) {
+            return null;
+        } else if (iterable instanceof Iterable) {
+            return iterableToString(((Iterable<?>)iterable).iterator(), separator);
+        } else if (iterable instanceof Iterator) {
+            return iterableToString((Iterator<?>)iterable, separator);
+        } else if (iterable.getClass().getComponentType() != null) {
+            int endIndex = Array.getLength(iterable) - 1;
+            if (endIndex == -1)
+                return "";
+            StringBuilder str = new StringBuilder();
+            for (int i = 0; ; i++) {
+                str.append(Array.get(iterable, i));
+                if (i == endIndex)
+                    return str.toString();
+                str.append(separator);
+            }
+        } else {
+            throw new IllegalArgumentException("IterableToString can only process iterable types or static arrays");
+        }
+    }
+
+    /**
      * Return generic-safe {@link java.util.Map} type.
      * Note that only non-typed arguments can be passed as key/value class to be
      * generic-safe.

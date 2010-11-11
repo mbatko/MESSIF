@@ -64,7 +64,7 @@ public abstract class DoubleSortedCollection extends RankedSortedCollection {
 
     @Override
     public boolean add(RankedAbstractObject e) {
-        return add((RankedAbstractObject) e.clone(getNewDistance(e.getObject(), e.getDistance())), e.getDistance());
+        return add(e.clone(getNewDistance(e.getObject(), e.getDistance())), e.getDistance());
     }
 
     /**
