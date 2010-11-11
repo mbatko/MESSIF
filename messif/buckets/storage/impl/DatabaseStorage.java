@@ -45,6 +45,7 @@ import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.InvalidAddressException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.LocalAbstractObject.TextStreamFactory;
 import messif.objects.MetaObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinarySerializator;
@@ -71,7 +72,7 @@ import messif.utility.ExtendedDatabaseConnection;
  */
 public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements IntStorageIndexed<T>, Serializable {
     /** class serial id for serialization */
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     //****************** Column convertor interface ******************//
 
@@ -111,7 +112,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException;
 
         /**
-         * Returns whether the {@link #convertFromColumnValue(T, java.lang.Object) convertFromColumnValue}
+         * Returns whether the {@link #convertFromColumnValue convertFromColumnValue}
          * method should be used when reading the object from the database.
          * @return whether this column convertor is used (<tt>true</tt>)
          *          or should be skipped (<tt>false</tt>) when the object is
@@ -133,6 +134,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
     /** Class of objects that the this storage works with */
     private final Class<? extends T> storedObjectsClass;
+    /** Name of the column that is the primary key of the table */
+    private final String primaryKeyColumn;
     /** List of column convertors */
     private final ColumnConvertor<T>[] columnConvertors;
     /** List of additional column names (same size as columnConvertors) */
@@ -197,6 +200,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
         // Set values
         this.storedObjectsClass = storedObjectsClass;
+        this.primaryKeyColumn = primaryKeyColumn;
         this.columnConvertors = columnConvertors;
         this.columnNames = columnNames;
 
@@ -346,7 +350,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     /**
      * Prepares and executes an SQL command.
      * The {@link ResultSet} returned by the execution can be retrieved by {@link PreparedStatement#getResultSet()}.
-     * Note that if a {@link SQLRecoverableException} is thrown while executing,
+     * Note that if a {@link java.sql.SQLRecoverableException} is thrown while executing,
      * the current connection is {@link #closeConnection() closed} and the command
      * retried.
      *
@@ -545,6 +549,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @return a column name or <tt>null</tt>
      */
     private String getComparatorCompatibleColumn(IndexComparator<?, ?> comparator) {
+        if (comparator == null)
+            return primaryKeyColumn;
         for (int i = 0; i < columnConvertors.length; i++)
             if (columnConvertors[i].isColumnCompatible(comparator))
                 return columnNames[i];
@@ -823,7 +829,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     /**
      * Column convertor that uses a database String into which instances of {@code T} are
      * serialized using {@link LocalAbstractObject#write(java.io.OutputStream) write}
-     * method and deserialized using {@link LocalAbstractObject#create(java.lang.Class, java.lang.String)}.
+     * method and deserialized using {@link TextStreamFactory}.
      *
      * @param <T> the class of instances that are serialized into the database
      */
@@ -834,7 +840,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         //****************** Attributes ******************//
 
         /** Factory for reading objects from database */
-        private final LocalAbstractObject.TextStreamFactory<? extends T> factory;
+        private final TextStreamFactory<? extends T> factory;
         /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage */
         private final boolean usedToRead;
         /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage */
@@ -911,7 +917,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * Column convertor that uses a database String into which instances of
      * an {@link LocalAbstractObject} encapsulated in {@code T} are
      * serialized using {@link LocalAbstractObject#write(java.io.OutputStream) write}
-     * method and deserialized using {@link LocalAbstractObject#create(java.lang.Class, java.lang.String)}.
+     * method and deserialized using {@link TextStreamFactory}.
      *
      * Note that this convertor can be used only to writing.
      *
