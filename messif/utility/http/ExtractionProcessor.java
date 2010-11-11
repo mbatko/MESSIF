@@ -29,7 +29,6 @@ import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
 import messif.utility.reflection.InstantiatorSignature;
-import messif.utility.reflection.Instantiators;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
@@ -57,7 +56,7 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
 
     /**
      * Create a new instace of extraction processor.
-     * Extractor is given as method signature that is parsed using {@link Instantiators#createInstanceWithStringArgs}.
+     * Extractor is given as method signature that is parsed using {@link InstantiatorSignature#createInstanceWithStringArgs}.
      * Example: <pre>
      *      messif.objects.extraction.Extractors.createExternalExtractor(messif.objects.impl.MetaObjectMap, some_extractor_binary)
      * </pre>
