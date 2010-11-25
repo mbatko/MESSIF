@@ -52,6 +52,15 @@ public class ObjectStringEditDist extends ObjectString {
     }
 
     /**
+     * Creates a new instance of ObjectStringEditDist.
+     * @param text the string content of the new object
+     * @param locatorURI the locator URI for the new object
+     */
+    public ObjectStringEditDist(String text, String locatorURI) {
+        super(text, locatorURI);
+    }
+
+    /**
      * Creates a new instance of ObjectStringEditDist with randomly generated string content.
      */
     public ObjectStringEditDist() {

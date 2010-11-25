@@ -57,6 +57,16 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
     }
 
     /**
+     * Creates a new instance of ObjectString.
+     * @param text the string content of the new object
+     * @param locatorURI the locator URI for the new object
+     */
+    public ObjectString(String text, String locatorURI) {
+        super(locatorURI);
+        this.text = text;
+    }
+
+    /**
      * Creates a new instance of ObjectString with randomly generated string content.
      */
     public ObjectString() {
