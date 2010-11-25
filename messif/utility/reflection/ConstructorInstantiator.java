@@ -232,7 +232,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the constructor can't be found for the specified arguments or the argument string-to-type convertion has failed
      * @throws InvocationTargetException if there was an exception when calling the constructor
      */
-    public static <T> T createInstanceWithStringArgs(Constructor<? extends T>[] constructors, Object[] arguments, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
+    public static <T> T createInstanceWithStringArgs(Constructor<T>[] constructors, Object[] arguments, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
         Object[] args = new Object[argEndIndex - argStartIndex + 1];
         System.arraycopy(arguments, argStartIndex, args, 0, args.length);
         Constructor<? extends T> constructor = getConstructor(constructors, true, namedInstances, args);

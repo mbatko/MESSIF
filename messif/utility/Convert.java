@@ -25,9 +25,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -779,6 +781,45 @@ public abstract class Convert {
         System.arraycopy(original, 0, ret, 0, i);
         System.arraycopy(original, i + 1, ret, i, original.length - i - 1);
         return ret;
+    }
+
+    /**
+     * Splits the given string by white space, but preserve the whitespace
+     * enclosed in (single or double) quotes. The quotes are removed in
+     * the process.
+     * @param text the string to split
+     * @return the string split into subsequences
+     * @throws IllegalArgumentException if there are unterminated quotes in the string
+     */
+    public static String[] splitBySpaceWithQuotes(String text) throws IllegalArgumentException {
+        if (text == null || text.length() == 0)
+            return new String[0];
+
+        // Parse string by regular expression
+        Matcher matcher = Pattern.compile("\\G\\s*(?:([^\\s'\"]+)|'([^']*)'|\"([^\"]*)\")(\\s*)").matcher(text);
+        List<String> args = new ArrayList<String>();
+        StringBuilder lastStr = new StringBuilder();
+        int lastMatchPos = 0;
+        while (matcher.find()) {
+            lastMatchPos = matcher.end();
+            // Get the right or-ed group that has matched
+            String str = matcher.group(1);
+            if (str == null)
+                str = matcher.group(2);
+            if (str == null)
+                str = matcher.group(3);
+            // Add the string to the buffer
+            lastStr.append(str);
+            // If there is a space match, add the string to splitted array and start over
+            if (matcher.group(4).length() > 0) {
+                args.add(lastStr.toString());
+                lastStr.setLength(0);
+            }
+        }
+        if (lastMatchPos != text.length())
+            throw new IllegalArgumentException("Missing quotes: " + text);
+        args.add(lastStr.toString());
+        return args.toArray(new String[args.size()]);
     }
 
     /**

@@ -118,18 +118,19 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                    see the documentation of the respective {@link CoreApplication} methods for their parameters.</li>
  * <li><i>repeat</i> parameter is optional and allows to specify multiple execution of
  *                 the same action &lt;repeats&gt; times. It can be used together with "block" method name to implement
- *                 a loop of commands with specified number of repeats.</li>
+ *                 a loop of commands with specified number of repeats. In each iteration the variable &lt;actionName&gt;
+ *                 is assigned the number of the actual iteration (starting from 1).</li>
  * <li><i>foreach</i> parameter is also optional and similarly to <i>repeat</i> it allows the action to be
  *                executed multiple times - the number of repeats is equal to the number of values provided.
  *                Moreover, in each iteration the variable &lt;actionName&gt; is assigned &lt;value&gt; taken
- *                one by one from the <i>foreach</i> parameter</li>
+ *                one by one from the <i>foreach</i> parameter.</li>
  * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all succesive writes are appended to this file
  *  until this batch run finishes.</li>
  * <li><i>assign</i> parameter is optional and allows to redirect output of this block to a variable
  *  &lt;variable name&gt;. The previous contents of the variable are replaced by the new value and the
- *  variable is available after the action with "assign" is finished</li>
+ *  variable is available after the action with "assign" is finished.</li>
  * <li><i>postponeUntil</i> parameter is optional and allows to postpone the action until the specified
  *  time. The whole execution of the control file is paused. If the specified time is in the past,
  *  this parameter is ignored. Note that the postponeUntil is working within one day.</li>
@@ -2121,9 +2122,11 @@ public class CoreApplication {
         // Execute action
         try {
             for (int i = 0; i < repeat; i++) {
-                // Add foreach value
+                // Add foreach/repeat value
                 if (foreachValues != null)
                     variables.put(actionName, foreachValues[i]);
+                else if (repeat > 1)
+                    variables.put(actionName, Integer.toString(i + 1));
 
                 // Show description if set
                 if (description != null)
@@ -2165,8 +2168,8 @@ public class CoreApplication {
                 }
             }
 
-            // Remove foreach value
-            if (foreachValues != null)
+            // Remove foreach/repeat value
+            if (foreachValues != null || repeat > 1)
                 variables.remove(actionName);
 
             // Assign variable is requested
@@ -2284,7 +2287,7 @@ public class CoreApplication {
         // Read lines from the socket
         for (String line = in.readLine(); line != null; line = in.readLine()) {
             // Execute method with the specified name and the provide the array of arguments
-            String[] arguments = removeBackspaces(line.trim()).split("[ \t]+");
+            String[] arguments = Convert.splitBySpaceWithQuotes(removeBackspaces(line.trim()));
 
             // Handle close command
             if (arguments[0].equalsIgnoreCase("close") || Thread.currentThread().isInterrupted())
