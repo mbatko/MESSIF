@@ -110,8 +110,10 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     public static int[] parseIntVector(String line) throws NumberFormatException, EOFException {
         if (line == null)
             throw new EOFException();
-
-        String[] numbers = line.trim().split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
+        line = line.trim();
+        if (line.length() == 0)
+            return new int[0];
+        String[] numbers = line.split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
 
         int[] data = new int[numbers.length];
         for (int i = 0; i < data.length; i++)
