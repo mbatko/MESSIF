@@ -23,6 +23,8 @@ import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -482,6 +484,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             String keyWord = keyWords[i].trim().toLowerCase();
             if (keyWord.isEmpty())
                 continue;
+            // Remove diacritics
+            keyWord = Normalizer.normalize(keyWord, Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
             if (stemmer != null)
                 keyWord = stemmer.stem(keyWord);
             if (ignoreWords == null || ignoreWords.add(keyWord))
