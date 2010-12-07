@@ -32,7 +32,7 @@ import messif.operations.AnswerType;
 public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
 
     /** Class serial id for serialization. */
-    private static final long serialVersionUID = 20203L;
+    private static final long serialVersionUID = 20204L;
         
     /** If greater than 0 then taken as the fixed number of clusters to be visited by the operation. */
     protected int initialLevelClusterNumber;
@@ -58,9 +58,12 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     /** Maximal number of peers to visit within (other than best) leaf-node cluster */
     protected int maxPeersForClusters;
 
-    /** Maximal penalty of visited peer on each level - setting to MAX_FLOAT naturally switches this funcionality off. */
+    /** Maximal penalty of visited peer on each level - setting to MAX_FLOAT naturally switches this functionality off. */
     protected float penaltyLimit;
 
+    // ************************************ TEMPORARY  **************************** //
+
+    protected float maxRadius = LocalAbstractObject.UNKNOWN_DISTANCE;
     
     // ************************************ Getters and setters  ******************************* //
 
@@ -137,6 +140,12 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
         this(queryObject, k, localSearchParam, localSearchType, AnswerType.NODATA_OBJECTS);
     }
 
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param", "Answer type", "Max query r"})
+    public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType, float maxRadius) {
+        this(queryObject, k, 8, 2, false, 1, 1, 0.1f, 3, 0.01f, 1, localSearchParam, localSearchType, false, answerType, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this.maxRadius = maxRadius;
+    }
+
     /**
      * Creates a new instance of ApproxKNNQueryOperationMIndex with default parameters for distributed processing
      *  and specify parameters for centralized approximation.
@@ -146,7 +155,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
      * @param localSearchType type of the local search parameter
      * @param answerType the type of objects this operation stores in its answer
      */
-    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param"})
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects",  "Local search param", "Type of <br/>local search param", "Answer type"})
     public ApproxKNNQueryOperationMIndex(LocalAbstractObject queryObject, int k, int localSearchParam, LocalSearchType localSearchType, AnswerType answerType) {
         this(queryObject, k, 8, 2, false, 1, 1, 0.1f, 3, 0.01f, 1, localSearchParam, localSearchType, false, answerType, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
@@ -236,7 +245,7 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
     }
 
     /**
-     * Creates a new instance of ApproxKNNQueryOperationMIndex copying most of the params from a given operaiton.
+     * Creates a new instance of ApproxKNNQueryOperationMIndex copying most of the params from a given operation.
      * @param queryObject query object
      * @param operation operation to copy everything, but query object, from
      */
@@ -246,6 +255,10 @@ public class ApproxKNNQueryOperationMIndex extends ApproxKNNQueryOperation {
                 operation.maxPeersForGreatClusters, operation.localSearchParam, operation.localSearchType, operation.isStoringMetaDistances(), operation.answerType, operation.radiusGuaranteed);
     }
 
+    @Override
+    public float getAnswerThreshold() {
+        return maxRadius == LocalAbstractObject.UNKNOWN_DISTANCE ? super.getAnswerThreshold() : maxRadius;
+    }
     
     /**
      * Returns argument that was passed while constructing instance.
