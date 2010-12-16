@@ -83,6 +83,9 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     /** Global counter for upper-bound distance computations (any purpose) */
     protected static final StatisticCounter counterUpperBoundDistanceComputations = StatisticCounter.getStatistics("DistanceComputations.UpperBound");
 
+    /** Global counter for saving distance computations by using precomputed */
+    protected static final StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
+
 
     //****************** Constructors ******************//
 
@@ -157,17 +160,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      *         must be greater than the threshold distance.
      */
     public final float getDistance(LocalAbstractObject obj, float distThreshold) {
-        if (distanceFilter != null && distanceFilter.isGetterSupported()) {
-            float distance = distanceFilter.getPrecomputedDistance(obj);
-            if (distance != UNKNOWN_DISTANCE)
-                return distance;
-        }
-
-        // This check is to enhance performance when statistics are disabled
-        if (Statistics.isEnabledGlobally())
-            counterDistanceComputations.add();
-
-        return getDistanceImpl(obj, distThreshold);
+        return getDistance(obj, null, distThreshold);
     }
 
     /**
@@ -177,12 +170,6 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * of the respective encapsulated objects if this object contains any, i.e.
      * this object is a descendant of {@link MetaObject}.
      *
-     * <p>
-     * Note that this method does not use the fast access to the
-     * {@link messif.objects.PrecomputedDistancesFilter#getPrecomputedDistance precomputed distances}
-     * even if there is a filter that supports it.
-     * </p>
-     *
      * @param obj the object to compute distance to
      * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
      * @param distThreshold the threshold value on the distance
@@ -191,11 +178,97 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      *         must be greater than the threshold distance.
      */
     public final float getDistance(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+        return getDistanceStorePrecomputed(obj, null, metaDistances, distThreshold);
+    }
+
+    /**
+     * Metric distance function that stores the resulting distance into a {@link PrecomputedDistancesFilter}.
+     * Measures the distance between this object and <code>obj</code>.
+     *
+     * <p>
+     * If the distance to the object was already precomputed, it is returned.
+     * If not, it is computed (using {@link #getDistanceImpl getDistanceImpl} method.
+     * Then, if the {@code filterFactory} is not <tt>null</tt>, the filter with
+     * the given {@code filterFactory}'s class is retrieved from the object or
+     * created by the factory if it does not exist. In that filter instance, the
+     * computed distance is added using {@link PrecomputedDistancesFilter#addPrecomputedDistance}.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param filterFactory the factory used to create a precomputed-distances filter (the class of the created filter is used to search the object first)
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistanceStorePrecomputed(LocalAbstractObject obj, PrecomputedDistancesFilterFactory<? extends PrecomputedDistancesFilter> filterFactory) {
+        return getDistanceStorePrecomputed(obj, filterFactory, MAX_DISTANCE);
+    }
+
+    /**
+     * Metric distance function that stores the resulting distance into a {@link PrecomputedDistancesFilter}.
+     * Measures the distance between this object and <code>obj</code>.
+     *
+     * <p>
+     * If the distance to the object was already precomputed, it is returned.
+     * If not, it is computed (using {@link #getDistanceImpl getDistanceImpl} method.
+     * Then, if the {@code filterFactory} is not <tt>null</tt>, the filter with
+     * the given {@code filterFactory}'s class is retrieved from the object or
+     * created by the factory if it does not exist. In that filter instance, the
+     * computed distance is added using {@link PrecomputedDistancesFilter#addPrecomputedDistance}.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param filterFactory the factory used to create a precomputed-distances filter (the class of the created filter is used to search the object first)
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistanceStorePrecomputed(LocalAbstractObject obj, PrecomputedDistancesFilterFactory<? extends PrecomputedDistancesFilter> filterFactory, float distThreshold) {
+        return getDistanceStorePrecomputed(obj, filterFactory, null, distThreshold);
+    }
+
+    /**
+     * Metric distance function that stores the resulting distance into a {@link PrecomputedDistancesFilter}.
+     * Measures the distance between this object and <code>obj</code>.
+     * The array <code>metaDistances</code> is filled with the distances
+     * of the respective encapsulated objects if this object contains any, i.e.
+     * this object is a descendant of {@link MetaObject}.
+     *
+     * <p>
+     * If the distance to the object was already precomputed, it is returned.
+     * If not, it is computed (using {@link #getDistanceImpl getDistanceImpl} method
+     * and the {@code metaDistances} array is filled if it is not <tt>null</tt>.
+     * Then, if the {@code filterFactory} is not <tt>null</tt>, the filter with
+     * the given {@code filterFactory}'s class is retrieved from the object or
+     * created by the factory if it does not exist. In that filter instance, the
+     * computed distance is added using {@link PrecomputedDistancesFilter#addPrecomputedDistance}.
+     * </p>
+     *
+     * @param obj the object to compute distance to
+     * @param filterFactory the factory used to create a precomputed-distances filter (the class of the created filter is used to search the object first)
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between obj and this if the distance is lower than distThreshold.
+     *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
+     *         must be greater than the threshold distance.
+     */
+    public final float getDistanceStorePrecomputed(LocalAbstractObject obj, PrecomputedDistancesFilterFactory<? extends PrecomputedDistancesFilter> filterFactory, float[] metaDistances, float distThreshold) {
+        float distance = getPrecomputedDistance(obj, metaDistances);
+        if (distance != UNKNOWN_DISTANCE)
+            return distance;
+
         // This check is to enhance performance when statistics are disabled
         if (Statistics.isEnabledGlobally())
             counterDistanceComputations.add();
 
-        return getDistanceImpl(obj, metaDistances, distThreshold);
+        distance = getDistanceImpl(obj, metaDistances, distThreshold);
+
+        // Add this distance to the distance filter by using the factory
+        if (filterFactory != null)
+            getDistanceFilter(filterFactory).addPrecomputedDistance(obj, distance, metaDistances);
+
+        return distance;
     }
 
     /**
@@ -309,6 +382,41 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
     /**
+     * Returns the precomputed distance to an object.
+     * If there is no distance associated with the object <tt>obj</tt>
+     * the function returns {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE}.
+     *
+     * @param obj the object for which the precomputed distance is returned
+     * @return the precomputed distance to an object
+     */
+    public final float getPrecomputedDistance(LocalAbstractObject obj) {
+        return getPrecomputedDistance(obj, null);
+    }
+
+    /**
+     * Returns the precomputed distance to an object.
+     * If there is no distance associated with the object <tt>obj</tt>
+     * the function returns {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE}.
+     * 
+     * @param obj the object for which the precomputed distance is returned
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @return the precomputed distance to an object
+     */
+    public final float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances) {
+        PrecomputedDistancesFilter filter = distanceFilter;
+        while (filter != null) {
+            float distance = filter.getPrecomputedDistance(obj, metaDistances);
+            if (distance != LocalAbstractObject.UNKNOWN_DISTANCE) {
+                counterPrecomputedDistanceSavings.add();
+                return distance;
+            }
+            filter = filter.nextFilter;
+        }
+        
+        return LocalAbstractObject.UNKNOWN_DISTANCE;
+    }
+
+    /**
      * Returns <tt>true</tt> if the <code>obj</code> has been excluded (filtered out) using stored precomputed distance.
      * Otherwise returns <tt>false</tt>, i.e. when <code>obj</code> must be checked using original distance (see {@link #getDistance}).
      *
@@ -321,8 +429,20 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * @return <tt>true</tt> if the <code>obj</code> has been excluded (filtered out) using stored precomputed distance
      */
     public final boolean excludeUsingPrecompDist(LocalAbstractObject obj, float radius) {
-        if (distanceFilter != null && obj.distanceFilter != null)
-            return distanceFilter.excludeUsingPrecompDist(obj.distanceFilter, radius);
+        PrecomputedDistancesFilter filter1 = distanceFilter;
+        PrecomputedDistancesFilter filter2 = obj.distanceFilter;
+
+        while (filter1 != null && filter2 != null) {
+            // Test for the same classes
+            if (! filter1.getClass().equals(filter2.getClass()))
+                throw new IllegalArgumentException("Trying to use different filters to filter an object: thisFilter=" + filter1.getClass() + " objectFilter=" + filter2.getClass());
+            if (filter1.excludeUsingPrecompDist(filter2, radius)) {
+                counterPrecomputedDistanceSavings.add();
+                return true;
+            }
+            filter1 = filter1.nextFilter;
+            filter2 = filter2.nextFilter;
+        }
 
         return false;
     }
@@ -340,8 +460,20 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * @return <tt>true</tt> if the obj has been included using stored precomputed distance
      */
     public final boolean includeUsingPrecompDist(LocalAbstractObject obj, float radius) {
-        if (distanceFilter != null && obj.distanceFilter != null)
-            return distanceFilter.includeUsingPrecompDist(obj.distanceFilter, radius);
+        PrecomputedDistancesFilter filter1 = distanceFilter;
+        PrecomputedDistancesFilter filter2 = obj.distanceFilter;
+
+        while (filter1 != null && filter2 != null) {
+            // Test for the same classes
+            if (! filter1.getClass().equals(filter2.getClass()))
+                throw new IllegalArgumentException("Trying to use different filters to include an object: thisFilter=" + filter1.getClass() + " objectFilter=" + filter2.getClass());
+            if (filter1.includeUsingPrecompDist(filter2, radius)) {
+                counterPrecomputedDistanceSavings.add();
+                return true;
+            }
+            filter1 = filter1.nextFilter;
+            filter2 = filter2.nextFilter;
+        }
 
         return false;
     }
@@ -384,7 +516,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * @throws NullPointerException if the filterClass is <tt>null</tt>
      */
     public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(Class<T> filterClass, boolean inheritable) throws NullPointerException {
-        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.getNextFilter()) {
+        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.nextFilter) {
             Class<?> currentFilterClass = currentFilter.getClass();
             if (filterClass == currentFilterClass || (inheritable && filterClass.isAssignableFrom(currentFilterClass)))
                 return filterClass.cast(currentFilter);
@@ -406,13 +538,10 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
             if (position == 0)
                 return currentFilter;
 
-            // Get next iteration value
-            PrecomputedDistancesFilter nextFilter = currentFilter.getNextFilter();
-
-            if (position < 0 && nextFilter == null)
+            if (position < 0 && currentFilter.nextFilter == null)
                 return currentFilter;
 
-            currentFilter = nextFilter;
+            currentFilter = currentFilter.nextFilter;
             position--;    
         }
 
@@ -420,33 +549,57 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
     /**
+     * Returns a filter of the {@code filterFactory}'s class from this object's filter chain.
+     * If there is no filter with requested class, a new one is created, chained
+     * to this object and returned.
+     * If there are more filters of the same class, the first one is returned.
+     *
+     * @param <T> the class of the filter to retrieve from the chain
+     * @param filterFactory the factory of the filter to retrieve
+     * @return a filter of specified class from this object's filter chain
+     * @throws NullPointerException if the filterFactory is <tt>null</tt>
+     */
+    public final <T extends PrecomputedDistancesFilter> T getDistanceFilter(PrecomputedDistancesFilterFactory<? extends T> filterFactory) throws NullPointerException {
+        T ret = getDistanceFilter(filterFactory.getPrecomputedDistancesFilterClass());
+        if (ret == null) {
+            ret = filterFactory.createPrecomputedDistancesFilter();
+            chainFilter(ret, false);
+        }
+        return ret;
+    }
+
+    /**
      * Adds the specified filter to the end of this object's filter chain.
      * 
      * @param filter the filter to add to this object's filter chain
      * @param replaceIfExists if <tt>true</tt> and there is another filter with the same class as the inserted filter, it is replaced
-     * @return either the replaced or the existing filter that has the same class as the newly inserted one; <tt>null</tt> is
-     *         returned if the filter was appended to the end of the chain
+     * @return the added {@code filter} or the existing filter that has the same class as the newly inserted one (only if {@code replaceIfExists} is <tt>false</tt>)
      * @throws IllegalArgumentException if the provided chain has set nextFilter attribute
      */
     public final PrecomputedDistancesFilter chainFilter(PrecomputedDistancesFilter filter, boolean replaceIfExists) throws IllegalArgumentException {
         if (filter.nextFilter != null)
             throw new IllegalArgumentException("This filter is a part of another chain");
 
-        // Add this filter to the object's distance filter chain
-        if (distanceFilter == null) {
-            // We are at the end of the chain
+        // Get to the end of chain while searching for the existing filter
+        PrecomputedDistancesFilter lastFilter = null;
+        for (PrecomputedDistancesFilter currentFilter = distanceFilter; currentFilter != null; currentFilter = currentFilter.nextFilter) {
+            if (currentFilter.getClass().equals(filter.getClass())) {
+                if (!replaceIfExists)
+                    return currentFilter;
+
+                // Preserve the chain and let the
+                filter.nextFilter = currentFilter.nextFilter;
+                break;
+            }
+            lastFilter = currentFilter;
+        }
+
+        // Add the filter to the chain (note that if the last filter is null, the directly attached filter is set)
+        if (lastFilter == null)
             distanceFilter = filter;
-            return null;
-        } else if (distanceFilter.getClass().equals(filter.getClass())) {
-            if (!replaceIfExists)
-                return distanceFilter;
-            // Preserve the chain link
-            filter.nextFilter = distanceFilter.nextFilter;
-            // Replace filter
-            PrecomputedDistancesFilter storedFilter = distanceFilter;
-            distanceFilter = filter;
-            return storedFilter;
-        } else return distanceFilter.chainFilter(filter, replaceIfExists);
+        else
+            lastFilter.nextFilter = filter;
+        return filter;
     }
 
     /**

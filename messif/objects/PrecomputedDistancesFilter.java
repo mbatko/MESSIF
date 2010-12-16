@@ -23,7 +23,6 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.statistics.StatisticCounter;
 
 /**
  * This class provides a framework for metric-distance filtering techniques.
@@ -45,19 +44,12 @@ import messif.statistics.StatisticCounter;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public abstract class PrecomputedDistancesFilter implements Cloneable, Serializable, BinarySerializable {
-
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    //****************** Statistics ******************//
-
-    /** Global counter for saving distance computations by using precomputed */
-    protected static StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
-
-
     //****************** Attributes ******************//
 
-    /** The next filter in this chain */
+    /** The next filter in this chain - this is accessed only from the {@link LocalAbstractObject} */
     PrecomputedDistancesFilter nextFilter;
 
 
@@ -70,81 +62,33 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     }
 
 
-    //****************** Filter chaining ******************//
-
-    /**
-     * Returns the next filter in this filter's chain.
-     * @return the next filter in this filter's chain
-     */
-    public PrecomputedDistancesFilter getNextFilter() {
-        return nextFilter;
-    }
-
-    /**
-     * Adds the specified filter to the end of this filter's chain.
-     *
-     * @param filter the filter to add to this filter's chain
-     * @param replaceIfExists if <tt>true</tt> and there is another filter with the same class as the inserted filter, it is replaced
-     * @return either the replaced or the existing filter that has the same class as the newly inserted one; <tt>null</tt> is
-     *         returned if the filter was appended to the end of the chain
-     */
-    final PrecomputedDistancesFilter chainFilter(PrecomputedDistancesFilter filter, boolean replaceIfExists) {
-        if (nextFilter == null) {
-            // We are at the end of the chain
-            nextFilter = filter;
-            return null;
-        } else if (nextFilter.getClass().equals(filter.getClass())) {
-            if (!replaceIfExists)
-                return nextFilter;
-            // Preserve the chain link
-            filter.nextFilter = nextFilter.nextFilter;
-            // Replace filter
-            PrecomputedDistancesFilter storedFilter = nextFilter;
-            nextFilter = filter;
-            return storedFilter;
-        } else
-            // Recurse into subfilters
-            return nextFilter.chainFilter(filter, replaceIfExists);
-    }
-
-
     //****************** Filtering methods ******************//
 
+
     /**
-     * Returns the precomputed distance to an object.
-     * If there is no distance associated with the object <tt>obj</tt>
-     * the function returns {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE}.
-     * 
-     * 
+     * Returns a precomputed distance to the given object.
+     * If there is no precomputed distance for the object {@code obj},
+     * an {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE} is returned.
+     *
      * @param obj the object for which the precomputed distance is returned
      * @return the precomputed distance to an object
      */
     public final float getPrecomputedDistance(LocalAbstractObject obj) {
-        float distance = getPrecomputedDistanceImpl(obj);
-        if (distance != LocalAbstractObject.UNKNOWN_DISTANCE) {
-            counterPrecomputedDistanceSavings.add();
-            return distance;
-        } else if (nextFilter != null) {
-            return nextFilter.getPrecomputedDistance(obj);
-        } else return LocalAbstractObject.UNKNOWN_DISTANCE;
+        return getPrecomputedDistance(obj, null);
     }
 
     /**
-     * Returns <tt>true</tt> if this object supports {@link #getPrecomputedDistance} method.
-     * @return <tt>true</tt> if this object supports {@link #getPrecomputedDistance} method
-     */
-    public abstract boolean isGetterSupported();
-
-    /**
-     * Implement this method to return the precomputed distance to an object.
-     * If there is no distance associated with the object <tt>obj</tt>
-     * the function should return {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE}.
-     * 
+     * Returns a precomputed distance to the given object and the respective meta distances
+     * array. If there is no precomputed distance for the object {@code obj},
+     * an {@link LocalAbstractObject#UNKNOWN_DISTANCE UNKNOWN_DISTANCE} is returned.
+     * The {@code metaDistances} are filled only if the array is not <tt>null</tt>
+     * and this distance filter has the respective precomputed meta distances stored.
      * 
      * @param obj the object for which the precomputed distance is returned
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
      * @return the precomputed distance to an object
      */
-    protected abstract float getPrecomputedDistanceImpl(LocalAbstractObject obj);
+    public abstract float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances);
 
     /**
      * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances.
@@ -154,17 +98,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
      */
-    public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
-        // Test for the same classes
-        if (! this.getClass().equals(targetFilter.getClass()))
-            throw new IllegalArgumentException("Trying to use different filters to filter an object: thisFilter=" + this.getClass() + " objectFilter=" + targetFilter.getClass());
-        if (excludeUsingPrecompDistImpl(targetFilter, radius)) {
-            counterPrecomputedDistanceSavings.add();
-            return true;
-        } else if (nextFilter != null && targetFilter.nextFilter != null) {
-            return nextFilter.excludeUsingPrecompDist(targetFilter.nextFilter, radius);
-        } else return false;
-    }
+    public abstract boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius);
 
     /**
      * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances.
@@ -174,34 +108,18 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
      */
-    public final boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
-        if (includeUsingPrecompDistImpl(targetFilter, radius)) {
-            counterPrecomputedDistanceSavings.add();
-            return true;
-        } else if (nextFilter != null && targetFilter.nextFilter != null) {
-            return nextFilter.includeUsingPrecompDist(targetFilter.nextFilter, radius);
-        } else return false;
-    }
+    public abstract boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius);
 
     /**
-     * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances.
-     * See {@link messif.objects.LocalAbstractObject#excludeUsingPrecompDist} for full explanation.
-     *
-     * @param targetFilter the target precomputed distances
-     * @param radius the radius to check the precomputed distances for
-     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
+     * Adds a precomputed distance to this filter.
+     * @param obj the object the distance to which is added
+     * @param distance the distance to add
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects
+     *          (it is <tt>null</tt> if the object does not have meta distances)
+     * @return <tt>true</tt> if the distance was added to the filter, or <tt>false</tt> if
+     *          it was already there
      */
-    protected abstract boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius);
-
-    /**
-     * Returns <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances.
-     * See {@link messif.objects.LocalAbstractObject#includeUsingPrecompDist} for full explanation.
-     *
-     * @param targetFilter the target precomputed distances
-     * @param radius the radius to check the precomputed distances for
-     * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
-     */
-    protected abstract boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius);
+    protected abstract boolean addPrecomputedDistance(LocalAbstractObject obj, float distance, float[] metaDistances);
 
 
     //****************** Serialization ******************//

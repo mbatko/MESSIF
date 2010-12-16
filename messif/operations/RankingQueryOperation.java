@@ -164,20 +164,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     @Override
     public Iterator<AbstractObject> getAnswerObjects() {
-        final Iterator<RankedAbstractObject> iterator = getAnswer();
-        return new Iterator<AbstractObject>() {
-            public boolean hasNext() {
-                return iterator.hasNext();
-            }
-
-            public AbstractObject next() {
-                return iterator.next().getObject();
-            }
-
-            public void remove() {
-                iterator.remove();
-            }
-        };
+        return RankedAbstractObject.getObjectsIterator(getAnswer());
     }
 
     /**
