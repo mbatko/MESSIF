@@ -478,20 +478,37 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param stemmer instances that provides a {@link Stemmer} for word transformation
      * @return a set of stemmed, non-duplicate, non-ignored words
      */
-    private static Collection<String> unifyKeywords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer) {
+    protected static Collection<String> unifyKeywords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer) {
         Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
         for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = keyWords[i].trim().toLowerCase();
-            if (keyWord.isEmpty())
-                continue;
-            // Remove diacritics
-            keyWord = Normalizer.normalize(keyWord, Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-            if (stemmer != null)
-                keyWord = stemmer.stem(keyWord);
-            if (ignoreWords == null || ignoreWords.add(keyWord))
+            String keyWord = unifyKeyword(keyWords[i], ignoreWords, stemmer);
+            if (keyWord != null)
                 processedKeyWords.add(keyWord);
         }
         return processedKeyWords;
+    }
+
+    /**
+     * Return a stemmed, non-ignored word with stripped diacritics.
+     * Note that the ignore words are updated whenever a non-ignored word is found.
+     * @param keyWord the keyword to transform
+     * @param ignoreWords set of words to ignore
+     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @return a stemmed, non-ignored word with stripped diacritics
+     */
+    protected static String unifyKeyword(String keyWord, Set<String> ignoreWords, Stemmer stemmer) {
+        keyWord = keyWord.trim();
+        if (keyWord.isEmpty())
+            return null;
+        // Remove diacritics and make lower case
+        keyWord = Normalizer.normalize(keyWord.toLowerCase(), Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        // Perform stemming
+        if (stemmer != null)
+            keyWord = stemmer.stem(keyWord);
+        // Check if not ignored
+        if (ignoreWords != null && !ignoreWords.add(keyWord))
+            return null;
+        return keyWord;
     }
 
     /**
@@ -1231,7 +1248,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws SQLException if there was a problem retrieving keyword frequencies from the database
          */
         private float keywordDistanceTfIdf(ObjectIntMultiVector o1, ObjectIntMultiVector o2, float[] keyWordWeights) throws SQLException {
-            return ObjectIntMultiVectorJaccard.getWeightedDistance(o1, new KeywordWeightProvider(o1, keyWordWeights), o2, new KeywordWeightProvider(o2, keyWordWeights));
+            return ObjectIntMultiVectorJaccard.getWeightedDistance(o1, getKeywordWeightProvider(o1, keyWordWeights), o2, getKeywordWeightProvider(o2, keyWordWeights));
         }
 
         /**
@@ -1535,9 +1552,42 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         /**
+         * Returns the weight provider for keywords based on tf-idf.
+         * The returned object is serializable and does not require the database access.
+         *
+         * @param keywords the keywords to read the weights for
+         * @param weights the weights for different layers of keywords (title, etc.)
+         * @return the weight provider for keywords
+         * @throws SQLException if there was an error reading the keyword weights from the database
+         */
+        public ObjectIntMultiVectorJaccard.WeightProvider getKeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
+            // Prepare SQL statement
+            StringBuilder sql = new StringBuilder("select ");
+            sql.append(keywordWeightSQL).append(" where keyword_id in (");
+            for (int i = 0; i < keywords.getVectorDataCount(); i++) {
+                int[] vector = keywords.getVectorData(i);
+                for (int j = 0; j < vector.length; j++)
+                    sql.append(vector[j]).append(",");
+            }
+            sql.setCharAt(sql.length() -1, ')'); // Replace last coma
+
+            // Execute SQL and get weight for the keywords
+            PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
+            ResultSet rs = crs.getResultSet();
+            Map<Integer, Float> keywordWeights = new HashMap<Integer, Float>();
+            while (rs.next())
+                keywordWeights.put(rs.getInt(1), rs.getFloat(2));
+            crs.close();
+
+            return new KeywordWeightProvider(keywordWeights, weights);
+        }
+
+        /**
          * Implements a database provider for keyword weights.
          */
-        private class KeywordWeightProvider implements ObjectIntMultiVectorJaccard.WeightProvider {
+        private static class KeywordWeightProvider implements ObjectIntMultiVectorJaccard.WeightProvider, java.io.Serializable {
+            /** Class id for serialization. */
+            private static final long serialVersionUID = 1L;
             /** Weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
             private final Map<Integer, Float> keywordWeights;
             /** Weights for different layers of keywords */
@@ -1545,29 +1595,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
             /**
              * Creates a new weight provider that reads the keyword weights from database.
-             * @param keywords the keywords to read the weights for
+             * @param keywordWeights the weights for the respective keyword IDs - keys is the keyword id and value is its idf weight
              * @param weights the weights for different layers of keywords (title, etc.)
-             * @throws SQLException if there was an error reading the keyword weights from the database
              */
-            public KeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
-                // Prepare SQL statement
-                StringBuilder sql = new StringBuilder("select ");
-                sql.append(keywordWeightSQL).append(" where keyword_id in (");
-                for (int i = 0; i < keywords.getVectorDataCount(); i++) {
-                    int[] vector = keywords.getVectorData(i);
-                    for (int j = 0; j < vector.length; j++)
-                        sql.append(vector[j]).append(",");
-                }
-                sql.setCharAt(sql.length() -1, ')'); // Replace last coma
-
-                // Execute SQL and get weight for the keywords
-                PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
-                ResultSet rs = crs.getResultSet();
-                keywordWeights = new HashMap<Integer, Float>();
-                while (rs.next())
-                    keywordWeights.put(rs.getInt(1), rs.getFloat(2));
-                crs.close();
-
+            protected KeywordWeightProvider(Map<Integer, Float> keywordWeights, float[] weights) {
+                this.keywordWeights = keywordWeights;
                 this.weights = weights;
             }
 
