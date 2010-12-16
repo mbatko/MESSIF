@@ -64,7 +64,7 @@ public final class StatisticCounter extends Statistics<StatisticCounter> {
     public long get() { return value; }
 
     @Override
-    public Object getValue() {
+    public Long getValue() {
         return get();
     }
 

@@ -55,7 +55,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
     }
     
     @Override
-    public Object getValue() {
+    public Map<Object, StatisticCounter> getValue() {
         return Collections.unmodifiableMap(values);
     }
 

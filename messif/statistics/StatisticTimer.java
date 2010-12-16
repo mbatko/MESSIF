@@ -91,7 +91,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
     @Override
-    public Object getValue() {
+    public Long getValue() {
         return get();
     }
 

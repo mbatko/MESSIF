@@ -36,7 +36,7 @@ import java.util.Properties;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtendedDatabaseConnection implements Serializable {
+public abstract class ExtendedDatabaseConnection implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -67,10 +67,22 @@ public class ExtendedDatabaseConnection implements Serializable {
      * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
      * @throws SQLException if there was a problem connecting to the database
      */
-    public ExtendedDatabaseConnection(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
+    protected ExtendedDatabaseConnection(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
         this.dbConnUrl = dbConnUrl;
         this.dbConnInfo = dbConnInfo;
         this.dbConnection = createConnection(dbConnUrl, dbConnInfo, dbDriverClass);
+    }
+
+    /**
+     * Creates a new extended database connection with parameters taken from another connection.
+     *
+     * @param sourceConnection the database connection from which to get the connection string and info
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    protected ExtendedDatabaseConnection(ExtendedDatabaseConnection sourceConnection) throws SQLException {
+        this.dbConnUrl = sourceConnection.dbConnUrl;
+        this.dbConnInfo = sourceConnection.dbConnInfo;
+        this.dbConnection = createConnection(dbConnUrl, dbConnInfo, null); // Driver is not needed, since it was registered by the previous connection
     }
 
     @Override
@@ -179,6 +191,76 @@ public class ExtendedDatabaseConnection implements Serializable {
         } finally {
             rs.close();
         }
+    }
+
+
+    //****************** Public wrapper ******************//
+
+    /**
+     * Provides a wrapper for the {@link ExtendedDatabaseConnection} that offers
+     * all the methods publicly.
+     */
+    public static final class ExtendedDatabaseConnectionPublic extends ExtendedDatabaseConnection {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Creates a new extended database connection.
+         *
+         * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+         * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+         * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+         * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public ExtendedDatabaseConnectionPublic(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
+            super(dbConnUrl, dbConnInfo, dbDriverClass);
+        }
+
+        /**
+         * Creates a new extended database connection with parameters taken from another connection.
+         *
+         * @param sourceConnection the database connection from which to get the connection string and info
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public ExtendedDatabaseConnectionPublic(ExtendedDatabaseConnectionPublic sourceConnection) throws SQLException {
+            super(sourceConnection);
+        }
+
+        @Override
+        public void closeConnection() throws SQLException {
+            super.closeConnection();
+        }
+
+        /**
+         * Prepares and executes an SQL command using this storage's database connection.
+         * The {@link ResultSet} returned by the execution can be retrieved by {@link PreparedStatement#getResultSet()}.
+         * Note that if a {@link SQLRecoverableException} is thrown while executing,
+         * the current connection is {@link #closeConnection() closed} and the command
+         * retried.
+         *
+         * @param statement the previous cached statement that matches the given {@code sql} (can be <tt>null</tt>)
+         * @param sql the SQL command to prepare and execute
+         * @param parameters the values for the SQL parameters (denoted by "?" chars in the SQL command)
+         * @return an executed prepared statement
+         * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
+         */
+        public PreparedStatement prepareAndExecuteStatement(PreparedStatement statement, String sql, Object... parameters) throws SQLException {
+            return super.prepareAndExecute(statement, sql, parameters);
+        }
+
+        /**
+         * Returns the first column of the first row returned by the given SQL command.
+         * @param sql the SQL command to execute
+         * @param parameters parameters for the "?" placeholders inside the SQL command
+         * @return the value in the first column of the first row
+         * @throws NoSuchElementException if the SQL command does not return any row
+         * @throws SQLException if there was a problem parsing or executing the SQL command
+         */
+        public Object executeSingleValueSQL(String sql, Object... parameters) throws NoSuchElementException, SQLException {
+            return super.executeSingleValue(sql, parameters);
+        }
+
     }
 
 }

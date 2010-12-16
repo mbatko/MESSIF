@@ -61,7 +61,7 @@ public class StatisticSimpleWeakrefCounter extends Statistics<StatisticSimpleWea
     }
 
     @Override
-    public Object getValue() {
+    public Map<Object, Long> getValue() {
         return Collections.unmodifiableMap(values);
     }
 

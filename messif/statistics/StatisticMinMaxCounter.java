@@ -79,7 +79,7 @@ public final class StatisticMinMaxCounter extends Statistics<StatisticMinMaxCoun
     public double getAvg() { return (count == 0)?0:sum/count; }
 
     @Override
-    public Object getValue() {
+    public String getValue() {
         return new StringBuilder().append(getMin()).append(", ").append(getMax()).append(", ")
                 .append(getSum()).append(", ").append(getCnt()).toString();
     }
