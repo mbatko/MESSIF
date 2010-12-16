@@ -102,6 +102,14 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return true;
     }
 
+    @Override
+    protected boolean addPrecomputedDistance(LocalAbstractObject obj, float distance, float[] metaDistances) {
+        if (precompDistMapping.containsKey(obj))
+            return false;
+        precompDistMapping.put(obj, distance);
+        return true;
+    }
+
     /**
      * Resets the precomputed distance to given object (pivot).
      *
@@ -132,9 +140,9 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
 
     //****************** Filtering methods ******************//
 
-    protected final boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
-            return excludeUsingPrecompDistImpl((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
+            return excludeUsingPrecompDist((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
         } catch (ClassCastException e) {
             return false;
         }
@@ -153,7 +161,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
      */
-    protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
+    public boolean excludeUsingPrecompDist(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
         for (Map.Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
             Float targetDistance = targetFilter.precompDistMapping.get(entry.getKey());
             if (targetDistance != null)
@@ -165,9 +173,9 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return false;
     }
 
-    protected final boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    public final boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
-            return includeUsingPrecompDistImpl((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
+            return includeUsingPrecompDist((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
         } catch (ClassCastException e) {
             return false;
         }
@@ -181,7 +189,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
      */
-    protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
+    public boolean includeUsingPrecompDist(PrecomputedDistancesPivotMapFilter targetFilter, float radius) {
         for (Map.Entry<LocalAbstractObject, Float> entry : precompDistMapping.entrySet()) {
             Float targetDistance = targetFilter.precompDistMapping.get(entry.getKey());
             if (targetDistance != null)
@@ -193,11 +201,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return false;
     }
 
-    public boolean isGetterSupported() {
-        return true;
-    }
-
-    protected float getPrecomputedDistanceImpl(LocalAbstractObject obj) {
+    public float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances) {
         Float distance = precompDistMapping.get(obj);
 
         if (distance == null)

@@ -108,6 +108,12 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     //****************** Manipulation methods ******************//
 
+    @Override
+    protected boolean addPrecomputedDistance(LocalAbstractObject obj, float distance, float[] metaDistances) {
+        insertPrecompDist(actualSize, distance);
+        return true;
+    }
+
     /** Add distance at the end of internal list of precomputed distances.
      * @param  dist   distance to append
      * @return The total number of precomputed distances stored.
@@ -302,14 +308,6 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
     }
 
     /**
-     * Returns <tt>true</tt> if this object supports {@link PrecomputedDistancesFilter#getPrecomputedDistance} method.
-     * @return <tt>true</tt> if this object supports {@link PrecomputedDistancesFilter#getPrecomputedDistance} method
-     */
-    public boolean isGetterSupported() {
-        return false;
-    }
-
-    /**
      * Returns the precomputed distance at the specified index.
      * If there is no distance associated with the index <code>position</code>
      * the function returns {@link LocalAbstractObject#UNKNOWN_DISTANCE}.
@@ -356,9 +354,9 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     //****************** Filtering methods ******************//
 
-    protected final boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
-            return excludeUsingPrecompDistImpl((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
+            return excludeUsingPrecompDist((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
         } catch (ClassCastException e) {
             return false;
         }
@@ -377,7 +375,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be excluded (filtered out) using this precomputed distances
      */
-    protected boolean excludeUsingPrecompDistImpl(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
+    public boolean excludeUsingPrecompDist(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
         // We have no precomputed distances either in the query or this object
         if (precompDist == null || targetFilter.precompDist == null)
             return false;
@@ -390,9 +388,9 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return false;
     }
 
-    protected final boolean includeUsingPrecompDistImpl(PrecomputedDistancesFilter targetFilter, float radius) {
+    public final boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
-            return includeUsingPrecompDistImpl((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
+            return includeUsingPrecompDist((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
         } catch (ClassCastException e) {
             return false;
         }
@@ -406,7 +404,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
      * @param radius the radius to check the precomputed distances for
      * @return <tt>true</tt> if object associated with <tt>targetFilter</tt> filter can be included using this precomputed distances
      */
-    protected boolean includeUsingPrecompDistImpl(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
+    public boolean includeUsingPrecompDist(PrecomputedDistancesFixedArrayFilter targetFilter, float radius) {
         // We have no precomputed distances either in the query or this object
         if (precompDist == null || targetFilter.precompDist == null)
             return false;
@@ -419,8 +417,8 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return false;
     }
 
-    protected float getPrecomputedDistanceImpl(LocalAbstractObject obj) {
-        throw new UnsupportedOperationException("This precomputed distances filter does not support get precomputed distance by object");
+    public float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances) {
+        return LocalAbstractObject.UNKNOWN_DISTANCE;
     }
 
 
