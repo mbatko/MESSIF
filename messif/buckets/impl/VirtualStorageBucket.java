@@ -100,8 +100,9 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
      *   <li><em>localAbstractObjectOrder</em> - the name of an enum constant or a static field of the {@link LocalAbstractObjectOrder}</li>
      * </ul>
      * <p>
-     * If any of the <em>comparatorInstance</em>, <em>comparatorClass</em>, <em>localAbstractObjectOrder</em> is specified,
-     * an index is created using this comparator. Otherwise, the storage is used in internal order.
+     * Note that one of the <em>comparatorInstance</em>, <em>comparatorClass</em>, <em>localAbstractObjectOrder</em>
+     * parameters must be specified in order to be able to create an index comparator.
+     * If a storage should be used in internal order, use {@link PlainStorageBucket} instead.
      * </p>
      * <p>
      * Note that additional parameters may be required according to the specified <em>storageClass</em>.
