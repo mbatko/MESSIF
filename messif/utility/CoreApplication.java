@@ -124,6 +124,12 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                executed multiple times - the number of repeats is equal to the number of values provided.
  *                Moreover, in each iteration the variable &lt;actionName&gt; is assigned &lt;value&gt; taken
  *                one by one from the <i>foreach</i> parameter.</li>
+ * <li><i>repeatUntilException</i> parameter is optional and allows to stop repeating the action
+ *                when the exception given as the value of this parameter occurs. Note
+ *                that if either "repeat" or "foreach" parameter is also specified,
+ *                the repeating ends after their number of repeats or an exception
+ *                whichever comes first. If no "repeat" or "foreach" is specified
+ *                the action is repeated until an exception occurs.
  * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all succesive writes are appended to this file
@@ -200,6 +206,35 @@ public class CoreApplication {
      */
     protected static void logException(Throwable e) {
         log.log(Level.SEVERE, e.getClass().toString(), e);
+    }
+
+    /**
+     * Process exception from exection.
+     * If the passed exception is either {@link InvocationTargetException} or {@link AlgorithmMethodException},
+     * the causing exception is unwrapped first.
+     * @param exception the exception to process
+     * @param ignoreExceptionClass the class of exceptions to ignore
+     * @param out the output stream where to show the error (if not <tt>null</tt>)
+     * @param logException if <tt>true</tt>, the exception is logged via {@link #logException(java.lang.Throwable)}
+     * @return <tt>true</tt> if the exception is <tt>null</tt> or ignored,
+     *          otherwise the exception is processed and <tt>false</tt> is returned
+     */
+    protected boolean processException(Throwable exception, Class<? extends Throwable> ignoreExceptionClass, PrintStream out, boolean logException) {
+        String message = null;
+        if (exception instanceof InvocationTargetException || exception instanceof AlgorithmMethodException) {
+            message = exception.getMessage();
+            exception = exception.getCause();
+        }
+        if (exception == null || (ignoreExceptionClass != null && ignoreExceptionClass.isInstance(exception)))
+            return true;
+        if (logException)
+            logException(exception);
+        if (out != null) {
+            out.println(exception);
+            if (message != null)
+                out.println(message);
+        }
+        return false;
     }
 
 
@@ -498,8 +533,9 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
      * @return an instance of operation or <tt>null</tt> if the specified arguments are invalid
+     * @throws InvocationTargetException if there was an error while creating an instance of the operation
      */
-    private AbstractOperation createOperation(PrintStream out, String[] args) {
+    private AbstractOperation createOperation(PrintStream out, String[] args) throws InvocationTargetException {
         if (args.length < 2) {
             out.println("The class of the operation must be specified (see 'help " + args[0] + "')");
             return null;
@@ -525,9 +561,9 @@ public class CoreApplication {
                         namedInstances
                     )
             );
-        } catch (InvocationTargetException e) {
-            out.println(e.getCause().toString());
-        } catch (Exception e) {
+        } catch (NoSuchMethodException e) {
+            out.println(e.toString());
+        } catch (InstantiationException e) {
             out.println(e.toString());
         }
 
@@ -561,9 +597,11 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating an instance of the operation
+     * @throws AlgorithmMethodException if there was an error executing the operation
      */    
     @ExecutableMethod(description = "execute specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
-    public boolean operationExecute(PrintStream out, String... args) {
+    public boolean operationExecute(PrintStream out, String... args) throws InvocationTargetException, AlgorithmMethodException {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
             return false;
@@ -582,10 +620,6 @@ public class CoreApplication {
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
             return true;
-        } catch (AlgorithmMethodException e) {
-            logException(e.getCause());
-            out.println(e.getCause().toString());
-            return false;
         } catch (NoSuchMethodException e) {
             out.println(e.getMessage());
             algorithmSupportedOperations(out, args);
@@ -617,9 +651,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     * @throws InvocationTargetException if there was an error while creating an instance of the operation
+     */
     @ExecutableMethod(description = "execute on background specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
-    public boolean operationBgExecute(PrintStream out, String... args) {       
+    public boolean operationBgExecute(PrintStream out, String... args) throws InvocationTargetException {       
         if (algorithm == null) {
             out.println("No running algorithm is selected");
             return false;
@@ -657,9 +692,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws AlgorithmMethodException if there was an error executing the operation
      */
     @ExecutableMethod(description = "wait for all background operations", arguments = {})
-    public boolean operationWaitBg(PrintStream out, String... args) {
+    public boolean operationWaitBg(PrintStream out, String... args) throws AlgorithmMethodException {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
             return false;
@@ -675,10 +711,6 @@ public class CoreApplication {
             return true;
         } catch (InterruptedException e) {
             out.println(e.toString());
-            return false;
-        } catch (AlgorithmMethodException e) {
-            logException(e.getCause());
-            out.println(e.getCause().toString());
             return false;
         }
     }
@@ -700,9 +732,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args flag whether to reset operation answer
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws AlgorithmMethodException if there was an error executing the operation
      */    
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
-    public boolean operationExecuteAgain(PrintStream out, String... args) {
+    public boolean operationExecuteAgain(PrintStream out, String... args) throws AlgorithmMethodException {
         try {
             AbstractOperation operation = lastOperation;
             if (algorithm != null && operation != null) {
@@ -720,10 +753,6 @@ public class CoreApplication {
                 out.println("No operation has been executed yet. Use operationExecute method first.");
                 return false;
             }
-        } catch (AlgorithmMethodException e) {
-            logException(e.getCause());
-            out.println(e.getCause().toString());
-            return false;
         } catch (NoSuchMethodException e) {
             out.println(e.getMessage());
             algorithmSupportedOperations(out, args);
@@ -826,9 +855,10 @@ public class CoreApplication {
      * @param args the fully specified name of the class where the method is defined, the name of the method and
      *          any number of additional arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while executing the method
      */
     @ExecutableMethod(description = "process the last executed operation by a static method", arguments = {"object class", "method name", "additional arguments for the method (optional) ..."})
-    public boolean operationProcessByMethod(PrintStream out, String... args) {
+    public boolean operationProcessByMethod(PrintStream out, String... args) throws InvocationTargetException {
         AbstractOperation operation = lastOperation;
         if (operation == null) {
             out.println("No operation has been executed yet");
@@ -856,10 +886,6 @@ public class CoreApplication {
             return false;
         } catch (NoSuchInstantiatorException e) {
             out.println(e.getMessage());
-            return false;
-        } catch (InvocationTargetException e) {
-            logException(e.getCause());
-            out.println("Error executing method " + args[1] + "." + args[2] + ": " + e.getCause());
             return false;
         }
     }
@@ -956,9 +982,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args method name followed by the values for its arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */ 
+     * @throws InvocationTargetException if there was an error while calling the method
+     */
     @ExecutableMethod(description = "directly execute a method of the running algorithm", arguments = {"method name", "arguments for the method ..."})
-    public boolean methodExecute(PrintStream out, String... args) {
+    public boolean methodExecute(PrintStream out, String... args) throws InvocationTargetException {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
             return false;
@@ -990,17 +1017,8 @@ public class CoreApplication {
 
             out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
             return false;
-        } catch (RuntimeException e) {
-            logException(e);
-            out.println(e.toString());
-            return false;
         } catch (InvocationTargetException e) {
-            Throwable ex = e.getCause();
-            if (ex instanceof AlgorithmMethodException || ex instanceof InvocationTargetException)
-                ex = ex.getCause();
-            logException(ex);
-            out.println(ex.toString());
-            return false;
+            throw e;
         } catch (Exception e) {
             logException(e);
             out.println(e.toString());
@@ -2022,6 +2040,167 @@ public class CoreApplication {
     private static final Pattern variablePattern = Pattern.compile("(?:<|\\$\\{)([^>}]+?)(?::-?([^>}]+))?(?:>|\\})", Pattern.MULTILINE);
 
     /**
+     * Returns the value with substituted variables.
+     * @param value the value in which to substitute the variables
+     * @param variables the current defined variables
+     * @return the value with substituted variables
+     */
+    protected String substituteVariables(String value, Map<String,String> variables) {
+        return Convert.substituteVariables(value, variablePattern, 1, 2, variables);
+    }
+
+    /**
+     * Returns a control file action arguments from properties with variable substitution.
+     * @param props the properties with parameters
+     * @param actionName the current action name
+     * @param variables the current defined variables
+     * @return the action arguments
+     */
+    protected List<String> getCFActionArguments(Properties props, String actionName, Map<String,String> variables) {
+        List<String> arguments = new ArrayList<String>();
+
+        // First argument is the method name (defaults to action name itself)
+        String arg = props.getProperty(actionName, actionName);
+        do {
+            // Add var-substituted arg to arguments list
+            arguments.add(substituteVariables(arg, variables));
+
+            // Read next property with name <actionName>.param.{1,2,3,4,...}
+            arg = props.getProperty(actionName + ".param." + Integer.toString(arguments.size()));
+        } while (arg != null);
+
+        return arguments;
+    }
+
+    /**
+     * Pospone the current action according to the "postponeUntil" argument.
+     * @param out the stream to write the output to
+     * @param props the properties with actions and their parameters
+     * @param actionName the name of the postponed action (used in errors)
+     * @param variables the current variables' environment
+     * @return <tt>true</tt> if the posponing was successful
+     */
+    protected boolean postponeCFAction(PrintStream out, Properties props, String actionName, Map<String,String> variables) {
+        String postponeUntil = substituteVariables(props.getProperty(actionName + ".postponeUntil"), variables);
+        if (postponeUntil == null)
+            return true;
+        postponeUntil = postponeUntil.trim();
+        if (postponeUntil.length() == 0)
+            return true;
+        try {
+            long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
+            if (sleepTime > 0)
+                Thread.sleep(sleepTime);
+        } catch (NumberFormatException e) {
+            out.println(e.getMessage() + " for postponeUntil parameter for action '" + actionName + "'");
+            return false;
+        } catch (InterruptedException e) {
+            out.println("Thread interrupted while waiting for posponed execution");
+        }
+        return true;
+    }
+
+    /**
+     * Returns the output stream for the given action.
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables' environment
+     * @param outputStreams currently opened output streams
+     * @param assignOutput the virtual output to which the result is stored
+     *          in order to put it into an "assign" variable
+     * @return the action output stream or <tt>null</tt> if there was a problem opening a file
+     */
+    protected PrintStream getCFActionOutput(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, ByteArrayOutputStream assignOutput) {
+        try {
+            String fileName = substituteVariables(props.getProperty(actionName + ".outputFile"), variables);
+            if (fileName != null && fileName.length() > 0) {
+                if (assignOutput != null)
+                    out.println("WARNING: Action '" + actionName + "' has both the 'outputFile' and the 'assign' parameters defined. Using outputFile.");
+                PrintStream outputStream = outputStreams.get(fileName);
+                if (outputStream == null) // Output stream not opened yet
+                    outputStreams.put(fileName, outputStream = new PrintStream(fileName));
+                return outputStream;
+            } else {
+                // No output file specified, use either the assign output (if specified) or the current output
+                return assignOutput == null ? out : new PrintStream(assignOutput);
+            }
+        } catch (FileNotFoundException e) {
+            out.println("Wrong outputFile for action '" + actionName + "': " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Returns foreach values from properties with variable substitution.
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables' environment
+     * @return the action's foreach values or <tt>null</tt> if they are not specified
+     */
+    protected String[] getCFActionForeach(PrintStream out, Properties props, String actionName, Map<String,String> variables) {
+        String foreach = props.getProperty(actionName + ".foreach");
+        return foreach != null ? substituteVariables(foreach, variables).trim().split("[ \t]+") : null;
+    }
+
+    /**
+     * Returns the repeat-until exception class from properties with variable substitution.
+     * Note that only subclasses of {@link Exception} are allowed and a
+     * {@link Throwable} class is returned if the given class is not exception.
+     *
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables' environment
+     * @param repeatUntilExceptionClass the current repeat-until exception class
+     * @return the action's repeat-until exception class or <tt>null</tt> if they are not specified
+     */
+    protected Class<? extends Throwable> getCFActionException(PrintStream out, Properties props, String actionName, Map<String,String> variables, Class<? extends Throwable> repeatUntilExceptionClass) {
+        String repeatUntilException = props.getProperty(actionName + ".repeatUntilException");
+        try {
+            return repeatUntilException != null ?
+                Convert.getClassForName(substituteVariables(repeatUntilException, variables).trim(), Exception.class) :
+                repeatUntilExceptionClass;
+        } catch (ClassNotFoundException e) {
+            out.println("Wrong repeatUntilException for action '" + actionName + "': " + e.getMessage());
+            return Throwable.class;
+        }
+    }
+
+    /**
+     * Returns the number of repeats with variable substitution.
+     * Note that number of repeats is the number of foreach values (if not <tt>null</tt>).
+     * If the repeatUntilException is not <tt>null</tt> and there is not a "repeat" or
+     * a "foreach" action parameter, {@link Integer#MAX_VALUE} is returned and
+     * thus the action will be repeated until there is an exception.
+     *
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables' environment
+     * @param foreachValues the foreach values for this action
+     * @param repeatUntilExceptionClass the class of the repeat-until exception
+     * @return the action's number of repeats, -1 is returned on error
+     */
+    protected int getCFActionRepeat(PrintStream out, Properties props, String actionName, Map<String,String> variables, String[] foreachValues, Class<? extends Throwable> repeatUntilExceptionClass) {
+        String repeatValue = props.getProperty(actionName + ".repeat");
+        if (foreachValues != null) {
+            if (repeatValue != null)
+                out.println("WARNING: Action '" + actionName + "' has both the 'repeat' and the 'foreach' parameters defined. Using foreach.");
+            return foreachValues.length;
+        } else {
+            try {
+                return repeatValue == null ? 
+                    (repeatUntilExceptionClass == null ? 1 : Integer.MAX_VALUE) : // No repeats specified, but repeat until exception
+                    Integer.valueOf(substituteVariables(repeatValue, variables));
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+    }
+
+    /**
      * This method reads and executes one action (with name actionName) from the control file (props).
      * For a full explanation of the command sytax see {@link CoreApplication}.
      * 
@@ -2030,94 +2209,42 @@ public class CoreApplication {
      * @param actionName the name of the action to execute
      * @param variables the current variables' environment
      * @param outputStreams currently opened output streams
+     * @param repeatUntilExceptionClass the current repeat-until exception class
      * @return <tt>true</tt> if the action was executed successfuly
      */
-    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
-        // Check for postponed execution
-        String postponeUntil = Convert.substituteVariables(props.getProperty(actionName + ".postponeUntil"), variablePattern, 1, 2, variables);
-        if (postponeUntil != null && postponeUntil.trim().length() > 0) {
-            try {
-                long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
-                if (sleepTime > 0)
-                    Thread.sleep(sleepTime);
-            } catch (NumberFormatException e) {
-                out.println(e.getMessage() + " for postponeUntil parameter of '" + actionName + "'");
-                return false;
-            } catch (InterruptedException e) {
-                out.println("Thread interrupted while waiting for posponed execution");
-            }
-        }
-
-        // Prepare array for arguments
-        List<String> arguments = new ArrayList<String>();
-
-        // First argument is the method name
-        String arg = props.getProperty(actionName, actionName);
-        do {
-            // Add var-substituted arg to arguments list
-            arguments.add(Convert.substituteVariables(arg, variablePattern, 1, 2, variables));
-
-            // Read next property with name <actionName>.param.{1,2,3,4,...}
-            arg = props.getProperty(actionName + ".param." + Integer.toString(arguments.size()));
-        } while (arg != null);
-
-        // Store the method name in a separate variable to speed things up
-        String methodName = Convert.substituteVariables(arguments.get(0), variablePattern, 1, 2, variables);
+    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, Class<? extends Throwable> repeatUntilExceptionClass) {
+        // Parse action name and arguments
+        List<String> arguments = getCFActionArguments(props, actionName, variables);
+        String methodName = arguments.get(0);
 
         // SPECIAL! For objectStreamOpen/namedInstanceAdd method a third/second parameter is automatically added from action name
         if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || (methodName.equals("namedInstanceAdd") && arguments.size() == 2))
             arguments.add(actionName);
 
-        // Read description
+        // Read description (variable substition in description is done during the repeat)
         String description = props.getProperty(actionName + ".description");
 
-        // Read outputFile parameter and set output to correct stream (if parameter outputFile was specified, file is opened, otherwise the default 'out' is used)
-        PrintStream outputStream;
-        try {
-            String fileName = Convert.substituteVariables(props.getProperty(actionName + ".outputFile"), variablePattern, 1, 2, variables);
-            if (fileName != null && fileName.length() > 0) {
-                outputStream = outputStreams.get(fileName);
-                if (outputStream == null) // Output stream not opened yet
-                    outputStreams.put(fileName, outputStream = new PrintStream(fileName));
-            } else {
-                // Default output stream is the current output stream
-                outputStream = out;
-            }
-        } catch (FileNotFoundException e) {
-            out.println("Wrong outputFile for action '" + actionName + "': " + e.getMessage());
+        // Read the assign parameter and set the output stream
+        String assignVariable = substituteVariables(props.getProperty(actionName + ".assign"), variables);
+        ByteArrayOutputStream assignOutput = assignVariable != null ? new ByteArrayOutputStream() : null;
+        PrintStream outputStream = getCFActionOutput(out, props, actionName, variables, outputStreams, assignOutput);
+        if (outputStream == null)
             return false;
-        }
-
-        // Read assign parameter
-        String assignVariable = Convert.substituteVariables(props.getProperty(actionName + ".assign"), variablePattern, 1, 2, variables);
-        ByteArrayOutputStream assignOutput;
-        if (assignVariable != null) {
-            assignOutput = new ByteArrayOutputStream();
-            outputStream = new PrintStream(assignOutput);
-        } else {
-            assignOutput = null;
-        }
 
         // Read number of repeats of this method
-        int repeat;
-        try {
-            repeat = Integer.valueOf(Convert.substituteVariables(props.getProperty(actionName + ".repeat", "1"), variablePattern, 1, 2, variables));
-        } catch (NumberFormatException e) {
-            out.println("Number of repeats specified in action '" + actionName + "' is not a valid integer");
+        String[] foreachValues = getCFActionForeach(out, props, actionName, variables);
+        repeatUntilExceptionClass = getCFActionException(out, props, actionName, variables, repeatUntilExceptionClass);
+        if (repeatUntilExceptionClass == Throwable.class)
+            return false;
+        int repeat = getCFActionRepeat(out, props, actionName, variables, foreachValues, repeatUntilExceptionClass);
+        if (repeat < 0) {
+            out.println("Number of repeats specified in action '" + actionName + "' is not a valid non-negative integer");
             return false;
         }
 
-        // Read foreach parameter of this method
-        String foreach = Convert.substituteVariables(props.getProperty(actionName + ".foreach"), variablePattern, 1, 2, variables);
-
-        // Parse foreach values
-        String[] foreachValues;
-        if (foreach != null) {
-            if (repeat > 1)
-                out.println("WARNING: Action '" + actionName + "' has both the 'repeat' and the 'foreach' parameters defined. Using foreach.");
-            foreachValues = foreach.trim().split("[ \t]+");
-            repeat = foreachValues.length;
-        } else foreachValues = null;
+        // Postpone action
+        if (!postponeCFAction(out, props, actionName, variables))
+            return false;
 
         // Execute action
         try {
@@ -2130,13 +2257,13 @@ public class CoreApplication {
 
                 // Show description if set
                 if (description != null)
-                    outputStream.println(Convert.substituteVariables(description, variablePattern, 1, 2, variables));
+                    outputStream.println(substituteVariables(description, variables));
 
                 // Perform action
                 if (methodName.indexOf(' ') != -1) {
                     // Special "block" method 
                     for (String blockActionName : methodName.split("[ \t]+"))
-                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams))
+                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, repeatUntilExceptionClass))
                             return false; // Stop execution of block if there was an error
                 } else try {
                     Object rtv;
@@ -2163,27 +2290,24 @@ public class CoreApplication {
                         return false; // Execution unsuccessful, method/action not found
                     } else
                         // There was no method for the action, so we try is as a name of block
-                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams))
+                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, repeatUntilExceptionClass))
                             return false;
                 }
             }
-
-            // Remove foreach/repeat value
-            if (foreachValues != null || repeat > 1)
-                variables.remove(actionName);
-
-            // Assign variable is requested
-            if (assignVariable != null && assignOutput != null)
-                variables.put(assignVariable, assignOutput.toString().trim());
-
-            return true; // Execution successful
         } catch (InvocationTargetException e) {
-            logException(e.getCause());
-            out.println(e.getCause());
-            out.println(e.getMessage());
+            if (!processException(e.getCause(), repeatUntilExceptionClass, out, true))
+                return false;
         }
 
-        return false; // Execution unsuccessful - exception was printed
+        // Remove foreach/repeat value
+        if (foreachValues != null || repeat > 1)
+            variables.remove(actionName);
+
+        // Assign variable is requested
+        if (assignVariable != null && assignOutput != null)
+            variables.put(assignVariable, assignOutput.toString().trim());
+
+        return true; // Execution successful
     }
 
     /**
@@ -2238,7 +2362,7 @@ public class CoreApplication {
         }
 
         // Execute the first action
-        boolean rtv = controlFileExecuteAction(out, props, action, variables, outputStreams);
+        boolean rtv = controlFileExecuteAction(out, props, action, variables, outputStreams, null);
         
         // Close all opened output streams
         for (PrintStream stream : outputStreams.values())
@@ -2298,7 +2422,7 @@ public class CoreApplication {
                 // Get appropriate method
                 methodExecutor.execute(out, arguments);
             } catch (InvocationTargetException e) {
-                out.println(e.getCause().toString());
+                processException(e.getCause(), null, out, false);
             } catch (NoSuchMethodException e) {
                 out.println("Unknown command: " + arguments[0]);
                 out.println("Use 'help' to see all available commands");
