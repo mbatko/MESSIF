@@ -363,9 +363,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         regionShape = new ObjectXMRegionShape(stream);
         rights = Rights.valueOfWithEmpty(stream.readLine());
         territories = Territory.stringToTerritories(stream.readLine());
-        added = Integer.valueOf(stream.readLine());
-        archiveID = Integer.valueOf(stream.readLine());
-        attractiveness = ObjectIntVector.parseIntVector(stream.readLine());
+        line = stream.readLine();
+        added = line == null ? 0 : Integer.parseInt(line);
+        line = stream.readLine();
+        archiveID = line == null ? 0 : Integer.parseInt(line);
+        line = stream.readLine();
+        attractiveness = line == null ? null : ObjectIntVector.parseIntVector(line);
         if (haveWords) {
             if (wordsConverted) {
                 titleString = null;
@@ -682,6 +685,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return the coma-separated list of attractiveness values for all existing territories
      */
     public String getAttractiveness() {
+        if (attractiveness == null)
+            return "";
         StringBuilder str = new StringBuilder();
         for (int i = 0; i < attractiveness.length; i++) {
             if (i > 0)
@@ -954,7 +959,10 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         stream.write(Integer.toString(archiveID).getBytes());
         stream.write('\n');
 
-        ObjectIntVector.writeIntVector(attractiveness, stream);
+        if (attractiveness == null)
+            stream.write('\n');
+        else
+            ObjectIntVector.writeIntVector(attractiveness, stream);
 
         if (titleString != null && keywordString != null) {
             stream.write(titleString.getBytes());
@@ -1150,17 +1158,31 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws ExtractorException if there was a problem retrieving or instantiating the data
          */
         public MetaObjectProfiSCT locatorToObject(String locator, String additionalKeyWords) throws ExtractorException {
+            return locatorToObject(locator, additionalKeyWords, false);
+        }
+        
+        /**
+         * Returns the object with given {@code locator}.
+         * The object is retrieved from the database.
+         * @param locator the locator of the object to return
+         * @param additionalKeyWords the additional keywords that will be encapsulated in the keyWords object as the third array
+         * @param remove if <tt>true</tt>, the object is removed from the database after it is retrieved
+         * @return the created instance of the object
+         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         */
+        public MetaObjectProfiSCT locatorToObject(String locator, String additionalKeyWords, boolean remove) throws ExtractorException {
             try {
                 IntStorageSearch<MetaObjectProfiSCT> search = databaseStorage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
                 if (search.next()) {
                     MetaObjectProfiSCT object = search.getCurrentObject();
+                    if (remove)
+                        search.remove();
                     if (additionalKeyWords != null)
                         object = new MetaObjectProfiSCT(object, stemmer, keyWordIndex, additionalKeyWords);
                     return object;
                 } else {
                     throw new ExtractorException("Cannot find object '" + locator + "' in the database");
                 }
-                //return textToObject((String)executeSingleValue(metaobjectSQL, locator), additionalKeyWords);
             } catch (Exception e) {
                 throw new ExtractorException("Cannot read object '" + locator + "' from database", e);
             }
@@ -1432,10 +1454,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * {@link ExtractorDataSource} to get the respective object from the database.
          * @param locatorParamName the name of the {@link ExtractorDataSource} parameter that contains the locator
          * @param additionalKeyWordsParamName the name of the {@link ExtractorDataSource} parameter that contains the additional keywords
+         * @param removeObjects if <tt>true</tt>, the object is removed from the database after it is retrieved
          * @return a new extractor instance
          */
-        public Extractor<? extends MetaObjectProfiSCT> createLocatorExtractor(String locatorParamName, String additionalKeyWordsParamName) {
-            return new LocatorExtractor(locatorParamName, additionalKeyWordsParamName);
+        public Extractor<? extends MetaObjectProfiSCT> createLocatorExtractor(String locatorParamName, String additionalKeyWordsParamName, boolean removeObjects) {
+            return new LocatorExtractor(locatorParamName, additionalKeyWordsParamName, removeObjects);
         }
 
         /**
@@ -1462,21 +1485,26 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             private final String locatorParamName;
             /** Name of the {@link ExtractorDataSource} parameter that contains the additional keywords */
             private final String additionalKeyWordsParamName;
+            /** Flag whether to remove successfully retrieved objects from database */
+            private final boolean removeObjects;
 
             /**
              * Creates a new instance of LocatorExtractor.
              * @param locatorParamName the name of the {@link ExtractorDataSource} parameter that contains the locator
              * @param additionalKeyWordsParamName the name of the {@link ExtractorDataSource} parameter that contains the additional keywords
+             * @param removeObjects if <tt>true</tt>, the object is removed from the database after it is retrieved
              */
-            public LocatorExtractor(String locatorParamName, String additionalKeyWordsParamName) {
+            public LocatorExtractor(String locatorParamName, String additionalKeyWordsParamName, boolean removeObjects) {
                 this.locatorParamName = locatorParamName;
                 this.additionalKeyWordsParamName = additionalKeyWordsParamName;
+                this.removeObjects = removeObjects;
             }
 
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return locatorToObject(
                         dataSource.getRequiredParameter(locatorParamName).toString(),
-                        dataSource.getParameter(additionalKeyWordsParamName, String.class)
+                        dataSource.getParameter(additionalKeyWordsParamName, String.class),
+                        removeObjects
                 );
             }
 
@@ -1525,14 +1553,14 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 // Add data from the parameters
                 if (dataLineParameterNames != null)
                     for (int i = 0; i < dataLineParameterNames.length; i++)
-                        str.append(dataSource.getRequiredParameter(dataLineParameterNames[i]).toString()).append('\n');
+                        str.append(dataSource.getParameter(dataLineParameterNames[i], String.class, "")).append('\n');
 
                 // Create the object
                 try {
                     MetaObjectProfiSCT obj = new MetaObjectProfiSCT(new BufferedReader(new StringReader(str.toString())), stemmer, keyWordIndex);
 
                     // Set object key
-                    String key = dataSource.getRequiredParameter("key").toString();
+                    String key = dataSource.getRequiredParameter("locator").toString();
                     if (key != null)
                         obj.setObjectKey(new AbstractObjectKey(key));
 
