@@ -44,13 +44,15 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
     //****************** Constructors ******************
 
     /** Creates a new instance of object */
-    public ObjectFeatureByte(short[] data) {
+    public ObjectFeatureByte(float x,  float y,  float ori,  float scl, short[] data) {
+        super(x, y, ori, scl);
         this.data = new short[data.length];
         System.arraycopy(data, 0, this.data, 0, data.length);
     }
 
     /** Creates a new instance of randomly generated object */
-    public ObjectFeatureByte(int dimension) {
+    public ObjectFeatureByte(float x,  float y,  float ori,  float scl, int dimension) {
+        super(x, y, ori, scl);
         this.data = new short[dimension];
         for (; dimension > 0; dimension--)
             this.data[dimension - 1] = (short)(getRandomNormal()*256);

@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -44,7 +45,7 @@ import messif.utility.Convert;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 
-public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable {
+public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<LocalAbstractObject> {
     /** Class id for serialization. */
     private static final long serialVersionUID = 666L;
 
@@ -95,6 +96,21 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public LocalAbstractObject getObject(int index) {
         // return objects.get(index).getFirst();
         return objects.get(index);
+    }
+
+    /**
+     * Returns iterator over all features.
+     */
+    public Iterator<LocalAbstractObject> getObjects() {
+        return objects.iterator();
+    }
+
+    /**
+     * Returns iterator over all features.
+     */
+    @Override
+    public Iterator<LocalAbstractObject> iterator() {
+        return objects.iterator();
     }
 
     /**
@@ -200,7 +216,8 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list (skip the comments)
         if (objects != null && !objects.isEmpty()) {
-            stream.write((objects.get(0).getClass().toString() + " : " + String.valueOf(objects.size()) + "\n").getBytes());
+            //stream.write((objects.get(0).getClass().toString() + " : " + String.valueOf(objects.size()) + "\n").getBytes());
+            stream.write((objects.get(0).getClass().toString().substring(6) + " : " + String.valueOf(objects.size()) + "\n").getBytes());
             for (LocalAbstractObject object : objects) {
                 object.write(stream, false);
             }

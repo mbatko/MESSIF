@@ -28,14 +28,33 @@ import messif.objects.nio.BinarySerializator;
 
 public abstract class ObjectFeature extends LocalAbstractObject implements BinarySerializable {
 
+    private static final long serialVersionUID = -6866567495938404391L;
+
     protected float x,  y,  ori,  scl;
 
-    public ObjectFeature() {
+    public float getOri() {
+        return ori;
     }
 
-    public ObjectFeature(byte[] data) {
+    public float getScl() {
+        return scl;
     }
 
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }    
+
+    public ObjectFeature(float x,  float y,  float ori,  float scl) {
+        this.x = x;
+        this.y = y;
+        this.ori = ori;
+        this.scl = scl;
+    }
+    
     public ObjectFeature(BufferedReader stream) throws IOException, NumberFormatException {
         String line = readObjectComments(stream);
         try {

@@ -29,8 +29,8 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
     /****************** Constructors ******************/
 
     /** Creates a new instance of object */
-    public ObjectFeatureByteL2(short[] data) {
-        super(data);
+    public ObjectFeatureByteL2(float x,  float y,  float ori,  float scl, short[] data) {
+        super(x, y, ori, scl, data);
     }
 
     /** Creates a new instance of object from stream */

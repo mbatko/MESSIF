@@ -29,8 +29,8 @@ public class ObjectFeatureFloatL2 extends ObjectFeatureFloat {
     /****************** Constructors ******************/
 
     /** Creates a new instance of object */
-    public ObjectFeatureFloatL2(float[] data) {
-        super(data);
+    public ObjectFeatureFloatL2(float x,  float y,  float ori,  float scl, float[] data) {
+        super(x, y, ori, scl, data);
     }
 
     /** Creates a new instance of object from stream */
