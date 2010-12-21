@@ -56,6 +56,7 @@ import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
 import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
+import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -268,22 +269,37 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}.
-     * The locator and the encapsulated objects from the source {@code object} are
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}.
+     * The locator, the attributes and the encapsulated objects from the source {@code object} are
      * taken.
      *
      * @param object the source metaobject from which to get the data
+     * @param copyIntKeywords if <tt>true</tt>, the {@link #keyWords} object is copied
+     *          otherwise the keyWords are <tt>null</tt>
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object) {
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, boolean copyIntKeywords) {
         this(object.getLocatorURI(), object.colorLayout, object.colorStructure, object.edgeHistogram,
                 object.scalableColor, object.regionShape, object.keyWords, object.rights,
                 object.territories, object.added, object.archiveID, object.attractiveness);
         this.titleString = object.titleString;
         this.keywordString = object.keywordString;
+        if (copyIntKeywords)
+            this.keyWords = object.keyWords;
     }
 
     /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}.
+     * The locator, the attributes and the encapsulated objects from the source {@code object} are
+     * taken. Keyword object is not copied and will be <tt>null</tt>.
+     *
+     * @param object the source metaobject from which to get the data
+     */
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object) {
+        this(object, false);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
@@ -294,13 +310,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param searchWords the searched keywords to set for the new object
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] searchWords) {
-        this(object);
+        this(object, false);
         if (titleWords != null || keyWords != null || searchWords != null)
             this.keyWords = convertKeywordsToIntegers(stemmer, keyWordIndex, titleWords, keyWords, searchWords);
     }
 
     /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
@@ -314,7 +330,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
@@ -329,7 +345,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObject}
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
@@ -437,13 +453,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     private ObjectIntMultiVectorJaccard convertKeywordsToIntegers(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] additionalWords) {
         try {
-            int[][] data = new int[additionalWords != null ? 3 : 2][];
-            Set<String> ignoreWords = new HashSet<String>();
-            if (additionalWords != null)
-                data[2] = keywordsToIdentifiers(additionalWords, ignoreWords, stemmer, keyWordIndex);
-            data[0] = keywordsToIdentifiers(titleWords, ignoreWords, stemmer, keyWordIndex);
-            data[1] = keywordsToIdentifiers(keyWords, ignoreWords, stemmer, keyWordIndex);
-            return new ObjectIntMultiVectorJaccard(data);
+            return convertKeywordsToIntegersException(stemmer, keyWordIndex, titleWords, keyWords, additionalWords);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
             return new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
@@ -568,6 +578,27 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         return ret;
+    }
+
+    /**
+     * Convert the given title, key and additional words to a int multi-vector
+     * object with Jaccard distance function.
+     *
+     * @param stemmer the stemmer to use for stemming of the words
+     * @param keyWordIndex the index used to transform the words into integers
+     * @param titleWords the title words to convert
+     * @param keyWords the key words to convert
+     * @param additionalWords the additional words to convert
+     * @return a new instance of int multi-vector object with Jaccard distance function
+     */
+    protected static ObjectIntMultiVectorJaccard convertKeywordsToIntegersException(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String[] titleWords, String[] keyWords, String[] additionalWords) {
+        int[][] data = new int[additionalWords != null ? 3 : 2][];
+        Set<String> ignoreWords = new HashSet<String>();
+        if (additionalWords != null)
+            data[2] = keywordsToIdentifiers(additionalWords, ignoreWords, stemmer, keyWordIndex);
+        data[0] = keywordsToIdentifiers(titleWords, ignoreWords, stemmer, keyWordIndex);
+        data[1] = keywordsToIdentifiers(keyWords, ignoreWords, stemmer, keyWordIndex);
+        return new ObjectIntMultiVectorJaccard(data);
     }
 
 
@@ -1581,6 +1612,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
         /**
          * Returns the weight provider for keywords based on tf-idf.
+         * The idf weights are computed only for the provided keywords.
          * The returned object is serializable and does not require the database access.
          *
          * @param keywords the keywords to read the weights for
@@ -1588,9 +1620,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @return the weight provider for keywords
          * @throws SQLException if there was an error reading the keyword weights from the database
          */
-        public ObjectIntMultiVectorJaccard.WeightProvider getKeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
+        public WeightProvider getKeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
+            if (keywordWeightSQL == null)
+                throw new SQLException("Keyword links table was not set for this database support");
             // Prepare SQL statement
-            StringBuilder sql = new StringBuilder("select ");
+            StringBuilder sql = new StringBuilder("select keyword_id, ");
             sql.append(keywordWeightSQL).append(" where keyword_id in (");
             for (int i = 0; i < keywords.getVectorDataCount(); i++) {
                 int[] vector = keywords.getVectorData(i);
@@ -1598,22 +1632,39 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                     sql.append(vector[j]).append(",");
             }
             sql.setCharAt(sql.length() -1, ')'); // Replace last coma
+            sql.append(" group by keyword_id");
 
             // Execute SQL and get weight for the keywords
             PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
-            ResultSet rs = crs.getResultSet();
-            Map<Integer, Float> keywordWeights = new HashMap<Integer, Float>();
-            while (rs.next())
-                keywordWeights.put(rs.getInt(1), rs.getFloat(2));
+            KeywordWeightProvider ret = new KeywordWeightProvider(crs.getResultSet(), 1, 2, weights);
             crs.close();
 
-            return new KeywordWeightProvider(keywordWeights, weights);
+            return ret;
+        }
+
+        /**
+         * Returns the weight provider for keywords based on tf-idf.
+         * The idf weights are computed for all the keywords in the database.
+         * The returned object is serializable and does not require the database access.
+         *
+         * @param weights the weights for different layers of keywords (title, etc.)
+         * @return the weight provider for keywords
+         * @throws SQLException if there was an error reading the keyword weights from the database
+         */
+        public WeightProvider getKeywordWeightProvider(float[] weights) throws SQLException {
+            if (keywordWeightSQL == null)
+                throw new SQLException("Keyword links table was not set for this database support");
+            PreparedStatement crs = prepareAndExecute(null, "select keyword_id, " + keywordWeightSQL + " group by keyword_id", (Object[])null);
+            KeywordWeightProvider ret = new KeywordWeightProvider(crs.getResultSet(), 1, 2, weights);
+            crs.close();
+
+            return ret;
         }
 
         /**
          * Implements a database provider for keyword weights.
          */
-        private static class KeywordWeightProvider implements ObjectIntMultiVectorJaccard.WeightProvider, java.io.Serializable {
+        private static class KeywordWeightProvider implements WeightProvider, java.io.Serializable {
             /** Class id for serialization. */
             private static final long serialVersionUID = 1L;
             /** Weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
@@ -1622,12 +1673,27 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             private final float[] weights;
 
             /**
-             * Creates a new weight provider that reads the keyword weights from database.
-             * @param keywordWeights the weights for the respective keyword IDs - keys is the keyword id and value is its idf weight
+             * Creates a new weight provider with the given map of keyword weights.
+             * @param keywordWeights the weights for the respective keyword IDs - key is the keyword id and value is its idf weight
              * @param weights the weights for different layers of keywords (title, etc.)
              */
             protected KeywordWeightProvider(Map<Integer, Float> keywordWeights, float[] weights) {
                 this.keywordWeights = keywordWeights;
+                this.weights = weights;
+            }
+
+            /**
+             * Creates a new weight provider that reads the keyword weights from database.
+             * @param keywordWeightData the database result set with the data
+             * @param keyColumn the column with the keys, i.e. the keyword ids
+             * @param valueColumn the column with the values, i.e. the keyword idf weights
+             * @param weights the weights for different layers of keywords (title, etc.)
+             * @throws SQLException if there was a problem reading the result set
+             */
+            protected KeywordWeightProvider(ResultSet keywordWeightData, int keyColumn, int valueColumn, float[] weights) throws SQLException {
+                this.keywordWeights = new HashMap<Integer, Float>();
+                while (keywordWeightData.next())
+                    this.keywordWeights.put(keywordWeightData.getInt(keyColumn), keywordWeightData.getFloat(valueColumn));
                 this.weights = weights;
             }
 
@@ -1662,6 +1728,81 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 }
                 return sum;
             }
+        }
+    }
+
+    /**
+     * Object that holds only keywords and measures the distance as the
+     * weighted jaccard with weights based on tf-idf algorithm. Note
+     * that the other object for the distance must be {@link MetaObjectProfiSCT}.
+     */
+    public static class MetaObjectProfiSCTKwdist extends MetaObjectProfiSCT {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Keyword weight provider ******************//
+
+        /** Internal keyword weight provider based on tf-idf - needs to be initialized by calling */
+        private static WeightProvider kwWeightProvider;
+
+        /**
+         * Initializes the internal keyword weight provider to the given one.
+         * @param databaseSupport the database support used to retrieve the keyword weights
+         * @param weights the weights for different layers of keywords (title, etc.)
+         * @return the weight provider for keywords
+         * @throws SQLException if there was an error reading the keyword weights from the database
+         */
+        public static WeightProvider initializeWeightProvider(DatabaseSupport databaseSupport, float[] weights) throws SQLException {
+            return MetaObjectProfiSCTKwdist.kwWeightProvider = databaseSupport.getKeywordWeightProvider(weights);
+        }
+
+
+        //****************** Attributes ******************//
+
+        /** Weight for combining the keywords distance with the visual descriptors distance */
+        private final Float keywordsWeight;
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwdist from the given {@link MetaObjectProfiSCT}.
+         * The locator and the encapsulated objects from the source {@code object} are
+         * taken.
+         *
+         * @param object the source metaobject from which to get the data
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         */
+        public MetaObjectProfiSCTKwdist(MetaObjectProfiSCT object, Float keywordsWeight) {
+            super(object, true);
+            this.keywordsWeight = keywordsWeight;
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCT.
+         * A keyword index is used to translate keywords to addresses.
+         *
+         * @param stream stream to read the data from
+         * @param stemmer instances that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex the index for translating keywords to addresses
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @throws IOException if reading from the stream fails
+         */
+        public MetaObjectProfiSCTKwdist(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, Float keywordsWeight) throws IOException {
+            super(stream, stemmer, keyWordIndex);
+            this.keywordsWeight = keywordsWeight;
+        }
+
+
+        //****************** Distance function ******************//
+
+        @Override
+        protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+            float distance = keyWords.getWeightedDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
+            if (keywordsWeight != null)
+                distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
+            return distance;
         }
     }
 
