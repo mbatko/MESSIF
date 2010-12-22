@@ -380,9 +380,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         rights = Rights.valueOfWithEmpty(stream.readLine());
         territories = Territory.stringToTerritories(stream.readLine());
         line = stream.readLine();
-        added = line == null ? 0 : Integer.parseInt(line);
+        added = (line == null || line.isEmpty()) ? 0 : Integer.parseInt(line);
         line = stream.readLine();
-        archiveID = line == null ? 0 : Integer.parseInt(line);
+        archiveID = (line == null || line.isEmpty()) ? 0 : Integer.parseInt(line);
         line = stream.readLine();
         attractiveness = line == null ? null : ObjectIntVector.parseIntVector(line);
         if (haveWords) {
@@ -1792,6 +1792,32 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         public MetaObjectProfiSCTKwdist(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, Float keywordsWeight) throws IOException {
             super(stream, stemmer, keyWordIndex);
             this.keywordsWeight = keywordsWeight;
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwdist from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         *
+         * @param stream the stream from which the data are read
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @throws IOException if there was an error reading the data from the stream
+         */
+        public MetaObjectProfiSCTKwdist(BufferedReader stream, Float keywordsWeight) throws IOException {
+            super(stream, true, true);
+            this.keywordsWeight = keywordsWeight;
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwdist from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         * Null keyword weight is applied, i.e. the distance is computed by text only.
+         *
+         * @param stream the stream from which the data are read
+         * @throws IOException if there was an error reading the data from the stream
+         */
+        public MetaObjectProfiSCTKwdist(BufferedReader stream) throws IOException {
+            this(stream, null);
         }
 
 
