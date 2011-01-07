@@ -197,9 +197,64 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
      * arrays were previously sorted using {@link #sortData()}.
      * @return an iterator over the integers from all vector data arrays
      */
-    protected SortedDataIterator getSortedIterator() {
+    public SortedDataIterator getSortedIterator() {
         return new SortedDataIterator();
     }
+
+    /**
+     * Represents resulting values that can be returned by
+     * {@link SortedDataIterator#intersect(messif.objects.impl.ObjectIntMultiVector.SortedDataIterator) intersect}
+     * method of the {@link SortedDataIterator}.
+     */
+    public static enum SDIteratorIntersectionResult {
+        /**
+         * There were no intersecting objects found. At least one iterator is completely read
+         * (i.e. has no next object).
+         */
+        NONE,
+        /** A new intersecting object was found in both iterators */
+        BOTH,
+        /**
+         * A new intersecting object was found in the iterator, on which the intersect
+         * method was called. The iterator passed as the argument did not advance.
+         */
+        THIS_ONLY,
+        /**
+         * A new intersecting object was found in the iterator, which was passed
+         * as the argument of the intersect method. The iterator on which the intersect
+         * was called did not advance.
+         */
+        ARGUMENT_ONLY;
+
+        /**
+         * Returns <tt>true</tt> if the result indicates that there was an intersecting object found.
+         * Otherwise, <tt>false</tt> is returned, i.e. the results is {@link #NONE}.
+         * @return <tt>true</tt> if the result indicates that there was an intersecting object found
+         */
+        public boolean isIntersecting() {
+            return this != NONE;
+        }
+
+        /**
+         * Returns <tt>true</tt> if the result indicates that there was an
+         * intersecting object found in the iterator on which the intersect method was called.
+         * @return <tt>true</tt> if the result indicates that there was an
+         *      intersecting object found in the iterator on which the intersect method was called
+         */
+        public boolean isThisIntersecting() {
+            return this == BOTH || this == THIS_ONLY;
+        }
+
+        /**
+         * Returns <tt>true</tt> if the result indicates that there was an
+         * intersecting object found in the iterator passed as argument.
+         * @return <tt>true</tt> if the result indicates that there was an
+         *      intersecting object found in the iterator passed as argument
+         */
+        public boolean isArgumentIntersecting() {
+            return this == BOTH || this == ARGUMENT_ONLY;
+        }
+    };
 
     /**
      * Internal iterator that provides sorted access to the vector data arrays of integers.
@@ -340,14 +395,18 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
          * @return <tt>true</tt> if a value in both the iterators was found (their current value will be the same)
          *      or <tt>false</tt> if one of the iterators reached last item without a matching value
          */
-        public boolean intersect(SortedDataIterator iterator) {
+        public SDIteratorIntersectionResult intersect(SortedDataIterator iterator) {
+            // If this iterator has the same next value as the other iterator's current value (duplicate objects)
+            if (nextIntEqual(iterator))
+                return SDIteratorIntersectionResult.THIS_ONLY;
+
+            // If the other iterator has the same next value as this iterator's current value (duplicate objects)
+            if (iterator.nextIntEqual(this))
+                return SDIteratorIntersectionResult.ARGUMENT_ONLY;
+
             // If there are no items in either iterator, exit
             if (!hasNext() || !iterator.hasNext())
-                return false;
-
-            // If the other iterator has the same next value as this iterator current value or vice versa (duplicate objects)
-            if (nextIntEqual(iterator) || iterator.nextIntEqual(this))
-                return true;
+                return SDIteratorIntersectionResult.NONE;
 
             // Read next item from both iterators - it is either at the beggining or after an intersection is found
             int thisInt = nextInt();
@@ -357,14 +416,14 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             for (;;) {
                 if (thisInt < itInt) { // This iterator's value is smaller, advance this iterator or exit
                     if (!hasNext())
-                        return false;
+                        return SDIteratorIntersectionResult.NONE;
                     thisInt = nextInt();
                 } else if (thisInt > itInt) { // Other iterator's value is smaller, advance the other iterator or exit
                     if (!iterator.hasNext())
-                        return false;
+                        return SDIteratorIntersectionResult.NONE;
                     itInt = iterator.nextInt();
                 } else {
-                    return true;
+                    return SDIteratorIntersectionResult.BOTH;
                 }
             }
         }
