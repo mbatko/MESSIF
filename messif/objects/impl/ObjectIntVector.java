@@ -113,6 +113,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         line = line.trim();
         if (line.length() == 0)
             return new int[0];
+        line = line.replaceAll("^[,\\s]+", line);
         String[] numbers = line.split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
 
         int[] data = new int[numbers.length];
