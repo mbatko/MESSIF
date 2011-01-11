@@ -1202,6 +1202,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws ExtractorException if there was a problem retrieving or instantiating the data
          */
         public MetaObjectProfiSCT locatorToObject(String locator, String additionalKeyWords, boolean remove) throws ExtractorException {
+            Exception causeException = null;
             try {
                 IntStorageSearch<MetaObjectProfiSCT> search = databaseStorage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
                 if (search.next()) {
@@ -1211,12 +1212,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                     if (additionalKeyWords != null)
                         object = new MetaObjectProfiSCT(object, stemmer, keyWordIndex, additionalKeyWords);
                     return object;
-                } else {
-                    throw new ExtractorException("Cannot find object '" + locator + "' in the database");
                 }
             } catch (Exception e) {
-                throw new ExtractorException("Cannot read object '" + locator + "' from database", e);
+                causeException = e;
             }
+            throw new ExtractorException("Cannot read object '" + locator + "' from database", causeException);
         }
 
         /**
@@ -1825,10 +1825,14 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
         @Override
         protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
-            float distance = keyWords.getWeightedDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
-            if (keywordsWeight != null)
-                distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
-            return distance;
+            try {
+                float distance = keyWords.getWeightedDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
+                if (keywordsWeight != null)
+                    distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
+                return distance;
+            } catch (RuntimeException e) {
+                throw new IllegalStateException("Error computing distance between " + this + " and " + obj + ": " + e, e);
+            }
         }
     }
 

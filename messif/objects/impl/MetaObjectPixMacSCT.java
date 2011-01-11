@@ -283,18 +283,18 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         String additionalKeyWords = readAdditionalKeyWords ? stream.readLine() : null;
 
         // Process the keywords (transformation to identifiers)
-        int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
         Set<String> ignoreWords = new HashSet<String>();
         try {
+            int[][] data = new int[additionalKeyWords != null ? 3 : 2][];
             if (additionalKeyWords != null)
                 data[2] = keywordsToIdentifiers(additionalKeyWords.split(";"), ignoreWords, keyWordIndex);
             data[0] = keywordsToIdentifiers(kwLine1.split(";"), ignoreWords, keyWordIndex);
             data[1] = keywordsToIdentifiers(kwLine2.split(";"), ignoreWords, keyWordIndex);
+            keyWords = new ObjectIntMultiVectorJaccard(data);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
-        keyWords = new ObjectIntMultiVectorJaccard(data);
     }
 
     /**
