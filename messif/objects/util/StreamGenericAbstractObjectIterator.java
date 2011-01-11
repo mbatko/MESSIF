@@ -72,12 +72,54 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      * @throws IllegalStateException if there was an error reading from the stream
      */
-    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Map<String, Object> namedInstances, Object... constructorArgs) throws IllegalArgumentException, IllegalStateException {
         this.stream = stream;
-        this.factory = new LocalAbstractObject.TextStreamFactory<E>(objClass, true, namedInstances, constructorArgs == null ? null : constructorArgs.toArray());
+        this.factory = new LocalAbstractObject.TextStreamFactory<E>(objClass, true, namedInstances, constructorArgs);
 
         // Read first object from the stream (hasNext is set automatically)
         this.nextObject = nextStreamObject();
+    }
+
+    /**
+     * Creates a new instance of StreamGenericAbstractObjectIterator.
+     * The objects are loaded from the given stream on the fly as this iterator is iterated.
+     * The constructor of <code>objClass</code> that acceps {@link BufferedReader}
+     * as the first argument and all the arguments from the <code>constructorArgs</code>
+     * is used to read objects from the stream.
+     *
+     * @param objClass the class used to create the instances of objects in this stream
+     * @param stream stream from which objects are read and instantiated
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param constructorArgs additional constructor arguments
+     * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
+     * @throws IllegalStateException if there was an error reading from the stream
+     */
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IllegalStateException {
+        this(objClass, stream, namedInstances, constructorArgs == null ? null : constructorArgs.toArray());
+    }
+
+    /**
+     * Creates a new instance of StreamGenericAbstractObjectIterator.
+     * The objects are loaded from the given file on the fly as this iterator is iterated.
+     * If the <code>fileName</code> is empty, <tt>null</tt> or dash, standard input is used.
+     *
+     * @param objClass the class used to create the instances of objects in this stream
+     * @param fileName the path to a file from which objects are read;
+     *          if it is a directory, all files that match the glob pattern are loaded
+     *          (see {@link DirectoryInputStream#open(java.lang.String) DirectoryInputStream} for more informations)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param constructorArgs additional constructor arguments
+     * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
+     * @throws IOException if there was an error opening the file
+     */
+    public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Map<String, Object> namedInstances, Object... constructorArgs) throws IllegalArgumentException, IOException {
+        this(objClass, new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName))), namedInstances, constructorArgs);
+
+        // Set file name to provided value - it is used in reset functionality
+        if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
+            this.fileName = null;
+        else
+            this.fileName = fileName;
     }
 
     /**
@@ -95,13 +137,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IOException if there was an error opening the file
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName, Map<String, Object> namedInstances, Collection<?> constructorArgs) throws IllegalArgumentException, IOException {
-        this(objClass, new BufferedReader(new InputStreamReader(DirectoryInputStream.open(fileName))), namedInstances, constructorArgs);
-
-        // Set file name to provided value - it is used in reset functionality
-        if (fileName == null || fileName.length() == 0 || fileName.equals("-"))
-            this.fileName = null;
-        else
-            this.fileName = fileName;
+        this(objClass, fileName, namedInstances, constructorArgs == null ? null : constructorArgs.toArray());
     }
 
     /**
@@ -115,7 +151,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IOException if there was an error opening the file
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, String fileName) throws IllegalArgumentException, IOException {
-        this(objClass, fileName, null, null);
+        this(objClass, fileName, null, (Object[])null);
     }
 
     /**
@@ -127,7 +163,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IllegalArgumentException if the provided class does not have a proper "stream" constructor
      */
     public StreamGenericAbstractObjectIterator(Class<? extends E> objClass, BufferedReader stream) throws IllegalArgumentException {
-        this(objClass, stream, null, null);
+        this(objClass, stream, null, (Object[])null);
     }
 
 
