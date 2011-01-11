@@ -111,8 +111,10 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         SortedDataIterator objIterator = ((ObjectIntMultiVectorJaccard)obj).getSortedIterator();
 
         float intersectCount = 0;
-        while (iterator.intersect(objIterator).isIntersecting())
-            intersectCount++;
+        for (SDIteratorIntersectionResult intersect = iterator.intersect(objIterator); intersect.isIntersecting(); intersect = iterator.intersect(objIterator)) {
+            if (intersect.isThisIntersecting())
+                intersectCount++;
+        }
 
         return 1f - intersectCount / (getDimensionality() + ((ObjectIntMultiVectorJaccard)obj).getDimensionality() - intersectCount);
     }
@@ -167,6 +169,8 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         }
 
         float sumWeight = weightProviderO1.getWeightSum(o1) + weightProviderO2.getWeightSum(o2);
+        if (Math.abs(intersectWeight - sumWeight) < 0.0001) // This is needed since the sum can be different when different number order is used
+            return 0;
         return (intersectWeight == 0 && sumWeight == 0) ? 0 : (1f - intersectWeight / sumWeight);
     }
 
