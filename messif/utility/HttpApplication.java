@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
 import messif.utility.http.HttpApplicationAuthenticator;
@@ -234,7 +235,7 @@ public class HttpApplication extends Application {
 
     @Override
     protected String usage() {
-        return "<http port> " + super.usage();
+        return "<http port> [-httpThreads <0|n>]" + super.usage();
     }
 
     @Override
@@ -242,10 +243,39 @@ public class HttpApplication extends Application {
         if (argIndex >= args.length)
             return false;
 
+        // Read http port argument
+        int httpPort;
         try {
-            httpServer = HttpServer.create(new InetSocketAddress(Integer.parseInt(args[argIndex])), 0);
-            httpServerContexts = new HashMap<String, HttpContext>();
+            httpPort = Integer.parseInt(args[argIndex]);
             argIndex++;
+        } catch (NumberFormatException e) {
+            System.err.println("HTTP port is not valid: " + e.getMessage());
+            return false;
+        }
+
+        // Read http threads parameter
+        int httpThreads = 1;
+        if (argIndex < args.length && args[argIndex].equalsIgnoreCase("-httpThreads")) {
+            try {
+                httpThreads = Integer.parseInt(args[argIndex + 1]);
+                argIndex += 2;
+            } catch (IndexOutOfBoundsException e) {
+                System.err.println("httpThreads parameter requires a number of threads");
+                return false;
+            } catch (NumberFormatException e) {
+                System.err.println("Number of httpThreads is invalid: " + e.getMessage());
+                return false;
+            }
+        }
+
+        try {
+            httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
+            if (httpThreads == 0) {
+                httpServer.setExecutor(Executors.newCachedThreadPool());
+            } else if (httpThreads > 1) {
+                httpServer.setExecutor(Executors.newFixedThreadPool(10));
+            }
+            httpServerContexts = new HashMap<String, HttpContext>();
         } catch (NumberFormatException e) {
             System.err.println("HTTP port is not valid: " + e.getMessage());
             return false;
