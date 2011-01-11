@@ -1026,7 +1026,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @return the database column name
          */
         public static String getTextStreamColumnName() {
-            return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
+            //return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
+            return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', f_profimedia_title_ids(id),'\n', f_profimedia_keyword_ids(id),'\n') as char)";
         }
 
         /**
@@ -1038,7 +1039,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          */
         public static ColumnConvertor<MetaObjectProfiSCT> getTextStreamColumnConvertor(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
             return DatabaseStorage.wrapConvertor(
-                    new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
+                    //new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
+                    new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, true, true),
                     true, false, true
             );
         }
