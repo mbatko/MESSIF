@@ -212,41 +212,80 @@ public class ParallelSequentialScan extends Algorithm {
     }
 
 
-    //****************** Query operations ******************//
-    
+    //****************** Query processing thread implementation ******************//
+
+    /**
+     * Internal thread used for processing an operation on a given bucket.
+     */
+    private static class QueryProcessingThread extends Thread {
+        /** Operation processed by this thread */
+        private final QueryOperation<?> operation;
+        /** Bucket on which the operation is processed by this thread */
+        private final LocalBucket bucket;
+        /** Exception thrown during the processing */
+        private RuntimeException processingException;
+
+        /**
+         * Creates a new processing thread for given operation and bucket.
+         * @param bucketName the identification of the bucket processed by this thread
+         * @param operation the operation processed by this thread
+         * @param bucket the bucket on which the operation is processed by this thread
+         */
+        public QueryProcessingThread(String bucketName, QueryOperation<?> operation, LocalBucket bucket) {
+            super("Query processing thread - " + bucketName);
+            this.operation = operation;
+            this.bucket = bucket;
+        }
+
+        @Override
+        public void run() {
+            processingException = null;
+            try {
+                bucket.processQuery(operation);
+            } catch (RuntimeException e) {
+                processingException = e;
+            }
+        }
+
+        /**
+         * Finishes processing of this thread by updating the given operation
+         * with answers from this operation. This method waits for this thread
+         * to finish.
+         * @param originalOperation the operation to update
+         * @throws RuntimeException if there was an error during the processing
+         * @throws InterruptedException if a waiting for this thread to finish was interrupted
+         */
+        public void finishUpdate(QueryOperation<?> originalOperation) throws RuntimeException, InterruptedException {
+            join();
+            if (processingException != null)
+                throw processingException;
+            originalOperation.updateFrom(operation);
+        }
+    }
+
     /**
      * Performs a query operation.
      * @param operation the query operation which is to be executed and which will received the result list.
      * @throws CloneNotSupportedException if the operation does not support clonning (and thus cannot be used in parallel)
-     * @throws InterruptedException if the processing thread was interrupted during processing
+         * @throws InterruptedException if a waiting for a processing thread was interrupted
      */
     public void search(QueryOperation<?> operation) throws CloneNotSupportedException, InterruptedException {
-        // Create a query clone for each bucket and execute it in a new thread
-        final QueryOperation<?>[] operationClones = new QueryOperation[buckets.length];
-        final Thread[] operationThreads = new Thread[buckets.length];
+        // Create a processing thread for each bucket
+        QueryProcessingThread[] operationThreads = new QueryProcessingThread[buckets.length];
         for (int i = 0; i < buckets.length; i++) {
-            final int j = i;
-            operationClones[i] = (QueryOperation<?>)operation.clone();
-            operationThreads[i] = new Thread("Query processing thread - bucket " + i) {
-                @Override
-                public void run() {
-                    buckets[j].processQuery(operationClones[j]);
-                }
-            };
+            operationThreads[i] = new QueryProcessingThread("bucket " + i, (QueryOperation<?>)operation.clone(), buckets[i]);
             operationThreads[i].start();
         }
 
         // Wait for the threads to finish
-        for (int i = 0; i < operationThreads.length; i++) {
-            operationThreads[i].join();
-            operation.updateFrom(operationClones[i]);
-        }
+        for (int i = 0; i < operationThreads.length; i++)
+            operationThreads[i].finishUpdate(operation);
 
         operation.endOperation();
     }
 
 
-    //****************** Query operations ******************//
+    //****************** Information string ******************//
 
     /**
      * Shows the information about this algorithm.
