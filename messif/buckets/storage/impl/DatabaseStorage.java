@@ -226,7 +226,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
                 columnWriteList.append(columnNames[i]);
                 columnUpdateList.append(columnNames[i]).append(" = ?");
                 columnQuestionMarkList.append('?');
-                columnDataWhereList.append(columnDataWhereList.length() > 0 ? " where " : " and ").
+                columnDataWhereList.append(columnDataWhereList.length() == 0 ? " where " : " and ").
                         append(columnNames[i]).append(" = ?");
             }
         }
@@ -469,12 +469,13 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         try {
             insertStatement = execute(insertStatement, insertSQL, null, object);
             ResultSet generatedKeys = insertStatement.getGeneratedKeys();
-            try {
-                if (generatedKeys.next() && generatedKeys.getMetaData().getColumnCount() > 0)
-                    return new IntAddress<T>(this, generatedKeys.getInt(1));
-            } finally {
-                generatedKeys.close();
-            }
+            if (generatedKeys != null)
+                try {
+                    if (generatedKeys.next() && generatedKeys.getMetaData().getColumnCount() > 0)
+                        return new IntAddress<T>(this, generatedKeys.getInt(1));
+                } finally {
+                    generatedKeys.close();
+                }
 
             // Generated keys failed, do full by-object select
             readByDataStatement = execute(readByDataStatement, readByDataSQL, null, object);
