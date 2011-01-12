@@ -1709,7 +1709,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             private float getWeight(int keywordId, int documentKwCount, int dataVectorIndex) {
                 Float kwWeight = keywordWeights.get(keywordId);
                 if (kwWeight == null)
-                    throw new IllegalArgumentException("Unknown keyword ID " + keywordId);
+                    return 0; // Ignore unknown keywords
                 if (weights != null)
                     return kwWeight.floatValue() * weights[dataVectorIndex] / documentKwCount;
                 else
