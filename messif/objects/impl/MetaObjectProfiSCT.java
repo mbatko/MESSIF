@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -1638,29 +1637,25 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
             // Execute SQL and get weight for the keywords
             PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
-            KeywordWeightProvider ret = new KeywordWeightProvider(crs.getResultSet(), 1, 2, weights);
+            KeywordWeightProvider ret = new KeywordWeightProvider(resultSetToMap(crs.getResultSet(), 1, Integer.class, 2, Float.class), weights);
             crs.close();
 
             return ret;
         }
 
         /**
-         * Returns the weight provider for keywords based on tf-idf.
-         * The idf weights are computed for all the keywords in the database.
-         * The returned object is serializable and does not require the database access.
-         *
-         * @param weights the weights for different layers of keywords (title, etc.)
-         * @return the weight provider for keywords
+         * Initializes the internal keyword idf weights.
+         * @return the map of keyword idf weights
          * @throws SQLException if there was an error reading the keyword weights from the database
          */
-        public WeightProvider getKeywordWeightProvider(float[] weights) throws SQLException {
+        public Map<Integer, Float> initializeKeywordIdfWeights() throws SQLException {
             if (keywordWeightSQL == null)
                 throw new SQLException("Keyword links table was not set for this database support");
             PreparedStatement crs = prepareAndExecute(null, "select keyword_id, " + keywordWeightSQL + " group by keyword_id", (Object[])null);
-            KeywordWeightProvider ret = new KeywordWeightProvider(crs.getResultSet(), 1, 2, weights);
+            KeywordWeightProvider.staticKeywordWeights = resultSetToMap(crs.getResultSet(), 1, Integer.class, 2, Float.class);
             crs.close();
 
-            return ret;
+            return KeywordWeightProvider.staticKeywordWeights;
         }
 
         /**
@@ -1669,6 +1664,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         private static class KeywordWeightProvider implements WeightProvider, java.io.Serializable {
             /** Class id for serialization. */
             private static final long serialVersionUID = 1L;
+            /** Static weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
+            private static Map<Integer, Float> staticKeywordWeights;
             /** Weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
             private final Map<Integer, Float> keywordWeights;
             /** Weights for different layers of keywords */
@@ -1685,21 +1682,6 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             }
 
             /**
-             * Creates a new weight provider that reads the keyword weights from database.
-             * @param keywordWeightData the database result set with the data
-             * @param keyColumn the column with the keys, i.e. the keyword ids
-             * @param valueColumn the column with the values, i.e. the keyword idf weights
-             * @param weights the weights for different layers of keywords (title, etc.)
-             * @throws SQLException if there was a problem reading the result set
-             */
-            protected KeywordWeightProvider(ResultSet keywordWeightData, int keyColumn, int valueColumn, float[] weights) throws SQLException {
-                this.keywordWeights = new HashMap<Integer, Float>();
-                while (keywordWeightData.next())
-                    this.keywordWeights.put(keywordWeightData.getInt(keyColumn), keywordWeightData.getFloat(valueColumn));
-                this.weights = weights;
-            }
-
-            /**
              * Returns the weight of the keyword using the tf-idf algorithm.
              * @param keywordId the id of the keyword in the database
              * @param documentKwCount the number of keywords in the respective document
@@ -1707,7 +1689,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
              * @return the weight
              */
             private float getWeight(int keywordId, int documentKwCount, int dataVectorIndex) {
-                Float kwWeight = keywordWeights.get(keywordId);
+                // Read the keyword idf weight from either local map or the static map
+                Float kwWeight;
+                if (keywordWeights != null)
+                    kwWeight = keywordWeights.get(keywordId);
+                else if (staticKeywordWeights != null)
+                    kwWeight = staticKeywordWeights.get(keywordId);
+                else
+                    kwWeight = null;
+
                 if (kwWeight == null)
                     return 0; // Ignore unknown keywords
                 if (weights != null)
@@ -1740,29 +1730,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public static class MetaObjectProfiSCTKwdist extends MetaObjectProfiSCT {
         /** Class id for serialization. */
-        private static final long serialVersionUID = 1L;
-
-        //****************** Keyword weight provider ******************//
-
-        /** Internal keyword weight provider based on tf-idf - needs to be initialized by calling */
-        private static WeightProvider kwWeightProvider;
-
-        /**
-         * Initializes the internal keyword weight provider to the given one.
-         * @param databaseSupport the database support used to retrieve the keyword weights
-         * @param weights the weights for different layers of keywords (title, etc.)
-         * @return the weight provider for keywords
-         * @throws SQLException if there was an error reading the keyword weights from the database
-         */
-        public static WeightProvider initializeWeightProvider(DatabaseSupport databaseSupport, float[] weights) throws SQLException {
-            return MetaObjectProfiSCTKwdist.kwWeightProvider = databaseSupport.getKeywordWeightProvider(weights);
-        }
-
+        private static final long serialVersionUID = 2L;
 
         //****************** Attributes ******************//
 
         /** Weight for combining the keywords distance with the visual descriptors distance */
         private final Float keywordsWeight;
+        /** Internal keyword weight provider based on tf-idf */
+        private final WeightProvider kwWeightProvider;
+
 
         //****************** Constructor ******************//
 
@@ -1774,10 +1750,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param object the source metaobject from which to get the data
          * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
          *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          */
-        public MetaObjectProfiSCTKwdist(MetaObjectProfiSCT object, Float keywordsWeight) {
+        public MetaObjectProfiSCTKwdist(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
             super(object, true);
             this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
@@ -1789,11 +1767,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param keyWordIndex the index for translating keywords to addresses
          * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
          *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          * @throws IOException if reading from the stream fails
          */
-        public MetaObjectProfiSCTKwdist(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, Float keywordsWeight) throws IOException {
+        public MetaObjectProfiSCTKwdist(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
             super(stream, stemmer, keyWordIndex);
             this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
@@ -1803,11 +1783,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param stream the stream from which the data are read
          * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
          *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          * @throws IOException if there was an error reading the data from the stream
          */
-        public MetaObjectProfiSCTKwdist(BufferedReader stream, Float keywordsWeight) throws IOException {
+        public MetaObjectProfiSCTKwdist(BufferedReader stream, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
             super(stream, true, true);
             this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
@@ -1819,7 +1801,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws IOException if there was an error reading the data from the stream
          */
         public MetaObjectProfiSCTKwdist(BufferedReader stream) throws IOException {
-            this(stream, null);
+            this(stream, null, null);
         }
 
 
