@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -1612,6 +1613,21 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         /**
+         * Creates a map of key-value pairs from a given result set.
+         * The keys are integers and they are read from the result set's first column.
+         * The values are floats and read from the second column.
+         * @param rs the result set to get the key-value pairs from
+         * @return a map of key-value pairs
+         * @throws SQLException if there was an error reading values from the result set
+         */
+        private Map<Integer, Float> rsToMap(ResultSet rs) throws SQLException {
+            Map<Integer, Float> ret = new HashMap<Integer, Float>();
+            while (rs.next())
+                ret.put(rs.getInt(1), rs.getFloat(2));
+            return ret;
+        }
+
+        /**
          * Returns the weight provider for keywords based on tf-idf.
          * The idf weights are computed only for the provided keywords.
          * The returned object is serializable and does not require the database access.
@@ -1637,7 +1653,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
             // Execute SQL and get weight for the keywords
             PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
-            KeywordWeightProvider ret = new KeywordWeightProvider(resultSetToMap(crs.getResultSet(), 1, Integer.class, 2, Float.class), weights);
+            KeywordWeightProvider ret = new KeywordWeightProvider(rsToMap(crs.getResultSet()), weights);
             crs.close();
 
             return ret;
@@ -1652,7 +1668,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             if (keywordWeightSQL == null)
                 throw new SQLException("Keyword links table was not set for this database support");
             PreparedStatement crs = prepareAndExecute(null, "select keyword_id, " + keywordWeightSQL + " group by keyword_id", (Object[])null);
-            KeywordWeightProvider.staticKeywordWeights = resultSetToMap(crs.getResultSet(), 1, Integer.class, 2, Float.class);
+            KeywordWeightProvider.staticKeywordWeights = rsToMap(crs.getResultSet());
             crs.close();
 
             return KeywordWeightProvider.staticKeywordWeights;
