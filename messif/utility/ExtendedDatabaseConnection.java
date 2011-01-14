@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 
@@ -191,6 +193,27 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
         } finally {
             rs.close();
         }
+    }
+
+    /**
+     * Creates a map of key-value pairs from a given result set.
+     * The keys are read from the result set's {@code keyColumn} and
+     * values from the {@code valueColumn}.
+     * @param <K> the class of the keys
+     * @param <V> the class of the values
+     * @param rs the result set to get the key-value pairs from
+     * @param keyColumn the identification of the column that contains the keys (1 means the first column, 2 the second, etc.)
+     * @param keyClass the class of the keys
+     * @param valueColumn the identification of the column that contains the values (1 means the first column, 2 the second, etc.)
+     * @param valueClass the class of the values
+     * @return a map of key-value pairs
+     * @throws SQLException if there was an error reading values from the result set
+     */
+    protected final <K, V> Map<K, V> resultSetToMap(ResultSet rs, int keyColumn, Class<? extends K> keyClass, int valueColumn, Class<? extends V> valueClass) throws SQLException {
+        Map<K, V> ret = new HashMap<K, V>();
+        while (rs.next())
+            ret.put(keyClass.cast(rs.getObject(keyColumn)), valueClass.cast(rs.getObject(valueColumn)));
+        return ret;
     }
 
 
