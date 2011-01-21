@@ -1023,11 +1023,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         /**
          * Returns the database column name for creating the {@link MetaObjectProfiSCT} object
          * from the text stream.
+         * @param useLinkTable flag whether to use the title and keyword link tables
          * @return the database column name
          */
-        public static String getTextStreamColumnName() {
-            //return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
-            return "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', f_profimedia_title_ids(id),'\n', f_profimedia_keyword_ids(id),'\n') as char)";
+        public static String getTextStreamColumnName(boolean useLinkTable) {
+            return useLinkTable ?
+                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', f_profimedia_title_ids(id),'\n', f_profimedia_keyword_ids(id),'\n') as char)":
+                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
         }
 
         /**
@@ -1035,12 +1037,14 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * from the text stream.
          * @param stemmer an instance that provides a {@link Stemmer} for word transformation
          * @param keyWordIndex the index for translating keywords to addresses
+         * @param useLinkTable flag whether to use the title and keyword link tables
          * @return the database column convertor
          */
-        public static ColumnConvertor<MetaObjectProfiSCT> getTextStreamColumnConvertor(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+        public static ColumnConvertor<MetaObjectProfiSCT> getTextStreamColumnConvertor(Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, boolean useLinkTable) {
             return DatabaseStorage.wrapConvertor(
-                    //new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
-                    new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, true, true),
+                    useLinkTable ?
+                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, true, true) :
+                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, true, false, stemmer, keyWordIndex),
                     true, false, true
             );
         }
@@ -1050,15 +1054,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param addTextStreamColumn flag whether to add the metaobject stream column to the resulting map
          * @param stemmer an instance that provides a {@link Stemmer} for word transformation
          * @param keyWordIndex the index for translating keywords to addresses
+         * @param useLinkTable flag whether to use the title and keyword link tables
          * @return the database column definitions for the {@link MetaObjectProfiSCT} object
          */
-        public static Map<String, ColumnConvertor<MetaObjectProfiSCT>> getDBColumnMap(boolean addTextStreamColumn, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+        public static Map<String, ColumnConvertor<MetaObjectProfiSCT>> getDBColumnMap(boolean addTextStreamColumn, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, boolean useLinkTable) {
             Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
             // id -- primary key
             // thumbfile -- location of the thumbnail image file
             map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
             if (addTextStreamColumn)
-                map.put(getTextStreamColumnName(), getTextStreamColumnConvertor(stemmer, keyWordIndex));
+                map.put(getTextStreamColumnName(useLinkTable), getTextStreamColumnConvertor(stemmer, keyWordIndex, useLinkTable));
             map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
             map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
             map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
@@ -1126,7 +1131,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             this.databaseStorage = new DatabaseStorage<MetaObjectProfiSCT>(
                     MetaObjectProfiSCT.class,
                     dbConnUrl, dbConnInfo, dbDriverClass,
-                    tableName, "id", getDBColumnMap(true, stemmer, keyWordIndex)
+                    tableName, "id", getDBColumnMap(true, stemmer, keyWordIndex, wordLinkTable != null)
             );
             if (wordLinkTable != null) {
                 this.insertWordLinkSQL = "insert into " + wordLinkTable + "(object_id, keyword_id) values (?, ?)";
@@ -1261,7 +1266,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 return null;
             StringBuilder str = new StringBuilder();
             str.append("select locator, ");
-            str.append(getTextStreamColumnName());
+            str.append(getTextStreamColumnName(true));
             str.append(" as metaobject, rank from (select keyword_links.object_id, sum((1/kwcount)*idf)/");
             str.append(processedKeyWords.size());
             str.append(" as rank from (select profimedia_keywords.id, ");
@@ -1275,7 +1280,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             Collection<RankedAbstractObject> ret = new ArrayList<RankedAbstractObject>(count);
             try {
                 PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), (Object[])null);
-                ColumnConvertor<MetaObjectProfiSCT> textStreamColumnConvertor = getTextStreamColumnConvertor(stemmer, keyWordIndex);
+                ColumnConvertor<MetaObjectProfiSCT> textStreamColumnConvertor = getTextStreamColumnConvertor(stemmer, keyWordIndex, true);
                 ResultSet rs = objectsCursor.getResultSet();
                 while (rs.next()) {
                     MetaObjectProfiSCT obj = textStreamColumnConvertor.convertFromColumnValue(null, rs.getObject(2));
