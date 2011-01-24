@@ -20,6 +20,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -318,6 +320,28 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     }
 
     /**
+     * Return a trimmed, lower-case word with stripped diacritics that is not ignored.
+     * Note that the ignore words are updated whenever a non-ignored word is found.
+     * @param keyWord the keyword to transform
+     * @param ignoreWords set of words to ignore
+     * @return a trimmed, lower-case word with stripped diacritics that is not ignored
+     */
+    protected static String unifyKeyword(String keyWord, Set<String> ignoreWords) {
+        if (keyWord == null)
+            return null;
+        // Trim and check for empty words
+        keyWord = keyWord.trim();
+        if (keyWord.isEmpty())
+            return null;
+        // Remove diacritics and make lower case
+        keyWord = Normalizer.normalize(keyWord.toLowerCase(), Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        // Check if not ignored
+        if (ignoreWords != null && !ignoreWords.add(keyWord))
+            return null;
+        return keyWord;
+    }
+
+    /**
      * Transforms a list of keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      * All items from the list are removed during the process, so
@@ -337,8 +361,8 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
         Set<String> processedKeyWords = new HashSet<String>(keyWords.length);
         for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = keyWords[i].trim().toLowerCase();
-            if (ignoreWords == null || ignoreWords.add(keyWord))
+            String keyWord = unifyKeyword(keyWords[i], ignoreWords);
+            if (keyWord != null)
                 processedKeyWords.add(keyWord);
         }
 
