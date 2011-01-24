@@ -25,6 +25,7 @@ import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import messif.objects.LocalAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 
 /**
  * Collection of utility methods for {@link Extractor}s.
@@ -173,17 +174,22 @@ public abstract class Extractors {
      * constructor that takes {@link java.io.BufferedReader} as argument.
      * @param <T> the class of object that is created by the extractor
      * @param objectClass the class of object that is created by the extractor
+     * @param locatorParameter parameter of the data source used to set the extracted object's locator;
+     *          if <tt>null</tt>, the object uses the default locator set by the factory
      * @param additionalArguments additional arguments for the constructor
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object... additionalArguments) throws IllegalArgumentException {
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
         final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
-                    return factory.create(dataSource.getBufferedReader());
+                    T object = factory.create(dataSource.getBufferedReader());
+                    if (locatorParameter != null)
+                        object.setObjectKey(new AbstractObjectKey(dataSource.getRequiredParameter(locatorParameter).toString()));
+                    return object;
                 } catch (InvocationTargetException e) {
                     if (e.getCause() instanceof IOException)
                         throw (IOException)e.getCause();
@@ -195,6 +201,19 @@ public abstract class Extractors {
                 return factory.getCreatedClass();
             }
         };
+    }
+
+    /**
+     * Creates an extractor that creates objects from text InputStream using the
+     * constructor that takes {@link java.io.BufferedReader} as argument.
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param additionalArguments additional arguments for the constructor
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object... additionalArguments) throws IllegalArgumentException {
+        return createTextExtractor(objectClass, null, additionalArguments);
     }
 
     /**
@@ -245,6 +264,24 @@ public abstract class Extractors {
     /**
      * Creates an extractor that creates objects from binary data by external command.
      * The command is executed using the specified {@code command} and is expected to
+     * receive the binary data on its standard input and return the text parsable by
+     * the constructor of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param command the external command (including all necessary arguments)
+     * @param locatorParameter parameter of the data source used to set the extracted object's locator;
+     *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, String command, String locatorParameter) throws IllegalArgumentException {
+        return createExternalExtractor(objectClass, command, false, locatorParameter);
+    }
+
+    /**
+     * Creates an extractor that creates objects from binary data by external command.
+     * The command is executed using the specified {@code command} and is expected to
      * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
      * or the data are read from file that is passed as "%s" argument to the external command if
      * {@code fileAsArgument} is <tt>false</tt>.
@@ -259,7 +296,29 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, Object... additionalArguments) throws IllegalArgumentException {
-        final Extractor<T> textExtractor = createTextExtractor(objectClass, additionalArguments);
+        return createExternalExtractor(objectClass, command, false, (String)null);
+    }
+
+    /**
+     * Creates an extractor that creates objects from binary data by external command.
+     * The command is executed using the specified {@code command} and is expected to
+     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
+     * or the data are read from file that is passed as "%s" argument to the external command if
+     * {@code fileAsArgument} is <tt>false</tt>.
+     * The extractor must return the text parsable by the constructor of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param command the external command (including all necessary arguments)
+     * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+     * @param locatorParameter parameter of the data source used to set the extracted object's locator;
+     *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @param additionalArguments additional arguments for the constructor
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
+        final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return textExtractor.extract(new ExtractorDataSource(

@@ -17,7 +17,9 @@
 package messif.objects.extraction;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
@@ -50,6 +52,27 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
     public ExtractorIterator(Extractor<? extends T> extractor, ExtractorDataSource dataSource) {
         this.extractor = extractor;
         this.dataSource = dataSource;
+    }
+
+    /**
+     * Creates a new instance of ExtractorIterator.
+     * @param extractor the extractor to use for creating objects
+     * @param fileName the file from which to download the data
+     * @param additionalParameters the additional parameters for this data source
+     * @throws IOException if there was an error opening the file
+     */
+    public ExtractorIterator(Extractor<? extends T> extractor, String fileName, Map<String, ? extends Object> additionalParameters) throws IOException {
+        this(extractor, new ExtractorDataSource(new File(fileName), additionalParameters));
+    }
+
+    /**
+     * Creates a new instance of ExtractorIterator.
+     * @param extractor the extractor to use for creating objects
+     * @param fileName the file from which to download the data
+     * @throws IOException if there was an error opening the file
+     */
+    public ExtractorIterator(Extractor<? extends T> extractor, String fileName) throws IOException {
+        this(extractor, fileName, null);
     }
 
     @Override

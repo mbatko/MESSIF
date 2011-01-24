@@ -22,7 +22,6 @@ import messif.buckets.BucketErrorCode;
 import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.AbstractStreamObjectIterator;
 import messif.operations.AbstractOperation;
 
 /**
@@ -82,7 +81,7 @@ public class BulkInsertOperation extends AbstractOperation {
      * @param count the number of objects to read from the iterator
      */
     @AbstractOperation.OperationConstructor({"Iterator (e.g. object stream) to read the objects to insert from", "Number of objects to read"})
-    public BulkInsertOperation(Iterator<LocalAbstractObject> objectsIterator, int count) {
+    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> objectsIterator, int count) {
         this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(objectsIterator, count);
     }
 
