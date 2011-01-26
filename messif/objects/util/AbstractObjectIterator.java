@@ -137,6 +137,23 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
     }
 
     /**
+     * Returns the first instance of object with a locator that matches the
+     * given regular expression. Note that this method can be called repeatedly
+     * to obtain all objects the locator of which match.
+     *
+     * @param locatorRegexp the regular expression for matching the locators of objects that we are searching for
+     * @return the first instance of object with a matching locator
+     * @throws NoSuchElementException if there is no object with the specified locator
+     */
+    public final E getObjectByLocatorRegexp(String locatorRegexp) throws NoSuchElementException {
+        while (true) {
+            String locator = next().getLocatorURI(); // NoSuchElement is thrown automatically here when trying to access an object after the last one.
+            if (locator != null && locator.matches(locatorRegexp))
+                return getCurrentObject();
+        }
+    }
+
+    /**
      * Returns the first instance of object, that has one of the specified locators.
      *
      * @param locatorURIs the set of locators that we are searching for
