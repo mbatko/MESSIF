@@ -246,8 +246,10 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
                 stream.readLine(); // Skip the two lines with keywords
             }
             if (readValues) {
-                attractiveness = Short.parseShort(stream.readLine());
-                credits = Byte.parseByte(stream.readLine());
+                line = stream.readLine();
+                attractiveness = (line == null || line.isEmpty()) ? 0 : Short.parseShort(line);
+                line = stream.readLine();
+                credits = (line == null || line.isEmpty()) ? 0 : Byte.parseByte(line);
             } else {
                 stream.readLine(); // Skip the line with attractiveness
                 stream.readLine(); // Skip the line with credits
