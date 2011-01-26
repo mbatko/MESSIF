@@ -18,7 +18,10 @@ package messif.objects.impl;
 
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -68,6 +71,16 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             libraryLoaded = false;
         }
         isLibraryLoaded = libraryLoaded;
+    }
+
+    /**
+     * Returns <tt>true</tt> if the FaceSDK library was successfuly loaded.
+     * If this method returns <tt>false</tt>, the {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) distance}
+     * method will throw exception.
+     * @return <tt>true</tt> if the FaceSDK library was successfuly loaded
+     */
+    public static boolean isIsLibraryLoaded() {
+        return isLibraryLoaded;
     }
 
 
@@ -181,33 +194,140 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
     private static native int activateLibrary(String activationKey);
 
 
-    //****************** Extraction ******************//
+    //****************** Face object key ******************//
 
-    //////////////////////////// HACKS BELOW THIS LINE ////////////////////////////
-    //////////////////////////// YOU HAVE BEEN WARNED  ////////////////////////////
-
+    /**
+     * Object key for the faces detected by the FaceSDK library.
+     */
     public static class FaceKey extends AbstractObjectKey {
         /** class id for serialization */
         private static final long serialVersionUID = 1L;
 
-        public static enum FeatureType {
-            LEFT_EYE, RIGHT_EYE, NOSE_TIP, MOUTH_RIGHT_CORNER, MOUTH_LEFT_CORNER,
-            FACE_CONTOUR7, FACE_CONTOUR6, FACE_CONTOUR8, FACE_CONTOUR5, FACE_CONTOUR9, FACE_CONTOUR4, FACE_CONTOUR10, FACE_CONTOUR1, FACE_CONTOUR13,
-            CHIN_LEFT, CHIN_RIGHT, LEFT_EYEBROW_OUTER_CORNER, LEFT_EYEBROW_INNER_CORNER, RIGHT_EYEBROW_INNER_CORNER, RIGHT_EYEBROW_OUTER_CORNER,
-            MOUTH_TOP, MOUTH_BOTTOM, NOSE_BRIDGE, LEFT_EYE_OUTER_CORNER, LEFT_EYE_INNER_CORNER, RIGHT_EYE_INNER_CORNER, RIGHT_EYE_OUTER_CORNER,
-            NOSE_LEFT_WING, NOSE_RIGHT_WING, CHIN_BOTTOM, FACE_CONTOUR2, FACE_CONTOUR12, FACE_CONTOUR3, FACE_CONTOUR11,
-            LEFT_EYEBROW_MIDDLE, RIGHT_EYEBROW_MIDDLE, MOUTH_LEFT_TOP, MOUTH_RIGHT_TOP, MOUTH_LEFT_BOTTOM, MOUTH_RIGHT_BOTTOM
+        //****************** FaceSDK Constants ******************//
+
+        /** Facial feature constant LEFT_EYE as defined by FaceSDK */
+        public static final int LEFT_EYE = 0;
+        /** Facial feature constant RIGHT_EYE as defined by FaceSDK */
+        public static final int RIGHT_EYE = 1;
+        /** Facial feature constant LEFT_EYE_INNER_CORNER as defined by FaceSDK */
+        public static final int LEFT_EYE_INNER_CORNER = 24;
+        /** Facial feature constant LEFT_EYE_OUTER_CORNER as defined by FaceSDK */
+        public static final int LEFT_EYE_OUTER_CORNER = 23;
+        /** Facial feature constant RIGHT_EYE_INNER_CORNER as defined by FaceSDK */
+        public static final int RIGHT_EYE_INNER_CORNER = 25;
+        /** Facial feature constant RIGHT_EYE_OUTER_CORNER as defined by FaceSDK */
+        public static final int RIGHT_EYE_OUTER_CORNER = 26;
+
+        /** Facial feature constant LEFT_EYEBROW_INNER_CORNER as defined by FaceSDK */
+        public static final int LEFT_EYEBROW_INNER_CORNER = 17;
+        /** Facial feature constant LEFT_EYEBROW_MIDDLE as defined by FaceSDK */
+        public static final int LEFT_EYEBROW_MIDDLE = 34;
+        /** Facial feature constant LEFT_EYEBROW_OUTER_CORNER as defined by FaceSDK */
+        public static final int LEFT_EYEBROW_OUTER_CORNER = 16;
+
+        /** Facial feature constant RIGHT_EYEBROW_INNER_CORNER as defined by FaceSDK */
+        public static final int RIGHT_EYEBROW_INNER_CORNER = 18;
+        /** Facial feature constant RIGHT_EYEBROW_MIDDLE as defined by FaceSDK */
+        public static final int RIGHT_EYEBROW_MIDDLE = 35;
+        /** Facial feature constant RIGHT_EYEBROW_OUTER_CORNER as defined by FaceSDK */
+        public static final int RIGHT_EYEBROW_OUTER_CORNER = 19;
+
+        /** Facial feature constant NOSE_TIP as defined by FaceSDK */
+        public static final int NOSE_TIP = 2;
+        /** Facial feature constant NOSE_BRIDGE as defined by FaceSDK */
+        public static final int NOSE_BRIDGE = 22;
+        /** Facial feature constant NOSE_LEFT_WING as defined by FaceSDK */
+        public static final int NOSE_LEFT_WING = 27;
+        /** Facial feature constant NOSE_RIGHT_WING as defined by FaceSDK */
+        public static final int NOSE_RIGHT_WING = 28;
+
+        /** Facial feature constant MOUTH_RIGHT_CORNER as defined by FaceSDK */
+        public static final int MOUTH_RIGHT_CORNER = 3;
+        /** Facial feature constant MOUTH_LEFT_CORNER as defined by FaceSDK */
+        public static final int MOUTH_LEFT_CORNER = 4;
+        /** Facial feature constant MOUTH_TOP as defined by FaceSDK */
+        public static final int MOUTH_TOP = 20;
+        /** Facial feature constant MOUTH_BOTTOM as defined by FaceSDK */
+        public static final int MOUTH_BOTTOM = 21;
+        /** Facial feature constant MOUTH_LEFT_TOP as defined by FaceSDK */
+        public static final int MOUTH_LEFT_TOP = 36;
+        /** Facial feature constant MOUTH_RIGHT_TOP as defined by FaceSDK */
+        public static final int MOUTH_RIGHT_TOP = 37;
+        /** Facial feature constant MOUTH_LEFT_BOTTOM as defined by FaceSDK */
+        public static final int MOUTH_LEFT_BOTTOM = 38;
+        /** Facial feature constant MOUTH_RIGHT_BOTTOM as defined by FaceSDK */
+        public static final int MOUTH_RIGHT_BOTTOM = 39;
+
+        /** Facial feature constant CHIN_BOTTOM as defined by FaceSDK */
+        public static final int CHIN_BOTTOM = 29;
+        /** Facial feature constant CHIN_LEFT as defined by FaceSDK */
+        public static final int CHIN_LEFT = 14;
+        /** Facial feature constant CHIN_RIGHT as defined by FaceSDK */
+        public static final int CHIN_RIGHT = 15;
+
+        /** Facial feature constant FACE_CONTOUR1 as defined by FaceSDK */
+        public static final int FACE_CONTOUR1 = 12;
+        /** Facial feature constant FACE_CONTOUR2 as defined by FaceSDK */
+        public static final int FACE_CONTOUR2 = 30;
+        /** Facial feature constant FACE_CONTOUR3 as defined by FaceSDK */
+        public static final int FACE_CONTOUR3 = 32;
+        /** Facial feature constant FACE_CONTOUR4 as defined by FaceSDK */
+        public static final int FACE_CONTOUR4 = 10;
+        /** Facial feature constant FACE_CONTOUR5 as defined by FaceSDK */
+        public static final int FACE_CONTOUR5 = 8;
+        /** Facial feature constant FACE_CONTOUR6 as defined by FaceSDK */
+        public static final int FACE_CONTOUR6 = 6;
+        /** Facial feature constant FACE_CONTOUR7 as defined by FaceSDK */
+        public static final int FACE_CONTOUR7 = 5;
+        /** Facial feature constant FACE_CONTOUR8 as defined by FaceSDK */
+        public static final int FACE_CONTOUR8 = 7;
+        /** Facial feature constant FACE_CONTOUR9 as defined by FaceSDK */
+        public static final int FACE_CONTOUR9 = 9;
+        /** Facial feature constant FACE_CONTOUR10 as defined by FaceSDK */
+        public static final int FACE_CONTOUR10 = 11;
+        /** Facial feature constant FACE_CONTOUR11 as defined by FaceSDK */
+        public static final int FACE_CONTOUR11 = 33;
+        /** Facial feature constant FACE_CONTOUR12 as defined by FaceSDK */
+        public static final int FACE_CONTOUR12 = 31;
+        /** Facial feature constant FACE_CONTOUR13 as defined by FaceSDK */
+        public static final int FACE_CONTOUR13 = 13;
+
+        /** List of facial feature constants that represent the face contour as defined by FaceSDK */
+        private static final int[] contourFeatures = {
+            FACE_CONTOUR1, FACE_CONTOUR2, FACE_CONTOUR3, FACE_CONTOUR4, FACE_CONTOUR5,
+            FACE_CONTOUR6, FACE_CONTOUR7, FACE_CONTOUR8, FACE_CONTOUR9, FACE_CONTOUR10,
+            FACE_CONTOUR11, FACE_CONTOUR12, FACE_CONTOUR13, CHIN_RIGHT, CHIN_BOTTOM, CHIN_LEFT
         };
 
+
+        //****************** Attributes ******************//
+
+        /** X-axis position of the face center (in pixels on the original image) */
         private final int centerX;
+        /** Y-axis position of the face center (in pixels on the original image) */
         private final int centerY;
+        /** Width of the face (in pixels) */
         private final int width;
+        /** In-plane face rotation angle (in degrees) */
+        private final double angle;
+        /** X-axis position of the face features (in pixels on the original image) */
         private final int[] featureXCoordinates;
+        /** Y-axis position of the face features (in pixels on the original image) */
         private final int[] featureYCoordinates;
 
+
+        //****************** Constructors ******************//
+
+        /**
+         * Creates a new FaceKey from the given data.
+         * @param locatorURI the face image locator URI
+         * @param position the face bounding box in the original image
+         * @param features the position of fourty face features in the original image
+         */
         public FaceKey(String locatorURI, Rectangle position, Point[] features) {
             super(locatorURI);
             this.width = position.width;
+            this.angle = 0;
             this.centerX = (int)position.getCenterX();
             this.centerY = (int)position.getCenterY();
             if (features == null) {
@@ -223,6 +343,17 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             }
         }
 
+        /**
+         * Creates a new FaceKey from the given string parts.
+         * The string features parts should contain the following:
+         * <ul>
+         * <li>coma-separated x and y axis coordinate of the face center,
+         *     width of the face and in-plane rotation of the face;</li>
+         * <li>forty coma-separated x and y axis values of the face features;</li>
+         * <li>face image locator.</li>
+         * </ul>
+         * @param stringData the string feature parts
+         */
         private FaceKey(String[] stringData) {
             super(stringData[stringData.length - 1]);
             // Parse position (center x,y and width)
@@ -230,6 +361,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             this.centerX = Integer.parseInt(positionData[0]);
             this.centerY = Integer.parseInt(positionData[1]);
             this.width = Integer.parseInt(positionData[2]);
+            this.angle = Double.parseDouble(positionData[3]);
 
             // Parse feature coordinates
             featureXCoordinates = new int[stringData.length - 2];
@@ -241,42 +373,258 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             }
         }
 
+        /**
+         * Creates a new FaceKey from the given string data.
+         * The string data should contain the following colon-separated parts:
+         * <ul>
+         * <li>coma-separated x and y axis coordinate of the face center,
+         *     width of the face and in-plane rotation of the face;</li>
+         * <li>forty coma-separated x and y axis values of the face features;</li>
+         * <li>face image locator.</li>
+         * </ul>
+         * @param stringData the data string with the position, features and locator
+         */
         public FaceKey(String stringData) {
             this(stringData.split(";"));
         }
 
-        public String getFileName() {
+
+        //****************** Attribute access ******************//
+
+        /**
+         * Returns the original image file name.
+         * This method returns the {@link #getLocatorURI() locatorURI} without
+         * the face number, i.e. without the two digits before the file extension.
+         * @return the original image file name
+         */
+        public String getOriginalFileName() {
             String locator = getLocatorURI();
-            return locator.substring(0, locator.length() - 6) + ".jpg";
-            /*
-            int comaPos = locator.lastIndexOf(',');
+            int comaPos = locator.lastIndexOf('.');
             if (comaPos == -1)
                 return locator;
-            else
-                return locator.substring(0, comaPos);
-            */
+            return locator.substring(0, comaPos - 2) + locator.substring(comaPos);
         }
 
+        /**
+         * Returns the face bounding rectangle.
+         * @return the face bounding rectangle
+         */
         public Rectangle getRect() {
             return new Rectangle(
-                centerX - (width + 1) / 2,
+                centerX - width / 2,
                 centerY - width * 3 / 4,
                 width, width * 3 / 2
             );
         }
 
-        public int getFeaturePosX(FeatureType feature) {
-            return featureXCoordinates[feature.ordinal()];
+        /**
+         * Returns the face contour.
+         * Specifically, the contour is a {@link Polygon} defined by 13
+         * points as defined by FaceSDK.
+         * @return the face contour
+         */
+        public Shape getFaceContour() {
+            Polygon polygon = new Polygon();
+            for (int i = 0; i < contourFeatures.length; i++)
+                polygon.addPoint(featureXCoordinates[contourFeatures[i]], featureYCoordinates[contourFeatures[i]]);
+            return polygon;
         }
-        public int getFeaturePosY(FeatureType feature) {
-            return featureYCoordinates[feature.ordinal()];
+
+        /**
+         * Returns the position of the given feature.
+         * @param feature identifier the feature the position of which to get
+         * @return the feature position
+         * @throws IndexOutOfBoundsException if the given feature identifier is not valid
+         */
+        public Point getFeaturePosition(int feature) throws IndexOutOfBoundsException {
+            return new Point(featureXCoordinates[feature], featureYCoordinates[feature]);
         }
+
+
+        //****************** Drawing functions ******************//
+
+        /**
+         * Draws a face oval in the given graphic context.
+         * Note that the coordinate system of the original image is assumed.
+         * @param g the graphic context in which to draw
+         * @return the graphic context that was passed (to allow streamlining of the drawing operations)
+         */
+        public Graphics2D drawFaceOval(Graphics2D g) {
+            AffineTransform transform = g.getTransform();
+
+            // Translate to face center and rotate
+            g.translate(centerX, centerY);
+            g.rotate(angle * Math.PI / 180);
+
+            // Draw oval
+            g.drawOval(- width / 2, - width * 3 / 4, width, width * 3 / 2);
+
+            g.setTransform(transform);
+
+            return g;
+        }
+
+        /**
+         * Draws a face oval in the given image.
+         * Note that the coordinate system of the original image is assumed.
+         * @param image the image in which to draw
+         * @return the image that was passed (to allow streamlining of the drawing operations)
+         */
+        public BufferedImage drawFaceOval(BufferedImage image) {
+            drawFaceOval(image.createGraphics());
+            return image;
+        }
+
+        /**
+         * Draws a face contour in the given graphic context.
+         * Note that the coordinate system of the original image is assumed.
+         * @param g the graphic context in which to draw
+         * @return the graphic context that was passed (to allow streamlining of the drawing operations)
+         */
+        public Graphics2D drawFaceContour(Graphics2D g) {
+            g.draw(getFaceContour());
+            return g;
+        }
+
+        /**
+         * Draws a face contour in the given image.
+         * Note that the coordinate system of the original image is assumed.
+         * @param image the image in which to draw
+         * @return the image that was passed (to allow streamlining of the drawing operations)
+         */
+        public BufferedImage drawFaceContour(BufferedImage image) {
+            drawFaceContour(image.createGraphics());
+            return image;
+        }
+
+        /**
+         * Draws a face feature point in the given graphic context.
+         * The point is drawn as 3-pixels dot.
+         * Note that the coordinate system of the original image is assumed.
+         * @param g the graphic context in which to draw
+         * @param feature the feature identifier the position of which to get
+         * @return the graphic context that was passed (to allow streamlining of the drawing operations)
+         * @throws IndexOutOfBoundsException if the given feature identifier is not valid
+         */
+        public Graphics2D drawFaceFeaturePoint(Graphics2D g, int feature) throws IndexOutOfBoundsException {
+            g.fillOval(featureXCoordinates[feature] - 1, featureYCoordinates[feature] - 1, 3, 3);
+            return g;
+        }
+
+        /**
+         * Draws a face feature point in the given image.
+         * The point is drawn as 3-pixels dot.
+         * Note that the coordinate system of the original image is assumed.
+         * @param image the image in which to draw
+         * @param feature the feature identifier the position of which to get
+         * @return the image that was passed (to allow streamlining of the drawing operations)
+         * @throws IndexOutOfBoundsException if the given feature identifier is not valid
+         */
+        public BufferedImage drawFaceFeaturePoint(BufferedImage image, int feature) throws IndexOutOfBoundsException {
+            drawFaceFeaturePoint(image.createGraphics(), feature);
+            return image;
+        }
+
+        /**
+         * Draws all face feature points in the given image.
+         * The points are drawn as 3-pixels dots.
+         * Note that the coordinate system of the original image is assumed.
+         * @param image the image in which to draw
+         * @return the image that was passed (to allow streamlining of the drawing operations)
+         * @throws IndexOutOfBoundsException if the given feature identifier is not valid
+         */
+        public BufferedImage drawFaceFeatures(BufferedImage image) throws IndexOutOfBoundsException {
+            Graphics2D g = image.createGraphics();
+            for (int i = 0; i < featureXCoordinates.length; i++)
+                drawFaceFeaturePoint(g, i);
+            return image;
+        }
+
+        /**
+         * Loads the original image where the this key's face was detected.
+         * The original image file name is derived from the locator (see {@link #getOriginalFileName()}).
+         * @param imageDir the root directory from which the detector was run;
+         *          it can be <tt>null</tt> if the locator contains valid absolute path
+         *          or relative path the the current working directory
+         * @return the loaded image
+         * @throws IOException if there was a problem loading the image (e.g. file was not found)
+         */
+        public BufferedImage loadFaceImage(File imageDir) throws IOException {
+            return ImageIO.read(new File(imageDir, getOriginalFileName()));
+        }
+
+        /**
+         * Saves the given image into the {@code destDir} as a file named
+         * by this key's {@link #getLocatorURI() locator}.
+         * This method is usually used as a final step of a serie of drawing operations.
+         * @param image the image to save
+         * @param destDir the destination directory where the image is stored
+         * @param imageFormatName a string containg the informal name of the format (e.g. "jpeg")
+         * @throws IOException if there was a problem loading the image (e.g. file was not found)
+         */
+        public void saveFaceImage(BufferedImage image, String imageFormatName, File destDir) throws IOException {
+            ImageIO.write(image, imageFormatName, new File(destDir, getLocatorURI()));
+        }
+
+        /**
+         * Returns the sub-image that contains the face.
+         * @param originalImage the original image where the face was detected
+         * @param enlargementFactor the enlargement factor of the face bounding box;
+         *          zero means no enlargement
+         * @return the sub-image with the face
+         */
+        public BufferedImage extractFaceImage(BufferedImage originalImage, double enlargementFactor) {
+            Rectangle rect = getRect();
+            if (enlargementFactor > 0)
+                rect.grow((int)(rect.getWidth() * enlargementFactor), (int)(rect.getHeight() * enlargementFactor));
+            return originalImage.getSubimage(rect.x, rect.y, rect.width, rect.height);
+        }
+
+        /**
+         * Returns the sub-image that contains the face.
+         * The original face image is loaded from the {@code imageDir} directory.
+         * @param imageDir the root directory from which the detector was run;
+         *          it can be <tt>null</tt> if the locator contains valid absolute path
+         *          or relative path the the current working directory
+         * @param enlargementFactor the enlargement factor of the face bounding box;
+         *          zero means no enlargement
+         * @return the sub-image with the face
+         * @throws IOException if there was a problem loading the image (e.g. file was not found)
+         */
+        public BufferedImage extractFaceImage(File imageDir, double enlargementFactor) throws IOException {
+            return extractFaceImage(loadFaceImage(imageDir), enlargementFactor);
+        }
+
+        /**
+         * Extracts the sub-image that contains the face and saves it into a file.
+         * The original face image is loaded from the {@code imageDir} directory.
+         * The face sub-image is placed into the {@code destDir} as a file named
+         * by this key's {@link #getLocatorURI() locator}.
+         * @param imageDir the root directory from which the detector was run;
+         *          it can be <tt>null</tt> if the locator contains valid absolute path
+         *          or relative path the the current working directory
+         * @param destDir the destination directory where the face sub-image is stored
+         * @param imageFormatName a string containg the informal name of the format (e.g. "jpeg")
+         * @param enlargementFactor the enlargement factor of the face bounding box;
+         *          zero means no enlargement
+         * @throws IOException
+         */
+        public void extractFaceImage(File imageDir, File destDir, String imageFormatName, double enlargementFactor) throws IOException {
+            ImageIO.write(
+                    extractFaceImage(imageDir, enlargementFactor),
+                    imageFormatName,
+                    new File(destDir, getLocatorURI())
+            );
+        }
+
+
+        //****************** Textual serialization ******************//
 
         @Override
         protected void writeData(OutputStream stream) throws IOException {
             StringBuilder str = new StringBuilder();
             str.append(centerX).append(',').append(centerY).append(',');
-            str.append(width).append(';');
+            str.append(width).append(',').append(angle).append(';');
             for (int i = 0; i < featureXCoordinates.length; i++) {
                 str.append(featureXCoordinates[i]).append(',');
                 str.append(featureYCoordinates[i]).append(';');
@@ -285,11 +633,22 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             super.writeData(stream);
         }
 
+
+        //****************** Binary serialization implementation ******************//
+
+        /**
+         * Creates a new instance of FaceKey loaded from binary input.
+         *
+         * @param input the input to read the AbstractObjectKey from
+         * @param serializator the serializator used to write objects
+         * @throws IOException if there was an I/O error reading from the input
+         */
         protected FaceKey(BinaryInput input, BinarySerializator serializator) throws IOException {
             super(input, serializator);
             centerX = serializator.readInt(input);
             centerY = serializator.readInt(input);
             width = serializator.readInt(input);
+            angle = serializator.readDouble(input);
             featureXCoordinates = serializator.readIntArray(input);
             featureYCoordinates = serializator.readIntArray(input);
         }
@@ -300,6 +659,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
                     serializator.getBinarySize(centerX) +
                     serializator.getBinarySize(centerY) +
                     serializator.getBinarySize(width) +
+                    serializator.getBinarySize(angle) +
                     serializator.getBinarySize(featureXCoordinates) +
                     serializator.getBinarySize(featureYCoordinates);
         }
@@ -310,56 +670,27 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
                     serializator.write(output, centerX) +
                     serializator.write(output, centerY) +
                     serializator.write(output, width) +
+                    serializator.write(output, angle) +
                     serializator.write(output, featureXCoordinates) +
                     serializator.write(output, featureYCoordinates);
         }
     }
 
 
-    //****************** Image manipulation ******************//
+    //////////////////////////// HACKS BELOW THIS LINE ////////////////////////////
+    //////////////////////////// YOU HAVE BEEN WARNED  ////////////////////////////
 
-    public static BufferedImage drawOval(BufferedImage image, Rectangle rectangle, double rotation) throws IOException {
-        Graphics2D g = image.createGraphics();
-
-        // Translate to face center and rotate
-        g.translate(rectangle.getCenterX(), rectangle.getCenterY());
-        g.rotate(-rotation);
-
-        // Draw oval
-        g.drawOval(-rectangle.width/2, -rectangle.height/2, rectangle.width, rectangle.height);
-
-        return image;
-    }
-
-    public static BufferedImage drawEyes(BufferedImage image, int leftEyeX, int leftEyeY, int rightEyeX, int rightEyeY) {
-        Graphics2D g = image.createGraphics();
-        g.fillOval(leftEyeX - 1, leftEyeY - 1, 3, 3);
-        g.fillOval(rightEyeX - 1, rightEyeY - 1, 3, 3);
-        return image;
-    }
-
-    public static void saveFace(File imageDir, FaceKey key, String format, File destFile) throws IOException {
-        BufferedImage image = ImageIO.read(new File(imageDir, key.getFileName()));
-        Rectangle rect = key.getRect();
-        BufferedImage subImage = image.getSubimage(rect.x - rect.width / 20, rect.y - rect.height / 20, rect.width + rect.width / 10, rect.height + rect.height / 10);
-        ImageIO.write(subImage, format, destFile);
-    }
-
-    public static BufferedImage drawFace(File imageDir, FaceKey key) throws IOException {
-        // Read image
-        BufferedImage image = ImageIO.read(new File(imageDir, key.getFileName()));
-        return drawEyes(drawOval(image, key.getRect(), 0),
-                key.getFeaturePosX(FaceKey.FeatureType.LEFT_EYE), key.getFeaturePosY(FaceKey.FeatureType.LEFT_EYE),
-                key.getFeaturePosX(FaceKey.FeatureType.RIGHT_EYE), key.getFeaturePosY(FaceKey.FeatureType.RIGHT_EYE)
-        );
-    }
-
+    /**
+     * Convenience method for getting images of the extracted faces.
+     * @param imageDir the directory with the original images
+     * @param destDir the directory where the new face images will be stored
+     * @param datafile the data file with {@link ObjectFaceSDKDescriptor}s
+     * @throws IOException if there was a problem reading a file from imageDir or writing a file to destDir
+     */
     public static void processImages(File imageDir, File destDir, String datafile) throws IOException {
         StreamGenericAbstractObjectIterator<ObjectFaceSDKDescriptor> objects = new StreamGenericAbstractObjectIterator<ObjectFaceSDKDescriptor>(ObjectFaceSDKDescriptor.class, datafile);
-        while (objects.hasNext()) {
-            FaceKey key = objects.next().getObjectKey();
-            saveFace(imageDir, key, "jpg", new File(destDir, key.getLocatorURI() + ".jpg"));
-        }
+        while (objects.hasNext())
+            objects.next().getObjectKey().extractFaceImage(imageDir, destDir, "jpeg", 0.05);
         objects.close();
     }
 }
