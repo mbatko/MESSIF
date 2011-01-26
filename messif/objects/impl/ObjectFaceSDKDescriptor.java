@@ -16,11 +16,13 @@
  */
 package messif.objects.impl;
 
+import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -29,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -447,9 +450,10 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * Draws a face oval in the given graphic context.
          * Note that the coordinate system of the original image is assumed.
          * @param g the graphic context in which to draw
+         * @param size the size of the oval line in pixels
          * @return the graphic context that was passed (to allow streamlining of the drawing operations)
          */
-        public Graphics2D drawFaceOval(Graphics2D g) {
+        public Graphics2D drawFaceOval(Graphics2D g, int size) {
             AffineTransform transform = g.getTransform();
 
             // Translate to face center and rotate
@@ -457,7 +461,10 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             g.rotate(angle * Math.PI / 180);
 
             // Draw oval
+            Stroke origStroke = g.getStroke();
+            g.setStroke(new BasicStroke(size));
             g.drawOval(- width / 2, - width * 3 / 4, width, width * 3 / 2);
+            g.setStroke(origStroke);
 
             g.setTransform(transform);
 
@@ -468,10 +475,11 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * Draws a face oval in the given image.
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
+         * @param size the size of the oval line in pixels
          * @return the image that was passed (to allow streamlining of the drawing operations)
          */
-        public BufferedImage drawFaceOval(BufferedImage image) {
-            drawFaceOval(image.createGraphics());
+        public BufferedImage drawFaceOval(BufferedImage image, int size) {
+            drawFaceOval(image.createGraphics(), size);
             return image;
         }
 
@@ -479,10 +487,14 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * Draws a face contour in the given graphic context.
          * Note that the coordinate system of the original image is assumed.
          * @param g the graphic context in which to draw
+         * @param size the size of the contour line in pixels
          * @return the graphic context that was passed (to allow streamlining of the drawing operations)
          */
-        public Graphics2D drawFaceContour(Graphics2D g) {
+        public Graphics2D drawFaceContour(Graphics2D g, int size) {
+            Stroke origStroke = g.getStroke();
+            g.setStroke(new BasicStroke(size));
             g.draw(getFaceContour());
+            g.setStroke(origStroke);
             return g;
         }
 
@@ -490,24 +502,25 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * Draws a face contour in the given image.
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
+         * @param size the size of the contour line in pixels
          * @return the image that was passed (to allow streamlining of the drawing operations)
          */
-        public BufferedImage drawFaceContour(BufferedImage image) {
-            drawFaceContour(image.createGraphics());
+        public BufferedImage drawFaceContour(BufferedImage image, int size) {
+            drawFaceContour(image.createGraphics(), size);
             return image;
         }
 
         /**
          * Draws a face feature point in the given graphic context.
-         * The point is drawn as 3-pixels dot.
          * Note that the coordinate system of the original image is assumed.
          * @param g the graphic context in which to draw
          * @param feature the feature identifier the position of which to get
+         * @param size the size of the dot in pixels
          * @return the graphic context that was passed (to allow streamlining of the drawing operations)
          * @throws IndexOutOfBoundsException if the given feature identifier is not valid
          */
-        public Graphics2D drawFaceFeaturePoint(Graphics2D g, int feature) throws IndexOutOfBoundsException {
-            g.fillOval(featureXCoordinates[feature] - 1, featureYCoordinates[feature] - 1, 3, 3);
+        public Graphics2D drawFaceFeaturePoint(Graphics2D g, int feature, int size) throws IndexOutOfBoundsException {
+            g.fillOval(featureXCoordinates[feature] - (size + 1)/2, featureYCoordinates[feature] - (size + 1)/2, size + 2, size + 2);
             return g;
         }
 
@@ -517,11 +530,12 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
          * @param feature the feature identifier the position of which to get
+         * @param size the size of the dot in pixels
          * @return the image that was passed (to allow streamlining of the drawing operations)
          * @throws IndexOutOfBoundsException if the given feature identifier is not valid
          */
-        public BufferedImage drawFaceFeaturePoint(BufferedImage image, int feature) throws IndexOutOfBoundsException {
-            drawFaceFeaturePoint(image.createGraphics(), feature);
+        public BufferedImage drawFaceFeaturePoint(BufferedImage image, int feature, int size) throws IndexOutOfBoundsException {
+            drawFaceFeaturePoint(image.createGraphics(), feature, size);
             return image;
         }
 
@@ -530,13 +544,14 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
          * The points are drawn as 3-pixels dots.
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
+         * @param size the size of the dot in pixels
          * @return the image that was passed (to allow streamlining of the drawing operations)
          * @throws IndexOutOfBoundsException if the given feature identifier is not valid
          */
-        public BufferedImage drawFaceFeatures(BufferedImage image) throws IndexOutOfBoundsException {
+        public BufferedImage drawFaceFeatures(BufferedImage image, int size) throws IndexOutOfBoundsException {
             Graphics2D g = image.createGraphics();
             for (int i = 0; i < featureXCoordinates.length; i++)
-                drawFaceFeaturePoint(g, i);
+                drawFaceFeaturePoint(g, i, size);
             return image;
         }
 
@@ -577,6 +592,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             Rectangle rect = getRect();
             if (enlargementFactor > 0)
                 rect.grow((int)(rect.getWidth() * enlargementFactor), (int)(rect.getHeight() * enlargementFactor));
+            rect = rect.intersection(new Rectangle(originalImage.getWidth(), originalImage.getHeight()));
             return originalImage.getSubimage(rect.x, rect.y, rect.width, rect.height);
         }
 
@@ -681,16 +697,59 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
     //////////////////////////// YOU HAVE BEEN WARNED  ////////////////////////////
 
     /**
-     * Convenience method for getting images of the extracted faces.
+     * Convenience method for processing the images of the detected faces.
+     *
      * @param imageDir the directory with the original images
      * @param destDir the directory where the new face images will be stored
      * @param datafile the data file with {@link ObjectFaceSDKDescriptor}s
-     * @throws IOException if there was a problem reading a file from imageDir or writing a file to destDir
+     * @param locatorRegexp regular expression for matching the object locators
+     * @param enlargementFactor the enlargement factor of the face bounding box;
+     *          zero means no enlargement, negative value means that the original
+     *          image is not cropped by the face bounding box
+     * @param featureSize the size of the features dots and lines in pixels;
+     *          if zero, no features are drawn
+     * @throws IOException if there was a problem reading the datafile, reading
+     *              an image from imageDir or writing to a file in destDir
      */
-    public static void processImages(File imageDir, File destDir, String datafile) throws IOException {
+    public static void processImages(File imageDir, File destDir, String datafile, String locatorRegexp, double enlargementFactor, int featureSize) throws IOException {
         StreamGenericAbstractObjectIterator<ObjectFaceSDKDescriptor> objects = new StreamGenericAbstractObjectIterator<ObjectFaceSDKDescriptor>(ObjectFaceSDKDescriptor.class, datafile);
-        while (objects.hasNext())
-            objects.next().getObjectKey().extractFaceImage(imageDir, destDir, "jpeg", 0.05);
+        try {
+            while (true) {
+                FaceKey key = objects.getObjectByLocatorRegexp(locatorRegexp).getObjectKey();
+                BufferedImage image = key.loadFaceImage(imageDir);
+                if (featureSize > 0)
+                    image = key.drawFaceFeatures(key.drawFaceContour(image, featureSize), featureSize);
+                if (enlargementFactor >= 0) // Zero means no enlargement, negative value means no cropping
+                    image = key.extractFaceImage(image, enlargementFactor);
+                key.saveFaceImage(image, "jpeg", destDir);
+            }
+        } catch (NoSuchElementException ignore) {
+        }
         objects.close();
+    }
+
+    /**
+     * Calls the {@link #processImages(java.io.File, java.io.File, java.lang.String)} method.
+     * Usage: java -classpath MESSIF.jar messif.objects.impl.ObjectFaceSDKDescriptor ...
+     *
+     * @param args the following arguments are expected: imageDir, destDir, datafile,
+     *          locatorRegexp, enlargementFactor, and featureSize
+     * @throws IOException if there was a problem reading the datafile, reading
+     *              an image from imageDir or writing to a file in destDir
+     */
+    public static void main(String[] args) throws IOException {
+        try {
+            int argIndex = 0;
+            File imageDir = new File(args[argIndex++]);
+            File destDir = new File(args[argIndex++]);
+            String datafile = args[argIndex++];
+            String locatorRegexp = argIndex < args.length ? args[argIndex++] : ".*";
+            double enlargementFactor = argIndex < args.length ? Double.parseDouble(args[argIndex++]) :  0.05;
+            int featureSize = argIndex < args.length ? Integer.parseInt(args[argIndex++]) :  0;
+            processImages(imageDir, destDir, datafile, locatorRegexp, enlargementFactor, featureSize);
+        } catch (Exception e) {
+            System.err.println(e);
+            System.err.println("Usage: " + ObjectFaceSDKDescriptor.class.getName() + " <imageDir> <destDir> <datafile> [<locatorRegexp> [<enlargementFactor> [<featureSize>]]]");
+        }
     }
 }
