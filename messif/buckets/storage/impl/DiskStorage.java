@@ -378,7 +378,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                         }
                     }
                 };
-                Runtime.getRuntime().removeShutdownHook(modifiedThread);
+                Runtime.getRuntime().addShutdownHook(modifiedThread);
             }
         }
     }
