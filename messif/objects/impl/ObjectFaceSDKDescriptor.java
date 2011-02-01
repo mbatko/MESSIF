@@ -24,6 +24,7 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -447,6 +448,17 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
         //****************** Drawing functions ******************//
 
         /**
+         * Returns the intersection of the image rectange (i.e. its width and height)
+         * with the given rectangle.
+         * @param image the image to use for intersection
+         * @param rect the rectangle to use for intersection
+         * @return an intersected rectangle
+         */
+        protected static Rectangle intersectRectWithImage(BufferedImage image, Rectangle rect) {
+            return rect.intersection(new Rectangle(image.getWidth(), image.getHeight()));
+        }
+
+        /**
          * Draws a face oval in the given graphic context.
          * Note that the coordinate system of the original image is assumed.
          * @param g the graphic context in which to draw
@@ -592,7 +604,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             Rectangle rect = getRect();
             if (enlargementFactor > 0)
                 rect.grow((int)(rect.getWidth() * enlargementFactor), (int)(rect.getHeight() * enlargementFactor));
-            rect = rect.intersection(new Rectangle(originalImage.getWidth(), originalImage.getHeight()));
+            rect = intersectRectWithImage(originalImage, rect);
             return originalImage.getSubimage(rect.x, rect.y, rect.width, rect.height);
         }
 
@@ -631,6 +643,42 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
                     imageFormatName,
                     new File(destDir, getLocatorURI())
             );
+        }
+
+        /**
+         * Extracts the face image represented by this key from the given image.
+         * The face is transformed so that the eyes are level, the left eye is
+         * at the given corredinates (and the right eye at "newWidth - leftEyeX").
+         *
+         * @param image the original image from which to extract the face
+         * @param leftEyeX the left eye x-coordinate in the resulting image
+         * @param leftEyeY the left eye y-coordinate in the resulting image
+         * @param newWidth the resulting image width
+         * @param newHeight the resulting image height
+         * @return the extracted face image
+         */
+        public BufferedImage extractTransformedFaceImage(BufferedImage image, int leftEyeX, int leftEyeY, int newWidth, int newHeight) {
+            // Compute the rotation and scale based on the eyes position
+            double rotation = Math.atan2(
+                    featureYCoordinates[LEFT_EYE] - featureYCoordinates[RIGHT_EYE],
+                    featureXCoordinates[RIGHT_EYE] - featureXCoordinates[LEFT_EYE]
+            );
+            double scale = (newWidth - 2 * leftEyeX) / Math.sqrt(
+                    Math.pow(featureXCoordinates[LEFT_EYE] - featureXCoordinates[RIGHT_EYE], 2) +
+                    Math.pow(featureYCoordinates[LEFT_EYE] - featureYCoordinates[RIGHT_EYE], 2)
+            );
+
+            // Prepare the transformation (note that the operations are applied down-to-top)
+            AffineTransform transform = new AffineTransform();
+            transform.translate(leftEyeX, leftEyeY);
+            transform.scale(scale, scale);
+            transform.rotate(rotation);
+            transform.translate(-featureXCoordinates[LEFT_EYE], -featureYCoordinates[LEFT_EYE]);
+
+            BufferedImage outImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = outImage.createGraphics();
+            g.drawImage(image, new AffineTransformOp(transform, AffineTransformOp.TYPE_BICUBIC), 0, 0);
+            return outImage;
         }
 
 
@@ -721,6 +769,8 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
                     image = key.drawFaceFeatures(key.drawFaceContour(image, featureSize), featureSize);
                 if (enlargementFactor >= 0) // Zero means no enlargement, negative value means no cropping
                     image = key.extractFaceImage(image, enlargementFactor);
+                else if (enlargementFactor < -2) // Large negative value means that the image is transformed for the ObjectAdvancedFaceDescriptor
+                    image = key.extractTransformedFaceImage(image, 16, 24, 46, 56);
                 key.saveFaceImage(image, "jpeg", destDir);
             }
         } catch (NoSuchElementException ignore) {
