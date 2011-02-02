@@ -518,21 +518,22 @@ public abstract class Convert {
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
      * Only parameters from <code>argStartIndex</code> to <code>argEndIndex</code> of <code>strings</code>
      * array will be used.
-     * 
+     *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
      * @param argStartIndex index in the strings array which denotes the first changable argument
      * @param argEndIndex index in the strings array which denotes the last changable argument
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws InstantiationException {
         // Create return array
         Object[] rtv = new Object[types.length];
-        
+
         // VarArg handling (last type is array)
-        if (types.length > 0 && types[types.length - 1].isArray()) {
+        if (handleVarArgs && types.length > 0 && types[types.length - 1].isArray()) {
             // Get class of the varargs (i.e. the class of the array's component
             Class<?> varargClass = types[types.length - 1].getComponentType();
             // Create new instance of the array
@@ -545,99 +546,104 @@ public abstract class Convert {
         // Convert every string to a proper class
         for (int i = 0; argStartIndex <= argEndIndex; argStartIndex++, i++)
             rtv[i] = stringToType(strings[argStartIndex], types[i], namedInstances);
-        
+
         return rtv;
     }
-    
+
     /**
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
      * Only parameters from <code>argStartIndex</code> to <code>argEndIndex</code> of <code>strings</code>
      * array will be used.
-     * 
+     *
      * <p>
      * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
      * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
      * </p>
-     * 
+     *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
      * @param argStartIndex index in the strings array which denotes the first changable argument
      * @param argEndIndex index in the strings array which denotes the last changable argument
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, int argEndIndex) throws InstantiationException {
-        return parseTypesFromString(strings, types, argStartIndex, argEndIndex, null);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, int argEndIndex) throws InstantiationException {
+        return parseTypesFromString(strings, types, handleVarArgs, argStartIndex, argEndIndex, null);
     }
 
     /**
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
-     * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will 
+     * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will
      * be used.
-     * 
+     *
      * <p>
      * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
      * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
      * </p>
-     * 
+     *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
      * @param argStartIndex index in the strings array which denotes the first changable argument
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex) throws InstantiationException {
-        return parseTypesFromString(strings, types, argStartIndex, strings.length - 1);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex) throws InstantiationException {
+        return parseTypesFromString(strings, types, handleVarArgs, argStartIndex, strings.length - 1);
     }
 
     /**
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
-     * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will 
+     * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will
      * be used.
-     * 
+     *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
      * @param argStartIndex index in the strings array which denotes the first changable argument
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, int argStartIndex, Map<String, Object> namedInstances) throws InstantiationException {
-        return parseTypesFromString(strings, types, argStartIndex, strings.length - 1, namedInstances);
-    }
-    
-    /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
-     * All the parameters from <code>strings</code> array will be used.
-     * 
-     * <p>
-     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
-     * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
-     * </p>
-     * 
-     * @param strings array of strings that hold the values
-     * @param types array of classes that the strings should be converted to
-     * @return the array of converted values
-     * @throws InstantiationException if there was a type that cannot be created from the provided string value
-     */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types) throws InstantiationException {
-        return parseTypesFromString(strings, types, 0);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, Map<String, Object> namedInstances) throws InstantiationException {
+        return parseTypesFromString(strings, types, handleVarArgs, argStartIndex, strings.length - 1, namedInstances);
     }
 
     /**
      * Parses array of strings into array of objects accoring to the types provided in the second argument.
      * All the parameters from <code>strings</code> array will be used.
-     * 
+     *
+     * <p>
+     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
+     * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
+     * </p>
+     *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
+     * @return the array of converted values
+     * @throws InstantiationException if there was a type that cannot be created from the provided string value
+     */
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs) throws InstantiationException {
+        return parseTypesFromString(strings, types, handleVarArgs, 0);
+    }
+
+    /**
+     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * All the parameters from <code>strings</code> array will be used.
+     *
+     * @param strings array of strings that hold the values
+     * @param types array of classes that the strings should be converted to
+     * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, Map<String, Object> namedInstances) throws InstantiationException {
-        return parseTypesFromString(strings, types, 0, namedInstances);
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, Map<String, Object> namedInstances) throws InstantiationException {
+        return parseTypesFromString(strings, types, handleVarArgs, 0, namedInstances);
     }
-    
+
     /**
      * Retrieves types of the objects in parameters 
      * @param objects list of objects to get the types for

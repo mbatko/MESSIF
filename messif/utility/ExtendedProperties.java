@@ -504,7 +504,7 @@ public class ExtendedProperties extends Properties {
      */
     public Object[] getMultiProperty(String key, Class<?>... parameterTypes) throws ExtendedPropertiesException {
         try {
-            return Convert.parseTypesFromString(getMultiProperty(key, parameterTypes.length), parameterTypes);
+            return Convert.parseTypesFromString(getMultiProperty(key, parameterTypes.length), parameterTypes, true);
         } catch (InstantiationException e) {
             throw new ExtendedPropertiesException(getFormattedProperty("convertFromString", "Cannot convert value of configuration key \"{0}\" to object: {1}", key, e));
         }

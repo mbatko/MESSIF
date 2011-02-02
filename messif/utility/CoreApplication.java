@@ -557,6 +557,7 @@ public class CoreApplication {
                     Convert.parseTypesFromString(
                         args,
                         AbstractOperation.getConstructorArguments(operationClass, args.length - 2),
+                        false, // do not use var-args, since number of constructor parameters is given
                         2, // skip the method name and operation class arguments
                         namedInstances
                     )
@@ -872,7 +873,7 @@ public class CoreApplication {
             // Prepare arguments
             String[] stringArgs = args.clone();
             stringArgs[2] = null;
-            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), 2, namedInstances);
+            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), true, 2, namedInstances);
             methodArgs[0] = lastOperation;
 
             // Execute method
@@ -1009,7 +1010,7 @@ public class CoreApplication {
                         continue;
 
                 // Try to invoke the method
-                Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, 2, namedInstances));
+                Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, true, 2, namedInstances));
                 if (!method.getReturnType().equals(void.class))
                     out.println(rtv);
                 return true;
