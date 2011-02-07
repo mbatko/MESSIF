@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.Iterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 
@@ -314,7 +315,7 @@ public abstract class Extractors {
      * @param locatorParameter parameter of the data source used to set the extracted object's locator;
      *          if <tt>null</tt>, the object uses the default locator set by the factory
      * @param additionalArguments additional arguments for the constructor
-     * @return object created by the extractor
+     * @return extractor for creating objects from binary data by external command
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
@@ -322,6 +323,39 @@ public abstract class Extractors {
         return new Extractor<T>() {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return textExtractor.extract(new ExtractorDataSource(
+                        callExternalExtractor(command, fileAsArgument, dataSource),
+                        dataSource.getAdditionalParameters()
+                ));
+            }
+            public Class<? extends T> getExtractedClass() {
+                return textExtractor.getExtractedClass();
+            }
+        };
+    }
+
+    /**
+     * Creates an extractor that creates multiple objects from binary data by external command.
+     * The command is executed using the specified {@code command} and is expected to
+     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
+     * or the data are read from file that is passed as "%s" argument to the external command if
+     * {@code fileAsArgument} is <tt>false</tt>.
+     * The extractor must return the text parsable by the constructor of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param command the external command (including all necessary arguments)
+     * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+     * @param locatorParameter parameter of the data source used to set the extracted object's locator;
+     *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @param additionalArguments additional arguments for the constructor
+     * @return extractor for creating multiple objects from single binary data by external command
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> MultiExtractor<T> createExternalMultiExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
+        final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
+        return new MultiExtractor<T>() {
+            public Iterator<T> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                return new ExtractorIterator<T>(textExtractor, new ExtractorDataSource(
                         callExternalExtractor(command, fileAsArgument, dataSource),
                         dataSource.getAdditionalParameters()
                 ));

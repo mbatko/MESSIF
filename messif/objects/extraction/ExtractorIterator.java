@@ -16,6 +16,7 @@
  */
 package messif.objects.extraction;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +35,7 @@ import messif.objects.util.AbstractObjectIterator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractObjectIterator<T> {
+public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractObjectIterator<T> implements Closeable {
     /** Extractor to use for creating objects */
     private final Extractor<? extends T> extractor;
     /** Data source for the extractor */
@@ -124,5 +125,9 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
         dataSource.reset();
         currentObject = null;
         nextObject = null;
+    }
+
+    public void close() throws IOException {
+        dataSource.close();
     }
 }
