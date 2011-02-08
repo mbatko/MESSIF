@@ -27,8 +27,11 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
     private static final long serialVersionUID = 1L;
 
     /****************** Constructors ******************/
-
-    /** Creates a new instance of object */
+    
+    /**
+     * Creates a new instance of object
+     * @param data
+     */
     public ObjectFeatureByteL2(float x,  float y,  float ori,  float scl, short[] data) {
         super(x, y, ori, scl, data);
     }
@@ -49,12 +52,15 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
         // We must have the same number of dimensions
         if (objdata.length != data.length)
             return MAX_DISTANCE;
+        double distTreshSq = distThreshold * distThreshold;
 
         // Get sum of absolute difference on all dimensions
-        float rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--)
+        double rtv = 0;
+        for (int i = data.length - 1; i >= 0; i--) {
             rtv += (data[i] - objdata[i])*(data[i] - objdata[i]);
-
+            if (rtv > distTreshSq)
+                return Float.MAX_VALUE;
+        }
         return ((float)Math.sqrt(rtv));
     }
 

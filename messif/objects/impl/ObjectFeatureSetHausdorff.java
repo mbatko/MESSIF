@@ -54,6 +54,7 @@ public class ObjectFeatureSetHausdorff  extends ObjectFeatureSet {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         float setdistance = 0;
         float setdistancerev = 0;

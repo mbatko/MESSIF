@@ -33,16 +33,15 @@ import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
 
 /**
- * Represents a multiset of LocalAbstractObjects
+ * Represents a list of LocalAbstractObjects
  * <p>
  * All the encapsulated objects share the same locator URI.
- * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes.
  * </p>
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
+ * @author Tomas Homola, Masaryk University, Brno, Czech Republic, xhomola@fi.muni.cz 
  */
 
 public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<LocalAbstractObject> {
@@ -57,6 +56,13 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
 
 
     //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ObjectFeatureSet with empty list of objects.
+     */
+    public ObjectFeatureSet () {
+        objects = new ArrayList<LocalAbstractObject>();
+    }
 
     /**
      * Creates a new instance of ObjectFeatureSet for the given locatorURI and encapsulated objects.
@@ -129,6 +135,14 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         return (getObjectCount() > 0) ? objects.get(0).getClass().toString() : "LocalAbstractObject";
     }
 
+
+    /**
+     * Adds the object to the internal list of objects (to the end of the list)
+     * @param obj Object to be added
+     */
+    public void addObject(LocalAbstractObject obj) {
+        objects.add(obj);
+    }
 
     //****************** Text stream I/O helper method ******************//
 
@@ -213,6 +227,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list (skip the comments)
         if (objects != null && !objects.isEmpty()) {
@@ -235,6 +250,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @return  <code>true</code> if this object is the same as the obj
      *          argument; <code>false</code> otherwise.
      */
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectFeatureSet))
             return false;
@@ -258,6 +274,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * Returns sum of hash code values for all the encapsulated objects' data.
      * @return a hash code value for the data of this object
      */
+    @Override
     public int dataHashCode() {
         int rtv = 0;
         for (LocalAbstractObject object : (LocalAbstractObject[]) objects.toArray())
