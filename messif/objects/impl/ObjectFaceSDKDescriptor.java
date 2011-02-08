@@ -17,6 +17,8 @@
 package messif.objects.impl;
 
 import java.awt.BasicStroke;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
@@ -27,21 +29,33 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import messif.algorithms.Algorithm;
+import messif.algorithms.AlgorithmMethodException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.extraction.ExtractorDataSource;
+import messif.objects.extraction.ExtractorException;
+import messif.objects.extraction.MultiExtractor;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
+import messif.operations.query.RangeQueryOperation;
 
 /**
  * This class encapsulates a FaceSDK recognition descriptor.
@@ -538,7 +552,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
 
         /**
          * Draws a face feature point in the given image.
-         * The point is drawn as 3-pixels dot.
+         * The point is drawn as {@code size}-pixels wide dot.
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
          * @param feature the feature identifier the position of which to get
@@ -553,7 +567,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
 
         /**
          * Draws all face feature points in the given image.
-         * The points are drawn as 3-pixels dots.
+         * The points are drawn as {@code size}-pixels wide dots.
          * Note that the coordinate system of the original image is assumed.
          * @param image the image in which to draw
          * @param size the size of the dot in pixels
@@ -564,6 +578,32 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
             Graphics2D g = image.createGraphics();
             for (int i = 0; i < featureXCoordinates.length; i++)
                 drawFaceFeaturePoint(g, i, size);
+            return image;
+        }
+
+        /**
+         * Draws a given face label at the bottom of the face chin.
+         * @param g the graphic context in which to draw
+         * @param label the label to draw
+         * @return the graphic context that was passed (to allow streamlining of the drawing operations)
+         */
+        public Graphics2D drawFaceLabel(Graphics2D g, String label) {
+            FontMetrics fontMetrics = g.getFontMetrics();
+            g.drawString(label,
+                    featureXCoordinates[CHIN_BOTTOM] - fontMetrics.stringWidth(label) / 2,
+                    featureYCoordinates[CHIN_BOTTOM] + fontMetrics.getMaxAscent());
+            return g;
+        }
+
+        /**
+         * Draws a given face label at the bottom of the face chin.
+         * Note that the coordinate system of the original image is assumed.
+         * @param image the image in which to draw
+         * @param label the label to draw
+         * @return the image that was passed (to allow streamlining of the drawing operations)
+         */
+        public BufferedImage drawFaceLabel(BufferedImage image, String label) {
+            drawFaceLabel(image.createGraphics(), label);
             return image;
         }
 
@@ -743,6 +783,81 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
 
     //////////////////////////// HACKS BELOW THIS LINE ////////////////////////////
     //////////////////////////// YOU HAVE BEEN WARNED  ////////////////////////////
+
+
+    /**
+     * Convenience method for searching for similar objects in the given algorithm.
+     * The query objects are first extracted from the given file using the extractor.
+     * Then the {@link RangeQueryOperation} is used on the {@code algorithm}
+     * to retrieve the most similar object within the given {@code threshold}.
+     * The object's locator is then used for labeling the face in the query image.
+     * @param queryImage the image to use
+     * @param extractor the extractor used to retrieve the faces from the query image
+     * @param algorithm the algorithm used to search for similar objects
+     * @param threshold the distance radius used for the {@link RangeQueryOperation}
+     *          executed on the {@code algorithm} in order to retrieve the similar objects
+     * @param outlineSize the size of the face outline to draw (no outline is drawn if zero)
+     * @param fontSize the size of the font used to draw the labels
+     * @param unknownLabel the label used when there was no similar face found by the algorithm
+     * @return a map of the query object and the closest object found
+     * @throws AlgorithmMethodException if there was an error executing the {@link RangeQueryOperation}
+     * @throws NoSuchMethodException if the algorithm does not support {@link RangeQueryOperation}
+     * @throws IOException if there was a problem reading the query image
+     * @throws ExtractorException if there was a problem extracting the faces
+     */
+    public static BufferedImage drawFaceLocatorsBySimilarFaces(File queryImage, MultiExtractor<? extends ObjectFaceSDKDescriptor> extractor, Algorithm algorithm, float threshold, int outlineSize, int fontSize, String unknownLabel) throws AlgorithmMethodException, NoSuchMethodException, IOException, ExtractorException {
+        // Load the image
+        BufferedImage image = ImageIO.read(queryImage);
+        Graphics2D g = image.createGraphics();
+        if (fontSize > 0)
+            g.setFont(g.getFont().deriveFont(Font.BOLD, fontSize));
+
+        // Call the external extraction and convert it to objects
+        ExtractorDataSource dataSource = new ExtractorDataSource(queryImage);
+        Iterator<? extends ObjectFaceSDKDescriptor> extractedFaces = extractor.extract(dataSource);
+
+        // Extract each face, search for similar ones in the given algorithm and draw it
+        while (extractedFaces.hasNext()) {
+            ObjectFaceSDKDescriptor face = extractedFaces.next();
+            FaceKey faceKey = face.getObjectKey();
+            if (outlineSize > 0)
+                faceKey.drawFaceContour(g, outlineSize);
+            Iterator<? extends RankedAbstractObject> similarFaces = algorithm.getQueryAnswer(new RangeQueryOperation(face, threshold, 1));
+            if (similarFaces.hasNext())
+                faceKey.drawFaceLabel(g, similarFaces.next().getObject().getLocatorURI());
+            else if (unknownLabel != null)
+                faceKey.drawFaceLabel(g, unknownLabel);
+        }
+
+        dataSource.close();
+        if (extractedFaces instanceof Closeable)
+            ((Closeable)extractedFaces).close();
+
+        return image;
+    }
+
+    /**
+     * Convenience method for searching for similar objects in the given algorithm.
+     * Note that {@link RangeQueryOperation} is used with the given {@code threshold}
+     * and the first object returned in the answer is taken for each query object.
+     * @param <T> the type of query objects
+     * @param queryObjects the list of query objects to search for the similar ones
+     * @param algorithm the algorithm used to search for similar objects
+     * @param threshold the distance radius used for the {@link RangeQueryOperation}
+     *          executed on the {@code algorithm} in order to retrieve the similar objects
+     * @return a map of the query object and the closest object found
+     * @throws AlgorithmMethodException if there was an error executing the {@link RangeQueryOperation}
+     * @throws NoSuchMethodException if the algorithm does not support {@link RangeQueryOperation}
+     */
+    public static <T extends LocalAbstractObject> Map<T, RankedAbstractObject> findSimilarObjects(List<T> queryObjects, Algorithm algorithm, float threshold) throws AlgorithmMethodException, NoSuchMethodException {
+        Map<T, RankedAbstractObject> ret = new HashMap<T, RankedAbstractObject>(queryObjects.size());
+        for (T queryObject : queryObjects) {
+            Iterator<? extends RankedAbstractObject> similarObjects = algorithm.getQueryAnswer(new RangeQueryOperation(queryObject, threshold, 1));
+            if (similarObjects.hasNext())
+                ret.put(queryObject, similarObjects.next());
+        }
+        return ret;
+    }
 
     /**
      * Convenience method for processing the images of the detected faces.
