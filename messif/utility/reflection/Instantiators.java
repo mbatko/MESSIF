@@ -149,10 +149,8 @@ public abstract class Instantiators {
             // Null value is accepted by any class
             if (arguments[i] == null && !prototype[i].isPrimitive())
                 continue;
-            // The argument of the method must be the same as or a superclass of the provided prototype class
-            if (!Convert.wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {
-                if (!convertStringArguments || !(arguments[i] instanceof String))
-                    return false;
+            // If string conversion is enabled and the argument is string
+            if (convertStringArguments && (arguments[i] instanceof String)) {
                 // Try to convert string argument
                 try {
                     // Clone argument array if not clonned yet
@@ -162,6 +160,9 @@ public abstract class Instantiators {
                 } catch (InstantiationException ignore) {
                     return false;
                 }
+            } else if (!Convert.wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {
+                // The argument of the method must be the same as or a superclass of the provided prototype class
+                return false;
             }
         }
 
