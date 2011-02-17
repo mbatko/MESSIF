@@ -85,6 +85,26 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         readObjects(stream);
     }
 
+    /**
+     * Creates a new instance of ObjectFeatureSet as a subset of an existing ObjectFeatureSet.
+     * Subset is determined as a sub-window.
+     * @param supSet original set of features (super-set)
+     * @param minX minimal X-coordinate to be included in the resulting subset
+     * @param maxX maximal X-coordinate to be included in the resulting subset
+     * @param minY minimal Y-coordinate to be included in the resulting subset
+     * @param maxY maximal Y-coordinate to be included in the resulting subset
+     */
+    public ObjectFeatureSet (ObjectFeatureSet supSet, float minX, float maxX, float minY, float maxY) {
+        super (supSet.getLocatorURI());
+        this.objects =  new ArrayList<LocalAbstractObject>();
+        for (int i = 0; i < supSet.getObjectCount(); i++) {
+            ObjectFeature of = (ObjectFeature) supSet.getObject(i);
+            if (of.getX() >= minX && of.getX() <= maxX && of.getY() >= minY && of.getY() <= maxY) {
+                objects.add(of);
+            }
+        }
+    }
+
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new UnsupportedOperationException("Not supported yet.");
@@ -106,15 +126,16 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
 
     /**
      * Returns iterator over all features.
+     * @return iterator over all features
      */
     public Iterator<LocalAbstractObject> getObjects() {
-        return objects.iterator();
+        return iterator();
     }
 
     /**
      * Returns iterator over all features.
+     * @return iterator over all features
      */
-    @Override
     public Iterator<LocalAbstractObject> iterator() {
         return objects.iterator();
     }
@@ -231,8 +252,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list (skip the comments)
         if (objects != null && !objects.isEmpty()) {
-            //stream.write((objects.get(0).getClass().toString() + " : " + String.valueOf(objects.size()) + "\n").getBytes());
-            stream.write((objects.get(0).getClass().toString().substring(6) + " : " + String.valueOf(objects.size()) + "\n").getBytes());
+            stream.write((objects.get(0).getClass().toString() + " : " + String.valueOf(objects.size()) + "\n").getBytes());
             for (LocalAbstractObject object : objects) {
                 object.write(stream, false);
             }

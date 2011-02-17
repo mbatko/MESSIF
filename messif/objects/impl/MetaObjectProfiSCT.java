@@ -1119,7 +1119,6 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
          * @throws SQLException if there was a problem connecting to the database
          */
-        @SuppressWarnings("unchecked")
         public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws IllegalArgumentException, SQLException {
             super(dbConnUrl, dbConnInfo, dbDriverClass);
             this.randomGenerator = new Random();
