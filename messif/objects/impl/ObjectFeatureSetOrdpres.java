@@ -16,13 +16,22 @@
  */
 package messif.objects.impl;
 
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.io.*;
 
 public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
 
@@ -175,6 +184,7 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
+    @SuppressWarnings("unchecked") // Hacks inside
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         Logger log = null;
 
