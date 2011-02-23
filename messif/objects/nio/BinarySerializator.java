@@ -481,7 +481,21 @@ public abstract class BinarySerializator {
      * @throws IOException if there was an I/O error
      */
     public int write(BinaryOutput output, String string) throws IOException {
-        return write(output, string.toCharArray());
+        return write(output, string == null ? null : string.toCharArray());
+    }
+
+    /**
+     * Writes a {@link String} array to the specified output.
+     * @param output the buffer to write the string array into
+     * @param array the {@link String} array to be written
+     * @return the number of bytes written
+     * @throws IOException if there was an I/O error
+     */
+    public int write(BinaryOutput output, String[] array) throws IOException {
+        int size = write(output, array.length);
+        for (int i = 0; i < array.length; i++)
+            size += write(output, array[i]);
+        return size;
     }
 
     /**
@@ -872,6 +886,22 @@ public abstract class BinarySerializator {
         if (stringBytes == null)
             return null;
         return new String(stringBytes);
+    }
+
+    /**
+     * Returns a {@link String} array read from the specified input.
+     * @param input the buffer to read the array from
+     * @return a {@link String} array read from the input
+     * @throws IOException if there was an I/O error
+     */
+    public String[] readStringArray(BinaryInput input) throws IOException {
+        int len = readInt(input);
+        if (len == -1)
+            return null;
+        String[] array = new String[len];
+        for (int i = 0; i < len; i++)
+            array[i] = readString(input);
+        return array;
     }
 
     /**
@@ -1272,7 +1302,7 @@ public abstract class BinarySerializator {
     /**
      * Returns the size of the (binary) serialized {@link String} in bytes.
      * The exact size including all overhead is returned.
-     * 
+     *
      * @param string the string to get the size for
      * @return the size of the binary-serialized {@link String}
      */
@@ -1280,6 +1310,22 @@ public abstract class BinarySerializator {
         if (string == null)
             return 4;
         return 4 + 2 * string.length();
+    }
+
+    /**
+     * Returns the size of the (binary) serialized {@link String} array in bytes.
+     * The exact size including all overhead is returned.
+     *
+     * @param array the string array to get the size for
+     * @return the size of the binary-serialized {@link String} array
+     */
+    public int getBinarySize(String[] array) {
+        if (array == null)
+            return 4;
+        int size = 4;
+        for (int i = 0; i < array.length; i++)
+            size += getBinarySize(array[i]);
+        return size;
     }
 
     /**
