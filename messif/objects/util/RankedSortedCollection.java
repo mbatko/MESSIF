@@ -144,4 +144,35 @@ public class RankedSortedCollection extends SortedCollection<RankedAbstractObjec
             return LocalAbstractObject.MAX_DISTANCE;
     }
 
+    /**
+     * Returns a distance-restricted iterator.
+     * Only objects within the specified distance range are returned by the iterator.
+     * @param minDistance the minimal distance of the ranked objects to return
+     * @param maxDistance the maximal distance of the ranked objects to return
+     * @return iterator over the objects of this collection that are within the specified range
+     */
+    public Iterator<RankedAbstractObject> iteratorDistanceRestricted(float minDistance, float maxDistance) {
+        // Search for lower and upper bounds
+        int minDistancePos = 0;
+        int maxDistancePos = size() - 1;
+        for (int i = 0; i <= maxDistancePos; i++) {
+            float dist = get(i).getDistance();
+            if (dist < minDistance)
+                minDistancePos = i + 1;
+            if (dist > maxDistance)
+                maxDistancePos = i - 1;
+        }
+
+        return iterator(minDistancePos, maxDistancePos - minDistancePos + 1);
+    }
+
+    /**
+     * Returns a distance-restricted iterator.
+     * Only objects that are smaller than the specified distance are returned by the iterator.
+     * @param maxDistance the maximal distance of the ranked objects to return
+     * @return iterator over the objects of this collection that are smaller than the specified distance
+     */
+    public Iterator<RankedAbstractObject> iteratorDistanceRestricted(float maxDistance) {
+        return iteratorDistanceRestricted(0, maxDistance);
+    }
 }

@@ -162,6 +162,27 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return answer.iterator(skip, count);
     }
 
+    /**
+     * Returns an iterator over all objects in the answer that are ranked higher
+     * than the <code>minDistance</code> but lower than the <code>maxDistance</code>.
+     * @param minDistance the minimal distance of the answer objects to return
+     * @param maxDistance the maximal distance of the answer objects to return
+     * @return an iterator over the objects in the answer to this query
+     */
+    public Iterator<RankedAbstractObject> getAnswerDistanceRestricted(float minDistance, float maxDistance) {
+        return answer.iteratorDistanceRestricted(minDistance, maxDistance);
+    }
+
+    /**
+     * Returns an iterator over all objects in the answer that are ranked lower
+     * than the <code>maxDistance</code>.
+     * @param maxDistance the maximal distance of the answer objects to return
+     * @return an iterator over the objects in the answer to this query
+     */
+    public Iterator<RankedAbstractObject> getAnswerDistanceRestricted(float maxDistance) {
+        return answer.iteratorDistanceRestricted(maxDistance);
+    }
+
     @Override
     public Iterator<AbstractObject> getAnswerObjects() {
         return RankedAbstractObject.getObjectsIterator(getAnswer());
