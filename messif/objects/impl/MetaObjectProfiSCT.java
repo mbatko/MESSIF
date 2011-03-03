@@ -316,6 +316,28 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     }
 
     /**
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}.
+     * All the encapsulated objects and the locator are taken from the source {@code object}.
+     * @param object the source metaobject from which to get the data
+     * @param searchWordIds the identifiers of the searched keywords to set for the new object (in addition to the copied keywords)
+     */
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, int[] searchWordIds) {
+        this(object, false);
+        if (object.keyWords != null && object.keyWords.getVectorDataCount() >= 2)
+            this.keyWords = new ObjectIntMultiVectorJaccard(
+                object.keyWords.getVectorData(0),
+                object.keyWords.getVectorData(1),
+                searchWordIds
+            );
+        else
+            this.keyWords = new ObjectIntMultiVectorJaccard(
+                new int[0],
+                new int[0],
+                searchWordIds
+            );
+    }
+
+    /**
      * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
@@ -354,7 +376,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param searchWords the searched keywords to set for the new object
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex, String searchWords) {
-        this(object, stemmer, keyWordIndex, object.titleString.split(TITLE_SPLIT_REGEXP), object.keywordString.split(KEYWORDS_SPLIT_REGEXP), (searchWords == null || searchWords.isEmpty()) ? null : searchWords.split("\\s+"));
+        this(object, (searchWords == null || searchWords.isEmpty()) ? null :
+            keywordsToIdentifiers(searchWords.split("\\s+"), null, stemmer, keyWordIndex));
     }
 
     /**
