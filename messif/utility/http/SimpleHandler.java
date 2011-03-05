@@ -63,6 +63,7 @@ public class SimpleHandler<T> implements HttpHandler {
      * @param exchange the HTTP request/response exchange
      * @throws IOException if there was a problem reading the HTTP request or writing the HTTP response
      */
+    @Override
     public final void handle(HttpExchange exchange) throws IOException {
         // Process the exchange by processor
         HttpApplicationResponse response;

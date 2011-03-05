@@ -79,6 +79,7 @@ public class InstantiatorProcessor<T> implements HttpApplicationProcessor<T> {
 
     //****************** Processor implementation ******************//
 
+    @Override
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws Exception {
         Object[] arguments = new Object[processors.length];
         for (int i = 0; i < processors.length; i++)
@@ -86,10 +87,12 @@ public class InstantiatorProcessor<T> implements HttpApplicationProcessor<T> {
         return instantiator.instantiate(arguments);
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return 1;
     }
 
+    @Override
     public Class<? extends T> getProcessorReturnType() {
         return instantiator.getInstantiatorClass();
     }

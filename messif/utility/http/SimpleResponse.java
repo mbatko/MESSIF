@@ -46,18 +46,22 @@ public class SimpleResponse implements HttpApplicationResponse {
         this.data = data;
     }
 
+    @Override
     public String getContentType() {
         return contentType;
     }
 
+    @Override
     public int getErrorCode() {
         return errorCode;
     }
 
+    @Override
     public long getLength() {
         return data.length;
     }
 
+    @Override
     public void write(OutputStream os) throws IOException {
         os.write(data);
     }

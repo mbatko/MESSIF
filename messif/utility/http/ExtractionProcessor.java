@@ -124,14 +124,17 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
         }
     }
 
+    @Override
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
         return extractObject(getExtractorDataSource(httpExchange, httpParams));
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return 1;
     }
 
+    @Override
     public Class<? extends T> getProcessorReturnType() {
         return extractor.getExtractedClass();
     }

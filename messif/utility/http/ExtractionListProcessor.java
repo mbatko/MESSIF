@@ -55,6 +55,7 @@ public class ExtractionListProcessor implements HttpApplicationProcessor<Abstrac
         this.extractionProcessor = new ExtractionProcessor<LocalAbstractObject>(extractorSignature, LocalAbstractObject.class, namedInstances);
     }
 
+    @Override
     public AbstractObjectList<LocalAbstractObject> processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
         AbstractObjectList<LocalAbstractObject> objects = new AbstractObjectList<LocalAbstractObject>();
         ExtractorDataSource dataSource = extractionProcessor.getExtractorDataSource(httpExchange, httpParams);
@@ -66,11 +67,13 @@ public class ExtractionListProcessor implements HttpApplicationProcessor<Abstrac
         return objects;
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return 1;
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public Class<? extends AbstractObjectList<?>> getProcessorReturnType() {
         return (Class)AbstractObjectList.class;
     }

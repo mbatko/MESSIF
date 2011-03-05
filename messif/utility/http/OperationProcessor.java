@@ -79,6 +79,7 @@ public class OperationProcessor<T extends AbstractOperation> implements HttpAppl
 
     //****************** Processor implementation ******************//
 
+    @Override
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws Exception {
         Object[] arguments = new Object[processors.length];
         for (int i = 0; i < processors.length; i++)
@@ -86,10 +87,12 @@ public class OperationProcessor<T extends AbstractOperation> implements HttpAppl
         return algorithm.executeOperation(operationConstructor.newInstance(arguments));
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return processors.length;
     }
 
+    @Override
     public Class<? extends T> getProcessorReturnType() {
         return operationConstructor.getDeclaringClass();
     }

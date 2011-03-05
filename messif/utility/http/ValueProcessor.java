@@ -58,15 +58,18 @@ public class ValueProcessor<T> implements HttpApplicationProcessor<T> {
         }
     }
 
+    @Override
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
         return value;
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return 1;
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public Class<? extends T> getProcessorReturnType() {
         return (Class<T>)value.getClass();
     }

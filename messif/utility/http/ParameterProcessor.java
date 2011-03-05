@@ -73,6 +73,7 @@ public class ParameterProcessor<T> implements HttpApplicationProcessor<T> {
         this.namedInstances = namedInstances;
     }
 
+    @Override
     public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
         String parameter = httpParams.get(parameterName);
         if (parameter == null)
@@ -86,10 +87,12 @@ public class ParameterProcessor<T> implements HttpApplicationProcessor<T> {
         }
     }
 
+    @Override
     public int getProcessorArgumentCount() {
         return 1;
     }
 
+    @Override
     public Class<? extends T> getProcessorReturnType() {
         return parameterClass;
     }
