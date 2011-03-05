@@ -216,6 +216,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         if (closeFileChannel())
             file.delete();
@@ -594,10 +595,12 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             this.streamReference = getInputStream(startPosition + headerSize);
         }
 
+        @Override
         public void unlock() {
         }
     }
 
+    @Override
     public synchronized Lock lock(boolean blocking) throws IllegalStateException {
         try {
             return new DiskStorageLock();
@@ -645,6 +648,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * Returns the number of objects stored in this storage.
      * @return the number of objects stored in this storage
      */
+    @Override
     public int size() {
         // Open file channel if not opened yet
         if (fileChannel == null) {
@@ -685,6 +689,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
     }
 
+    @Override
     public synchronized LongAddress<T> store(T object) throws BucketStorageException {
         if (readonly)
             throw new ReadonlyStorageException();
@@ -709,6 +714,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
     }
 
+    @Override
     public synchronized void remove(long position) throws BucketStorageException {
         try {
             // Remove the object at given position - the size of the object is retrieved by the skip
@@ -751,6 +757,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
     }
 
+    @Override
     public synchronized T read(long position) throws BucketStorageException {
         try {
             return serializator.readObject(getInputStream(position), storedObjectsClass);
@@ -762,23 +769,28 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     //****************** Default index implementation ******************//
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         return store(object) != null;
     }
 
+    @Override
     public LongStorageSearch<T> search() throws IllegalStateException {
         return new DiskStorageSearch<Object>(null, Collections.emptyList());
     }
 
+    @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, keys);
     }
 
+    @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, Collections.singletonList(key));
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new DiskStorageSearch<C>(comparator, from, to);
     }
@@ -855,21 +867,25 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             throw new UnsupportedOperationException("This is not supported by the disk storage, use index");
         }
 
+        @Override
         public LongAddress<T> getCurrentObjectAddress() {
             return new LongAddress<T>(DiskStorage.this, getCurrentObjectLongAddress());
         }
 
+        @Override
         public long getCurrentObjectLongAddress() throws IllegalStateException {
             if (lastObjectPosition == -1)
                 throw new IllegalStateException("There is no object to get address for");
             return lastObjectPosition;
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             DiskStorage.this.remove(getCurrentObjectLongAddress(), (int)(inputStream.getPosition() - lastObjectPosition - 4));
             lastObjectPosition = -1;
         }
 
+        @Override
         public void close() {
             try {
                 inputStream.close();
