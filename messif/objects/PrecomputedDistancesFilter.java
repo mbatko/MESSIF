@@ -202,6 +202,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
+    @Override
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return serializator.write(output, nextFilter);
     }
@@ -211,6 +212,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * @param serializator the serializator used to write objects
      * @return size of the binary-serialized version of this object
      */
+    @Override
     public int getBinarySize(BinarySerializator serializator) {
         return serializator.getBinarySize(nextFilter);
     }

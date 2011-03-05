@@ -107,6 +107,7 @@ public class BallRegion extends LocalAbstractObject {
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         stream.write(String.valueOf(this.radius).getBytes());
         stream.write(';');
@@ -176,6 +177,7 @@ public class BallRegion extends LocalAbstractObject {
      *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
      *         must be greater than the threshold distance.
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         if (obj instanceof BallRegion)
             return getDistanceRegionImpl((BallRegion)obj, distThreshold);
@@ -299,6 +301,7 @@ public class BallRegion extends LocalAbstractObject {
      * Specifically, it is the size of the pivot plus the float number for radius.
      * @return the size of this ball region in bytes
      */
+    @Override
     public int getSize() {
         return Float.SIZE/8 + ((pivot != null)?pivot.getSize():0);
     }
@@ -309,6 +312,7 @@ public class BallRegion extends LocalAbstractObject {
      * @return  <code>true</code> if this object is the same as the obj
      *          argument; <code>false</code> otherwise.
      */
+    @Override
     public boolean dataEquals(Object obj) {
         // Only compare with other ball regions
         if (!(obj instanceof BallRegion))
@@ -328,6 +332,7 @@ public class BallRegion extends LocalAbstractObject {
      * Returns a hash code value for this ball region's data, i.e. the hash code of the pivot.
      * @return a hash code value for this ball region's data
      */
+    @Override
     public int dataHashCode() {
         return (pivot != null)?pivot.dataHashCode():0;
     }

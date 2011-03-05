@@ -267,6 +267,7 @@ public class DirectoryInputStream extends InputStream {
 
     //****************** InputStream method implementations ******************//
 
+    @Override
     public int read() throws IOException {
         int ret;
         do {

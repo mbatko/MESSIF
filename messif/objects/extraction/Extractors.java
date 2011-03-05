@@ -185,6 +185,7 @@ public abstract class Extractors {
         final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
+            @Override
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
                     T object = factory.create(dataSource.getBufferedReader());
@@ -198,6 +199,7 @@ public abstract class Extractors {
                         throw new ExtractorException("Cannot create instance using " + factory + ": " + e.getCause(), e.getCause());
                 }
             }
+            @Override
             public Class<? extends T> getExtractedClass() {
                 return factory.getCreatedClass();
             }
@@ -321,12 +323,14 @@ public abstract class Extractors {
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
         final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
         return new Extractor<T>() {
+            @Override
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return textExtractor.extract(new ExtractorDataSource(
                         callExternalExtractor(command, fileAsArgument, dataSource),
                         dataSource.getAdditionalParameters()
                 ));
             }
+            @Override
             public Class<? extends T> getExtractedClass() {
                 return textExtractor.getExtractedClass();
             }
@@ -354,12 +358,14 @@ public abstract class Extractors {
     public static <T extends LocalAbstractObject> MultiExtractor<T> createExternalMultiExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
         final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
         return new MultiExtractor<T>() {
+            @Override
             public Iterator<T> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return new ExtractorIterator<T>(textExtractor, new ExtractorDataSource(
                         callExternalExtractor(command, fileAsArgument, dataSource),
                         dataSource.getAdditionalParameters()
                 ));
             }
+            @Override
             public Class<? extends T> getExtractedClass() {
                 return textExtractor.getExtractedClass();
             }

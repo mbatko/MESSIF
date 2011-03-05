@@ -145,6 +145,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * not <tt>null</tt>. The transformation only preserves the locator URI, all
      * additional information is lost.
      */
+    @Override
     public void clearSurplusData() {
         // If object key is some extended class, remap it to the basic AbstractObjectKey
         if (objectKey != null && !objectKey.getClass().equals(AbstractObjectKey.class))

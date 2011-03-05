@@ -288,6 +288,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @throws IllegalArgumentException if the arguments are not compatible with the constructor prototype
      * @throws InvocationTargetException if there was an exception thrown when the constructor was invoked
      */
+    @Override
     public T instantiate(Object... arguments) throws IllegalArgumentException, InvocationTargetException {
         try {
             return constructor.newInstance(arguments);
@@ -298,10 +299,12 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
         }
     }
 
+    @Override
     public Class<?>[] getInstantiatorPrototype() {
         return constructor.getParameterTypes();
     }
 
+    @Override
     public Class<? extends T> getInstantiatorClass() {
         return constructor.getDeclaringClass();
     }

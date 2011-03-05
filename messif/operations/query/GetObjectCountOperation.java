@@ -123,6 +123,7 @@ public class GetObjectCountOperation extends AbstractOperation {
      *
      * @return <tt>true</tt> if this operation has finished successfuly
      */
+    @Override
     public boolean wasSuccessful() {
         return getErrorCode().equals(OperationErrorCode.RESPONSE_RETURNED);
     }
@@ -131,6 +132,7 @@ public class GetObjectCountOperation extends AbstractOperation {
     /**
      * End operation successfully.
      */
+    @Override
     public void endOperation() {
         endOperation(OperationErrorCode.RESPONSE_RETURNED);
     }

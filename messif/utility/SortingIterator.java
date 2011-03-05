@@ -58,18 +58,22 @@ public class SortingIterator<T> implements Iterator<T> {
             this.iterator = iterator;
         }
 
+        @Override
         public boolean hasNext() {
             return iterator.hasNext();
         }
 
+        @Override
         public T next() {
             return current = iterator.next();
         }
 
+        @Override
         public void remove() {
             iterator.remove();
         }
 
+        @Override
         public int compareTo(Item item) {
             int ret = comparator.compare(current, item.current);
             if (ret == 0)
@@ -138,10 +142,12 @@ public class SortingIterator<T> implements Iterator<T> {
         iterators[low] = item;	
     }
 
+    @Override
     public boolean hasNext() {
         return iteratorsLastIndex != -1;
     }
 
+    @Override
     public T next() {
         // Pop the last iterator (which has the smallest current object)
         Item item = iterators[iteratorsLastIndex--];
@@ -158,6 +164,7 @@ public class SortingIterator<T> implements Iterator<T> {
         return ret;
     }
 
+    @Override
     public void remove() {
         throw new UnsupportedOperationException();
     }

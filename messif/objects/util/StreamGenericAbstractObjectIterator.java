@@ -179,6 +179,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IndexOutOfBoundsException if the index parameter is out of bounds (zero parameter cannot be changed)
      * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
      */
+    @Override
     public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
         factory.setConstructorParameter(index, paramValue);
     }
@@ -216,6 +217,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IllegalArgumentException if there was an error creating a new instance of the object
      * @throws IllegalStateException if there was an error reading from the stream
      */
+    @Override
     public E next() throws NoSuchElementException, IllegalArgumentException, IllegalStateException {
         // No next object available
         if (nextObject == null)
@@ -232,6 +234,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @return an instance of object returned by the last call to next()
      * @throws NoSuchElementException if {@link #next} has not been called yet
      */
+    @Override
     public E getCurrentObject() throws NoSuchElementException {
         if (currentObject == null)
             throw new NoSuchElementException("Can't call getCurrentObject() before first call to next()");
@@ -245,6 +248,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      *
      * @return <tt>true</tt> if the iterator has more elements.
      */
+    @Override
     public boolean hasNext() {
         return nextObject != null;
     }
@@ -254,6 +258,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * iterator.
      * This method is unsupported by the stream iterator.
      */
+    @Override
     public void remove() {
         throw new UnsupportedOperationException("This iterator doesn't support remove method - can't remove objects from file");
     }
@@ -293,6 +298,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * However, getCurrentObject is still valid if there was previous call to next().
      * @throws IOException if there was an I/O error closing the file
      */
+    @Override
     public void close() throws IOException {
         stream.close();
         nextObject = null;
@@ -302,6 +308,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * Reset the associated stream and restarts the iteration from beginning.
      * @throws IOException if there was an I/O error re-opening the file
      */
+    @Override
     public void reset() throws IOException {
         // Check if file name was remembered
         if (fileName == null)

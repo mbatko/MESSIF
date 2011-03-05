@@ -34,6 +34,7 @@ public interface DistanceRanked {
      * This comparator compares the objects based on their distance rank.
      */
     public static Comparator<DistanceRanked> comparator = new Comparator<DistanceRanked>() {
+        @Override
         public int compare(DistanceRanked o1, DistanceRanked o2) {
             return Float.compare(o1.getDistance(), o2.getDistance());
         }

@@ -47,27 +47,57 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     public GenericMatchingObjectList() {
     }
 
-    /** Creates a new instance of MatchingObjectList */
+    /**
+     * Creates a new instance of MatchingObjectList filled with objects from the iterator.
+     * The objects are added to partition identified by 1.
+     * @param iterator the iterator that provides the objects to fill
+     */
     public GenericMatchingObjectList(AbstractObjectIterator<E> iterator) {
         this(iterator, 1);
     }
 
-    /** Creates a new instance of MatchingObjectList */
+    /**
+     * Creates a new instance of MatchingObjectList filled with objects from the iterator.
+     * @param iterator the iterator that provides the objects to fill
+     * @param partId the identification of the partition of this list to fill
+     */
     public GenericMatchingObjectList(AbstractObjectIterator<E> iterator, int partId) {
         getPart(partId, true).addAll(iterator);
     }
 
 
     //****************** Parts ******************//
-    
+
+    /**
+     * Returns all partition identifiers that are set in this list.
+     * @return all partition identifiers that are set in this list
+     */
     public Set<Integer> getPartIDs() {
         return keySet();
     }
-    
+
+    /**
+     * Returns a list of objects in the partition identified by the given {@code partId}.
+     * Note that the returned list can be used to directly modify the encapsulated data.
+     * 
+     * @param partId the identification of the partition of this list to retrieve
+     * @return a list of objects in the given partition or <tt>null</tt> if
+     *      there is no list for the given {@code partId}
+     */
     protected AbstractObjectList<E> getPart(int partId) { 
         return getPart(partId, false); 
     }
-    
+
+    /**
+     * Returns a list of objects in the partition identified by the given {@code partId}.
+     * Note that the returned list can be used to directly modify the encapsulated data.
+     *
+     * @param partId the identification of the partition of this list to retrieve
+     * @param allocateNewIfMissing if <tt>true</tt>, a new list is allocated if there
+     *      there was none for the given {@code partId}
+     * @return a list of objects in the given partition or <tt>null</tt> if
+     *      there is no list for the given {@code partId} and {@code allocateNewIfMissing} is <tt>false</tt>
+     */
     protected AbstractObjectList<E> getPart(int partId, boolean allocateNewIfMissing) {
         // Try to get the part partId
         AbstractObjectList<E> part = get(partId);
@@ -84,10 +114,11 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
         
         return part;
     }
-    
-    /** Returns number of object in the given part.
-     * @param partId partition id
-     * @return number of objects if partition exists, otherwise zero
+
+    /**
+     * Returns the number of objects in the given partition.
+     * @param partId the identification of the partition of this list to retrieve
+     * @return the number of objects if partition exists or zero otherwise
      */
     public int getObjectCount(int partId) {
         // Try to get the part partId
@@ -97,12 +128,13 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
             return 0;
         }
     }
-    
+
 
     //****************** List access ******************//
 
-    /** Returns number of object in all parts
-     * @return number of objects
+    /**
+     * Returns the number of objects in all partitions.
+     * @return the number of objects in all partitions
      */
     public int getObjectCount() {
         int rtv = 0;
@@ -111,37 +143,60 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
 
         return rtv;
     }
-    
-    /** Get object with index position from part partId
-     *  @throws NoSuchElementException if part is not found
-     *  @throws ArrayIndexOutOfBoundsException if object index is out of bounds
+
+    /**
+     * Returns the object at position {@code index} of the partition {@code partId}.
+     * @param index the index of object within the given partition
+     * @param partId the identification of the partition from which to retrieve the object
+     * @return the object at position {@code index} of the part {@code partId}
+     * @throws NoSuchElementException if the partition {@code partId} is not found
+     * @throws IndexOutOfBoundsException if object {@code index} is invalid
      */
-    public E getObject(int index, int partId) {
+    public E getObject(int index, int partId) throws NoSuchElementException, IndexOutOfBoundsException {
         return getPart(partId).get(index);
     }
-    
-    /** Get ID of object with index position from part partId
-     *  @throws NoSuchElementException if part is not found
-     *  @throws ArrayIndexOutOfBoundsException if object index is out of bounds
+
+    /**
+     * Returns the ID of the object at position {@code index} of the partition {@code partId}.
+     * @param index the index of object within the given partition
+     * @param partId the identification of the partition from which to retrieve the object
+     * @return the ID of the object at position {@code index} of the part {@code partId}
+     * @throws NoSuchElementException if the partition {@code partId} is not found
+     * @throws IndexOutOfBoundsException if object {@code index} is invalid
      */
-    public UniqueID getObjectID(int index, int partId) { 
+    public UniqueID getObjectID(int index, int partId) throws NoSuchElementException, IndexOutOfBoundsException { 
         return getObject(index, partId).getObjectID();
     }
 
-    /** Add object to a specified part */
+    /**
+     * Adds an object to the specified partition.
+     * @param object the object to add
+     * @param partId the identification of the partition from which to retrieve the object
+     */
     public void add(E object, int partId) {
         getPart(partId, true).add(object);
     }
 
-    /** Insert object on a specified index position to a specified part */
-    public void add(int index, E object, int partId) {
+    /**
+     * Inserts an object at the specified position of the specified partition.
+     * @param index the index in the specified partition where to insert the object
+     * @param object the object to insert
+     * @param partId the identification of the partition from which to retrieve the object
+     * @throws IndexOutOfBoundsException if object {@code index} is invalid
+     */
+    public void add(int index, E object, int partId) throws IndexOutOfBoundsException {
         getPart(partId, true).add(index, object);
     }
-    
-    /** Remove specified object from part partId
-     *  throws NoSuchElementException if part is not found
+
+    /**
+     * Removes the object at specified {@code index} of partition {@code partId}.
+     * @param index the index of object within the given partition
+     * @param partId the identification of the partition from which to remove the object
+     * @return the removed object
+     * @throws NoSuchElementException if the partition {@code partId} is not found
+     * @throws IndexOutOfBoundsException if object {@code index} is invalid
      */
-    public E remove(int index, int partId) {
+    public E remove(int index, int partId) throws NoSuchElementException, IndexOutOfBoundsException {
         AbstractObjectList<E> part = getPart(partId);
         E obj = part.remove(index);
         
@@ -150,9 +205,17 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
 
         return obj;
     }
-    
-    /** Remove object by index position from part partId
-     *  throws NoSuchElementException if part is not found
+
+    /**
+     * Removes the first occurrence of the specified object from partition {@code partId}.
+     * Note that the {@link Object#equals(java.lang.Object) equals} method is used
+     * to locate the object to remove.
+     * @param object the object to remove
+     * @param partId the identification of the partition from which to remove the object
+     * @return <tt>true</tt> if the object was removed or <tt>false</tt> if the
+     *      object was not found (partition is then not modified)
+     * @throws NoSuchElementException if the partition {@code partId} is not found
+     * @throws IndexOutOfBoundsException if object {@code index} is invalid
      */
     public boolean remove(E object, int partId) { 
         AbstractObjectList<E> part = getPart(partId);
@@ -165,19 +228,25 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
 
         return true;
     }
-    
+
+    /**
+     * Removes all objects from the given partition {@code partId}.
+     * @param partId the identification of the partition from which to remove all objects
+     */
     public void removeAll(int partId) {
         remove(partId);
     }
 
 
-    /****************** Iterators ******************/
-    
+    //****************** Iterators ******************//
+
     /**
-     *  Returns iterator through objects from the specified part of this MatchingObjectList
-     *  throws NoSuchElementException if specified part cannot be found
+     * Returns an iterator for objects of the specified partition of this list.
+     * @param partId the identification of the partition the iterator of which to retrieve
+     * @return an iterator for objects of the specified partition
+     * @throws NoSuchElementException if the partition {@code partId} is not found
      */
-    public AbstractObjectIterator<E> iterator(int partId) {
+    public AbstractObjectIterator<E> iterator(int partId) throws NoSuchElementException {
         try {
             return getPart(partId).iterator();
         } catch (NoSuchElementException e) {
@@ -186,22 +255,17 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
     }
 
     /**
-     * Returns list of all objects from given part of this MatchingObjectList.
-     * @throws NoSuchElementException if the part does not exist
-     */
-    public AbstractObjectList<E> objects(int partId) throws NoSuchElementException {
-        return getPart(partId, false);
-    }
-
-    /**
-     *  Returns iterator through all objects from all parts of this MatchingObjectList
+     * Returns an iterator for all objects of all partitions of this list.
+     * @return an iterator for all objects
      */
     public AbstractObjectIterator<E> iterator() {
         return objects().iterator();
     }
-    
+
     /**
-     *  Returns list of all objects from all parts of this MatchingObjectList
+     * Returns a list of all objects from all partitions.
+     * The modifications in the returned list are <em>not</em> reflected in this list.
+     * @return a list of all objects from all partitions
      */
     public AbstractObjectList<E> objects() {
         AbstractObjectList<E> rtv = new AbstractObjectList<E>();
@@ -213,17 +277,15 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
         return rtv;
     }
 
-    /**
-     * The iterator for provided objects for ObjectProvider interface.
-     *
-     * @return iterator for provided objects
-     */
+    @Override
     public AbstractObjectIterator<E> provideObjects() {
         return iterator();
     }
 
 
-    /****************** String representation ******************/
+    //****************** String representation ******************//
+
+    @Override
     public String toString() {
         return "MatchingObjectList: " + super.toString();
     }

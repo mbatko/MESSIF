@@ -83,11 +83,13 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
         }
 
         /** Return true if there is another statistic with a matching name */
+        @Override
         public boolean hasNext() {
             return nextObject != null;
         }
 
         /** Returns next statistic object with name that matches the regexp */
+        @Override
         public Statistics<?> next() {
             if (nextObject == null)
                 throw new NoSuchElementException();
@@ -99,12 +101,14 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
         }
 
         /** Removal is unsupported */
+        @Override
         public void remove() {
             throw new UnsupportedOperationException("StatisticsRegexpIterator cannot remove statistics");
         }
     }
 
     /** Returns iterator through all the stored statistics */
+    @Override
     public Iterator<Statistics<?>> iterator() {
         return Collections.unmodifiableCollection(statistics.values()).iterator();
     }
@@ -125,11 +129,13 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
     }
 
     /** Returns number of the stored statistics */
+    @Override
     public int size() {
         return statistics.size();
     }
     
     /** Add specified statistic to the collection. Returns false if a statistic with the same name already exists. */
+    @Override
     public boolean add(Statistics<?> stat) {
         // Disallow duplicate names
         if (statistics.containsKey(stat.getName()))
@@ -213,6 +219,7 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
 
     /** toString
      */
+    @Override
     public String toString() {
         return print(null, ", ");
     }

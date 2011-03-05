@@ -129,12 +129,15 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
                     throw new NoSuchElementException("Can't call getCurrentObject before next was called");
                 return currentObject;
             }
+            @Override
             public boolean hasNext() {
                 return iterator.hasNext();
             }
+            @Override
             public E next() {
                 return currentObject = iterator.next();
             }
+            @Override
             public void remove() {
                 iterator.next();
             }
@@ -146,6 +149,7 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
      *
      * @return iterator for provided objects
      */
+    @Override
     public AbstractObjectIterator<E> provideObjects() {
         return iterator();
     }

@@ -126,12 +126,14 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
 
     //****************** Overrides ******************//
 
+    @Override
     public T getCurrentObject() {
         if (search == null)
             throw new NoSuchElementException("There is no current object");
         return search.getCurrentObject();
     }
 
+    @Override
     public boolean hasNext() {
         // Check limit
         if (isLimitReached())
@@ -147,6 +149,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         return hasNext == 1;
     }
 
+    @Override
     public T next() throws NoSuchElementException {
         if (!hasNext())
             throw new NoSuchElementException("There are no more objects");
@@ -156,6 +159,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
         return getCurrentObject();
     }
     
+    @Override
     public void remove() throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This iterator does not support removal");
     }

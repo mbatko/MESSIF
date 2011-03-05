@@ -105,6 +105,7 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
      * @param b the byte to be written
      * @throws IOException if there was an error using writeChannel
      */
+    @Override
     public void write(int b) throws IOException {
         prepareOutput(1).put((byte)b);
     }
@@ -149,6 +150,7 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
 
     //****************** Binary output implementation ******************//
 
+    @Override
     public ByteBuffer prepareOutput(int minBytes) throws IOException {
         // If there is enough space in the buffer, do nothing
         if (minBytes <= byteBuffer.remaining())

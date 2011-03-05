@@ -180,6 +180,7 @@ public class MethodNameExecutor extends MethodExecutor {
 
     //****************** Implementation of necessary methods ******************//
 
+    @Override
     protected Method getMethod(Object[] arguments) throws NoSuchMethodException {
         Method method = null;
         try {
@@ -207,6 +208,7 @@ public class MethodNameExecutor extends MethodExecutor {
         return rtv;
     }
 
+    @Override
     protected Collection<Method> getRegisteredMethods() {
         return Collections.unmodifiableCollection(registeredMethods.values());
     }

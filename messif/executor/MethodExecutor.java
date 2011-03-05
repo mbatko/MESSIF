@@ -152,6 +152,7 @@ public abstract class MethodExecutor {
         // Sort array first
         List<Method> methods = new ArrayList<Method>(getRegisteredMethods());
         Collections.sort(methods, new Comparator<Method>() {
+            @Override
             public int compare(Method o1, Method o2) {
                 return o1.getName().compareTo(o2.getName());
             }

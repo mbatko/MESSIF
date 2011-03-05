@@ -261,6 +261,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return  <code>true</code> if this object is the same as the obj
      *          argument; <code>false</code> otherwise.
      */
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof MetaObject))
             return false;
@@ -284,6 +285,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * Returns sum of hash code values for all the encapsulated objects' data.
      * @return a hash code value for the data of this object
      */
+    @Override
     public int dataHashCode() {
         int rtv = 0;
         for (LocalAbstractObject object : getObjects())
@@ -305,6 +307,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
+    @Override
     protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         return getDistanceImpl((MetaObject)obj, null, distThreshold);
     }

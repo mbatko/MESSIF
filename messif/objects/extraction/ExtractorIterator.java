@@ -83,6 +83,7 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
         return currentObject;
     }
 
+    @Override
     public boolean hasNext() {
         // If there is another next object
         if (nextObject != null && currentObject != nextObject)
@@ -105,6 +106,7 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
         return nextObject != null;
     }
 
+    @Override
     public T next() throws NoSuchElementException {
         // Check next (extracts an object if necessary)
         if (!hasNext())
@@ -113,6 +115,7 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
         return currentObject;
     }
 
+    @Override
     public void remove() {
         throw new UnsupportedOperationException("ExtractorIterator does not support removal");
     }
@@ -127,6 +130,7 @@ public class ExtractorIterator<T extends LocalAbstractObject> extends AbstractOb
         nextObject = null;
     }
 
+    @Override
     public void close() throws IOException {
         dataSource.close();
     }

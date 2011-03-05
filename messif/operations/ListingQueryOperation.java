@@ -124,14 +124,17 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         final ListIterator<AbstractObject> listIterator = answer.listIterator(skip);
         return new Iterator<AbstractObject>() {
             private int returnedCount = 0;
+            @Override
             public boolean hasNext() {
                 return returnedCount < count && listIterator.hasNext();
             }
+            @Override
             public AbstractObject next() {
                 AbstractObject ret = listIterator.next();
                 returnedCount++;
                 return ret;
             }
+            @Override
             public void remove() {
                 throw new UnsupportedOperationException("Not supported");
             }

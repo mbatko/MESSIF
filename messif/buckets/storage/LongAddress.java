@@ -55,10 +55,12 @@ public final class LongAddress<T> implements Address<T> {
         return address;
     }
 
+    @Override
     public T read() throws BucketStorageException {
         return storage.read(address);
     }
 
+    @Override
     public void remove() throws BucketStorageException, UnsupportedOperationException {
         storage.remove(address);
     }

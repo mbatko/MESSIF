@@ -178,6 +178,7 @@ public class DeleteByLocatorOperation extends AbstractOperation {
      * Returns <tt>true</tt> if this operation was successfuly completed.
      * @return <tt>true</tt> if this operation was successfuly completed
      */
+    @Override
     public boolean wasSuccessful() {
         return errValue.equals(BucketErrorCode.OBJECT_DELETED);
     }
@@ -185,6 +186,7 @@ public class DeleteByLocatorOperation extends AbstractOperation {
     /**
      * End operation successfully.
      */
+    @Override
     public void endOperation() {
         this.errValue = BucketErrorCode.OBJECT_DELETED;
     }

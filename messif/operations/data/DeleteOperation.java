@@ -155,10 +155,12 @@ public class DeleteOperation extends AbstractOperation {
 
     //****************** Implementation of abstract methods ******************//
 
+    @Override
     public boolean wasSuccessful() {
         return errValue.equals(BucketErrorCode.OBJECT_DELETED);
     }
 
+    @Override
     public void endOperation() {
         this.errValue = BucketErrorCode.OBJECT_DELETED;
     }

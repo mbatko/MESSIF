@@ -117,6 +117,7 @@ public class MultiClassSerializator<T> extends BinarySerializator implements Ser
         return size;
     }
 
+    @Override
     protected int write(BinaryOutput output, BinarySerializable object) throws IOException {
         byte position = (byte)getClassIndex(object);
         int size = write(output, position);
@@ -145,6 +146,7 @@ public class MultiClassSerializator<T> extends BinarySerializator implements Ser
      * @throws IOException if there was an I/O error
      * @throws IllegalArgumentException if there was a problem getting a valid constructor/factory method
      */
+    @Override
     protected <E> E readObjectImpl(BinaryInput input, Class<E> expectedClass) throws IOException, IllegalArgumentException {
         Constructor<?> selectedConstructor;
         Method selectedFactoryMethod;

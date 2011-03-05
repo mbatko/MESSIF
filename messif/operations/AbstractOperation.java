@@ -92,7 +92,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      */
     @Override
     public final boolean equals(Object obj) {
-        if (!getClass().isInstance(obj))
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
             return false;
         return operID.equals(((AbstractOperation)obj).operID);
     }
@@ -272,6 +274,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * sent back to client in order to minimize problems with unknown
      * classes after deserialization.
      */
+    @Override
     public void clearSurplusData() {
         suppData = null;
     }

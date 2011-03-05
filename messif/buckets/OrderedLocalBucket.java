@@ -54,6 +54,7 @@ public abstract class OrderedLocalBucket<C> extends LocalBucket {
         return getModifiableIndex();
     }
 
+    @Override
     protected abstract ModifiableOrderedIndex<C, LocalAbstractObject> getModifiableIndex();
 
 }

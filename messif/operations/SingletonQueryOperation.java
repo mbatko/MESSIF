@@ -109,15 +109,18 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     public Iterator<AbstractObject> getAnswer(final int skip, int count) {
         return new Iterator<AbstractObject>() {
             private boolean hasNext = answer != null && skip == 0;
+            @Override
             public boolean hasNext() {
                 return hasNext;
             }
+            @Override
             public AbstractObject next() {
                 if (!hasNext)
                     throw new NoSuchElementException();
                 hasNext = false;
                 return answer;
             }
+            @Override
             public void remove() {
                 throw new UnsupportedOperationException("Not supported");
             }

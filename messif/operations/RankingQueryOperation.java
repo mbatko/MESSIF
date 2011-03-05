@@ -158,6 +158,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return answer.iterator();
     }
 
+    @Override
     public Iterator<RankedAbstractObject> getAnswer(int skip, int count) {
         return answer.iterator(skip, count);
     }

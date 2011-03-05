@@ -84,10 +84,12 @@ public class WildcardFileFilter implements FileFilter, FilenameFilter {
         return pattern.matcher(name).matches();
     }
 
+    @Override
     public boolean accept(File pathname) {
         return match(pathname.getName());
     }
 
+    @Override
     public boolean accept(File dir, String name) {
         return match(name);
     }

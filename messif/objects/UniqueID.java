@@ -144,6 +144,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      * @return -1, 0 or 1 as this unique ID is less than, equal
      *         to, or greater than <tt>val</tt>.
      */
+    @Override
     public final int compareTo(UniqueID val) {
         // The ordering is intentionally set up so that the unique IDs
         // can simply be numerically compared as two numbers

@@ -346,6 +346,7 @@ public class ExtractorDataSource implements Closeable {
         inputStream.close();
     }
 
+    @Override
     public void close() throws IOException {
         inputStream.close();
     }

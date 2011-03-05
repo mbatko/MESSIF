@@ -313,6 +313,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws IllegalArgumentException if the arguments are not compatible with the method prototype
      * @throws InvocationTargetException if there was an exception thrown when the method was invoked
      */
+    @Override
     public T instantiate(Object... arguments) throws IllegalArgumentException, InvocationTargetException {
         try {
             return objectClass.cast(method.invoke(callInstance, arguments));
@@ -321,10 +322,12 @@ public class MethodInstantiator<T> implements Instantiator<T> {
         }
     }
 
+    @Override
     public Class<?>[] getInstantiatorPrototype() {
         return method.getParameterTypes();
     }
 
+    @Override
     public Class<? extends T> getInstantiatorClass() {
         return objectClass;
     }

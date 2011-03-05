@@ -127,6 +127,7 @@ public class FieldInstantiator<T> implements Instantiator<T> {
      * @param arguments arguments are ignored
      * @return the encapsulated field instance
      */
+    @Override
     public T instantiate(Object... arguments) throws IllegalArgumentException, InvocationTargetException {
         try {
             return objectClass.cast(field.get(fieldInstance));
@@ -135,6 +136,7 @@ public class FieldInstantiator<T> implements Instantiator<T> {
         }
     }
 
+    @Override
     public Class<?>[] getInstantiatorPrototype() {
         if (Modifier.isStatic(field.getModifiers()))
             return new Class<?>[0];
@@ -142,6 +144,7 @@ public class FieldInstantiator<T> implements Instantiator<T> {
             return new Class<?>[] { objectClass };
     }
 
+    @Override
     public Class<? extends T> getInstantiatorClass() {
         return objectClass;
     }

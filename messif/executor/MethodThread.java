@@ -157,6 +157,7 @@ public final class MethodThread extends SingleMethodExecutor implements Runnable
     }
 
     /** Execute the method inside the thread */
+    @Override
     public void run() {
         synchronized (runningThread) {
             threadException = null;

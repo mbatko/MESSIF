@@ -73,11 +73,13 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      *
      * @return <tt>true</tt> if this operation has finished successfuly
      */
+    @Override
     public boolean wasSuccessful() {
         return errValue.equals(OperationErrorCode.RESPONSE_RETURNED);
     }
 
     /** End operation successfully */
+    @Override
     public void endOperation() {
         errValue = OperationErrorCode.RESPONSE_RETURNED;
     }

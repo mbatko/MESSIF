@@ -146,6 +146,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * Returns the unique ID of this bucket.
      * @return this bucket ID
      */
+    @Override
     public int getBucketID() {
         return bucketID;
     }
@@ -408,6 +409,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
 
     //****************** Bucket methods overrides ******************//
 
+    @Override
     public void addObject(LocalAbstractObject object) throws BucketStorageException {
         addObject(object, getModifiableIndex());
     }
@@ -422,6 +424,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
             return ret;
     }
 
+    @Override
     public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
         // Search for objects with the specified ID
         ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
@@ -433,6 +436,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
+    @Override
    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
         // Search for object with the same data
         ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object);
@@ -453,6 +457,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return count;
     }
 
+    @Override
     public int deleteAllObjects() throws BucketStorageException {
         ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search();
         int count = 0;
@@ -463,6 +468,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return count;
     }
 
+    @Override
     public synchronized LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
         // Search for objects with the specified ID
         ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
@@ -478,6 +484,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
+    @Override
     public synchronized LocalAbstractObject getObject(String locator) throws NoSuchElementException {
         // Search for objects with the specified ID
         Search<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
@@ -493,6 +500,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
+    @Override
     public synchronized LocalAbstractObject getObject(AbstractObjectKey key) throws NoSuchElementException {
         // Search for objects with the specified ID
         Search<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.keyToLocalObjectComparator, key);
@@ -508,6 +516,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
         return search.getCurrentObject();
     }
 
+    @Override
     public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         // Update statistics
         if (StatisticRefCounter.isEnabledGlobally())

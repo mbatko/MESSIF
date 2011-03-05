@@ -203,6 +203,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * This implementation of the {@link ObjectProvider} interface returns itself as an iterator.
      * @return an iterator over the {@link ObjectProvider provided} objects
      */
+    @Override
     public AbstractObjectIterator<E> provideObjects() {
         return this;
     }

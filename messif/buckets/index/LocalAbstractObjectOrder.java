@@ -47,6 +47,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     /** Order defined by object keys */
     KEY;
 
+    @Override
     public int indexCompare(LocalAbstractObject o1, LocalAbstractObject o2) {
         switch (this) {
             case UNIQUE_ID:
@@ -64,10 +65,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         throw new InternalError("Compare method is not implemented for order " + this);
     }
 
+    @Override
     public int compare(LocalAbstractObject o1, LocalAbstractObject o2) {
         return indexCompare(o1, o2);
     }
 
+    @Override
     public LocalAbstractObject extractKey(LocalAbstractObject object) {
         return object;
     }
@@ -77,18 +80,22 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25102L;
 
+        @Override
         public int indexCompare(UniqueID o1, LocalAbstractObject o2) {
             return compare(o1, o2);
         }
 
+        @Override
         public int compare(UniqueID o1, UniqueID o2) {
             return o1.compareTo(o2);
         }
 
+        @Override
         public UniqueID extractKey(LocalAbstractObject object) {
             return object.getObjectID();
         }
 
+        @Override
         public QueryOperation<?> createIndexOperation(Collection<? extends UniqueID> ids) {
             if (ids.size() == 1)
                 return new GetObjectQueryOperation(ids.iterator().next(), AnswerType.ORIGINAL_OBJECTS);
@@ -112,18 +119,22 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25103L;
 
+        @Override
         public int indexCompare(String o1, LocalAbstractObject o2) {
             return compare(o1, o2.getLocatorURI());
         }
 
+        @Override
         public int compare(String o1, String o2) {
             return o1.compareTo(o2);
         }
 
+        @Override
         public String extractKey(LocalAbstractObject object) {
             return object.getLocatorURI();
         }
 
+        @Override
         public QueryOperation<?> createIndexOperation(Collection<? extends String> locators) {
             if (locators.size() == 1)
                 return new GetObjectByLocatorOperation(locators.iterator().next(), AnswerType.ORIGINAL_OBJECTS);
@@ -147,14 +158,17 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25104L;
 
+        @Override
         public int indexCompare(AbstractObjectKey o1, LocalAbstractObject o2) {
             return compare(o1, o2.getObjectKey());
         }
 
+        @Override
         public int compare(AbstractObjectKey o1, AbstractObjectKey o2) {
             return o1.compareTo(o2);
         }
 
+        @Override
         public AbstractObjectKey extractKey(LocalAbstractObject object) {
             return object.getObjectKey();
         }
@@ -178,15 +192,18 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         private static final long serialVersionUID = 25105L;
 
         @SuppressWarnings("unchecked")
+        @Override
         public int indexCompare(Comparable k, Object o) {
             return k.compareTo(o);
         }
 
+        @Override
         public Comparable extractKey(Object object) {
             return (Comparable)object;
         }
 
         @SuppressWarnings("unchecked")
+        @Override
         public int compare(Comparable o1, Comparable o2) {
             return o1.compareTo(o2);
         }

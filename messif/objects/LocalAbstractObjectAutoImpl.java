@@ -70,6 +70,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         readAttributesFromStream(line, ';', ' ', this, getDataFields());
     }       
 
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         writeAttributesToStream(stream, ';', ' ', this, getDataFields());
     }
@@ -77,6 +78,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
 
     //****************** Size function ******************//
 
+    @Override
     public int getSize() throws IllegalArgumentException {
         try {
             int rtv = 0;
@@ -99,6 +101,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
 
     //****************** Equality driven by object data ******************//
 
+    @Override
     public boolean dataEquals(Object obj) {
         try {
             for (Field field : getDataFields()) {
@@ -131,6 +134,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         }
     }
 
+    @Override
     public int dataHashCode() throws IllegalArgumentException {
         try {
             int rtv = 0;

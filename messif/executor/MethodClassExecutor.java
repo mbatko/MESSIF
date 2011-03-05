@@ -244,6 +244,7 @@ public class MethodClassExecutor extends MethodExecutor {
      * @return proper execution method for provided arguments
      * @throws NoSuchMethodException if there was no method for the specified arguments
      */
+    @Override
     protected Method getMethod(Object[] arguments) throws NoSuchMethodException {
         try {
             Class diffClass = arguments[differentiateByArgNo].getClass();
@@ -307,6 +308,7 @@ public class MethodClassExecutor extends MethodExecutor {
      * This method is typically used to return the list of supported arguments.
      * @return the list of classes that this executor recognizes
      */
+    @Override
     protected Collection<Method> getRegisteredMethods() {
         return Collections.unmodifiableCollection(registeredMethods.values());
     }    

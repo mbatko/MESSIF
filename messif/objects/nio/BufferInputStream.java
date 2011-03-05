@@ -195,6 +195,7 @@ public class BufferInputStream extends InputStream implements BinaryInput {
 
     //****************** Implementation of BinaryInput ******************//
 
+    @Override
     public ByteBuffer readInput(int minBytes) throws IOException {
         // There is enough data remaining in the buffer
         if (minBytes <= byteBuffer.remaining())

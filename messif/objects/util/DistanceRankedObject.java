@@ -84,6 +84,7 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
      * Returns the measured distance.
      * @return the measured distance
      */
+    @Override
     public float getDistance() {
         return distance;
     }
@@ -130,6 +131,7 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
      * @return  a negative integer, zero, or a positive integer as this object
      *		is less than, equal to, or greater than the specified object
      */
+    @Override
     public int compareTo(DistanceRankedObject<?> o) {
         return Float.compare(distance, o.distance);
     }
@@ -166,14 +168,17 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
      */
     public static <T> Iterator<T> getObjectsIterator(final Iterator<? extends DistanceRankedObject<T>> iterator) {
         return new Iterator<T>() {
+            @Override
             public boolean hasNext() {
                 return iterator.hasNext();
             }
 
+            @Override
             public T next() {
                 return iterator.next().getObject();
             }
 
+            @Override
             public void remove() {
                 iterator.remove();
             }

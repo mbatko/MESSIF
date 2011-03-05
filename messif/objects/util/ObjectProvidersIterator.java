@@ -64,6 +64,7 @@ public class ObjectProvidersIterator<E extends AbstractObject> extends AbstractO
      * @return Returns an instance of object returned by the last call to next()
      * @throws NoSuchElementException Exception NoSuchElementException is thrown if next() has not been called yet.
      */
+    @Override
     public E getCurrentObject() throws NoSuchElementException {
         if (currentObject == null)
             throw new NoSuchElementException("Can't call getCurrentObject before next was called");
@@ -77,6 +78,7 @@ public class ObjectProvidersIterator<E extends AbstractObject> extends AbstractO
      *
      * @return <tt>true</tt> if the iterator has more elements.
      */
+    @Override
     public boolean hasNext() {
         // Until the end of iterators is reached
         while (currentIterator != null) {
@@ -97,6 +99,7 @@ public class ObjectProvidersIterator<E extends AbstractObject> extends AbstractO
      * @return the next element in the iteration.
      * @exception NoSuchElementException iteration has no more elements.
      */
+    @Override
     public E next() throws NoSuchElementException {
         if (hasNext())
             return currentObject = currentIterator.next();
@@ -118,6 +121,7 @@ public class ObjectProvidersIterator<E extends AbstractObject> extends AbstractO
      * 		  been called after the last call to the <tt>next</tt>
      * 		  method.
      */
+    @Override
     public void remove() throws UnsupportedOperationException, IllegalStateException {
         if (currentIterator == null)
             throw new IllegalStateException("There is no object available for removal");

@@ -181,6 +181,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd
      * @param object the inserted object
      * @param bucket the bucket where the object will was inserted
      */
+    @Override
     public synchronized void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
         if (pivot == null) {
             // First object is set as the pivot
@@ -192,6 +193,7 @@ public class BucketBallRegion extends BallRegion implements BucketFilterAfterAdd
         }
     }
 
+    @Override
     public void filterAfterRemove(LocalAbstractObject object, LocalBucket bucket) {
         needsAdjusting = true;
     }

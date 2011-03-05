@@ -482,6 +482,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * Returns the distance between object {@code o1} and object {@code o2}.
      * Simple implementation using {@link #getDistance(messif.objects.LocalAbstractObject)}.
      */
+    @Override
     public float getDistance(LocalAbstractObject o1, LocalAbstractObject o2) {
         return o1.getDistance(o2);
     }
@@ -635,14 +636,9 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
 
     /**
      * Destroys whole filter chain of this object.
-     * The first (head of the chain) filter is returned.
-     * @return the first filter in the chain; the rest of the chain can be
-     *         obtained by calling {@link PrecomputedDistancesFilter#getNextFilter getNextFilter}
      */
-    public final PrecomputedDistancesFilter chainDestroy() {
-        PrecomputedDistancesFilter rtv = distanceFilter;
+    public final void chainDestroy() {
         distanceFilter = null;
-        return rtv;
     }
 
     /**

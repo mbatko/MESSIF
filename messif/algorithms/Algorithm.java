@@ -513,6 +513,7 @@ public abstract class Algorithm implements Serializable {
          * Mark the current thread's statistics for future merge.
          * Must be called from within the thread whose statistics are going to be merged.
          */
+        @Override
         public synchronized void execute() {
             if (statisticsToMerge == null)
                 statisticsToMerge = new HashSet<OperationStatistics>();

@@ -82,6 +82,7 @@ public abstract class Logging {
         }
 
         /** Check if a given log record should be published. The record must match the regular expression to be published. */
+        @Override
         public boolean isLoggable(LogRecord record) {
             String text;
             switch (regexpAgainst) {

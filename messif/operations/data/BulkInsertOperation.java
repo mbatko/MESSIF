@@ -111,10 +111,12 @@ public class BulkInsertOperation extends AbstractOperation {
         return 1;
     }
 
+    @Override
     public boolean wasSuccessful() {
         return errValue.equals(BucketErrorCode.OBJECT_INSERTED) || errValue.equals(BucketErrorCode.SOFTCAPACITY_EXCEEDED);
     }
 
+    @Override
     public void endOperation() {
         errValue = BucketErrorCode.OBJECT_INSERTED;
     }

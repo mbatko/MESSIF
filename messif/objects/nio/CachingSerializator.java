@@ -236,6 +236,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
         // Get the list of classes sorted by position
         List<Class<? extends BinarySerializable>> classes = new ArrayList<Class<? extends BinarySerializable>>(cachedClasses.keySet());
         Collections.sort(classes, new Comparator<Class<? extends BinarySerializable>>() {
+            @Override
             public int compare(Class<? extends BinarySerializable> o1, Class<? extends BinarySerializable> o2) {
                 return cachedClasses.get(o1) - cachedClasses.get(o2);
             }

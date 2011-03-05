@@ -122,6 +122,7 @@ public class SingleClassSerializator<T> extends BinarySerializator implements Se
         return readObject(input, getDefaultClass());
     }
 
+    @Override
     protected int write(BinaryOutput output, BinarySerializable object) throws IOException {
         if (object instanceof JavaToBinarySerializable || deserializationClass.isInstance(object)) {
             return object.binarySerialize(output, this);
@@ -130,6 +131,7 @@ public class SingleClassSerializator<T> extends BinarySerializator implements Se
         }
     }
 
+    @Override
     protected <E> E readObjectImpl(BinaryInput input, Class<E> expectedClass) throws IOException, IllegalArgumentException {
         return expectedClass.cast(readObject(
                 input,
@@ -146,6 +148,7 @@ public class SingleClassSerializator<T> extends BinarySerializator implements Se
      * @return the size of the binary-serialized <code>object</code>
      * @throws IllegalArgumentException if there was an error using Java standard serialization on the object
      */
+    @Override
     protected int getBinarySize(BinarySerializable object) throws IllegalArgumentException {
         return object.getBinarySize(this);
     }

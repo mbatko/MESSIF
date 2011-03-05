@@ -97,6 +97,7 @@ public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> 
      * @param object an object that is tested for the matching condition
      * @return the group (partition) to which the given object belongs
      */
+    @Override
     public abstract int match(LocalAbstractObject object);
 
     /**
