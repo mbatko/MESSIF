@@ -129,6 +129,7 @@ public class ObjectStringEditDist extends ObjectString {
         return DEFAULT_WEIGHT;
     }
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         int str1Len = this.text.length();
         int str2Len = ((ObjectString)obj).text.length();

@@ -76,6 +76,7 @@ public class ArithmeticOperatorToken implements PatternToken {
      * @param subdistances specific subdistances for the two meta objects compared
      * @return result of the arithmetic operation
      */
+    @Override
     public final float evaluate(float[] subdistances) {
         switch (this.operator) {
             case PLUS:

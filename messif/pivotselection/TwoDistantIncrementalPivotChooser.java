@@ -84,6 +84,7 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
      * @param object the inserted object
      * @param bucket the bucket where the object was stored
      */
+    @Override
     public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
         try {
             counterPivotDistComp.bindTo(counterObjectDistComp);
@@ -103,6 +104,7 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
      * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
      * @throws IllegalArgumentException if more than two pivots are requested
      */
+    @Override
     protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) throws IllegalArgumentException {
         if (count > 2)
             throw new IllegalArgumentException("Pivot chooser only supports two pivots");

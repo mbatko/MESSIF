@@ -70,6 +70,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         storage.destroy();
     }
@@ -77,6 +78,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
 
     //****************** Comparator methods ******************//
 
+    @Override
     public IndexComparator<K, T> comparator() {
         return comparator;
     }
@@ -89,6 +91,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
 
     //****************** Index access methods ******************//
 
+    @Override
     public int size() {
         return index.length;
     }
@@ -103,6 +106,7 @@ public class IntStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements S
         return binarySearch(comparator.extractKey(object), 0, index.length - 1, false);
     }
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         // Search for the position where the object is added into index
         int pos = insertionPoint(object);

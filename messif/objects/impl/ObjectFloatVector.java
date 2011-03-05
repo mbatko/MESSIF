@@ -95,6 +95,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
             this.data[i] = Float.parseFloat(numbers[i]);
     }
 
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0)
@@ -108,6 +109,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
 
     //****************** Equality comparing function ******************//
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectFloatVector))
             return false;
@@ -115,6 +117,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
         return Arrays.equals(((ObjectFloatVector)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
@@ -131,6 +134,7 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
         return this.data.clone();
     }
 
+    @Override
     public int getSize() {
         return this.data.length * Float.SIZE / 8;
     }

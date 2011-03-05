@@ -92,6 +92,7 @@ public class IncrementalIDistanceChooser extends AbstractPivotChooser implements
      * @param pivots number of pivots to generate
      * @param objectIter Iterator over the sample set of objects to choose new pivots from
      */
+    @Override
     protected void selectPivot(int pivots, AbstractObjectIterator<? extends LocalAbstractObject> objectIter) {
         // Store all passed objects temporarily
         AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);

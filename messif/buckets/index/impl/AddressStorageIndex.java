@@ -71,6 +71,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         storage.destroy();
     }
@@ -78,6 +79,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
 
     //****************** Comparator methods ******************//
 
+    @Override
     public IndexComparator<K, T> comparator() {
         return comparator;
     }
@@ -100,6 +102,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         return new Address[size];
     }
     
+    @Override
     public int size() {
         return index.length;
     }
@@ -114,6 +117,7 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
         return binarySearch(comparator.extractKey(object), 0, index.length - 1, false);
     }
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         // Search for the position where the object is added into index
         int pos = insertionPoint(object);

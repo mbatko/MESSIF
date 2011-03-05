@@ -49,6 +49,7 @@ public class ConstantToken implements PatternToken {
      * @param subdistances distnaces that are ignored by the constant.
      * @return the constant value
      */
+    @Override
     public final float evaluate(float[] subdistances) {
         return constant;
     }

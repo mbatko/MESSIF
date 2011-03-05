@@ -234,6 +234,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         // Create first line with semicolon-separated names of classes
         Iterator<Entry<String, LocalAbstractObject>> iterator = objects.entrySet().iterator();

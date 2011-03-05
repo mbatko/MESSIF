@@ -54,6 +54,7 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
     /** Metric function
      *      Implements euclidean distance measure (so-called L2 metric)
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         float powSum = 0;
 

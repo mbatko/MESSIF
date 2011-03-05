@@ -55,6 +55,7 @@ public class ObjectFloatVectorL1 extends ObjectFloatVector {
     /** Metric function
      *      Implements city-block distance measure (so-called L1 metric)
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
         float[] objdata = ((ObjectFloatVector)obj).data;

@@ -101,6 +101,7 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         this.size = 0;
         this.deleted = 0;
@@ -177,6 +178,7 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
      * Returns the number of elements in this storage.
      * @return the number of elements in this storage
      */
+    @Override
     public int size() {
         return size - deleted;
     }
@@ -192,6 +194,7 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
 
     //****************** Storage methods implementation ******************//
 
+    @Override
     public synchronized IntAddress<T> store(T object) {
         // If array is too small to hold new item
         if (size == items.length) {
@@ -207,6 +210,7 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public T read(int address) throws BucketStorageException {
         try {
             return (T)items[address];
@@ -215,6 +219,7 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
         }
     }
 
+    @Override
     public synchronized void remove(int address) throws BucketStorageException, UnsupportedOperationException {
         try {
             items[address] = null;
@@ -265,22 +270,27 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
 
     //****************** Default index implementation ******************//
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         return store(object) != null;
     }
 
+    @Override
     public IntStorageSearch<T> search() throws IllegalStateException {
         return new MemoryStorageSearch<Object>(null, Collections.emptyList());
     }
 
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, Collections.singletonList(key));
     }
 
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, keys);
     }
 
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new MemoryStorageSearch<C>(comparator, from, to);
     }
@@ -343,20 +353,24 @@ public class MemoryStorage<T> implements IntStorageIndexed<T>, Serializable {
             return object;
         }
 
+        @Override
         public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             return new IntAddress<T>(MemoryStorage.this, getCurrentObjectIntAddress());
         }
 
+        @Override
         public int getCurrentObjectIntAddress() throws IllegalStateException {
             if (currentIndexPosition < 0 || currentIndexPosition > size - 1)
                 throw new IllegalStateException("There is no current object");
             return currentIndexPosition;
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             MemoryStorage.this.remove(getCurrentObjectIntAddress());
         }
 
+        @Override
         public void close() {
         }
     }

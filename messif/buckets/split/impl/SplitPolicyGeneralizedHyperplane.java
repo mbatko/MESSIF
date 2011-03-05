@@ -156,6 +156,7 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
      *
      * @return 0 for objects near the left pivot defined by this policy (or exactly in the middle) and 1 for objects near the right pivot
      */
+    @Override
     public int match(LocalAbstractObject object) {
         // The GH-partitioning is defined that object (<=) fall in 0 partition and the others in 1 partition.
         // includeUsingPrecompDist used <= as well, so calling it against leftPivot and then against rightPivot is correct.
@@ -175,6 +176,7 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
      * Returns the number of partitions of this policy.
      * @return the number of partitions of this policy
      */
+    @Override
     public int getPartitionsCount() {
         return 2;
     }
@@ -188,6 +190,7 @@ public class SplitPolicyGeneralizedHyperplane extends SplitPolicy {
      * @param region a ball region that is tested for the matching condition
      * @return the group (partition) to which the whole ball region belongs or -1 if it is uncertain
      */
+    @Override
     public int match(BallRegion region) {
         // Reset the distance to the left & right pivot
         leftDist = LocalAbstractObject.UNKNOWN_DISTANCE;

@@ -99,6 +99,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         storage.destroy();
         storage = null;
@@ -107,6 +108,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
     // ******************     Comparator methods      ****************** //
 
+    @Override
     public IndexComparator<K, T> comparator() {
         return comparator;
     }
@@ -158,6 +160,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         }
     }
 
+    @Override
     public int size() {
         return index.size();
     }
@@ -172,6 +175,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         return binarySearch(key, 0, index.size() - 1, false);
     }
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         // Search for the position where the object is added into index
         K key = comparator.extractKey(object);
@@ -225,18 +229,22 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
 
     //****************** Search methods ******************//
 
+    @Override
     public StorageSearch<T> search() throws IllegalStateException {
         return new OrderedModifiableSearch(0, 0, size() - 1, lock());
     }
 
+    @Override
     public StorageSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
         return search(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
+    @Override
     public StorageSearch<T> search(K from, K to) throws IllegalStateException {
         return search((K)null, from, to);
     }
 
+    @Override
     public StorageSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
         // Search for lower boundary key
         int fromIndex = (from == null)?0:binarySearch(from, 0, size() - 1, true);        
@@ -283,15 +291,18 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         return new OrderedModifiableSearch(startIndex, fromIndex, toIndex, lock());
     }
 
+    @Override
     public StorageSearch<T> search(Collection<? extends K> keys) throws IllegalStateException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, Collections.singletonList(key));
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         if (comparator.equals(comparator()))
             return search((K)from, (K)from, (K)to); // This cast IS checked, because the comparators are equal
@@ -300,6 +311,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <C> StorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
         if (comparator.equals(comparator()) && keys.size() == 1)
             return search((K)keys.iterator().next(), true); // This cast IS checked, because the comparators are equal
@@ -359,16 +371,19 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             super.finalize();
         }
 
+        @Override
         public T getCurrentObject() {
             return currentObject;
         }
 
+        @Override
         public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             if (lastRet == -1)
                 throw new IllegalStateException();
             return new LongAddress<T>(storage, index.get(lastRet).position);
         }
 
+        @Override
         public boolean next() throws IllegalStateException {
             if (cursor > maxIndex) {
                 return false;
@@ -378,6 +393,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return true;
         }
 
+        @Override
         public boolean previous() throws IllegalStateException {
             if (cursor <= minIndex) {
                 return false;
@@ -387,6 +403,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return true;
         }
 
+        @Override
         public boolean skip(int count) throws IllegalStateException {
             if (count < 0 && cursor + count >= minIndex) {
                 cursor += count + 1;
@@ -405,6 +422,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return false;
         }
 
+        @Override
         public void remove() throws IllegalStateException {
             if (lastRet == -1) {
                 throw new IllegalStateException();
@@ -424,6 +442,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return (OrderedModifiableSearch) super.clone();
         }
 
+        @Override
         public void close() {
         }
     }
@@ -493,12 +512,14 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             return getObject(get(lastRet = --cursor).position);
         }
 
+        @Override
         public LongAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             if (lastRet == -1)
                 throw new IllegalStateException();
             return new LongAddress<T>(storage, index.get(lastRet).position);
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             if (lastRet == -1) {
                 throw new IllegalStateException();
@@ -510,6 +531,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             }
             lastRet = -1;
         }
+        @Override
         public void close() {
             if (searchLock != null)
                 searchLock.unlock();

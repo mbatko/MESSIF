@@ -141,10 +141,12 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
         return (C)keys[index];
     }
 
+    @Override
     public T getCurrentObject() {
         return currentObject;
     }
 
+    @Override
     public boolean next() throws IllegalStateException {
         try {
             for (currentObject = readNext(); currentObject != null; currentObject = readNext()) {
@@ -158,6 +160,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
         return false;
     }
 
+    @Override
     public boolean skip(int count) throws IllegalStateException {
         while (count < 0 && previous())
             count++;
@@ -166,6 +169,7 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
         return count == 0;
     }
 
+    @Override
     public boolean previous() throws IllegalStateException {
         try {
             for (currentObject = readPrevious(); currentObject != null; currentObject = readPrevious()) {

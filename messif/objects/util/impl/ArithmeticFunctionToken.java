@@ -71,6 +71,7 @@ public class ArithmeticFunctionToken implements PatternToken {
      * @param subdistances specific subdistances for the two meta objects compared
      * @return result of the arithmetic function application to the argument evaluation
      */
+    @Override
     public final float evaluate(float[] subdistances) {
         switch (function) {
             case LOG:

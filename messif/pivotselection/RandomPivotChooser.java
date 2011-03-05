@@ -42,6 +42,7 @@ public class RandomPivotChooser extends AbstractPivotChooser implements Serializ
      * Statistics are maintained automatically.
      * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
      */
+    @Override
     protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
         for (LocalAbstractObject o : AbstractObjectList.randomList(count, false, sampleSetIterator))
             preselectedPivots.add(o);

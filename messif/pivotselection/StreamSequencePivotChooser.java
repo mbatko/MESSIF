@@ -60,6 +60,7 @@ public class StreamSequencePivotChooser extends AbstractPivotChooser implements 
      * @param count number of pivots to generate
      * @param sampleSetIterator ignored by this chooser, since the pivots are provided externally
      */
+    @Override
     protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
         for (;count > 0;count--)
             addPivot(stream.next());

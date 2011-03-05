@@ -86,6 +86,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
     }
     
     /** Write object to stream */
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0)
@@ -102,6 +103,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
      * The format is the comma-separated list of coordinates enclosed in square brackets
      * and the result of <code>super.toString()</code> is appended.
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
 
@@ -118,6 +120,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
     //****************** Equality comparing function ******************
     
     
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectShortVector))
             return false;
@@ -125,6 +128,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
         return Arrays.equals(((ObjectShortVector)obj).data, data);
     }
     
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
@@ -134,6 +138,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
     
     /** Returns the size of object in bytes
      */
+    @Override
     public int getSize() {
         return this.data.length * Short.SIZE / 8;
     }
@@ -234,6 +239,7 @@ public abstract class ObjectShortVector extends LocalAbstractObject implements B
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectShortVector rtv = (ObjectShortVector) this.clone();
         rtv.data = this.data.clone();

@@ -140,6 +140,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
 
     //****************** Filtering methods ******************//
 
+    @Override
     public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return excludeUsingPrecompDist((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
@@ -173,6 +174,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return false;
     }
 
+    @Override
     public final boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return includeUsingPrecompDist((PrecomputedDistancesPivotMapFilter)targetFilter, radius);
@@ -201,6 +203,7 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
         return false;
     }
 
+    @Override
     public float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances) {
         Float distance = precompDistMapping.get(obj);
 

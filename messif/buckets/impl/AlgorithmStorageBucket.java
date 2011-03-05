@@ -197,6 +197,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         return this;
     }
 
+    @Override
     public int size() {
         return objectCount;
     }
@@ -218,6 +219,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * @throws BucketStorageException if there was an error storing the object to the encapsulated algorithm,
      *              e.g. the encapsulated algorithm does not support InsertOperation
      */
+    @Override
     public boolean add(LocalAbstractObject object) throws BucketStorageException {
         InsertOperation operation = new InsertOperation(object);
         try {
@@ -287,18 +289,22 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         return operation.getObjects().size();
     }
 
+    @Override
     public ModifiableSearch<LocalAbstractObject> search() throws IllegalStateException {
         return new AlgorithmStorageSearch<Object>(null, Collections.emptyList());
     }
 
+    @Override
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C key) throws IllegalStateException {
         return new AlgorithmStorageSearch<Object>(null, Collections.singletonList(key));
     }
 
+    @Override
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, keys);
     }
 
+    @Override
     public <C> ModifiableSearch<LocalAbstractObject> search(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C from, C to) throws IllegalStateException {
         return new AlgorithmStorageSearch<C>(comparator, from, to);
     }
@@ -397,6 +403,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             return iterator.hasPrevious()?iterator.previous():null;
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             LocalAbstractObject object = getCurrentObject();
             if (object == null)
@@ -404,6 +411,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             deleteObject(object);
         }
 
+        @Override
         public void close() {
         }
 
@@ -458,12 +466,14 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
             this.bucketCreator = bucketCreator;
         }
 
+        @Override
         public void markMovedObjects(Algorithm alg, Collection<? extends LocalAbstractObject> objects) throws BucketStorageException, InstantiationException {
             // Call single addition for all objects
             for (LocalAbstractObject object : objects)
                 markMovedObject(alg, object);
         }
 
+        @Override
         public void markMovedObject(Algorithm alg, LocalAbstractObject object) throws BucketStorageException, InstantiationException {
             // Get the existing bucket for the specified algorithm
             AlgorithmStorageBucket bucket = bucketMap.get(alg);
@@ -502,13 +512,16 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         /** Currently moved object (set from {@link #markMovedObject}) */
         private LocalAbstractObject currentMovedObject;
 
+        @Override
         public LocalAbstractObject getCurrentObject() throws NoSuchElementException {
             return currentMovedObject;
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
         }
 
+        @Override
         public boolean add(LocalAbstractObject object) throws BucketStorageException {
             return true;
         }

@@ -147,6 +147,7 @@ public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
 
     //****************** Evaluating methods ******************//
 
+    @Override
     public float compute(float... distances) {
         if (distances.length < variableCoeffs.length)
             throw new IndexOutOfBoundsException("Distance must be provided for each parameter");
@@ -158,6 +159,7 @@ public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
         return rtv;
     }
 
+    @Override
     public String[] getParameterNames() {
         return variableNames;
     }

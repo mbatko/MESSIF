@@ -64,6 +64,7 @@ public class SubdistanceToken implements PatternToken {
      * @param subdistances specific subdistances for the two meta objects compared
      * @return one of the subdistances given
      */
+    @Override
     public final float evaluate(float[] subdistances) {
         return subdistances[index];
     }

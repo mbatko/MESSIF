@@ -116,6 +116,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
         this.text = readObjectComments(stream);
     }
 
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         stream.write(text.getBytes());
         stream.write('\n');
@@ -124,6 +125,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
 
     //****************** Equality comparing function ******************
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectString))
             return false;
@@ -132,6 +134,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
         return ((ObjectString)obj).text.equals(text);
     }
 
+    @Override
     public int dataHashCode() {
         return text.hashCode();
     }
@@ -155,6 +158,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
         return text.length();
     }
 
+    @Override
     public int getSize() {
         return text.length() * Character.SIZE / 8;
     }

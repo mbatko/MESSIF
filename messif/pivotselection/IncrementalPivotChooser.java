@@ -85,11 +85,13 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
     public IncrementalPivotChooser() {
     }
         
+    @Override
     public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
         // Increment the number of changes since the last reselection of samples only
         changesFromLastSampleSetSelection++;
     }
 
+    @Override
     public void filterAfterRemove(LocalAbstractObject object, LocalBucket bucket) {
         // Increment the number of changes since the last reselection of samples only
         changesFromLastSampleSetSelection++;
@@ -108,6 +110,7 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
      * @param pivots number of pivots to generate
      * @param objectIter Iterator over the sample set of objects to choose new pivots from
      */
+    @Override
     protected void selectPivot(int pivots, AbstractObjectIterator<? extends LocalAbstractObject> objectIter) {
         AbstractObjectList<LocalAbstractObject> objectList = new AbstractObjectList<LocalAbstractObject>(objectIter);
         
@@ -272,6 +275,7 @@ public class IncrementalPivotChooser extends AbstractPivotChooser implements Ser
 
     /** This method appends a new pivot to the currently existing list.
      */
+    @Override
     public void addPivot(LocalAbstractObject newPivot) {
         super.addPivot(newPivot);
 

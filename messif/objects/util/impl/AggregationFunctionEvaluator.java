@@ -226,10 +226,12 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
     
     //****************** Evaluating methods ******************//
 
+    @Override
     public float compute(float... distances) {
         return pattern.evaluate(distances);
     }
 
+    @Override
     public String[] getParameterNames() {
         return variableNames;
     }

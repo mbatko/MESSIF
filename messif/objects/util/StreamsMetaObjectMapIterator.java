@@ -98,6 +98,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
         return currentObject;
     }
 
+    @Override
     public boolean hasNext() {
         if (! readingStarted) {
             try {
@@ -109,6 +110,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
         return nextObject != null;
     }
 
+    @Override
     public MetaObjectMap next() {
         try {
             // No next object available
@@ -130,10 +132,12 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
         }
     }
 
+    @Override
     public void remove() {
         throw new UnsupportedOperationException("This iterator doesn't support remove method - can't remove objects from file");
     }
 
+    @Override
     public void close() throws IOException {
         for (StreamGenericAbstractObjectIterator stream : subObjectIterators.values()) {
             stream.close();

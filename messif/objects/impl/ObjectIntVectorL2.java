@@ -54,6 +54,7 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     /** 
      * Metric function implements Euclidean (L_2) metric
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
         int[] objdata = ((ObjectIntVector)obj).data;

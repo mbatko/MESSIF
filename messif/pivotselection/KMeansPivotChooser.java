@@ -63,6 +63,7 @@ public class KMeansPivotChooser extends AbstractPivotChooser {
     /**
      *  This method only uses the preselected pivots as initial pivots for k-means and rewrites the pivots completely
      */
+    @Override
     protected void selectPivot(int count, AbstractObjectIterator<? extends LocalAbstractObject> sampleSetIterator) {
         
         // Store all passed objects temporarily

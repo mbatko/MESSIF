@@ -130,6 +130,7 @@ public class SplitPolicyBallPartitioning extends SplitPolicy {
      *
      * @return 1 for objects outside the ball partition defined by this policy and 0 for objects belonging to the partition
      */
+    @Override
     public int match(LocalAbstractObject object) {
         if (object.includeUsingPrecompDist(pivot, radius))
             return PART_ID_INNER;
@@ -145,6 +146,7 @@ public class SplitPolicyBallPartitioning extends SplitPolicy {
      * Returns the number of partitions of this policy.
      * @return the number of partitions of this policy
      */
+    @Override
     public int getPartitionsCount() {
         return 2;
     }
@@ -159,6 +161,7 @@ public class SplitPolicyBallPartitioning extends SplitPolicy {
      * @param region a ball region that is tested for the matching condition
      * @return the group (partition) to which the whole ball region belongs or -1 if it is uncertain
      */
+    @Override
     public int match(BallRegion region) {
         // Reset the distance to the pivot
         dist = LocalAbstractObject.UNKNOWN_DISTANCE;

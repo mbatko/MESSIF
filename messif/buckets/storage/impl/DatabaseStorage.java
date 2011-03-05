@@ -297,6 +297,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         );
     }
 
+    @Override
     public void destroy() throws Throwable {
         // Delete all records from the database
         prepareAndExecute(null, deleteAllSQL);
@@ -447,6 +448,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * Returns the number of elements in this storage.
      * @return the number of elements in this storage
      */
+    @Override
     public synchronized int size() {
         try {
             sizeStatement = execute(sizeStatement, sizeSQL, null, null);
@@ -465,6 +467,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
     }
 
+    @Override
     public synchronized IntAddress<T> store(T object) throws BucketStorageException {
         try {
             insertStatement = execute(insertStatement, insertSQL, null, object);
@@ -492,6 +495,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
     }
 
+    @Override
     public synchronized T read(int address) throws BucketStorageException {
         try {
             readStatement = execute(readStatement, readSQL, address, null);
@@ -508,6 +512,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
     }
 
+    @Override
     public synchronized void remove(int address) throws BucketStorageException, UnsupportedOperationException {
         try {
             deleteStatement = execute(deleteStatement, deleteSQL, address, null);
@@ -536,10 +541,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
     //****************** Default index implementation ******************//
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         return store(object) != null;
     }
 
+    @Override
     public IntStorageSearch<T> search() throws IllegalStateException {
         return search(null, null, null);
     }
@@ -558,15 +565,18 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         return null;
     }
 
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), Collections.singletonList(key));
     }
 
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
         return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), keys);
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), from, to);
     }
@@ -715,10 +725,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public IntAddress<T> getCurrentObjectAddress() throws IllegalStateException {
             return new IntAddress<T>(DatabaseStorage.this, getCurrentObjectIntAddress());
         }
 
+        @Override
         public int getCurrentObjectIntAddress() throws IllegalStateException {
             try {
                 return resultSet.getInt(1);
@@ -727,10 +739,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             DatabaseStorage.this.remove(getCurrentObjectIntAddress());
         }
 
+        @Override
         public void close() {
             try {
                 resultSet.close();
@@ -796,6 +810,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
         //****************** Implementation of ColumnConvertor interface ******************//
 
+        @Override
         public Object convertToColumnValue(T instance) throws BucketStorageException {
             try {
                 return serializator.write(instance, false).write();
@@ -804,10 +819,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertToColumnUsed() {
             return usedToWrite;
         }
         
+        @Override
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
             if (column == null)
                 return null;
@@ -818,10 +835,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertFromColumnUsed() {
             return usedToRead;
         }
 
+        @Override
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return false;
         }
@@ -878,6 +897,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
         //****************** Implementation of ColumnConvertor interface ******************//
 
+        @Override
         public Object convertToColumnValue(LocalAbstractObject instance) throws BucketStorageException {
             try {
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -893,10 +913,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertToColumnUsed() {
             return usedToWrite;
         }
 
+        @Override
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
             try {
                 return factory.create((String)column);
@@ -905,10 +927,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertFromColumnUsed() {
             return usedToRead;
         }
 
+        @Override
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return false;
         }
@@ -1029,6 +1053,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
         //****************** Implementation of ColumnConvertor interface ******************//
 
+        @Override
         public Object convertToColumnValue(T instance) throws BucketStorageException {
             try {
                 return getterMethod.invoke(instance);
@@ -1039,10 +1064,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertToColumnUsed() {
             return getterMethod != null;
         }
 
+        @Override
         public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
             try {
                 // Create a new bean instance if it does not exist yet
@@ -1057,10 +1084,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             }
         }
 
+        @Override
         public boolean isConvertFromColumnUsed() {
             return setterMethod != null;
         }
 
+        @Override
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return indexComparator != null &&
                     indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator) &&
@@ -1076,24 +1105,29 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     public static final ColumnConvertor<LocalAbstractObject> locatorColumnConvertor = new ColumnConvertor<LocalAbstractObject>() {
         private static final long serialVersionUID = 1L;
 
+        @Override
         public Object convertToColumnValue(LocalAbstractObject instance) throws BucketStorageException {
             return instance.getLocatorURI();
         }
 
+        @Override
         public boolean isConvertFromColumnUsed() {
             return true;
         }
 
+        @Override
         public LocalAbstractObject convertFromColumnValue(LocalAbstractObject value, Object column) throws BucketStorageException {
             if (value != null && column != null && value.getObjectKey() == null)
                 value.setObjectKey(new AbstractObjectKey(column.toString()));
             return value;
         }
 
+        @Override
         public boolean isConvertToColumnUsed() {
             return true;
         }
 
+        @Override
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.locatorToLocalObjectComparator);
         }
@@ -1121,22 +1155,27 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     public static final ColumnConvertor<Object> trivialColumnConvertor = new ColumnConvertor<Object>() {
         private static final long serialVersionUID = 1L;
 
+        @Override
         public Object convertToColumnValue(Object instance) throws BucketStorageException {
             return instance;
         }
 
+        @Override
         public boolean isConvertFromColumnUsed() {
             return true;
         }
 
+        @Override
         public Object convertFromColumnValue(Object value, Object column) throws BucketStorageException {
             return column;
         }
 
+        @Override
         public boolean isConvertToColumnUsed() {
             return true;
         }
 
+        @Override
         public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
         }
@@ -1161,20 +1200,25 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         return new ColumnConvertor<T>() {
             /** class serial id for serialization */
             private static final long serialVersionUID = 1L;
+            @Override
             public Object convertToColumnValue(T instance) throws BucketStorageException {
                 return convertor.convertToColumnValue(instance);
             }
+            @Override
             public boolean isConvertToColumnUsed() {
                 return usedToWrite;
             }
+            @Override
             public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
                 if (skipReadIfNotNull && value != null)
                     return value;
                 return convertor.convertFromColumnValue(value, column);
             }
+            @Override
             public boolean isConvertFromColumnUsed() {
                 return usedToRead;
             }
+            @Override
             public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
                 return convertor.isColumnCompatible(indexComparator);
             }

@@ -54,6 +54,7 @@ public class ObjectShortVectorL2 extends ObjectShortVector {
     /** 
      * Metric function implements Euclidean (L_2) metric
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
         short[] objdata = ((ObjectShortVector)obj).data;

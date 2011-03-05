@@ -83,6 +83,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         super.finalize();
     }
 
+    @Override
     public void destroy() throws Throwable {
         storage.destroy();
     }
@@ -90,6 +91,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
 
     //****************** Comparator methods ******************//
 
+    @Override
     public IndexComparator<K, T> comparator() {
         return comparator;
     }
@@ -102,6 +104,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
 
     //****************** Index access methods ******************//
 
+    @Override
     public int size() {
         return index.length - unsortedSizeTotal + unsortedSizeUsed;
     }
@@ -119,6 +122,7 @@ public class LongStorageIndex<K, T> extends AbstractArrayIndex<K, T> implements 
         return binarySearch(comparator.extractKey(object), 0, index.length - unsortedSizeTotal - 1, false);
     }
 
+    @Override
     public boolean add(T object) throws BucketStorageException {
         if (size() > POSTPONED_SORT_SIZE) {
             if (unsortedSizeTotal == unsortedSizeUsed) {

@@ -68,31 +68,38 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
 
     //****************** Search methods ******************//
 
+    @Override
     public final ModifiableSearch<T> search() throws IllegalStateException {
         return search((IndexComparator<Object, Object>)null, null, null);
     }
 
+    @Override
     public final ModifiableSearch<T> search(K key, boolean restrictEqual) throws IllegalStateException {
         return search(key, restrictEqual?key:null, restrictEqual?key:null);
     }
 
+    @Override
     public final ModifiableSearch<T> search(K from, K to) throws IllegalStateException {
         return search((K)null, from, to);
     }
 
+    @Override
     public final ModifiableSearch<T> search(K startKey, K from, K to) throws IllegalStateException {
         return new IndexedBoundedSearch(acquireSearchLock(), startKey, from, to);
     }
 
+    @Override
     public final ModifiableSearch<T> search(Collection<? extends K> keys) throws IllegalStateException {
         return new IndexedKeySearch(acquireSearchLock(), keys);
     }
 
+    @Override
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
         return search(comparator, Collections.singletonList(key));
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
         if (comparator != null && comparator.equals(comparator()))
             return new IndexedBoundedSearch(acquireSearchLock(), null, (K)from, (K)to); // This cast IS checked by the comparator
@@ -101,6 +108,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public final <C> ModifiableSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
         if (comparator != null && comparator.equals(comparator()))
             return new IndexedKeySearch(acquireSearchLock(), (Collection)keys); // This cast IS checked by the comparator
@@ -223,6 +231,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             return false;
         }
 
+        @Override
         public void remove() throws IllegalStateException, BucketStorageException {
             if (lastRet == -1)
                 throw new IllegalStateException();
@@ -234,6 +243,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             lastRet = -1;
         }
 
+        @Override
         public void close() {
             if (lock != null)
                 lock.unlock();

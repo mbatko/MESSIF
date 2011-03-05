@@ -52,6 +52,7 @@ public class OnFlyRandomPivotChooser extends RandomPivotChooser implements Seria
      *
      * Notice that this filter erases all previously selested pivots (e.g. by getPivot(int)).
      */
+    @Override
     public void filterAfterAdd(LocalAbstractObject object, LocalBucket bucket) {
         int idx = (int)(Math.random() * (float)(bucket.getObjectCount() + 1));
         

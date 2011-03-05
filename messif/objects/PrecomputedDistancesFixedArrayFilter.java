@@ -98,6 +98,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return true;
     }
 
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         for (float number : precompDist) {
             stream.write(' ');
@@ -354,6 +355,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     //****************** Filtering methods ******************//
 
+    @Override
     public final boolean excludeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return excludeUsingPrecompDist((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
@@ -388,6 +390,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return false;
     }
 
+    @Override
     public final boolean includeUsingPrecompDist(PrecomputedDistancesFilter targetFilter, float radius) {
         try {
             return includeUsingPrecompDist((PrecomputedDistancesFixedArrayFilter)targetFilter, radius);
@@ -417,6 +420,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return false;
     }
 
+    @Override
     public float getPrecomputedDistance(LocalAbstractObject obj, float[] metaDistances) {
         return LocalAbstractObject.UNKNOWN_DISTANCE;
     }

@@ -138,6 +138,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         stream.write('\n');
     }
 
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         writeIntVector(data, stream);
     }
@@ -164,6 +165,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
 
     //****************** Equality comparing function ******************
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectIntVector))
             return false;
@@ -171,6 +173,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         return Arrays.equals(((ObjectIntVector)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
@@ -187,6 +190,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         return this.data.clone();
     }
 
+    @Override
     public int getSize() {
         return this.data.length * Integer.SIZE / 8;
     }

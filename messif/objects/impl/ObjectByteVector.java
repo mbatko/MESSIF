@@ -86,6 +86,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     }
     
     /** Write object to stream */
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0)
@@ -102,6 +103,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      * The format is the comma-separated list of coordinates enclosed in square brackets
      * and the result of <code>super.toString()</code> is appended.
      */
+    @Override
     public String toString() {
         StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
 
@@ -118,6 +120,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     //****************** Equality comparing function ******************
     
     
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectByteVector))
             return false;
@@ -125,6 +128,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
         return Arrays.equals(((ObjectByteVector)obj).data, data);
     }
     
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
@@ -134,6 +138,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     
     /** Returns the size of object in bytes
      */
+    @Override
     public int getSize() {
         return this.data.length * Byte.SIZE / 8;
     }
@@ -234,6 +239,7 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectByteVector rtv = (ObjectByteVector) this.clone();
         rtv.data = this.data.clone();
