@@ -62,8 +62,10 @@ public class ThreadInvokingReceiver extends InvokingReceiver {
      * @param msg the accepted message (it will be the parameter for the invoked method)
      * @param method the method to invoke on the executionObject
      */
+    @Override
     protected void processMessage(final Message msg, final Method method) {
         new Thread(threadGroup, "thInvokingReceiver-" + nextThreadNumber.getAndIncrement()) {
+            @Override
             public void run() {
                 ThreadInvokingReceiver.super.processMessage(msg, method);
             }

@@ -73,6 +73,7 @@ public class QueueInvokingReceiver extends InvokingReceiver implements Runnable 
     /**
      * Stops the queue thread and clears the queue.
      */
+    @Override
     public void finalize() {
         queueThread.interrupt();
         synchronized (messageQueue) {
@@ -89,6 +90,7 @@ public class QueueInvokingReceiver extends InvokingReceiver implements Runnable 
      * @param msg the accepted message (it will be the parameter for the invoked method)
      * @param method the method to invoke on the executionObject
      */
+    @Override
     protected void processMessage(Message msg, Method method) {
         synchronized(messageQueue) {
             // Put message into queue
@@ -133,6 +135,7 @@ public class QueueInvokingReceiver extends InvokingReceiver implements Runnable 
      * If there is no message in the queue, the thread is put into waiting state and 
      * it is notified when a new message arrives to the queue.
      */
+    @Override
     public void run() {
         try {
             // Receive and process message in this thread

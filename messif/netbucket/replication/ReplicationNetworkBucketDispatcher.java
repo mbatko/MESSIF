@@ -81,6 +81,7 @@ public class ReplicationNetworkBucketDispatcher extends NetworkBucketDispatcher 
     /****************** Override for replica change ******************/
 
     /** Add new bucket with encapsulation into ReplicationBucket */
+    @Override
     public synchronized LocalBucket addBucket(LocalBucket bucket) throws BucketStorageException, IllegalStateException {
         // Create replica envelope and call super implementation
         ReplicationBucket newBucket = new ReplicationBucket(this, bucket);

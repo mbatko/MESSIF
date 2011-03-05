@@ -70,6 +70,7 @@ public abstract class NetworkNodeDispatcher implements Startable, Serializable {
     /****************** Startable implementation ******************/
 
     /** Method "start" from interface Startable. Simply starts all registered startables */
+    @Override
     public void start() throws CantStartException {
         // Start all supplied startables
         if (startables != null)

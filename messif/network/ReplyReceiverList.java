@@ -93,6 +93,7 @@ class ReplyReceiverList implements Receiver {
 
     //****************** Reply accepting creator ******************//
 
+    @Override
     public synchronized boolean acceptMessage(Message msg, boolean allowSuperclass) {
         // Get reply receiver for this message (Message hashcode & equals is ID driven)
         ReplyReceiver receiver = receivers.get(msg);

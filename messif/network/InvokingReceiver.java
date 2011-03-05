@@ -89,6 +89,7 @@ public class InvokingReceiver extends MethodClassExecutor implements Receiver {
      *                        set to <tt>true</tt> (so the receiver can relax its acceptance conditions).
      * @return <tt>true</tt> if a there is a method for the message's class
      */
+    @Override
     public boolean acceptMessage(Message msg, boolean allowSuperclass) {
         // Get invoking method
         Method method = getMethod(msg.getClass(), allowSuperclass);

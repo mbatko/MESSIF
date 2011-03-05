@@ -60,6 +60,7 @@ public class SocketThreadTCP extends Thread {
             in = new ObjectInputStream(connection.getInputStream());
         }
         
+        @Override
         public void run() {
             try {
                 for (;;)
@@ -73,6 +74,7 @@ public class SocketThreadTCP extends Thread {
         }
     }
     
+    @Override
     public void run() {
         for (;;)
             try {

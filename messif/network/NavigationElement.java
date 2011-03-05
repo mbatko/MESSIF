@@ -209,6 +209,7 @@ public class NavigationElement implements Serializable {
      * Returns the string representation of this navigation element.
      * @return the string representation of this navigation element
      */
+    @Override
     public String toString() {
         StringBuffer strbuf = new StringBuffer();
         if (reply)

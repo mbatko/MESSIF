@@ -227,6 +227,7 @@ public final class ReplyReceiver<TReplyMessage extends ReplyMessage> implements 
      * @param allowSuperclass this receiver only receives message if this parameter is <tt>false</tt>
      * @return <tt>true</tt> if the message is accepted by this receiver
      */
+    @Override
     public boolean acceptMessage(Message msg, boolean allowSuperclass) {
         // Don't accept message if allowing super class messages, the receiver has finished or the message has wrong class
         if (allowSuperclass || isFinished() || !replyClass.isInstance(msg))

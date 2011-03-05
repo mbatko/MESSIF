@@ -742,6 +742,7 @@ public class MessageDispatcher implements Receiver, Serializable {
      *                        set to <tt>true</tt> (so the receiver can relax its acceptance conditions).
      * @return <tt>true</tt> if the message is accepted by any receiver from the internal list
      */
+    @Override
     public boolean acceptMessage(Message msg, boolean allowSuperclass) {
         // Do not accept the message if it is not addressed directely to this message dispatcher or its sub-dispatchers
         NetworkNode actualDest = msg.getDestination();
