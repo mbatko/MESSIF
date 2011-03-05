@@ -185,6 +185,7 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
      * @see LocalAbstractObject#getDistance
      */
     @SuppressWarnings("unchecked") // Hacks inside
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         Logger log = null;
 

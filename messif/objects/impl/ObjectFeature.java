@@ -158,6 +158,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Binar
         return super.getBinarySize(serializator) + 16;
     }
 
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("cloneRandomlyModify not supported yet");
     }

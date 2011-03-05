@@ -108,6 +108,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     /** Write object to text stream
      * @throws IOException
      */
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.valueOf(average).getBytes());
         stream.write(';');
@@ -138,6 +139,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
     /****************** Size function ******************/
 
+    @Override
     public int getSize() {
         return (2 + energy.length + ((energyDeviation != null)?energyDeviation.length:0)) * Short.SIZE / 8;
     }
@@ -145,6 +147,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
     /****************** Data equality functions ******************/
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectHomogeneousTexture))
             return false;
@@ -156,6 +159,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
                 Arrays.equals(energyDeviation, castObj.energyDeviation);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(energy);
     }
@@ -175,6 +179,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     private static final double wdc=0.28;
     private static final double wstd=0.22;
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
 
         //---yjyu - 010217
@@ -357,6 +362,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
      * @return a randomly modified clone of this instance.
      * @throws CloneNotSupportedException if predecessors does not support cloning
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectHomogeneousTexture rtv = (ObjectHomogeneousTexture) this.clone();
         rtv.energy = this.energy.clone();

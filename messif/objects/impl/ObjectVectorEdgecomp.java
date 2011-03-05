@@ -54,6 +54,7 @@ public class ObjectVectorEdgecomp extends ObjectByteVector {
     /** Metric function
      *      Implements edge histogram distance
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Access data of the other object (throws ClassCastException if trying to compare with another type of object)
         byte[] objData = ((ObjectVectorEdgecomp)obj).data;

@@ -125,6 +125,7 @@ public class ObjectFeatureLong extends ObjectFeature  implements BinarySerializa
         return Arrays.equals(((ObjectFeatureLong)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }
@@ -173,9 +174,6 @@ public class ObjectFeatureLong extends ObjectFeature  implements BinarySerializa
 
     /**
      * TODO: either implement or make this class abstract
-     * @param obj
-     * @param distThreshold
-     * @return
      */
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {

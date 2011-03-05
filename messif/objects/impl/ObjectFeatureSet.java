@@ -136,6 +136,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * Returns iterator over all features.
      * @return iterator over all features
      */
+    @Override
     public Iterator<LocalAbstractObject> iterator() {
         return objects.iterator();
     }

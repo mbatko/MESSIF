@@ -193,8 +193,6 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     /**
      * Class for distance functions that compute distances between two
      * {@link ObjectIntMultiVector}s using a non-metric weighted Jaccard coeficient.
-     *
-     * @return a distance function instance
      */
     public static class WeightedJaccardDistanceFunction implements DistanceFunction<ObjectIntMultiVector> {
         /** Weight provider for the first object */
@@ -231,6 +229,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             return weightProviderO2;
         }
 
+        @Override
         public float getDistance(ObjectIntMultiVector o1, ObjectIntMultiVector o2) {
             return getWeightedDistance(o1, weightProviderO1, o2, weightProviderO2);
         }
@@ -255,10 +254,12 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             this.weights = weights;
         }
 
+        @Override
         public float getWeight(SortedDataIterator iterator) {
             return weights[iterator.getCurrentVectorDataIndex()];
         }
 
+        @Override
         public float getWeightSum(ObjectIntMultiVector obj) {
             float sum = 0;
             for (int i = 0; i < obj.data.length; i++)
@@ -305,10 +306,12 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             return sum;
         }
 
+        @Override
         public float getWeight(SortedDataIterator iterator) {
             return weights[iterator.getCurrentVectorDataIndex()][iterator.currentIndex()];
         }
 
+        @Override
         public float getWeightSum(ObjectIntMultiVector obj) {
             return weightSum;
         }
@@ -349,10 +352,12 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             return weight.floatValue();
         }
 
+        @Override
         public float getWeight(SortedDataIterator iterator) {
             return getWeight(iterator.currentInt());
         }
 
+        @Override
         public float getWeightSum(ObjectIntMultiVector obj) {
             float sum = 0;
             for (int i = 0; i < obj.data.length; i++) {

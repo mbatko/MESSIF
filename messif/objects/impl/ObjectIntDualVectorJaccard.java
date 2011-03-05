@@ -180,10 +180,12 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
             this.secondaryWeight = secondaryWeight;
         }
 
+        @Override
         public float getWeight(SortedDataIterator iterator) {
             return iterator.isCurrentPrimary() ? primaryWeight : secondaryWeight;
         }
 
+        @Override
         public float getWeightSum(ObjectIntDualVector obj) {
             return obj.data.length * primaryWeight + obj.data2.length * secondaryWeight;
         }
@@ -227,10 +229,12 @@ public class ObjectIntDualVectorJaccard extends ObjectIntDualVector implements S
             return sum;
         }
 
+        @Override
         public float getWeight(SortedDataIterator iterator) {
             return (iterator.isCurrentPrimary() ? primaryWeight : secondaryWeight)[iterator.currentIndex()];
         }
 
+        @Override
         public float getWeightSum(ObjectIntDualVector obj) {
             return weightSum;
         }

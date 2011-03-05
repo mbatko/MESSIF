@@ -161,6 +161,7 @@ public abstract class ObjectIntDualVector extends ObjectIntVector implements Ser
         /** Index of the data array from which the last value was returned */
         private int which = -1;
 
+        @Override
         public boolean hasNext() {
             return dataIndex < data.length || data2Index < data2.length;
         }
@@ -221,10 +222,12 @@ public abstract class ObjectIntDualVector extends ObjectIntVector implements Ser
             }
         }
 
+        @Override
         public Integer next() {
             return nextInt();
         }
 
+        @Override
         public void remove() {
             throw new UnsupportedOperationException("SortedDataIterator does not support removal");
         }

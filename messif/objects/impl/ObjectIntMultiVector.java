@@ -105,6 +105,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
 
     //****************** Text file store/retrieve methods ******************//
 
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         for (int i = 0; i < data.length; i++)
             ObjectIntVector.writeIntVector(data[i], stream);
@@ -113,6 +114,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
 
     //****************** Equality comparing function ******************
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectIntMultiVector))
             return false;
@@ -120,6 +122,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
         return Arrays.deepEquals(((ObjectIntMultiVector)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.deepHashCode(data);
     }
@@ -176,6 +179,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
         return dim;
     }
 
+    @Override
     public int getSize() {
         return getDimensionality() * Integer.SIZE / 8;
     }
@@ -291,6 +295,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             return ret;
         }
 
+        @Override
         public boolean hasNext() {
             return nextWhich != -1;
         }
@@ -362,10 +367,12 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             return data[nextWhich][dataIndex[nextWhich]];
         }
 
+        @Override
         public Integer next() {
             return nextInt();
         }
 
+        @Override
         public void remove() {
             throw new UnsupportedOperationException("SortedDataIterator does not support removal");
         }

@@ -965,6 +965,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list
         if (colorLayout != null) {
@@ -1560,6 +1561,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 this.removeObjects = removeObjects;
             }
 
+            @Override
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return locatorToObject(
                         dataSource.getRequiredParameter(locatorParamName).toString(),
@@ -1568,6 +1570,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 );
             }
 
+            @Override
             public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
                 return MetaObjectProfiSCT.class;
             }
@@ -1598,6 +1601,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 this.storeObjects = storeObjects;
             }
 
+            @Override
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 StringBuilder str = new StringBuilder();
 
@@ -1634,6 +1638,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 }
             }
 
+            @Override
             public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
                 return MetaObjectProfiSCT.class;
             }
@@ -1749,10 +1754,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                     return kwWeight.floatValue() / documentKwCount;
             }
 
+            @Override
             public float getWeight(SortedDataIterator iterator) {
                 return getWeight(iterator.currentInt(), iterator.getIteratedObject().getDimensionality(), iterator.getCurrentVectorDataIndex());
             }
 
+            @Override
             public float getWeightSum(ObjectIntMultiVector obj) {
                 float sum = 0;
                 int documentKwCount = obj.getDimensionality();

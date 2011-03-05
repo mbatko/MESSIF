@@ -74,6 +74,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
     }
 
     /** Write object to text stream */
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         join(stream, YCoeff);
         stream.write(';');
@@ -106,6 +107,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
 
     /****************** Size function ******************/
 
+    @Override
     public int getSize() {
         return (YCoeff.length + CbCoeff.length + CrCoeff.length) * Byte.SIZE / 8;
     }
@@ -113,6 +115,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
 
     /****************** Data equality functions ******************/
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectColorLayout))
             return false;
@@ -123,6 +126,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
                 Arrays.equals(CrCoeff, castObj.CrCoeff);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(YCoeff) + Arrays.hashCode(CbCoeff) + Arrays.hashCode(CrCoeff);
     }
@@ -130,6 +134,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
 
     /****************** Distance function ******************/
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         ObjectColorLayout castObj = (ObjectColorLayout)obj;
         return (float)(Math.sqrt(sumCoeff(YWeights, YCoeff, castObj.YCoeff)) + 
@@ -161,6 +166,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         ObjectColorLayout rtv = (ObjectColorLayout) this.clone();
         rtv.YCoeff = this.YCoeff.clone();

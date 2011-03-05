@@ -253,6 +253,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
      * Note that the collection can contain <tt>null</tt> values.
      * @return a map with symbolic names as keyas and the respective encapsulated objects as values
      */
+    @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
         Map<String, LocalAbstractObject> map = new HashMap<String, LocalAbstractObject>(6);
         if (colorLayout != null)
@@ -324,6 +325,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         boolean written = false;
         if (colorLayout != null) {
@@ -448,6 +450,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
         protected Map<String, String> descriptorData = new HashMap<String, String>();
         protected String descriptorName = null;
 
+        @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
             String name = (localName.length() == 0)?qName:localName;
             elementNamesStack.push(name);
@@ -466,6 +469,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
             }
         }
 
+        @Override
         public void endElement(String uri, String localName, String qName) throws SAXException {
             String name = elementNamesStack.pop();
             if (localName.length() == 0) {
@@ -494,6 +498,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
             }
         }
 
+        @Override
         public void characters(char[] ch, int start, int length) throws SAXException {
             // If inside descriptor
             if (descriptorName != null) {

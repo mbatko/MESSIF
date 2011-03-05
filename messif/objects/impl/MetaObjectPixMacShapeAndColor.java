@@ -501,6 +501,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         // Write a line for every object from the list
         if (colorLayout != null)

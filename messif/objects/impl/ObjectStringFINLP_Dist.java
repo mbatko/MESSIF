@@ -70,6 +70,7 @@ public class ObjectStringFINLP_Dist extends ObjectString {
         return mi;
     }
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         String[] o1_words = getWords(this);
         String[] o2_words = getWords((ObjectStringFINLP_Dist)obj);

@@ -118,6 +118,7 @@ public class ObjectStringSmithWaterman extends ObjectString {
      *
      * @return distance between this object and argument
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         ObjectStringSmithWaterman castObj = (ObjectStringSmithWaterman)obj;
         return (float)Math.sqrt(

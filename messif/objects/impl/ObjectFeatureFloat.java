@@ -124,6 +124,7 @@ public abstract class ObjectFeatureFloat extends ObjectFeature  implements Binar
         return Arrays.equals(((ObjectFeatureFloat)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }

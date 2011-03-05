@@ -80,6 +80,7 @@ public class ObjectFaceDescriptor extends ObjectIntVector {
      *         Otherwise the returned value is not guaranteed to be exact, but in this respect the returned value
      *         must be greater than the threshold distance.
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         ObjectFaceDescriptor castObj = (ObjectFaceDescriptor)obj;
         

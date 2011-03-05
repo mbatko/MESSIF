@@ -299,6 +299,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
      * @param stream the stream to store this object to
      * @throws IOException if there was an error while writing to stream
      */
+    @Override
     protected void writeData(OutputStream stream) throws IOException {
         boolean written = false;
         if (colorLayout != null) {

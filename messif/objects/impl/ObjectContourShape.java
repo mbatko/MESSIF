@@ -104,6 +104,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
      *   globalCurvatureVector; prototypeCurvatureVector; highhestPeakY; peaks vector
      * @throws java.io.IOException when the output stream throws an expeption during the write operations
      */
+    @Override
     public void writeData(OutputStream stream) throws IOException {
         // Write globalCurvatureVector
         for (int i = 0; i < globalCurvatureVector.length; i++) {
@@ -134,6 +135,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
 
     //****************** Size function ******************//
 
+    @Override
     public int getSize() {
         return (this.globalCurvatureVector.length + this.prototypeCurvatureVector.length + this.peak.length) * Byte.SIZE / 8;
     }
@@ -141,6 +143,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
 
     //****************** Data equality functions ******************//
 
+    @Override
     public boolean dataEquals(Object obj) {
         if (!(obj instanceof ObjectContourShape))
             return false;
@@ -151,6 +154,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
                 Arrays.equals(peak, castObj.peak);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(peak);
     }
@@ -244,6 +248,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
      * @param distThreshold the threshold value on the distance
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
 
         ObjectContourShape castObj = (ObjectContourShape) obj;        
@@ -499,6 +504,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
      * @return a randomly modified clone of this instance.
      * @throws java.lang.CloneNotSupportedException when random clonning not supported
      */
+    @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("cloneRandomlyModify not supported yet");
     }

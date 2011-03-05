@@ -121,6 +121,7 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
         return Arrays.equals(((ObjectFeatureByte)obj).data, data);
     }
 
+    @Override
     public int dataHashCode() {
         return Arrays.hashCode(data);
     }

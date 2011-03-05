@@ -16,14 +16,12 @@
  */
 package messif.transactions;
 
-import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Collection;
 import java.util.ListIterator;
 import java.util.AbstractList;
-import java.util.NoSuchElementException;
 
 /**
  * An implementation of List interface which takes a list as an argument and provides transactional behavior on it.
@@ -35,6 +33,8 @@ import java.util.NoSuchElementException;
  *
  * Notice: This class inherits from AbstractList only for the reason of having fully function subList() method. Other 
  *         methods are overwritten.
+ *
+ * @param <E> the type of objects stored in this list
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -51,8 +51,14 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
     /** Elements added/deleted/modified in the list */
     private List<ListMember> changes = new ArrayList<ListMember>();
 
-    /** Creates a new instance of TransactionList */
-    public TransactionList(List<E> list) {
+    /**
+     * Creates a new instance of TransactionList with the encapsulated list.
+     * @param list the list to encapsulate
+     * @throws NullPointerException if the given list is <tt>null</tt>
+     */
+    public TransactionList(List<E> list) throws NullPointerException {
+        if (list == null)
+            throw new NullPointerException();
         monitoredList = list;
     }
     
@@ -99,7 +105,9 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
         return beginTransaction(false);
     } 
     
-    /** Returns current transaction state
+    /**
+     * Returns the current transaction state.
+     * @return the current transaction state
      */
     public boolean isTransactionRunning() {
         return transactionActive;
@@ -143,11 +151,13 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
         changedInTransaction = false;
     }
     
-    /** Reports whether the list was changed during the last transaction or not.
+    /**
+     * Reports whether the list was changed during the last transaction or not.
      * The state is retained until a new transaction is started.
      * If the list was changed and the transaction was rolled back, returns false, 
      * which is obvious.
      * When a transaction is pending, returns true/false based on the changes made or not.
+     * @return whether the list was changed during the last transaction or not
      */
     public boolean changedDuringTransaction() {
         if (isTransactionRunning())
@@ -170,6 +180,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      *
      * @return the number of elements in this list.
      */
+    @Override
     public int size() { return monitoredList.size(); }
 
     /**
@@ -177,6 +188,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      *
      * @return <tt>true</tt> if this list contains no elements.
      */
+    @Override
     public boolean isEmpty() { return monitoredList.isEmpty(); }
 
     /**
@@ -193,6 +205,8 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if the specified element is null and this
      *         list does not support null elements (optional).
      */
+    @Override
+    @SuppressWarnings("element-type-mismatch")
     public boolean contains(Object o) { return monitoredList.contains(o); }
 
     /**
@@ -200,6 +214,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      *
      * @return an iterator over the elements in this list in proper sequence.
      */
+    @Override
     public Iterator<E> iterator() {
         return new TransactionIterator(monitoredList.listIterator());
     }
@@ -213,6 +228,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      *	       sequence.
      * @see java.util.Arrays#asList(Object[])
      */
+    @Override
     public Object[] toArray() { return monitoredList.toArray(); }
 
     /**
@@ -221,6 +237,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * specified array.  Obeys the general contract of the
      * <tt>Collection.toArray(Object[])</tt> method.
      *
+     * @param <T> the type of the returned array
      * @param a the array into which the elements of this list are to
      *		be stored, if it is big enough; otherwise, a new array of the
      * 		same runtime type is allocated for this purpose.
@@ -231,6 +248,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * 		  this list.
      * @throws NullPointerException if the specified array is <tt>null</tt>.
      */
+    @Override
     public <T> T[] toArray(T[] a) { return monitoredList.toArray(a); }
 
 
@@ -260,6 +278,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws IllegalArgumentException if some aspect of this element
      *            prevents it from being added to this list.
      */
+    @Override
     public boolean add(E o) {
         boolean res = monitoredList.add(o);
         if (transactionActive)
@@ -283,6 +302,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws UnsupportedOperationException if the <tt>remove</tt> method is
      *		  not supported by this list.
      */
+    @Override
     public boolean remove(Object o) {
         // Get the index of the object o
         int index = monitoredList.indexOf(o);
@@ -314,10 +334,9 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if the specified collection contains one
      *         or more null elements and this list does not support null
      *         elements (optional).
-     * @throws NullPointerException if the specified collection is
-     *         <tt>null</tt>.
      * @see #contains(Object)
      */
+    @Override
     public boolean containsAll(Collection<?> c) { return containsAll(c); }
 
     /**
@@ -343,6 +362,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      *         list.
      * @see #add(Object)
      */
+    @Override
     public boolean addAll(Collection<? extends E> c) {
         // Add all elements
         boolean res = monitoredList.addAll(c);
@@ -385,6 +405,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws IndexOutOfBoundsException if the index is out of range (index
      *		  &lt; 0 || index &gt; size()).
      */
+    @Override
     public boolean addAll(int index, Collection<? extends E> c) {
         // Add all elements
         boolean res = monitoredList.addAll(index, c);
@@ -413,11 +434,10 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if this list contains one or more
      *            null elements and the specified collection does not support
      *            null elements (optional).
-     * @throws NullPointerException if the specified collection is
-     *            <tt>null</tt>.
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    @Override
     public boolean removeAll(Collection<?> c) {
 	boolean modified = false;
         
@@ -456,11 +476,10 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if this list contains one or more
      *            null elements and the specified collection does not support
      *            null elements (optional).
-     * @throws NullPointerException if the specified collection is
-     *         <tt>null</tt>.
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    @Override
     public boolean retainAll(Collection<?> c) {
 	boolean modified = false;
 
@@ -488,6 +507,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws UnsupportedOperationException if the <tt>clear</tt> method is
      * 		  not supported by this list.
      */
+    @Override
     public void clear() {
         if (!transactionActive) {
             monitoredList.clear();
@@ -529,7 +549,11 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @param o the object to be compared for equality with this list.
      * @return <tt>true</tt> if the specified object is equal to this list.
      */
-    public boolean equals(Object o) { return monitoredList.equals(o); }
+    @Override
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
+    public boolean equals(Object o) {
+        return monitoredList.equals(o);
+    }
 
     /**
      * Returns the hash code value for this list.  The hash code of a list
@@ -552,6 +576,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @see Object#equals(Object)
      * @see #equals(Object)
      */
+    @Override
     public int hashCode() { return monitoredList.hashCode(); }
 
 
@@ -566,6 +591,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws IndexOutOfBoundsException if the index is out of range (index
      * 		  &lt; 0 || index &gt;= size()).
      */
+    @Override
     public E get(int index) { return monitoredList.get(index); }
 
     /**
@@ -587,6 +613,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws    IndexOutOfBoundsException if the index is out of range
      *		  (index &lt; 0 || index &gt;= size()).
      */
+    @Override
     public E set(int index, E element) {
         // Change the element
         E orig = monitoredList.set(index, element);
@@ -616,6 +643,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws    IndexOutOfBoundsException if the index is out of range
      *		  (index &lt; 0 || index &gt; size()).
      */
+    @Override
     public void add(int index, E element) {
         // Add the element
         monitoredList.add(index, element);
@@ -638,6 +666,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws IndexOutOfBoundsException if the index is out of range (index
      *            &lt; 0 || index &gt;= size()).
      */
+    @Override
     public E remove(int index) {
         // Remove the element
         E orig = monitoredList.remove(index);
@@ -665,6 +694,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if the specified element is null and this
      *         list does not support null elements (optional).
      */
+    @Override
     public int indexOf(Object o) { return monitoredList.indexOf(o); }
 
     /**
@@ -682,6 +712,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws NullPointerException if the specified element is null and this
      *         list does not support null elements (optional).
      */
+    @Override
     public int lastIndexOf(Object o) { return monitoredList.lastIndexOf(o); }
 
 
@@ -694,8 +725,9 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @return a list iterator of the elements in this list (in proper
      * 	       sequence).
      */
+    @Override
     public ListIterator<E> listIterator() {
-        return new TransactionListIterator(0, monitoredList.listIterator(0));
+        return new TransactionListIterator(monitoredList.listIterator(0));
     }
 
     /**
@@ -713,8 +745,9 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
      * @throws IndexOutOfBoundsException if the index is out of range (index
      *         &lt; 0 || index &gt; size()).
      */
+    @Override
     public ListIterator<E> listIterator(int index) {
-        return new TransactionListIterator(index, monitoredList.listIterator(index));
+        return new TransactionListIterator(monitoredList.listIterator(index));
     }
 
     // View
@@ -725,7 +758,8 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
 //    public List<E> subList(int fromIndex, int toIndex);
     
     
-    
+
+    /** Internal iterator for the transaction-aware list. */
     private class TransactionIterator implements Iterator<E> {
         /** Iterator of the monitored list */
         protected ListIterator<E> monitoredIter;
@@ -748,17 +782,22 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
         
         
         
-        /** Constructor for encapsulating an iterator of the monitored list */
+        /**
+         * Constructor for encapsulating an iterator of the monitored list.
+         * @param iter the iterator of the monitored list to encapsulate
+         */
         public TransactionIterator(ListIterator<E> iter) {
             monitoredIter = iter;
         }
         
         /** Iterator interface methods */
         
+        @Override
 	public boolean hasNext() {
             return monitoredIter.hasNext();
 	}
 
+        @Override
 	public E next() {
             lastRet = monitoredIter.nextIndex();        // This element is gonna be returned by next().
             returnedObject = monitoredIter.next();
@@ -766,6 +805,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
             return returnedObject;
 	}
 
+        @Override
 	public void remove() {                
             // Remove the object via Iterator
             monitoredIter.remove();
@@ -778,16 +818,23 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
 	}
     }
 
+    /** Internal list-iterator for the transaction-aware list. */
     private class TransactionListIterator extends TransactionIterator implements ListIterator<E> {
         
-	TransactionListIterator(int index, ListIterator<E> iter) {
+        /**
+         * Constructor for encapsulating an iterator of the monitored list.
+         * @param iter the iterator of the monitored list to encapsulate
+         */
+	TransactionListIterator(ListIterator<E> iter) {
             super(iter);
 	}
 
+        @Override
 	public boolean hasPrevious() {
             return monitoredIter.hasPrevious();
 	}
 
+        @Override
         public E previous() {
             returnedObject = monitoredIter.previous();
             lastRet = monitoredIter.nextIndex();        // save index of the element just returned
@@ -795,14 +842,17 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
             return returnedObject;
         }
 
+        @Override
 	public int nextIndex() {
             return monitoredIter.nextIndex();
 	}
 
+        @Override
 	public int previousIndex() {
             return monitoredIter.previousIndex();
 	}
 
+        @Override
 	public void set(E o) {
             // Update the object via Iterator
             monitoredIter.set(o);
@@ -812,6 +862,7 @@ public class TransactionList<E> extends AbstractList<E> implements List<E> {
             // Do not change the index of last returned object
 	}
 
+        @Override
 	public void add(E o) {
             // Get the index where the add() takes place
             int index = monitoredIter.nextIndex();

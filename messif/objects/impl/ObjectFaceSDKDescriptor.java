@@ -186,6 +186,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
      *         must be greater than the threshold distance.
      * @throws IllegalStateException if the FaceSDK library was not loaded
      */
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) throws IllegalStateException {
         if (!isLibraryLoaded)
             throw new IllegalStateException("Cannot compute distance - the FaceSDK library was not loaded");
@@ -894,7 +895,7 @@ public class ObjectFaceSDKDescriptor extends LocalAbstractObject {
     }
 
     /**
-     * Calls the {@link #processImages(java.io.File, java.io.File, java.lang.String)} method.
+     * Calls the {@link #processImages} method.
      * Usage: java -classpath MESSIF.jar messif.objects.impl.ObjectFaceSDKDescriptor ...
      *
      * @param args the following arguments are expected: imageDir, destDir, datafile,

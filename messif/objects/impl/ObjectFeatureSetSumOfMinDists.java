@@ -53,6 +53,7 @@ public class ObjectFeatureSetSumOfMinDists extends ObjectFeatureSet {
      * @see LocalAbstractObject#getDistance
      */
 
+    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         double setdistance = 0.0;
         double setdistancerev = 0.0;
