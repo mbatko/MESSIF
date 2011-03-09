@@ -33,6 +33,8 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
+ * This class represents a meta object that encapsulates MPEG7 descriptors for shape and color.
+ * The descriptors are ColorLayout, ColorStructure, ScalableColor, EdgeHistogram, and RegionShape.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -51,6 +53,10 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     /** The list of the names for the encapsulated objects - in the form of a set */
     protected static final Set<String> descriptorNameSet = new HashSet<String>(Arrays.asList("ColorLayoutType","ColorStructureType","ScalableColorType","EdgeHistogramType","RegionShapeType"));
 
+    /** Descriptor weights used to compute the overall distance */
+    protected static float[] descriptorWeights = { 2.0f, 2.0f, 2.0f, 5.0f, 4.0f };
+
+
     //****************** Attributes ******************//
 
     /** Object for the ColorLayoutType */
@@ -65,10 +71,10 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     protected ObjectRegionShape regionShape;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /** 
-     * Creates a new instance of MetaObjectShapeAndColor
+     * Creates a new instance of MetaObjectShapeAndColor.
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param colorLayout color layout descriptor
@@ -86,26 +92,46 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         this.regionShape = regionShape;
     }
 
+    /**
+     * Creates a new instance of MetaObjectShapeAndColor from the given map of objects.
+     * Note that the encapsulated objects will have the correct key only if the
+     * {@code cloneObjects} is requested.
+     *
+     * @param locatorURI locator of the metaobject (and typically all of the passed objects)
+     * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
+     * @param cloneObjects  flag whether to clone the objects from the map (<tt>true</tt>) or not (<tt>false</tt>)
+     * @throws CloneNotSupportedException if the clonning was not supported by any of the clonned objects
+     */
     public MetaObjectShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
-        this(locatorURI, objects);
-        if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
-            this.edgeHistogram = (ObjectVectorEdgecomp)this.edgeHistogram.clone(getObjectKey());
-            this.regionShape = (ObjectRegionShape)this.regionShape.clone(getObjectKey());
-        }
+        super(locatorURI);
+        this.colorLayout = getObjectFromMap(objects, descriptorNames[0], ObjectColorLayout.class, cloneObjects, getObjectKey());
+        this.colorStructure = getObjectFromMap(objects, descriptorNames[1], ObjectShortVectorL1.class, cloneObjects, getObjectKey());
+        this.scalableColor = getObjectFromMap(objects, descriptorNames[2], ObjectIntVectorL1.class, cloneObjects, getObjectKey());
+        this.edgeHistogram = getObjectFromMap(objects, descriptorNames[3], ObjectVectorEdgecomp.class, cloneObjects, getObjectKey());
+        this.regionShape = getObjectFromMap(objects, descriptorNames[4], ObjectRegionShape.class, cloneObjects, getObjectKey());
     }
 
+    /**
+     * Creates a new instance of MetaObjectShapeAndColor from the given map of objects.
+     * Note that the encapsulated object are not clonned and will retain their keys.
+     *
+     * @param locatorURI locator of the metaobject (and typically all of the passed objects)
+     * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
+     */
     public MetaObjectShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects) {
         super(locatorURI);
-        this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
-        this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");
-        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
-        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get("EdgeHistogramType");
-        this.regionShape = (ObjectRegionShape)objects.get("RegionShapeType");
+        this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
+        this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
+        this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[2]);
+        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[3]);
+        this.regionShape = (ObjectRegionShape)objects.get(descriptorNames[4]);
     }
 
+    /**
+     * Creates a new instance of MetaObjectShapeAndColor by taking objects from another {@link MetaObject}.
+     * Note that the objects are not clonned.
+     * @param object the meta object from which this one is created
+     */
     public MetaObjectShapeAndColor(MetaObject object) {
         this(object.getLocatorURI(), object.getObjectMap());
     }
@@ -141,15 +167,15 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
                     readObject(stream, uriNamesClasses[i + 1]); // Read the object, but skip it
                 } catch (IOException e) { // Ignore the error on skipped objects
                 }
-            } else if ("ColorLayoutType".equals(uriNamesClasses[i])) {
+            } else if (descriptorNames[0].equals(uriNamesClasses[i])) {
                 colorLayout = readObject(stream, ObjectColorLayout.class);
-            } else if ("ColorStructureType".equals(uriNamesClasses[i])) {
+            } else if (descriptorNames[1].equals(uriNamesClasses[i])) {
                 colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            } else if ("ScalableColorType".equals(uriNamesClasses[i])) {
+            } else if (descriptorNames[2].equals(uriNamesClasses[i])) {
                 scalableColor = readObject(stream, ObjectIntVectorL1.class);
-            } else if ("EdgeHistogramType".equals(uriNamesClasses[i])) {
+            } else if (descriptorNames[3].equals(uriNamesClasses[i])) {
                 edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
-            } else if ("RegionShapeType".equals(uriNamesClasses[i])) {
+            } else if (descriptorNames[4].equals(uriNamesClasses[i])) {
                 regionShape = readObject(stream, ObjectRegionShape.class);
             }
         }
@@ -185,7 +211,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     }
 
 
-    /****************** MetaObject overrides ******************/
+    //****************** MetaObject overrides ******************//
 
     /**
      * Returns the number of encapsulated objects.
@@ -193,7 +219,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
      */
     @Override
     public int getObjectCount() {
-        return 5;
+        return descriptorNames.length;
     }
 
     /**
@@ -204,15 +230,15 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
      */
     @Override
     public LocalAbstractObject getObject(String name) {
-        if ("ColorLayoutType".equals(name))
+        if (descriptorNames[0].equals(name))
             return colorLayout;
-        else if ("ColorStructureType".equals(name))
+        else if (descriptorNames[1].equals(name))
             return colorStructure;
-        else if ("EdgeHistogramType".equals(name))
-            return edgeHistogram;
-        else if ("ScalableColorType".equals(name))
+        else if (descriptorNames[2].equals(name))
             return scalableColor;
-        else if ("RegionShapeType".equals(name))
+        else if (descriptorNames[3].equals(name))
+            return edgeHistogram;
+        else if (descriptorNames[4].equals(name))
             return regionShape;
         else
             return null;
@@ -220,7 +246,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
 
     @Override
     public Collection<LocalAbstractObject> getObjects() {
-        return Arrays.asList((LocalAbstractObject)colorLayout, colorStructure, edgeHistogram, scalableColor, regionShape);
+        return Arrays.asList((LocalAbstractObject)colorLayout, colorStructure, scalableColor, edgeHistogram, regionShape);
     }
 
     @Override
@@ -229,7 +255,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     }
 
 
-    // ***************************  Distance computation  ******************************* //
+    //***************************  Distance computation  *******************************//
 
     @Override
     protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
@@ -239,64 +265,71 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
 
         if (colorLayout != null && castObj.colorLayout != null) {
             if (metaDistances != null) {
-                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)/300.0f;
-                rtv += metaDistances[0]*2.0f;
+                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) / 300.0f;
+                rtv += metaDistances[0] * descriptorWeights[0];
             } else {
-                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)*2.0f/300.0f;
+                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) * descriptorWeights[0] / 300.0f;
             }
         }
 
         if (colorStructure != null && castObj.colorStructure != null) {
             if (metaDistances != null) {
-                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)/40.0f/255.0f;
-                rtv += metaDistances[1]*2.0f;
+                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) / 40.0f / 255.0f;
+                rtv += metaDistances[1] * descriptorWeights[1];
             } else {
-                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)*2.0f/40.0f/255.0f;
+                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) * descriptorWeights[1] / 40.0f / 255.0f;
             }
         }
 
         if (scalableColor != null && castObj.scalableColor != null) {
             if (metaDistances != null) {
-                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)/3000.0f;
-                rtv += metaDistances[2]*2.0f;
+                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) / 3000.0f;
+                rtv += metaDistances[2] * descriptorWeights[2];
             } else {
-                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.0f/3000.0f;
+                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) * descriptorWeights[2] / 3000.0f;
             }
         }
 
         if (edgeHistogram != null && castObj.edgeHistogram != null) {
             if (metaDistances != null) {
-                metaDistances[3] = edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)/68.0f;
-                rtv += metaDistances[3]*5.0f;
+                metaDistances[3] = edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold) / 68.0f;
+                rtv += metaDistances[3] * descriptorWeights[3];
             } else {
-                rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold)*5.0f/68.0f;
+                rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold) * descriptorWeights[3] / 68.0f;
             }
         }
 
         if (regionShape != null && castObj.regionShape != null) {
             if (metaDistances != null) {
-                metaDistances[4] = regionShape.getDistanceImpl(castObj.regionShape, distThreshold)/8.0f;
-                rtv += metaDistances[4]*4.0f;
+                metaDistances[4] = regionShape.getDistanceImpl(castObj.regionShape, distThreshold) / 8.0f;
+                rtv += metaDistances[4] * descriptorWeights[4];
             } else {
-                rtv += regionShape.getDistanceImpl(castObj.regionShape, distThreshold)*4.0f/8.0f;
+                rtv += regionShape.getDistanceImpl(castObj.regionShape, distThreshold) * descriptorWeights[4] / 8.0f;
             }
         }
 
         return rtv;
     }
 
+    /**
+     * Returns the weights used to compute the overall distance.
+     * @return the weights used to compute the overall distance
+     */
     public static float[] getWeights() {
-        return new float[] { 2.0f, 2.0f, 2.0f, 5.0f, 4.0f};
+        return descriptorWeights.clone();
     }
 
     @Override
     public float getMaxDistance() {
-        return 16f;
+        float sum = 1; // Adjustment to overcome rounding problems
+        for (int i = 0; i < descriptorWeights.length; i++)
+            sum += descriptorWeights[i];
+        return sum;
     }
 
 
 
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 
@@ -349,31 +382,31 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     protected void writeData(OutputStream stream) throws IOException {
         boolean written = false;
         if (colorLayout != null) {
-            stream.write("ColorLayoutType;messif.objects.impl.ObjectColorLayout".getBytes());
+            stream.write((descriptorNames[0] + ';' + colorLayout.getClass().getName()).getBytes());
             written = true;
         }
         if (colorStructure != null) {
             if (written)
                 stream.write(';');
-            stream.write("ColorStructureType;messif.objects.impl.ObjectShortVectorL1".getBytes());
+            stream.write((descriptorNames[1] + ';' + colorStructure.getClass().getName()).getBytes());
             written = true;
         }
         if (scalableColor != null) {
             if (written)
                 stream.write(';');
-            stream.write("ScalableColorType;messif.objects.impl.ObjectIntVectorL1".getBytes());
+            stream.write((descriptorNames[2] + ';' + scalableColor.getClass().getName()).getBytes());
             written = true;
         }
         if (edgeHistogram != null) {
             if (written)
                 stream.write(';');
-            stream.write("EdgeHistogramType;messif.objects.impl.ObjectVectorEdgecomp".getBytes());
+            stream.write((descriptorNames[3] + ';' + edgeHistogram.getClass().getName()).getBytes());
             written = true;
         }
         if (regionShape != null) {
             if (written)
                 stream.write(';');
-            stream.write("RegionShapeType;messif.objects.impl.ObjectRegionShape".getBytes());
+            stream.write((descriptorNames[4] + ';' + regionShape.getClass().getName()).getBytes());
             written = true;
         }
         if (written) {

@@ -281,8 +281,10 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         // Read all data from the stream
         String kwLine1 = stream.readLine();
         String kwLine2 = stream.readLine();
-        attractiveness = Short.parseShort(stream.readLine());
-        credits = Byte.parseByte(stream.readLine());
+        String line = stream.readLine();
+        attractiveness = (line == null || line.isEmpty()) ? 0 : Short.parseShort(line);
+        line = stream.readLine();
+        credits = (line == null || line.isEmpty()) ? 0 : Byte.parseByte(line);
         // The additional keywords are added AS THE LAST LINE OF THE OBJECT!
         String additionalKeyWords = readAdditionalKeyWords ? stream.readLine() : null;
 
