@@ -323,6 +323,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, int[] searchWordIds) {
         this(object, false);
+        if (searchWordIds == null)
+            searchWordIds = new int[0];
         if (object.keyWords != null && object.keyWords.getVectorDataCount() >= 2)
             this.keyWords = new ObjectIntMultiVectorJaccard(
                 object.keyWords.getVectorData(0),

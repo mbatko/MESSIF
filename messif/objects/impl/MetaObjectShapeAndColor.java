@@ -43,7 +43,7 @@ import messif.objects.nio.BinarySerializator;
 public class MetaObjectShapeAndColor extends MetaObject implements BinarySerializable {
 
     /** Class id for serialization. */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** The list of supported names ******************//
 
@@ -68,7 +68,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     /** Object for the EdgeHistogramType */
     protected ObjectVectorEdgecomp edgeHistogram;
     /** Object for the RegionShapeType */
-    protected ObjectRegionShape regionShape;
+    protected ObjectXMRegionShape regionShape;
 
 
     //****************** Constructors ******************//
@@ -83,7 +83,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
      * @param edgeHistogram edge histogram descriptor
      * @param regionShape region shape descriptor
      */
-    public MetaObjectShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectIntVectorL1 scalableColor, ObjectVectorEdgecomp edgeHistogram, ObjectRegionShape regionShape) {
+    public MetaObjectShapeAndColor(String locatorURI, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectIntVectorL1 scalableColor, ObjectVectorEdgecomp edgeHistogram, ObjectXMRegionShape regionShape) {
         super(locatorURI);
         this.colorLayout = colorLayout;
         this.colorStructure = colorStructure;
@@ -108,7 +108,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         this.colorStructure = getObjectFromMap(objects, descriptorNames[1], ObjectShortVectorL1.class, cloneObjects, getObjectKey());
         this.scalableColor = getObjectFromMap(objects, descriptorNames[2], ObjectIntVectorL1.class, cloneObjects, getObjectKey());
         this.edgeHistogram = getObjectFromMap(objects, descriptorNames[3], ObjectVectorEdgecomp.class, cloneObjects, getObjectKey());
-        this.regionShape = getObjectFromMap(objects, descriptorNames[4], ObjectRegionShape.class, cloneObjects, getObjectKey());
+        this.regionShape = getObjectFromMap(objects, descriptorNames[4], ObjectXMRegionShape.class, cloneObjects, getObjectKey());
     }
 
     /**
@@ -124,7 +124,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
         this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[2]);
         this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[3]);
-        this.regionShape = (ObjectRegionShape)objects.get(descriptorNames[4]);
+        this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[4]);
     }
 
     /**
@@ -176,7 +176,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
             } else if (descriptorNames[3].equals(uriNamesClasses[i])) {
                 edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
             } else if (descriptorNames[4].equals(uriNamesClasses[i])) {
-                regionShape = readObject(stream, ObjectRegionShape.class);
+                regionShape = readObject(stream, ObjectXMRegionShape.class);
             }
         }
     }
@@ -350,7 +350,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         if (scalableColor != null)
             rtv.scalableColor = (ObjectIntVectorL1)scalableColor.clone(cloneFilterChain);
         if (regionShape != null)
-            rtv.regionShape = (ObjectRegionShape)regionShape.clone(cloneFilterChain);
+            rtv.regionShape = (ObjectXMRegionShape)regionShape.clone(cloneFilterChain);
 
         return rtv;
     }
@@ -367,7 +367,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         if (scalableColor != null)
             rtv.scalableColor = (ObjectIntVectorL1)scalableColor.cloneRandomlyModify(args);
         if (regionShape != null)
-            rtv.regionShape = (ObjectRegionShape)regionShape.cloneRandomlyModify(args);
+            rtv.regionShape = (ObjectXMRegionShape)regionShape.cloneRandomlyModify(args);
         return rtv;
     }
 
@@ -441,7 +441,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
         scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
         edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
-        regionShape = serializator.readObject(input, ObjectRegionShape.class);
+        regionShape = serializator.readObject(input, ObjectXMRegionShape.class);
     }
 
     @Override
