@@ -26,8 +26,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import messif.utility.Parametric;
 
 /**
  * Provides a data source for {@link Extractor}s.
@@ -49,7 +51,7 @@ import java.util.Map;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractorDataSource implements Closeable {
+public class ExtractorDataSource implements Closeable, Parametric {
     /** Number of bytes that the {@link #getBinaryData()} method allocates */
     private static final int readStreamDataAllocation = 4096;
 
@@ -197,22 +199,22 @@ public class ExtractorDataSource implements Closeable {
 
     //****************** Data access methods *************//
 
-    /**
-     * Returns an additional parameter of this data source with the given {@code name}.
-     * @param name the name of the additional parameter to get
-     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
-     */
+    @Override
+    public int getParameterCount() {
+        return additionalParameters != null ? additionalParameters.size() : 0;
+    }
+
+    @Override
+    public Collection<String> getParameterNames() {
+        return additionalParameters != null ? Collections.unmodifiableCollection(additionalParameters.keySet()) : null;
+    }
+
+    @Override
     public Object getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }
 
-    /**
-     * Returns an additional parameter of this data source with the given {@code name}.
-     * If the parameter with the given {@code name} is not set, an exception is thrown.
-     * @param name the name of the additional parameter to get
-     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
-     * @throws IllegalArgumentException if the parameter with the given {@code name} is not set
-     */
+    @Override
     public Object getRequiredParameter(String name) throws IllegalArgumentException {
         Object parameter = getParameter(name);
         if (parameter == null)
@@ -220,43 +222,19 @@ public class ExtractorDataSource implements Closeable {
         return parameter;
     }
 
-    /**
-     * Returns an additional parameter of this data source with the given {@code name}.
-     * If the parameter is not set or is not instance of {@code parameterClass},
-     * the {@code defaultValue} is returned instead.
-     *
-     * @param <T> the class of the parameter
-     * @param name the name of the additional parameter to get
-     * @param parameterClass the class of the parameter to get
-     * @param defaultValue the default value to use if the parameter is <tt>null</tt>
-     * @return the parameter value
-     */
-    @SuppressWarnings("unchecked")
+    @Override
     public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
         Object value = getParameter(name);
-        return value != null && parameterClass.isInstance(value) ? (T)value : defaultValue; // This cast IS checked by isInstance
+        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
     }
 
-    /**
-     * Returns an additional parameter of this data source with the given {@code name}.
-     * If the parameter {@code name} exists but it is not an instance of
-     * {@code parameterClass}, <tt>null</tt> is returned.
-     *
-     * @param <T> the class of the parameter
-     * @param name the name of the additional parameter to get
-     * @param parameterClass the class of the parameter to get
-     * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set
-     */
+    @Override
     public <T> T getParameter(String name, Class<? extends T> parameterClass) {
         return getParameter(name, parameterClass, null);
     }
 
-    /**
-     * Returns the map of additional parameters of this data source.
-     * Note that the map is not modifiable.
-     * @return the map of additional parameters
-     */
-    public Map<String, ? extends Object> getAdditionalParameters() {
+    @Override
+    public Map<String, ? extends Object> getParameterMap() {
         if (additionalParameters == null)
             return null;
         return Collections.unmodifiableMap(additionalParameters);

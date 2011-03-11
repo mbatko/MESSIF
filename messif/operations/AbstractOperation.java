@@ -26,8 +26,13 @@ import java.util.UUID;
 import messif.utility.ErrorCode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import messif.utility.Clearable;
 import messif.utility.Convert;
+import messif.utility.Parametric;
 
 
 /**
@@ -49,19 +54,23 @@ import messif.utility.Convert;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class AbstractOperation implements Serializable, Cloneable, Clearable {
+public abstract class AbstractOperation implements Serializable, Cloneable, Clearable, Parametric {
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
-    //****************** Supplemental data object associated with this instance ******************//
+    //****************** Attributes ******************//
 
-    /** Supplemental data object */
+    /** Supplemental data object associated with this operation instance */
     public Object suppData = null;
+    /** An universaly unique identification of the operation */
+    private final UUID operID = UUID.randomUUID();
+    /** Additional parameters for this operation */
+    private Map<String, Serializable> additionalParameters;
+    /** Operation result code */
+    protected ErrorCode errValue = ErrorCode.NOT_SET;
+
 
     //****************** Operation ID ******************//
-
-    /** An universaly unique identification of the operation */
-    protected final UUID operID = UUID.randomUUID();
 
     /**
      * Returns the current operation ID.
@@ -97,6 +106,73 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         if (getClass() != obj.getClass())
             return false;
         return operID.equals(((AbstractOperation)obj).operID);
+    }
+
+
+    //****************** Parametric implementation ******************//
+
+    @Override
+    public int getParameterCount() {
+        return additionalParameters != null ? additionalParameters.size() : 0;
+    }
+
+    @Override
+    public Collection<String> getParameterNames() {
+        return additionalParameters != null ? Collections.unmodifiableCollection(additionalParameters.keySet()) : null;
+    }
+
+    @Override
+    public Object getParameter(String name) {
+        return additionalParameters != null ? additionalParameters.get(name) : null;
+    }
+
+    @Override
+    public Object getRequiredParameter(String name) throws IllegalArgumentException {
+        Object parameter = getParameter(name);
+        if (parameter == null)
+            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
+        return parameter;
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
+        Object value = getParameter(name);
+        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
+        return getParameter(name, parameterClass, null);
+    }
+
+    @Override
+    public Map<String, ? extends Serializable> getParameterMap() {
+        if (additionalParameters == null)
+            return null;
+        return Collections.unmodifiableMap(additionalParameters);
+    }
+
+    /**
+     * Set additional {@code name} parameter of this operation to {@code value}.
+     * @param name the name of the additional parameter to set
+     * @param value the value of the additional parameter to set
+     * @return the previous value of the parameter {@code name} or <tt>null</tt> if it was not set
+     */
+    public Serializable setParameter(String name, Serializable value) {
+        if (additionalParameters == null)
+            additionalParameters = new HashMap<String, Serializable>();
+        return additionalParameters.put(name, value);
+    }
+
+    /**
+     * Removes additional {@code name} parameter from this operation.
+     * @param name the name of the additional parameter to remove
+     * @return the value of the parameter {@code name} that was removed or <tt>null</tt> if it was not set
+     */
+    public Serializable removeParameter(String name) {
+        if (additionalParameters == null)
+            return null;
+        return additionalParameters.remove(name);
     }
 
 
@@ -188,9 +264,6 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
 
 
     //****************** Success flag ******************//
-
-    /** Operation result code */
-    protected ErrorCode errValue = ErrorCode.NOT_SET;
 
     /**
      * Returns <tt>true</tt> if this operation has finished successfuly.

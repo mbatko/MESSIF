@@ -327,7 +327,7 @@ public abstract class Extractors {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return textExtractor.extract(new ExtractorDataSource(
                         callExternalExtractor(command, fileAsArgument, dataSource),
-                        dataSource.getAdditionalParameters()
+                        dataSource.getParameterMap()
                 ));
             }
             @Override
@@ -362,7 +362,7 @@ public abstract class Extractors {
             public Iterator<T> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return new ExtractorIterator<T>(textExtractor, new ExtractorDataSource(
                         callExternalExtractor(command, fileAsArgument, dataSource),
-                        dataSource.getAdditionalParameters()
+                        dataSource.getParameterMap()
                 ));
             }
             @Override
