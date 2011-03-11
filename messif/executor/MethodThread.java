@@ -121,6 +121,14 @@ public final class MethodThread extends SingleMethodExecutor implements Runnable
     }
 
     /**
+     * Returns the thread that is processing this method.
+     * @return the thread that is processing this method
+     */
+    public Thread getRunningThread() {
+        return runningThread;
+    }
+
+    /**
      * This method waits for the end of execution.
      * If the method is already finished, this method returns immediately.
      * @return <tt>true</tt> if the execution was successful

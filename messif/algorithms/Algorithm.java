@@ -31,11 +31,15 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Logger;
 import messif.executor.Executable;
@@ -88,7 +92,10 @@ public abstract class Algorithm implements Serializable {
     private final String algorithmName;
 
     /** Number of actually running operations */
-    private transient Semaphore runningOperations;
+    private transient Semaphore runningOperationsSemaphore;
+
+    /** List of currently running operations */
+    private transient WeakHashMap<Thread, AbstractOperation> runningOperations;
 
     /** Executor for operations */
     private transient MethodClassExecutor operationExecutor;
@@ -228,7 +235,7 @@ public abstract class Algorithm implements Serializable {
     public void storeToFile(String filepath) throws IOException {
         // Acquire all locks, thus waiting for all currently running operations and disable additional
         if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly(maximalConcurrentOperations);
+            runningOperationsSemaphore.acquireUninterruptibly(maximalConcurrentOperations);
         
         try {
             // Check if the file is a regular file
@@ -246,12 +253,12 @@ public abstract class Algorithm implements Serializable {
         } finally {
             // Unlock operations
             if (maximalConcurrentOperations > 0)
-                runningOperations.release(maximalConcurrentOperations);
+                runningOperationsSemaphore.release(maximalConcurrentOperations);
         }
     }
 
 
-    //****************** Operation execution ******************//
+    //****************** Operation info methods ******************//
 
     /**
      * Returns the number of currently evaluated operations.
@@ -262,7 +269,54 @@ public abstract class Algorithm implements Serializable {
     public int getRunningOperationsCount() {
         if (maximalConcurrentOperations == 0)
             return 0;
-        return maximalConcurrentOperations - runningOperations.availablePermits();
+        return maximalConcurrentOperations - runningOperationsSemaphore.availablePermits();
+    }
+
+    /**
+     * Returns the operation executed in the given thread.
+     * If the given thread is not an algorithm execution thread, <tt>null</tt> is returned.
+     * @param thread the algorithm execution thread for which to get the operation
+     * @return the executed operation or <tt>null</tt> if the thread is not executing any operation
+     */
+    public AbstractOperation getRunningOperationByThread(Thread thread) {
+        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+            return runningOperations.get(thread);
+        }
+    }
+
+    /**
+     * Returns the currently executed operation with the given identifier.
+     * If there is no running operation with that identifier, <tt>null</tt> is returned.
+     * @param operationId the identifier of the operation to get
+     * @return the executed operation or <tt>null</tt> if there was no running operation with that identifier
+     */
+    public AbstractOperation getRunningOperationById(UUID operationId) {
+        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+            for (AbstractOperation operation : runningOperations.values())
+                if (operation.getOperationID().equals(operationId))
+                    return operation;
+            return null;
+        }
+    }
+
+    /**
+     * Returns the operation executed in this thread.
+     * If this thread is not an algorithm execution thread, <tt>null</tt> is returned.
+     * @return the executed operation or <tt>null</tt> if this thread is not executing any operation
+     */
+    public AbstractOperation getRunningOperation() {
+        return getRunningOperationByThread(Thread.currentThread());
+    }
+
+    /**
+     * Returns the operation executed in this thread.
+     * If this thread is not an algorithm execution thread, <tt>null</tt> is returned.
+     * @return the executed operation or <tt>null</tt> if this thread is not executing any operation
+     */
+    public Collection<AbstractOperation> getAllRunningOperations() {
+        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+            return Collections.unmodifiableCollection(runningOperations.values());
+        }
     }
 
     /**
@@ -280,22 +334,6 @@ public abstract class Algorithm implements Serializable {
      */
     public void resetOperationStatistics() {
         OperationStatistics.resetLocalThreadStatistics();
-    }
-
-    /**
-     * Initialize operation executor.
-     * This method is called from constructor and serialization.
-     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
-     */
-    private void initializeExecutor() throws IllegalArgumentException {
-        runningOperations = new Semaphore(maximalConcurrentOperations, true);
-        operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
-        bgExecutionList = new ThreadLocal<StatisticsEnabledMethodThreadList>() {
-            @Override
-            protected synchronized StatisticsEnabledMethodThreadList initialValue() {
-                return new StatisticsEnabledMethodThreadList(operationExecutor);
-            }
-        };
     }
 
     /**
@@ -335,6 +373,26 @@ public abstract class Algorithm implements Serializable {
         return supportedOperations.get(0);
     }
 
+
+    //****************** Operation execution ******************//
+
+    /**
+     * Initialize operation executor.
+     * This method is called from constructor and serialization.
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
+     */
+    private void initializeExecutor() throws IllegalArgumentException {
+        runningOperationsSemaphore = new Semaphore(maximalConcurrentOperations, true);
+        runningOperations = new WeakHashMap<Thread, AbstractOperation>(maximalConcurrentOperations);
+        operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
+        bgExecutionList = new ThreadLocal<StatisticsEnabledMethodThreadList>() {
+            @Override
+            protected synchronized StatisticsEnabledMethodThreadList initialValue() {
+                return new StatisticsEnabledMethodThreadList(operationExecutor);
+            }
+        };
+    }
+
     /**
      * Execute operation with additional parameters.
      * This is a synchronized wrapper around {@link MethodExecutor#execute}. 
@@ -345,7 +403,10 @@ public abstract class Algorithm implements Serializable {
      */
     protected final void execute(boolean addTimeStatistic, Object... params) throws AlgorithmMethodException, NoSuchMethodException {
         if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly();
+            runningOperationsSemaphore.acquireUninterruptibly();
+        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+            runningOperations.put(Thread.currentThread(), getExecutorOperationParam(params));
+        }
         try {
             // Measure time of execution (as an operation statistic)
             if (addTimeStatistic) {
@@ -362,7 +423,7 @@ public abstract class Algorithm implements Serializable {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
             if (maximalConcurrentOperations > 0)
-                runningOperations.release();
+                runningOperationsSemaphore.release();
         }
     }
 
@@ -375,16 +436,19 @@ public abstract class Algorithm implements Serializable {
      */
     protected final void backgroundExecute(boolean updateStatistics, Object... params) throws NoSuchMethodException {
         if (maximalConcurrentOperations > 0)
-            runningOperations.acquireUninterruptibly();
+            runningOperationsSemaphore.acquireUninterruptibly();
         try {
-            bgExecutionList.get().backgroundExecute(updateStatistics, params);
+            MethodThread bgMethodThread = bgExecutionList.get().backgroundExecute(updateStatistics, params);
+            synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+                runningOperations.put(bgMethodThread.getRunningThread(), getExecutorOperationParam(params));
+            }
         } catch (NoSuchMethodException e) { // Unlock on exception (but keep the lock if everything was ok)
             if (maximalConcurrentOperations > 0)
-                runningOperations.release();
+                runningOperationsSemaphore.release();
             throw e;
         } catch (RuntimeException e) { // Unlock on exception (but keep the lock if everything was ok)
             if (maximalConcurrentOperations > 0)
-                runningOperations.release();
+                runningOperationsSemaphore.release();
             throw e;
         }
     }
@@ -482,7 +546,7 @@ public abstract class Algorithm implements Serializable {
         // Wait for execution end and release locks
         int operationsCount = list.waitBackgroundExecuteOperation();
         if (maximalConcurrentOperations > 0)
-            runningOperations.release(operationsCount);
+            runningOperationsSemaphore.release(operationsCount);
 
         try {
             List<E> retList = list.getAllMethodsReturnValue(argClass);
@@ -494,6 +558,42 @@ public abstract class Algorithm implements Serializable {
         } catch (Exception e) {
             throw new AlgorithmMethodException(e);
         }
+    }
+
+    /**
+     * Terminates processing of the operation with given identifier.
+     * Note that the thread that executes the operation is interrupted leaving
+     * the decision on how to finish cleanly to the processing method.
+     * Each processing method thus should check the {@link Thread#isInterrupted()}
+     * regularly and act accordingly if it is set.
+     * @param operationId the identifier of the operation to terminate
+     * @return <tt>true</tt> if there was an operation for that identifier and it was interrupted;
+     *          if there was no operation or the thread executing it has already finished, <tt>false</tt> is returned
+     */
+    public boolean terminateOperation(UUID operationId) {
+        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
+            for (Entry<Thread, AbstractOperation> entry : runningOperations.entrySet()) {
+                if (entry.getValue().getOperationID().equals(operationId)) {
+                    entry.getKey().interrupt();
+                    return entry.getKey().isAlive();
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Terminates processing of the given operation.
+     * Note that the thread that executes the operation is interrupted leaving
+     * the decision on how to finish cleanly to the processing method.
+     * Each processing method thus should check the {@link Thread#isInterrupted()}
+     * regularly and act accordingly if it is set.
+     * @param operation the operation to terminate
+     * @return <tt>true</tt> if the operation was processed by a thread and it was interrupted;
+     *          if there was no thread currently processing the operation, <tt>false</tt> is returned
+     */
+    public boolean terminateOperation(AbstractOperation operation) {
+        return terminateOperation(operation.getOperationID());
     }
 
     /** This is a helper class that allows merging of operation statistics from the background-executed operations */
@@ -617,6 +717,22 @@ public abstract class Algorithm implements Serializable {
     protected Class[] getExecutorParamClasses() {
         Class[] rtv = { AbstractOperation.class };
         return rtv;
+    }
+
+    /**
+     * Returns the instance of {@link AbstractOperation} from the parameters for the executor.
+     * @param params the parameters for the executor
+     * @return the instance of {@link AbstractOperation}
+     */
+    private final AbstractOperation getExecutorOperationParam(Object... params) {
+        Class<?>[] executorParamClasses = getExecutorParamClasses();
+        for (int i = 0; i < executorParamClasses.length; i++)
+            if (executorParamClasses[i] == AbstractOperation.class) {
+                if (params[i] instanceof AbstractOperation)
+                    return (AbstractOperation)params[i];
+                throw new InternalError("Method getExecutorParamClasses is not compatible with the actual operation call");
+            }
+        throw new InternalError("Method getExecutorParamClasses does not have an AbstractOperation class");
     }
 
 
