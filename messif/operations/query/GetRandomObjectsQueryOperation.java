@@ -82,6 +82,10 @@ public class GetRandomObjectsQueryOperation extends ListingQueryOperation {
         return 1;
     }
 
+    /** Returns the number of objects to be returned by this operation */
+    public int getCount() {
+        return count;
+    }
 
     //****************** Default implementation of query evaluation ******************//
 
