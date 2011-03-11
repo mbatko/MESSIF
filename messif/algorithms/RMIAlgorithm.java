@@ -23,7 +23,9 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import messif.objects.LocalAbstractObject;
 import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
@@ -264,6 +266,27 @@ public class RMIAlgorithm extends Algorithm {
     @Override
     public int getRunningOperationsCount() {
         return (Integer)methodExecute("getRunningOperationsCount");
+    }
+
+    @Override
+    public AbstractOperation getRunningOperationByThread(Thread thread) {
+        throw new UnsupportedOperationException("This operation cannot be called via RMI");
+    }
+
+    @Override
+    public AbstractOperation getRunningOperationById(UUID operationId) {
+        return (AbstractOperation)methodExecute("getRunningOperationById", operationId);
+    }
+
+    @Override
+    public AbstractOperation getRunningOperation() {
+        return (AbstractOperation)methodExecute("getRunningOperation");
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Collection<AbstractOperation> getAllRunningOperations() {
+        return (Collection<AbstractOperation>)methodExecute("getAllRunningOperations");
     }
 
     @Override
