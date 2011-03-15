@@ -273,7 +273,7 @@ public class HttpApplication extends Application {
             if (httpThreads == 0) {
                 httpServer.setExecutor(Executors.newCachedThreadPool());
             } else if (httpThreads > 1) {
-                httpServer.setExecutor(Executors.newFixedThreadPool(10));
+                httpServer.setExecutor(Executors.newFixedThreadPool(httpThreads));
             }
             httpServerContexts = new HashMap<String, HttpContext>();
         } catch (NumberFormatException e) {
