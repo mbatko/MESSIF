@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import messif.buckets.index.IndexComparator;
 import messif.utility.Clearable;
 import messif.utility.Convert;
 import messif.utility.Parametric;
@@ -174,6 +175,29 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
             return null;
         return additionalParameters.remove(name);
     }
+
+    //*****************   Operation-UUID comparator   **************************//
+
+    /**
+     * Comparator to be used in buckets and storages to index & compare operations according to operation UUID.
+     */
+    public static final IndexComparator<UUID, AbstractOperation> uuidOperationComparator = new IndexComparator<UUID, AbstractOperation> () {
+
+        @Override
+        public int indexCompare(UUID k, AbstractOperation o) {
+            return k.compareTo(o.getOperationID());
+        }
+
+        @Override
+        public UUID extractKey(AbstractOperation object) {
+            return object.getOperationID();
+        }
+
+        @Override
+        public int compare(UUID t, UUID t1) {
+            return t.compareTo(t1);
+        }
+    };
 
 
     //****************** Equality driven by operation data ******************//

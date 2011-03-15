@@ -16,6 +16,7 @@
  */
 package messif.operations.query;
 
+import java.util.Arrays;
 import java.util.Collection;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
@@ -45,18 +46,71 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
     /** Number of nearest objects to retrieve */
     private final int k;
 
+    /** Type of aggregation */
+    private final AggregationFunction aggregation;
+
+    /**
+     * Aggregating function to combine distance of given data object from set of queries in this operation.
+     */
+    public static enum AggregationFunction {
+        
+        SUM, MAX, AVG, MIN;
+
+        /** Given array of distances of given data object from set of queries, this method returns aggregated distance */
+        protected float evaluate(float [] distances) {
+            float retVal = 0f;
+            switch (this) {
+                case SUM:
+                    for (float f : distances) {
+                        retVal += f;
+                    }
+                    break;
+                case MAX:
+                    for (float f : distances) {
+                        retVal = Math.max(retVal, f);
+                    }
+                    break;
+                case MIN:
+                    retVal = Float.MAX_VALUE;
+                    for (float f : distances) {
+                        retVal = Math.min(retVal, f);
+                    }
+                    break;
+                case AVG:
+                    for (float f : distances) {
+                        retVal += f;
+                    }
+                    retVal /= (float) distances.length;
+                    break;
+            }
+            return retVal;
+        }
+    }
 
     //****************** Constructors ******************//
 
     /**
      * Creates a new instance of kNNQueryOperation for given query objects and maximal number of objects to return.
      * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
+     * Default aggregation function is "sum".
      * @param queryObjects the objects to which the nearest neighbors are searched
      * @param k the number of nearest neighbors to retrieve
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects"})
     public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k) {
-        this(queryObjects, k, AnswerType.NODATA_OBJECTS);
+        this(queryObjects, k, AnswerType.NODATA_OBJECTS, AggregationFunction.SUM);
+    }
+
+    /**
+     * Creates a new instance of kNNQueryOperation for given query objects and maximal number of objects to return.
+     * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
+     * @param queryObjects the objects to which the nearest neighbors are searched
+     * @param k the number of nearest neighbors to retrieve
+     * @param aggregationFunction function to aggregate distances between set of query objects and data objects
+     */
+    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Aggregation function"})
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AggregationFunction aggregationFunction) {
+        this(queryObjects, k, AnswerType.NODATA_OBJECTS, aggregationFunction);
     }
 
     /**
@@ -64,25 +118,28 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param queryObjects the objects to which the nearest neighbors are searched
      * @param k the number of nearest neighbors to retrieve
      * @param answerType the type of objects this operation stores in its answer
+     * @param aggregationFunction function to aggregate distances between set of query objects and data objects
      */
-    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type"})
-    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType) {
-        this(queryObjects, k, false, answerType);
+    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type", "Aggregation function"})
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType, AggregationFunction aggregationFunction) {
+        this(queryObjects, k, false, answerType, aggregationFunction);
     }
 
     /**
      * Creates a new instance of kNNQueryOperation for given query objects and maximal number of objects to return.
      * @param queryObjects the objects to which the nearest neighbors are searched
      * @param k the number of nearest neighbors to retrieve
-     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
-     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     * @param storedIndividualDistances if <tt>true</tt>, all distances between the data object and all query objects are
+     *          stored in {@link messif.objects.util.RankedAbstractMetaObject sub-distances}
      * @param answerType the type of objects this operation stores in its answer
+     * @param aggregationFunction function to aggregate distances between set of query objects and data objects
      */
-    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type"})
-    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storeMetaDistances, AnswerType answerType) {
-        super(answerType, k, storeMetaDistances);
+    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store individual obj-queries distances?", "Answer type", "Aggregation function"})
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, AggregationFunction aggregationFunction) {
+        super(answerType, k, storedIndividualDistances);
         this.queryObjects = queryObjects.toArray(new LocalAbstractObject[queryObjects.size()]);
         this.k = k;
+        this.aggregation = aggregationFunction;
     }
 
 
@@ -145,16 +202,19 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
+
+        float [] distances = new float [queryObjects.length];
+
         // Iterate through all supplied objects
         while (objects.hasNext()) {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            float distance = 0;
             for (int i = 0; i < queryObjects.length; i++) {
-                distance += queryObjects[i].getDistance(object);
+                distances[i] = queryObjects[i].getDistance(object);
             }
-            addToAnswer(object, distance, null);
+
+            addToAnswer(object, aggregation.evaluate(distances), isStoringMetaDistances() ? distances.clone() : null);
         }
 
         return getAnswerCount() - beforeCount;

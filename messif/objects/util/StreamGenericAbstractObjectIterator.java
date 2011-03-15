@@ -288,7 +288,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
                     "Cannot read instance #" + (objectsRead + 1) + " of " +
                     factory.getCreatedClass().getName() + " from " +
                     ((fileName == null) ? "STDIN" : fileName) + ": " +
-                    e.getCause());
+                    e.getCause(), e.getCause());
         }
     }
 

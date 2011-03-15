@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
