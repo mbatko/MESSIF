@@ -1185,6 +1185,20 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         /**
+         * Transforms a list of keywords into array of addresses.
+         * Note that unknown keywords are added to the index.
+         * All items from the list are removed during the process, so
+         * do not pass an unmodifiable list!
+         *
+         * @param keyWords the list of keywords to transform
+         * @return array of translated addresses
+         * @throws IllegalStateException if there was a problem reading the index
+         */
+        public int[] keywordsToIdentifiers(String[] keyWords) throws IllegalStateException {
+            return MetaObjectProfiSCT.keywordsToIdentifiers(keyWords, null, stemmer, keyWordIndex);
+        }
+
+        /**
          * Returns the thumbnail path of the object with the given locator.
          * @param locator the locator of the object for which to get the thumbnail
          * @return the thumbnail path
@@ -1394,7 +1408,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         public Collection<RankedAbstractObject> rankByKeywords(String[][] referenceKeywords, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws SQLException {
             int[][] keywordIds = new int[referenceKeywords.length][];
             for (int i = 0; i < referenceKeywords.length; i++)
-                keywordIds[i] = keywordsToIdentifiers(referenceKeywords[i], null, stemmer, keyWordIndex);
+                keywordIds[i] = keywordsToIdentifiers(referenceKeywords[i]);
             ObjectIntMultiVectorJaccard queryObject = new ObjectIntMultiVectorJaccard(keywordIds);
             RankedSortedCollection ret = new RankedSortedCollection();
             while (iterator.hasNext()) {
