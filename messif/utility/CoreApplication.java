@@ -106,6 +106,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  ...
  *  &lt;actionName&gt;.repeat = &lt;repeats&gt;
  *  &lt;actionName&gt;.foreach = &lt;value&gt; &lt;value&gt; ...
+ *  &lt;actionName&gt;.repeatUntilException = &lt;some exception class, e.g. java.util.NoSuchElementException&gt;
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
