@@ -979,7 +979,7 @@ public abstract class Convert {
                 value = matcher.group(defaultValueRegexGroup);
 
             // Do the replacement, if variable is not found, the variable placeholder is removed
-            matcher.appendReplacement(sb, (value != null)?value:"");
+            matcher.appendReplacement(sb, value != null ? Matcher.quoteReplacement(value) : "");
         }
 
         // Finish replacing
