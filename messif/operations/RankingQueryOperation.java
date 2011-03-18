@@ -116,12 +116,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     public RankingQueryOperation clone() throws CloneNotSupportedException {
         RankingQueryOperation operation = (RankingQueryOperation)super.clone();
 
-        // Create a new collection for the answer set
-        int maxAnswerSize = operation.answer.getMaximalCapacity();
-        if (maxAnswerSize < Integer.MAX_VALUE)
-            operation.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
-        else
-            operation.answer = new RankedSortedCollection();
+        // Create a new collection for the answer set (without data)
+        operation.answer = (RankedSortedCollection)operation.answer.clone(false);
 
         return operation;
     }

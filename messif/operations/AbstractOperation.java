@@ -182,6 +182,8 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * Comparator to be used in buckets and storages to index & compare operations according to operation UUID.
      */
     public static final IndexComparator<UUID, AbstractOperation> uuidOperationComparator = new IndexComparator<UUID, AbstractOperation> () {
+        /** Class serial id for serialization. */
+        private static final long serialVersionUID = 1L;
 
         @Override
         public int indexCompare(UUID k, AbstractOperation o) {
@@ -196,6 +198,16 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         @Override
         public int compare(UUID t, UUID t1) {
             return t.compareTo(t1);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj.getClass() == this.getClass();
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
         }
     };
 
@@ -341,7 +353,9 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     /**
      * Create a duplicate of this operation.
      * Check (and override) the implementation in subclasses if there are mutable object attributes.
-     * Note that supplemental data ({@link #suppData}) is not clonned.
+     * Note that supplemental data ({@link #suppData}) is not clonned (but the reference is kept).
+     * Note also that the answer of the query operations is not clonned but
+     * a new collection is created.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned

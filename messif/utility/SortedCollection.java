@@ -42,6 +42,9 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     /** Percentage of the capacity that is added when internal array is resized */
     private static final float SIZE_INCREASE_FACTOR = 0.3f;
 
+    /** Default initial capacity of the internal array */
+    private static final int DEFAULT_INITIAL_CAPACITY = 16;
+
 
     //****************** Attributes ******************//
 
@@ -103,7 +106,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
     public SortedCollection(Comparator<? super T> comparator) throws IllegalArgumentException {
-        this(16, comparator);
+        this(DEFAULT_INITIAL_CAPACITY, comparator);
     }
 
     /**
@@ -279,16 +282,41 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
     /**
      * Returns a shallow copy of this <tt>SortedCollection</tt> instance.
-     * The elements themselves are not copied and the comparator is shared.
+     * The elements themselves are copied as references only and the comparator is shared.
      * @return a clone of this <tt>SortedCollection</tt> instance
+     * @throws CloneNotSupportedException if there was a problem clonning this collection
      */
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        SortedCollection ret = (SortedCollection)super.clone();
-        ret.items = new Object[size];
-        System.arraycopy(items, 0, ret.items, 0, size);
+    public final SortedCollection<T> clone() throws CloneNotSupportedException {
+        return clone(true);
+    }
+
+    /**
+     * Returns a shell or shallow copy of this <tt>SortedCollection</tt> instance.
+     * If {@code copyData} parameter is <tt>false</tt>, only the collection shell
+     * is copied but no data, i.e. this creates a new instance of an empty collection
+     * with the same settings as the original one. Otherwise, the data are also copied
+     * as references.
+     * The comparator is shared with the new instance.
+     * @param copyData if <tt>true</tt> the collection data are copied as references, otherwise,
+     *      only the collection shell is copied but no data, i.e. this creates a new instance of
+     *      an empty collection with the same settings as the original one
+     * @return a clone of this <tt>SortedCollection</tt> instance
+     * @throws CloneNotSupportedException if there was a problem clonning this collection
+     */
+    public SortedCollection<T> clone(boolean copyData) throws CloneNotSupportedException {
+        @SuppressWarnings("unchecked")
+        SortedCollection<T> ret = (SortedCollection<T>)super.clone(); // This uncheck IS correct, since this is clonning
+        if (copyData) {
+            ret.items = new Object[size];
+            System.arraycopy(items, 0, ret.items, 0, size);
+        } else {
+            ret.items = new Object[DEFAULT_INITIAL_CAPACITY];
+            ret.size = 0;
+        }
         ret.modCount = 0;
         return ret;
+
     }
 
     /**
