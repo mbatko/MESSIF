@@ -1024,8 +1024,10 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             try {
                 BeanInfo beanInfo = Introspector.getBeanInfo(storedObjectsClass);
                 for (PropertyDescriptor pd : beanInfo.getPropertyDescriptors()) {
-                    if (propertyName.equals(pd.getName()))
+                    if (propertyName.equals(pd.getName())) {
                         propertyDescriptor = pd;
+                        break;
+                    }
                 }
             } catch (IntrospectionException e) {
                 throw new IllegalArgumentException("Property '" + propertyName + "' on " + storedObjectsClass + " cannot be used", e);
