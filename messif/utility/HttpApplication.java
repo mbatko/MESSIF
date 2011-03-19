@@ -94,6 +94,11 @@ public class HttpApplication extends Application {
             return false;
         }
 
+        if (httpServerContexts.containsKey(args[1])) {
+            out.println("Context '" + args[1] + "' already exists");
+            return false;
+        }
+
         try {
             HttpContext context = httpServer.createContext(
                     args[1],
