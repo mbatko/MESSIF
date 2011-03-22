@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
@@ -45,30 +45,26 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     /** Class id for serialization. */
     private static final long serialVersionUID = 2L;
 
-    //****************** The list of supported names ******************//
+    //****************** Constants ******************//
 
     /** The list of the names for the encapsulated objects */
     protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","ScalableColorType","EdgeHistogramType","RegionShapeType"};
-
-    /** The list of the names for the encapsulated objects - in the form of a set */
-    protected static final Set<String> descriptorNameSet = new HashSet<String>(Arrays.asList("ColorLayoutType","ColorStructureType","ScalableColorType","EdgeHistogramType","RegionShapeType"));
-
     /** Descriptor weights used to compute the overall distance */
-    protected static float[] descriptorWeights = { 2.0f, 2.0f, 2.0f, 5.0f, 4.0f };
+    protected static final float[] descriptorWeights = { 2.0f, 2.0f, 2.0f, 5.0f, 4.0f };
 
 
     //****************** Attributes ******************//
 
     /** Object for the ColorLayoutType */
-    protected ObjectColorLayout colorLayout;
+    private ObjectColorLayout colorLayout;
     /** Object for the ColorStructureType */
-    protected ObjectShortVectorL1 colorStructure;
+    private ObjectShortVectorL1 colorStructure;
     /** Object for the ScalableColorType */
-    protected ObjectIntVectorL1 scalableColor;
+    private ObjectIntVectorL1 scalableColor;
     /** Object for the EdgeHistogramType */
-    protected ObjectVectorEdgecomp edgeHistogram;
+    private ObjectVectorEdgecomp edgeHistogram;
     /** Object for the RegionShapeType */
-    protected ObjectXMRegionShape regionShape;
+    private ObjectXMRegionShape regionShape;
 
 
     //****************** Constructors ******************//
@@ -137,77 +133,61 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     }
 
     /**
-     * Creates a new instance of MetaObjectShapeAndColor.
+     * Creates a new instance of MetaObjectShapeAndColor from a text stream.
+     * Only the descriptors specified in restrict names are loaded.
      * 
-     * @param stream stream to read the data from
+     * @param stream the text stream to read the data from
      * @param restrictNames the sub-distances may be restricted by passing list of sub-dist names
-     * @throws IOException if reading from the stream fails
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectShapeAndColor(BufferedReader stream, Set<String> restrictNames) throws IOException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-
-        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
-        String[] uriNamesClasses = line.split(";");
-
-        // Skip the first name if the number of elements is odd
-        int i = uriNamesClasses.length % 2;
-
-        // If the URI locator is used (and it is not set from the previous - this is the old format)
-        if (i == 1) {
-            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0)) {
-                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
-            }
-        }
-
-        for (; i < uriNamesClasses.length; i += 2) {
-            // Check restricted names
-            if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i])) {
-                try {
-                    readObject(stream, uriNamesClasses[i + 1]); // Read the object, but skip it
-                } catch (IOException e) { // Ignore the error on skipped objects
-                }
-            } else if (descriptorNames[0].equals(uriNamesClasses[i])) {
-                colorLayout = readObject(stream, ObjectColorLayout.class);
-            } else if (descriptorNames[1].equals(uriNamesClasses[i])) {
-                colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            } else if (descriptorNames[2].equals(uriNamesClasses[i])) {
-                scalableColor = readObject(stream, ObjectIntVectorL1.class);
-            } else if (descriptorNames[3].equals(uriNamesClasses[i])) {
-                edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
-            } else if (descriptorNames[4].equals(uriNamesClasses[i])) {
-                regionShape = readObject(stream, ObjectXMRegionShape.class);
-            }
-        }
+        Map<String, LocalAbstractObject> objects = readObjects(stream, restrictNames, readObjectsHeader(stream), new HashMap<String, LocalAbstractObject>(descriptorNames.length));
+        this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
+        this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
+        this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[2]);
+        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[3]);
+        this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[4]);
     }
 
     /**
-     * Creates a new instance of MetaObjectShapeAndColor.
+     * Creates a new instance of MetaObjectShapeAndColor from a text stream.
+     * Only the descriptors specified in restrict names are loaded.
      *
-     * @param stream stream to read the data from
+     * @param stream the text stream to read the data from
      * @param restrictNames the sub-distances may be restricted by passing list of sub-dist names
-     * @throws IOException if reading from the stream fails
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectShapeAndColor(BufferedReader stream, String[] restrictNames) throws IOException {
         this(stream, new HashSet<String>(Arrays.asList(restrictNames)));
     }
 
     /**
-     * Creates a new instance of MetaObjectShapeAndColor.
+     * Creates a new instance of MetaObjectShapeAndColor from a text stream.
      *
-     * @param stream stream to read the data from
-     * @throws IOException if reading from the stream fails
+     * @param stream the text stream to read the data from
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectShapeAndColor(BufferedReader stream) throws IOException {
-        this(stream, descriptorNameSet);
+        this(stream, descriptorNames);
     }
+
+
+    //****************** Access to object names and weights by static methods ******************//
 
     /**
      * Returns list of supported visual descriptor types that this object recognizes in XML.
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
+        return descriptorNames.clone();
+    }
+
+    /**
+     * Returns the weights used to compute the overall distance.
+     * @return the weights used to compute the overall distance
+     */
+    public static float[] getWeights() {
+        return descriptorWeights.clone();
     }
 
 
@@ -252,6 +232,11 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     @Override
     public Collection<String> getObjectNames() {
         return Arrays.asList(descriptorNames);
+    }
+
+    @Override
+    protected void writeData(OutputStream stream) throws IOException {
+        writeObjects(stream, writeObjectsHeader(stream, getObjectMap()));
     }
 
 
@@ -311,14 +296,6 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         return rtv;
     }
 
-    /**
-     * Returns the weights used to compute the overall distance.
-     * @return the weights used to compute the overall distance
-     */
-    public static float[] getWeights() {
-        return descriptorWeights.clone();
-    }
-
     @Override
     public float getMaxDistance() {
         float sum = 1; // Adjustment to overcome rounding problems
@@ -328,16 +305,8 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     }
 
 
-
     //****************** Clonning ******************//
 
-    /**
-     * Creates and returns a copy of this object. The precise meaning 
-     * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
-     * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         MetaObjectShapeAndColor rtv = (MetaObjectShapeAndColor)super.clone(cloneFilterChain);
@@ -369,60 +338,6 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
         if (regionShape != null)
             rtv.regionShape = (ObjectXMRegionShape)regionShape.cloneRandomlyModify(args);
         return rtv;
-    }
-
-    /**
-     * Store this object to a text stream.
-     * This method should have the opposite deserialization in constructor of a given object class.
-     *
-     * @param stream the stream to store this object to
-     * @throws IOException if there was an error while writing to stream
-     */
-    @Override
-    protected void writeData(OutputStream stream) throws IOException {
-        boolean written = false;
-        if (colorLayout != null) {
-            stream.write((descriptorNames[0] + ';' + colorLayout.getClass().getName()).getBytes());
-            written = true;
-        }
-        if (colorStructure != null) {
-            if (written)
-                stream.write(';');
-            stream.write((descriptorNames[1] + ';' + colorStructure.getClass().getName()).getBytes());
-            written = true;
-        }
-        if (scalableColor != null) {
-            if (written)
-                stream.write(';');
-            stream.write((descriptorNames[2] + ';' + scalableColor.getClass().getName()).getBytes());
-            written = true;
-        }
-        if (edgeHistogram != null) {
-            if (written)
-                stream.write(';');
-            stream.write((descriptorNames[3] + ';' + edgeHistogram.getClass().getName()).getBytes());
-            written = true;
-        }
-        if (regionShape != null) {
-            if (written)
-                stream.write(';');
-            stream.write((descriptorNames[4] + ';' + regionShape.getClass().getName()).getBytes());
-            written = true;
-        }
-        if (written) {
-            stream.write('\n');
-            // Write a line for every object from the list (skip the comments)
-            if (colorLayout != null)
-                colorLayout.writeData(stream);
-            if (colorStructure != null)
-                colorStructure.writeData(stream);
-            if (scalableColor != null)
-                scalableColor.writeData(stream);
-            if (edgeHistogram != null)
-                edgeHistogram.writeData(stream);
-            if (regionShape != null)
-                regionShape.writeData(stream);
-        }
     }
 
 

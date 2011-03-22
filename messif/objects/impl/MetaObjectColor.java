@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import messif.objects.keys.AbstractObjectKey;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
@@ -33,6 +33,8 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
+ * This class represents a meta object that encapsulates MPEG7 descriptors for colors.
+ * The descriptors are ColorLayout, ColorStructure, and ScalableColor.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -43,13 +45,13 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
-    //****************** The list of supported names ******************//
+    //****************** Constants ******************//
 
     /** The list of the names for the encapsulated objects */
     protected static final String[] descriptorNames = {"ColorLayoutType","ColorStructureType","ScalableColorType"};
+    /** Descriptor weights used to compute the overall distance */
+    protected static final float[] descriptorWeights = { 2.0f, 2.0f, 2.0f };
 
-    /** The list of the names for the encapsulated objects - in the form of a set */
-    protected static final Set<String> descriptorNameSet = new HashSet<String>(Arrays.asList("ColorLayoutType","ColorStructureType","ScalableColorType"));
 
     //****************** Attributes ******************//
 
@@ -61,7 +63,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
     protected ObjectIntVectorL1 scalableColor;
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of MetaObjectColor.
@@ -78,98 +80,104 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
         this.scalableColor = scalableColor;
     }
 
+    /**
+     * Creates a new instance of MetaObjectColor from the given map of objects.
+     * Note that the encapsulated objects will have the correct key only if the
+     * {@code cloneObjects} is requested.
+     *
+     * @param locatorURI locator of the metaobject (and typically all of the passed objects)
+     * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
+     * @param cloneObjects  flag whether to clone the objects from the map (<tt>true</tt>) or not (<tt>false</tt>)
+     * @throws CloneNotSupportedException if the clonning was not supported by any of the clonned objects
+     */
     public MetaObjectColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
-        this(locatorURI, objects);
-        if (cloneObjects) {
-            this.colorLayout = (ObjectColorLayout)this.colorLayout.clone(getObjectKey());
-            this.colorStructure = (ObjectShortVectorL1)this.colorStructure.clone(getObjectKey());
-            this.scalableColor = (ObjectIntVectorL1)this.scalableColor.clone(getObjectKey());
-        }
+        super(locatorURI);
+        this.colorLayout = getObjectFromMap(objects, descriptorNames[0], ObjectColorLayout.class, cloneObjects, getObjectKey());
+        this.colorStructure = getObjectFromMap(objects, descriptorNames[1], ObjectShortVectorL1.class, cloneObjects, getObjectKey());
+        this.scalableColor = getObjectFromMap(objects, descriptorNames[2], ObjectIntVectorL1.class, cloneObjects, getObjectKey());
     }
 
+    /**
+     * Creates a new instance of MetaObjectColor from the given map of objects.
+     * Note that the encapsulated object are not clonned and will retain their keys.
+     *
+     * @param locatorURI locator of the metaobject (and typically all of the passed objects)
+     * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
+     */
     public MetaObjectColor(String locatorURI, Map<String, LocalAbstractObject> objects) {
         super(locatorURI);
-        this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
-        this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");
-        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
+        this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
+        this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
+        this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[2]);
     }
 
+    /**
+     * Creates a new instance of MetaObjectColor by taking objects from another {@link MetaObject}.
+     * Note that the objects are not clonned.
+     * @param object the meta object from which this one is created
+     */
     public MetaObjectColor(MetaObject object) {
         this(object.getLocatorURI(), object.getObjectMap());
     }
 
     /**
-     * Creates a new instance of MetaObjectColor.
-     * 
-     * @param stream stream to read the data from
+     * Creates a new instance of MetaObjectColor from a text stream.
+     * Only the descriptors specified in restrict names are loaded.
+     *
+     * @param stream the text stream to read the data from
      * @param restrictNames the sub-distances may be restricted by passing list of sub-dist names
-     * @throws IOException if reading from the stream fails
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectColor(BufferedReader stream, Set<String> restrictNames) throws IOException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-
-        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
-        String[] uriNamesClasses = line.split(";");
-
-        // Skip the first name if the number of elements is odd
-        int i = uriNamesClasses.length % 2;
-
-        // If the URI locator is used (and it is not set from the previous - this is the old format)
-        if (i == 1) {
-            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0)) {
-                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
-            }
-        }
-
-        for (; i < uriNamesClasses.length; i += 2) {
-            // Check restricted names
-            if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i])) {
-                try {
-                    readObject(stream, uriNamesClasses[i + 1]); // Read the object, but skip it
-                } catch (IOException e) { // Ignore the error on skipped objects
-                }
-            } else if ("ColorLayoutType".equals(uriNamesClasses[i])) {
-                colorLayout = readObject(stream, ObjectColorLayout.class);
-            } else if ("ColorStructureType".equals(uriNamesClasses[i])) {
-                colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            } else if ("ScalableColorType".equals(uriNamesClasses[i])) {
-                scalableColor = readObject(stream, ObjectIntVectorL1.class);
-            }
-        }
+        Map<String, LocalAbstractObject> objects = readObjects(stream, restrictNames, readObjectsHeader(stream), new HashMap<String, LocalAbstractObject>(descriptorNames.length));
+        this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
+        this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
+        this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[2]);
     }
 
     /**
-     * Creates a new instance of MetaObjectColor.
+     * Creates a new instance of MetaObjectColor from a text stream.
+     * Only the descriptors specified in restrict names are loaded.
      *
-     * @param stream stream to read the data from
+     * @param stream the text stream to read the data from
      * @param restrictNames the sub-distances may be restricted by passing list of sub-dist names
-     * @throws IOException if reading from the stream fails
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectColor(BufferedReader stream, String[] restrictNames) throws IOException {
         this(stream, new HashSet<String>(Arrays.asList(restrictNames)));
     }
 
     /**
-     * Creates a new instance of MetaObjectColor.
+     * Creates a new instance of MetaObjectColor from a text stream.
      *
-     * @param stream stream to read the data from
-     * @throws IOException if reading from the stream fails
+     * @param stream the text stream to read the data from
+     * @throws IOException if there was a problem reading from the stream
      */
     public MetaObjectColor(BufferedReader stream) throws IOException {
-        this(stream, descriptorNameSet);
+        this(stream, descriptorNames);
     }
+
+
+    //****************** Access to object names and weights by static methods ******************//
 
     /**
      * Returns list of supported visual descriptor types that this object recognizes in XML.
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
+        return descriptorNames.clone();
+    }
+
+    /**
+     * Returns the weights used to compute the overall distance.
+     * @return the weights used to compute the overall distance
+     */
+    public static float[] getWeights() {
+        return descriptorWeights.clone();
     }
 
 
-    /****************** MetaObject overrides ******************/
+    //****************** MetaObject overrides ******************//
 
     /**
      * Returns the number of encapsulated objects.
@@ -177,7 +185,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
      */
     @Override
     public int getObjectCount() {
-        return 3;
+        return descriptorNames.length;
     }
 
     /**
@@ -208,8 +216,13 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
         return Arrays.asList(descriptorNames);
     }
 
+    @Override
+    protected void writeData(OutputStream stream) throws IOException {
+        writeObjects(stream, writeObjectsHeader(stream, getObjectMap()));
+    }
 
-    // ***************************  Distance computation  ******************************* //
+
+    //***************************  Distance computation  *******************************//
 
     @Override
     protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
@@ -219,46 +232,44 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
 
         if (colorLayout != null && castObj.colorLayout != null) {
             if (metaDistances != null) {
-                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)/300.0f;
-                rtv += metaDistances[0]*2.0f;
+                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) / 300.0f;
+                rtv += metaDistances[0] * descriptorWeights[0];
             } else {
-                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold)*2.0f/300.0f;
+                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) * descriptorWeights[0] / 300.0f;
             }
         }
 
         if (colorStructure != null && castObj.colorStructure != null) {
             if (metaDistances != null) {
-                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)/40.0f/255.0f;
-                rtv += metaDistances[1]*2.0f;
+                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) / 40.0f / 255.0f;
+                rtv += metaDistances[1] * descriptorWeights[1];
             } else {
-                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold)*2.0f/40.0f/255.0f;
+                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) * descriptorWeights[1] / 40.0f / 255.0f;
             }
         }
 
         if (scalableColor != null && castObj.scalableColor != null) {
             if (metaDistances != null) {
-                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)/3000.0f;
-                rtv += metaDistances[2]*2.0f;
+                metaDistances[2] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) / 3000.0f;
+                rtv += metaDistances[2] * descriptorWeights[2];
             } else {
-                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold)*2.0f/3000.0f;
+                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) * descriptorWeights[2] / 3000.0f;
             }
         }
 
         return rtv;
     }
 
-    public static float[] getWeights() {
-        return new float[] { 2.0f, 2.0f, 2.0f};
-    }
-
     @Override
     public float getMaxDistance() {
-        return 6f;
+        float sum = 1; // Adjustment to overcome rounding problems
+        for (int i = 0; i < descriptorWeights.length; i++)
+            sum += descriptorWeights[i];
+        return sum;
     }
 
 
-
-    /****************** Clonning ******************/
+    //****************** Clonning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 
@@ -290,44 +301,6 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
         if (scalableColor != null)
             rtv.scalableColor = (ObjectIntVectorL1)scalableColor.cloneRandomlyModify(args);
         return rtv;
-    }
-
-    /**
-     * Store this object to a text stream.
-     * This method should have the opposite deserialization in constructor of a given object class.
-     *
-     * @param stream the stream to store this object to
-     * @throws IOException if there was an error while writing to stream
-     */
-    @Override
-    protected void writeData(OutputStream stream) throws IOException {
-        boolean written = false;
-        if (colorLayout != null) {
-            stream.write("ColorLayoutType;messif.objects.impl.ObjectColorLayout".getBytes());
-            written = true;
-        }
-        if (colorStructure != null) {
-            if (written)
-                stream.write(';');
-            stream.write("ColorStructureType;messif.objects.impl.ObjectShortVectorL1".getBytes());
-            written = true;
-        }
-        if (scalableColor != null) {
-            if (written)
-                stream.write(';');
-            stream.write("ScalableColorType;messif.objects.impl.ObjectIntVectorL1".getBytes());
-            written = true;
-        }
-        if (written) {
-            stream.write('\n');
-            // Write a line for every object from the list (skip the comments)
-            if (colorLayout != null)
-                colorLayout.writeData(stream);
-            if (colorStructure != null)
-                colorStructure.writeData(stream);
-            if (scalableColor != null)
-                scalableColor.writeData(stream);
-        }
     }
 
 
