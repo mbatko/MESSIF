@@ -16,6 +16,8 @@
  */
 package messif.objects;
 
+import java.util.Iterator;
+import java.util.Map.Entry;
 import messif.objects.keys.AbstractObjectKey;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -248,6 +250,119 @@ public abstract class MetaObject extends LocalAbstractObject {
         } catch (NoSuchMethodException e) {
             throw new IOException("Can't create object from stream: " + e);
         }
+    }
+
+    /**
+     * Utility method for reading metaobject header from a text stream.
+     * This method is intended to be used in subclasses to implement the {@link BufferedReader} constructor.
+     * Note that this method also reads the {@link #readObjectComments(java.io.BufferedReader) object comments}.
+     *
+     * @param stream the text stream to read the header from
+     * @return the header that contains pairs of object names and classes
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #writeObjectsHeader(java.io.OutputStream, java.util.Map)
+     * @see #writeObjects(java.io.OutputStream, java.util.Collection)
+     */
+    protected String[] readObjectsHeader(BufferedReader stream) throws IOException {
+        // Keep reading the lines while they are comments, then read the first line of the object
+        String line = readObjectComments(stream);
+
+        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
+        String[] uriNamesClasses = line.split(";");
+
+        // Skip the first name if the number of elements is odd
+        if (uriNamesClasses.length % 2 == 1) {
+            if ((this.getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
+                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
+            String[] shiftArray = uriNamesClasses;
+            uriNamesClasses = new String[uriNamesClasses.length - 1];
+            System.arraycopy(shiftArray, 1, uriNamesClasses, 0, uriNamesClasses.length);
+        }
+
+        return uriNamesClasses;
+    }
+
+    /**
+     * Utility method for reading objects from a text stream.
+     * This method is intended to be used in subclasses to implement the {@link BufferedReader} constructor.
+     * The {@code namesAndClasses} parameter can be retrieved by {@link #readObjectsHeader} method.
+     *
+     * @param stream the text stream to read the objects from
+     * @param restrictNames if not <tt>null</tt> only the names specified in this collection are added to the objects table
+     * @param namesAndClasses the list of names and object classes pairs
+     *          (the name of the first object is the first item, the class of the first object is the second item, and so on)
+     * @param objects the map into which the objects are stored
+     * @return the filled objects map
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #writeObjectsHeader(java.io.OutputStream, java.util.Map)
+     * @see #writeObjects(java.io.OutputStream, java.util.Collection)
+     */
+    protected Map<String, LocalAbstractObject> readObjects(BufferedReader stream, Collection<String> restrictNames, String[] namesAndClasses, Map<String, LocalAbstractObject> objects) throws IOException {
+        for (int i = 1; i < namesAndClasses.length; i += 2) { // Note that it is safer to keep i pointing to the class
+            boolean readObject = restrictNames == null || restrictNames.contains(namesAndClasses[i - 1]);
+            try {
+                LocalAbstractObject object = readObject(stream, namesAndClasses[i]);
+                if (readObject) {
+                    object.setObjectKey(this.getObjectKey());
+                    objects.put(namesAndClasses[i - 1], object);
+                }
+            } catch (IOException e) {
+                if (readObject) // Silently ignore errors on objects that are skipped
+                    throw e;
+            }
+        }
+        return objects;
+    }
+
+    /**
+     * Utility method for writing a metaobject header to a given text stream.
+     * Note that only non-null objects are written.
+     *
+     * @param stream the stream to write the header and encapsulated objects to
+     * @param objects the objects the header of which to write
+     * @return returns a collection of objects the header of which was written to the stream
+     * @throws IOException if there was an error while writing to stream
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
+     */
+    protected Collection<LocalAbstractObject> writeObjectsHeader(OutputStream stream, Map<String, LocalAbstractObject> objects) throws IOException {
+        Collection<LocalAbstractObject> objectsToWrite = new ArrayList<LocalAbstractObject>(objects.size());
+
+        // Create first line with semicolon-separated names of classes
+        Iterator<Entry<String, LocalAbstractObject>> iterator = objects.entrySet().iterator();
+        for (int i = 0; iterator.hasNext(); i++) {
+            Entry<String, ? extends LocalAbstractObject> entry = iterator.next();
+            if (entry.getValue() != null) {
+                objectsToWrite.add(entry.getValue());
+                // Write object name and class
+                stream.write(entry.getKey().getBytes());
+                stream.write(';');
+                stream.write(entry.getValue().getClass().getName().getBytes());
+                // Do not append semicolon after the last object in the header
+                if (iterator.hasNext())
+                    stream.write(';');
+            }
+        }
+        stream.write('\n');
+        return objectsToWrite;
+    }
+
+    /**
+     * Utility method for writing a the given objects to a text stream.
+     * The {@code objects} parameter can be prepared by {@link #writeObjectsHeader} method.
+     *
+     * @param stream the stream to write the header and encapsulated objects to
+     * @param objects the objects to write
+     * @throws IOException if there was an error while writing to stream
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
+     */
+    protected void writeObjects(OutputStream stream, Collection<LocalAbstractObject> objects) throws IOException {
+        // Write a line for every object from the list (skip the comments)
+        for (LocalAbstractObject object : objects)
+            object.write(stream, false);
     }
 
 
