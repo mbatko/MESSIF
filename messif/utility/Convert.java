@@ -33,9 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import messif.objects.LocalAbstractObject;
-import messif.objects.util.AbstractObjectList;
-import messif.objects.util.AbstractStreamObjectIterator;
 
 /**
  * Utility class that provides methods for type conversions and instantiation.
@@ -55,9 +52,7 @@ public abstract class Convert {
      *   <li>all object wrappers for primitive types</li>
      *   <li>{@link String}</li>
      *   <li>{@link Class}</li>
-     *   <li>{@link AbstractStreamObjectIterator} - parameter represents the name of an opened stream from <code>objectStreams</code></li>
-     *   <li>{@link AbstractObjectList} - parameter represents the name of an opened stream from <code>objectStreams</code>, the number of objects to read can be specified after a colon</li>
-     *   <li>{@link LocalAbstractObject} - parameter represents the name of an opened stream from <code>objectStreams</code>, the next object is acquired</li>
+     *   <li>{@link Iterator} - if the parameter represents the named object that implements {@link Iterator}, then the next value from the iterator is tried</li>
      *   <li>static array of any "convertible" element type - parameter should be comma-separated values that will be converted using {@link #stringToType} into the array's items</li>
      *   <li>{@link Map} with {@link String} key and value - parameter should be comma-separated key=value pairs (possibly quoted)</li>
      *   <li>any class with a public constructor that has a single {@link String} parameter</li>
