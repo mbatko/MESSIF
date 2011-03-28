@@ -16,22 +16,13 @@
  */
 package messif.objects.impl;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.*;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.io.*;
 
 public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
 
@@ -184,8 +175,6 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    @SuppressWarnings("unchecked") // Hacks inside
-    @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         Logger log = null;
 
@@ -247,13 +236,17 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
                 scaletheir = o.getScale();
                 if (scalemine < scaletheir - scaletheir / 10 || scalemine > scaletheir + scaletheir / 10)
                     continue;
-                theirminx = rect.getMinX(); theirmaxx = rect.getMaxX();
+                theirminxnew = 0;
+                theirmaxxnew = 1;
+                theirminynew = 0;
+                theirmaxynew = 1;
+                /*theirminx = rect.getMinX(); theirmaxx = rect.getMaxX();
                 theirminy = rect.getMinY(); theirmaxy = rect.getMaxY();
                 // rozsirime vyhledavani o 10%
                 theirminxnew = Math.max (0, theirminx - (theirmaxx - theirminx) / 10);
                 theirmaxxnew = Math.min (1, theirmaxx + (theirmaxx - theirminx) / 10);
                 theirminynew = Math.max (0, theirminy - (theirmaxy - theirminy) / 10);
-                theirmaxynew = Math.min (1, theirmaxy + (theirmaxy - theirminy) / 10);
+                theirmaxynew = Math.min (1, theirmaxy + (theirmaxy - theirminy) / 10);*/
                 theirx = o.getX();
                 theiry = o.getY();
 
