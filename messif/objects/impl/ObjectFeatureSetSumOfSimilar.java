@@ -118,9 +118,9 @@ public class ObjectFeatureSetSumOfSimilar extends ObjectFeatureSet {
         int m = obj.getObjectCount();
 
         if (n == 0)
-            return 0;
+            return MAX_DISTANCE;
         if (m == 0)
-            return 0;
+            return MAX_DISTANCE;
 
         int soucet = 0;
 
@@ -130,7 +130,7 @@ public class ObjectFeatureSetSumOfSimilar extends ObjectFeatureSet {
                     soucet++;
             }
         }
-        return soucet;
+        return Math.max(0, n - soucet);
     }
 
 }
