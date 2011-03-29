@@ -62,6 +62,25 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
      public ObjectFeatureSetOrdpres(BufferedReader stream) throws IOException {
          super(stream);
      }
+    
+	 /**
+      * Creates a new instance of ObjectFeatureSetOrdpress from a text stream
+     * overriding default parameters
+     * @param stream the text stream to read an object from
+     * @param epsilon  queryFeatureSearchRadius parameter
+     * @param limit1   limit1 parameter
+     * @param limit2   limit2 parameters
+     * @param nof  queryFeaturesCount parameter
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public ObjectFeatureSetOrdpres(BufferedReader stream, float epsilon, int limit1, int limit2, int nof) throws IOException {
+		super(stream);
+        this.queryFeatureSearchRadius = epsilon;
+        this.limit1= limit1;
+        this.limit2 = limit2;
+        this.queryFeaturesCount = nof;
+    }
 
      /**
       * Creates a new instance of ObjectFeatureSetOrdpress from a file
