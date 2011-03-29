@@ -37,6 +37,9 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
+    /** Maximal value of "k" */
+    public static final int MAX_K = 5000;
+
     /** Index of the first objects returned from the answer (to simulate an incremental query) */
     private final int from;
 
@@ -68,7 +71,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
             float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights,
             int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
     ) {
-        super(queryObject, k + from, localSearchParam, localSearchType, answerType);
+        super(queryObject, Math.min(k + from, MAX_K), localSearchParam, localSearchType, answerType);
         if (from < 0)
             throw new IllegalArgumentException("From parameter cannot be negative and must be smaller than k");
         this.from = from;
@@ -121,8 +124,8 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
 
     @Override
     public String toString() {
-        return new StringBuilder(" Pixmac search <from=").append(from).append(", k=").append(getK()).append("> ").
-                append(" approx precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
+        return new StringBuilder("Pixmac search q=").append(queryObject.getLocatorURI()).append(" <from=").append(from).append(", k=").append(getK()).append("> ").
+                append(" precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
     }
 
 }
