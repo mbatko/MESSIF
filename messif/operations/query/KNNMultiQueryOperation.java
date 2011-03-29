@@ -16,10 +16,11 @@
  */
 package messif.operations.query;
 
-import java.util.Arrays;
 import java.util.Collection;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.AggregationFunction;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.RankingQueryOperation;
@@ -46,18 +47,24 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
     /** Number of nearest objects to retrieve */
     private final int k;
 
-    /** Type of aggregation */
-    private final AggregationFunction aggregation;
+    /** Type of aggregation of distances between a data object and all query objects into a single distance. */
+    private final DistanceAggregation distanceAggregation;
 
     /**
-     * Aggregating function to combine distance of given data object from set of queries in this operation.
+     * If not null, this function is used to evaluate distance between two meta objects
+     *  (instead of {@link LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject)}).
      */
-    public static enum AggregationFunction {
-        
+    private final AggregationFunction metaObjectAggregation;
+
+    /**
+     * Enumeration to distinguish between several variants of aggregating distances between a data object
+     *  and all query objects into a single distance.
+     */
+    public static enum DistanceAggregation {
+
         SUM, MAX, AVG, MIN;
 
-        /** Given array of distances of given data object from set of queries, this method returns aggregated distance */
-        protected float evaluate(float [] distances) {
+        protected float evaluate(float[] distances) {
             float retVal = 0f;
             switch (this) {
                 case SUM:
@@ -86,7 +93,7 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
             return retVal;
         }
     }
-
+    
     //****************** Constructors ******************//
 
     /**
@@ -98,7 +105,7 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects"})
     public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k) {
-        this(queryObjects, k, AnswerType.NODATA_OBJECTS, AggregationFunction.SUM);
+        this(queryObjects, k, AnswerType.NODATA_OBJECTS, DistanceAggregation.SUM, null);
     }
 
     /**
@@ -109,8 +116,8 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param aggregationFunction function to aggregate distances between set of query objects and data objects
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Aggregation function"})
-    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AggregationFunction aggregationFunction) {
-        this(queryObjects, k, AnswerType.NODATA_OBJECTS, aggregationFunction);
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, DistanceAggregation aggregationFunction, AggregationFunction metaObjectAggregation) {
+        this(queryObjects, k, AnswerType.NODATA_OBJECTS, aggregationFunction, metaObjectAggregation);
     }
 
     /**
@@ -121,8 +128,8 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param aggregationFunction function to aggregate distances between set of query objects and data objects
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type", "Aggregation function"})
-    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType, AggregationFunction aggregationFunction) {
-        this(queryObjects, k, false, answerType, aggregationFunction);
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType, DistanceAggregation aggregationFunction, AggregationFunction metaObjectAggregation) {
+        this(queryObjects, k, false, answerType, aggregationFunction, metaObjectAggregation);
     }
 
     /**
@@ -135,11 +142,15 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param aggregationFunction function to aggregate distances between set of query objects and data objects
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store individual obj-queries distances?", "Answer type", "Aggregation function"})
-    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, AggregationFunction aggregationFunction) {
+    public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, DistanceAggregation distanceAggregation, AggregationFunction metaObjectAggregation) {
         super(answerType, k, storedIndividualDistances);
         this.queryObjects = queryObjects.toArray(new LocalAbstractObject[queryObjects.size()]);
         this.k = k;
-        this.aggregation = aggregationFunction;
+        if (distanceAggregation == null) {
+            throw new NullPointerException("distance aggregation cannot be null");
+        }
+        this.distanceAggregation = distanceAggregation;
+        this.metaObjectAggregation = metaObjectAggregation;
     }
 
 
@@ -211,10 +222,14 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
             LocalAbstractObject object = objects.next();
 
             for (int i = 0; i < queryObjects.length; i++) {
-                distances[i] = queryObjects[i].getDistance(object);
+                if (metaObjectAggregation != null) {
+                    distances[i] = metaObjectAggregation.getDistance((MetaObject) queryObjects[i], (MetaObject) object);
+                } else {
+                    distances[i] = queryObjects[i].getDistance(object);
+                }
             }
 
-            addToAnswer(object, aggregation.evaluate(distances), isStoringMetaDistances() ? distances.clone() : null);
+            addToAnswer(object, distanceAggregation.evaluate(distances), isStoringMetaDistances() ? distances.clone() : null);
         }
 
         return getAnswerCount() - beforeCount;
@@ -260,6 +275,16 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
             if (!queryObjects[i].dataEquals(castObj.queryObjects[i]))
                 return false;
 
+        if (distanceAggregation != castObj.distanceAggregation)
+            return false;
+
+        if ((metaObjectAggregation != null) && (castObj.metaObjectAggregation == null) ||
+                (metaObjectAggregation == null) && (castObj.metaObjectAggregation != null))
+            return false;
+        
+        if ((metaObjectAggregation != null) && (castObj.metaObjectAggregation != null) && (! metaObjectAggregation.equals(castObj.metaObjectAggregation)))
+            return false;
+
         return true;
     }
 
@@ -272,6 +297,10 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
         int hc = k;
         for (int i = 0; i < queryObjects.length; i++)
             hc += queryObjects[i].dataHashCode() << i;
+        hc += distanceAggregation.hashCode();
+        if (metaObjectAggregation != null) {
+            hc += metaObjectAggregation.hashCode();
+        }
         return hc;
     }
 
