@@ -28,7 +28,7 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLRecoverableException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -119,14 +119,32 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
          *          retrieved from the storage
          */
         public boolean isConvertFromColumnUsed();
+    }
 
+    /**
+     * Extension of the {@link ColumnConvertor} that allows a direct searching
+     * by the column value in the database. This usually means that there is
+     * a unique index on that column.
+     *
+     * @param <K> the type of the key arguments of the comparison
+     * @param <T> the type of the instance that is stored/read from the database column
+     */
+    public static interface SearchableColumnConvertor<K, T> extends ColumnConvertor<T> {
         /**
          * Returns <tt>true</tt> if the instance created by this convertor is compatible
-         * with the given index comparator.
+         * with the given index comparator. If <tt>true</tt> is returned, the column
+         * is used to search for the value.
          * @param indexComparator the index comparator that is checked for compatibility
          * @return <tt>true</tt> if this column convertor works with compatible instances
          */
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator);
+        public boolean isColumnCompatible(IndexComparator<?, ? super T> indexComparator);
+
+        /**
+         * Returns a column value that can be used to search inside the database.
+         * @param key the key from which to create a database value
+         * @return a database value
+         */
+        public Object convertKeyToColumnValue(K key);
     }
 
 
@@ -300,7 +318,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public void destroy() throws Throwable {
         // Delete all records from the database
-        prepareAndExecute(null, deleteAllSQL);
+        prepareAndExecute(null, deleteAllSQL, false);
         closeConnection();
     }
 
@@ -359,11 +377,13 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @param sql the SQL command to prepare and execute; one parameter (using "?") for the primary key or n parameters for data can be specified
      * @param primaryKey the value for the one SQL parameter of the primary key (if <tt>null</tt> the parameter is not set)
      * @param object the instance that is converted to database columns using {@link #columnConvertors} (if <tt>null</tt> the parameters are not set)
+     * @param returnGeneratedKeys flag whether to set the {@link java.sql.Statement#RETURN_GENERATED_KEYS} on the prepared statement
      * @return an executed prepared statement
+     * @throws SQLFeatureNotSupportedException if the {@link Statement#RETURN_GENERATED_KEYS} is not supported by the driver
      * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
      * @throws BucketStorageException if there was an error converting a column value
      */
-    protected final PreparedStatement execute(PreparedStatement statement, String sql, Integer primaryKey, T object) throws SQLException, BucketStorageException {
+    protected final PreparedStatement execute(PreparedStatement statement, String sql, Integer primaryKey, T object, boolean returnGeneratedKeys) throws SQLFeatureNotSupportedException, SQLException, BucketStorageException {
         List<Object> parameters = new ArrayList<Object>(columnConvertors.length);
 
         // Map parameters
@@ -377,7 +397,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
                 parameters.add(primaryKey);
         }
 
-        return prepareAndExecute(statement, sql, parameters.toArray());
+        return prepareAndExecute(statement, sql, returnGeneratedKeys, parameters.toArray());
     }
 
 
@@ -451,7 +471,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public synchronized int size() {
         try {
-            sizeStatement = execute(sizeStatement, sizeSQL, null, null);
+            sizeStatement = execute(sizeStatement, sizeSQL, null, null, false);
             ResultSet result = sizeStatement.getResultSet();
             try {
                 if (!result.next())
@@ -470,18 +490,22 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public synchronized IntAddress<T> store(T object) throws BucketStorageException {
         try {
-            insertStatement = execute(insertStatement, insertSQL, null, object);
-            ResultSet generatedKeys = insertStatement.getGeneratedKeys();
-            if (generatedKeys != null)
-                try {
-                    if (generatedKeys.next() && generatedKeys.getMetaData().getColumnCount() > 0)
-                        return new IntAddress<T>(this, generatedKeys.getInt(1));
-                } finally {
-                    generatedKeys.close();
-                }
+            ResultSet generatedKeys;
+            try {
+                insertStatement = execute(insertStatement, insertSQL, null, object, true);
+                generatedKeys = insertStatement.getGeneratedKeys();
+                if (generatedKeys != null)
+                    try {
+                        if (generatedKeys.next() && generatedKeys.getMetaData().getColumnCount() > 0)
+                            return new IntAddress<T>(this, generatedKeys.getInt(1));
+                    } finally {
+                        generatedKeys.close();
+                    }
+            } catch (SQLFeatureNotSupportedException ignore) { // Generated keys flag is not supported
+            }
 
             // Generated keys failed, do full by-object select
-            readByDataStatement = execute(readByDataStatement, readByDataSQL, null, object);
+            readByDataStatement = execute(readByDataStatement, readByDataSQL, null, object, false);
             generatedKeys = readByDataStatement.getResultSet();
             try {
                 if (!generatedKeys.next())
@@ -498,7 +522,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public synchronized T read(int address) throws BucketStorageException {
         try {
-            readStatement = execute(readStatement, readSQL, address, null);
+            readStatement = execute(readStatement, readSQL, address, null, false);
             ResultSet result = readStatement.getResultSet();
             try {
                 if (!result.next())
@@ -515,7 +539,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public synchronized void remove(int address) throws BucketStorageException, UnsupportedOperationException {
         try {
-            deleteStatement = execute(deleteStatement, deleteSQL, address, null);
+            deleteStatement = execute(deleteStatement, deleteSQL, address, null, false);
         } catch (SQLException e) {
             throw new StorageFailureException(e);
         }
@@ -532,7 +556,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      */
     public synchronized void update(int address, T object) throws BucketStorageException, UnsupportedOperationException {
         try {
-            updateStatement = execute(updateStatement, updateSQL, address, object);
+            updateStatement = execute(updateStatement, updateSQL, address, object, false);
         } catch (SQLException e) {
             throw new StorageFailureException(e);
         }
@@ -556,18 +580,21 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @param comparator the comparator for which to get column name
      * @return a column name or <tt>null</tt>
      */
-    private String getComparatorCompatibleColumn(IndexComparator<?, ?> comparator) {
+    private int getComparatorCompatibleColumn(IndexComparator<?, ? super T> comparator) {
         if (comparator == null)
-            return primaryKeyColumn;
-        for (int i = 0; i < columnConvertors.length; i++)
-            if (columnConvertors[i].isColumnCompatible(comparator))
-                return columnNames[i];
-        return null;
+            return -1;
+        for (int i = 0; i < columnConvertors.length; i++) {
+            if (columnConvertors[i] instanceof SearchableColumnConvertor &&
+                    ((SearchableColumnConvertor<?, T>)columnConvertors[i]).isColumnCompatible(comparator)) {
+                return i;
+            }
+        }
+        return -2;
     }
 
     @Override
     public <C> IntStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new DatabaseStorageSearch<C>(comparator, getComparatorCompatibleColumn(comparator), Collections.singletonList(key));
+        return search(comparator, Collections.singletonList(key));
     }
 
     @Override
@@ -587,8 +614,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @param <C> the type the boundaries used by the search
      */
     private class DatabaseStorageSearch<C> extends AbstractSearch<C, T> implements IntStorageSearch<T> {
-        /** Name of the column that contains the searched keys */
-        private final String columnName;
+        /** Index of the column that contains the searched keys (use <tt>-2</tt> to do full scan, use <tt>-1</tt> to use primary key) */
+        private final int columnIndex;
         /** Query result set that provides data for this search */
         private ResultSet resultSet;
         /** Statement that needs to be closed along with the result */
@@ -600,14 +627,14 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
          * to those that have values of column {@code columnName} set to given keys.
          *
          * @param comparator the comparator that is used to compare the keys
-         * @param columnName the column name that contains the keys (use <tt>null</tt> to do full scan)
+         * @param columnIndex the index of the column that contains the keys (use <tt>-2</tt> to do full scan, use <tt>-1</tt> to use primary key)
          * @param keys list of keys to search for
          * @throws IllegalStateException if there was an error executing the query
          */
-        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, Collection<? extends C> keys) throws IllegalStateException {
+        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, int columnIndex, Collection<? extends C> keys) throws IllegalStateException {
             // Pass the comparator only if the database column is not provided (and thus the filtering must be done)
-            super(columnName != null ? null : comparator, keys);
-            this.columnName = columnName;
+            super(columnIndex >= -1 ? null : comparator, keys);
+            this.columnIndex = columnIndex;
 
             // Execute the query
             try {
@@ -623,15 +650,15 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
          * to those that have values of column {@code columnName} set to given keys.
          *
          * @param comparator the comparator that is used to compare the keys
-         * @param columnName the column name that contains the keys (use <tt>null</tt> to do full scan)
+         * @param columnIndex the index of the column that contains the keys (use <tt>-2</tt> to do full scan, use <tt>-1</tt> to use primary key)
          * @param fromKey the lower bound on the searched keys
          * @param toKey the upper bound on the searched keys
          * @throws IllegalStateException if there was an error executing the query
          */
-        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, String columnName, C fromKey, C toKey) throws IllegalStateException {
+        private DatabaseStorageSearch(IndexComparator<? super C, ? super T> comparator, int columnIndex, C fromKey, C toKey) throws IllegalStateException {
             // Pass the comparator only if the database column is not provided (and thus the filtering must be done)
-            super(columnName != null ? null : comparator, fromKey, toKey);
-            this.columnName = columnName;
+            super(columnIndex >= -1 ? null : comparator, fromKey, toKey);
+            this.columnIndex = columnIndex;
 
             // Execute the query
             try {
@@ -649,21 +676,34 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         private ResultSet executeQuery() throws SQLException {
             StringBuilder sql;
             Object[] parameters;
-            if (columnName == null) {
+            if (columnIndex <= -2) { // Full scan search
                 sql = new StringBuilder(selectSQL);
                 parameters = null;
-            } else if (isKeyBounds()) {
-                sql = new StringBuilder(selectSQL).append(" where ").append(columnName).append(" between ? and ?");
-                parameters = new Object[] { getKey(0), getKey(1) };
-            } else {
-                sql = new StringBuilder(selectSQL);
-                sql.append(" where ").append(columnName).append(" in (");
-                for (int i = 0; i < getKeyCount(); i++)
-                    sql.append(i == 0 ? "?" : ",?");
-                sql.append(')');
-                parameters = getKeys();
+            } else { // Single-column search
+                String columnName;
+                if (columnIndex == -1) { // Primary key search (no conversion of keys)
+                    columnName = primaryKeyColumn;
+                    parameters = getKeys();
+                } else { // Other column search - must be converted
+                    columnName = columnNames[columnIndex];
+                    parameters = new Object[getKeyCount()];
+                    @SuppressWarnings("unchecked") // This is checked in the constructor call
+                    SearchableColumnConvertor<? super C, T> columnConvertor = ((SearchableColumnConvertor<? super C, T>)columnConvertors[columnIndex]);
+                    for (int i = 0; i < parameters.length; i++)
+                        parameters[i] = columnConvertor.convertKeyToColumnValue(getKey(i));
+                }
+                if (isKeyBounds()) {
+                    sql = new StringBuilder(selectSQL).append(" where ").append(columnName).append(" between ? and ?");
+                } else {
+                    sql = new StringBuilder(selectSQL);
+                    sql.append(" where ").append(columnName).append(" in (");
+                    for (int i = 0; i < parameters.length; i++)
+                        sql.append(i == 0 ? "?" : ",?");
+                    sql.append(')');
+                }
+
             }
-            resultSetStatement = prepareAndExecute(null, sql.toString(), parameters);
+            resultSetStatement = prepareAndExecute(null, sql.toString(), false, parameters);
             return resultSetStatement.getResultSet();
         }
 
@@ -839,11 +879,6 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         public boolean isConvertFromColumnUsed() {
             return usedToRead;
         }
-
-        @Override
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-            return false;
-        }
     }
 
     /**
@@ -931,11 +966,6 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         public boolean isConvertFromColumnUsed() {
             return usedToRead;
         }
-
-        @Override
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-            return false;
-        }
     }
 
     /**
@@ -993,7 +1023,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      *
      * @param <T> the class of instances that are serialized into the database
      */
-    public static class BeanPropertyColumnConvertor<T> implements ColumnConvertor<T> {
+    public static class BeanPropertyColumnConvertor<T> implements SearchableColumnConvertor<Object, T> {
         /** class serial id for serialization */
         private static final long serialVersionUID = 1L;
 
@@ -1092,10 +1122,15 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
 
         @Override
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+        public boolean isColumnCompatible(IndexComparator<?, ? super T> indexComparator) {
             return indexComparator != null &&
                     indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator) &&
                     Comparable.class.isAssignableFrom(setterMethod.getReturnType());
+        }
+
+        @Override
+        public Object convertKeyToColumnValue(Object key) {
+            return key;
         }
     }
 
@@ -1104,7 +1139,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * of {@link LocalAbstractObject}s stored in the database. Note that the associated column must
      * be {@link String}-compatible. When restoring an object, its key is set only if it has no key yet.
      */
-    public static final ColumnConvertor<LocalAbstractObject> locatorColumnConvertor = new ColumnConvertor<LocalAbstractObject>() {
+    public static final ColumnConvertor<LocalAbstractObject> locatorColumnConvertor = new SearchableColumnConvertor<String, LocalAbstractObject>() {
         private static final long serialVersionUID = 1L;
 
         @Override
@@ -1130,8 +1165,13 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
 
         @Override
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+        public boolean isColumnCompatible(IndexComparator<?, ? super LocalAbstractObject> indexComparator) {
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.locatorToLocalObjectComparator);
+        }
+
+        @Override
+        public Object convertKeyToColumnValue(String key) {
+            return key;
         }
     };
 
@@ -1154,7 +1194,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * Note that this convertor states a compatibility with {@link LocalAbstractObjectOrder#trivialObjectComparator}
      * since practically all database types are inherently {@link Comparable}.
      */
-    public static final ColumnConvertor<Object> trivialColumnConvertor = new ColumnConvertor<Object>() {
+    public static final ColumnConvertor<Object> trivialColumnConvertor = new SearchableColumnConvertor<Object, Object>() {
         private static final long serialVersionUID = 1L;
 
         @Override
@@ -1178,8 +1218,13 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
 
         @Override
-        public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
+        public boolean isColumnCompatible(IndexComparator<?, Object> indexComparator) {
             return indexComparator != null && indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
+        }
+
+        @Override
+        public Object convertKeyToColumnValue(Object key) {
+            return key;
         }
     };
 
@@ -1199,31 +1244,62 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             throw new IllegalArgumentException("Cannot set used-to-read flag on convertor that does not support reading");
         if (usedToWrite && !convertor.isConvertToColumnUsed())
             throw new IllegalArgumentException("Cannot set used-to-write flag on convertor that does not support writing");
-        return new ColumnConvertor<T>() {
-            /** class serial id for serialization */
-            private static final long serialVersionUID = 1L;
-            @Override
-            public Object convertToColumnValue(T instance) throws BucketStorageException {
-                return convertor.convertToColumnValue(instance);
-            }
-            @Override
-            public boolean isConvertToColumnUsed() {
-                return usedToWrite;
-            }
-            @Override
-            public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
-                if (skipReadIfNotNull && value != null)
-                    return value;
-                return convertor.convertFromColumnValue(value, column);
-            }
-            @Override
-            public boolean isConvertFromColumnUsed() {
-                return usedToRead;
-            }
-            @Override
-            public boolean isColumnCompatible(IndexComparator<?, ?> indexComparator) {
-                return convertor.isColumnCompatible(indexComparator);
-            }
-        };
+        if (convertor instanceof SearchableColumnConvertor) {
+            @SuppressWarnings("unchecked") // This is ok, since this wraps an existing searchable column convertor
+            final SearchableColumnConvertor<Object, T> searchableConvertor = (SearchableColumnConvertor<Object, T>)convertor;
+            return new SearchableColumnConvertor<Object, T>() {
+                /** class serial id for serialization */
+                private static final long serialVersionUID = 1L;
+                @Override
+                public Object convertToColumnValue(T instance) throws BucketStorageException {
+                    return searchableConvertor.convertToColumnValue(instance);
+                }
+                @Override
+                public boolean isConvertToColumnUsed() {
+                    return usedToWrite;
+                }
+                @Override
+                public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+                    if (skipReadIfNotNull && value != null)
+                        return value;
+                    return searchableConvertor.convertFromColumnValue(value, column);
+                }
+                @Override
+                public boolean isConvertFromColumnUsed() {
+                    return usedToRead;
+                }
+                @Override
+                public boolean isColumnCompatible(IndexComparator<?, ? super T> indexComparator) {
+                    return searchableConvertor.isColumnCompatible(indexComparator);
+                }
+                @Override
+                public Object convertKeyToColumnValue(Object key) {
+                    return searchableConvertor.convertKeyToColumnValue(key);
+                }
+            };
+        } else {
+            return new ColumnConvertor<T>() {
+                /** class serial id for serialization */
+                private static final long serialVersionUID = 1L;
+                @Override
+                public Object convertToColumnValue(T instance) throws BucketStorageException {
+                    return convertor.convertToColumnValue(instance);
+                }
+                @Override
+                public boolean isConvertToColumnUsed() {
+                    return usedToWrite;
+                }
+                @Override
+                public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+                    if (skipReadIfNotNull && value != null)
+                        return value;
+                    return convertor.convertFromColumnValue(value, column);
+                }
+                @Override
+                public boolean isConvertFromColumnUsed() {
+                    return usedToRead;
+                }
+            };
+        }
     }
 }
