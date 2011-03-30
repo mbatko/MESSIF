@@ -1318,7 +1318,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
             Collection<RankedAbstractObject> ret = new ArrayList<RankedAbstractObject>(count);
             try {
-                PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), (Object[])null);
+                PreparedStatement objectsCursor = prepareAndExecute(null, str.toString(), false, (Object[])null);
                 ColumnConvertor<MetaObjectProfiSCT> textStreamColumnConvertor = getTextStreamColumnConvertor(stemmer, keyWordIndex, true);
                 ResultSet rs = objectsCursor.getResultSet();
                 while (rs.next()) {
@@ -1454,7 +1454,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             if (deleteObjectWordLinksSQL == null)
                 return;
 
-            prepareAndExecute(null, deleteObjectWordLinksSQL, objectId).close();
+            prepareAndExecute(null, deleteObjectWordLinksSQL, false, objectId).close();
         }
 
         /**
@@ -1700,7 +1700,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             sql.append(" group by keyword_id");
 
             // Execute SQL and get weight for the keywords
-            PreparedStatement crs = prepareAndExecute(null, sql.toString(), (Object[])null);
+            PreparedStatement crs = prepareAndExecute(null, sql.toString(), false, (Object[])null);
             KeywordWeightProvider ret = new KeywordWeightProvider(rsToMap(crs.getResultSet()), weights);
             crs.close();
 
@@ -1715,7 +1715,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         public Map<Integer, Float> initializeKeywordIdfWeights() throws SQLException {
             if (keywordWeightSQL == null)
                 throw new SQLException("Keyword links table was not set for this database support");
-            PreparedStatement crs = prepareAndExecute(null, "select keyword_id, " + keywordWeightSQL + " group by keyword_id", (Object[])null);
+            PreparedStatement crs = prepareAndExecute(null, "select keyword_id, " + keywordWeightSQL + " group by keyword_id", false, (Object[])null);
             KeywordWeightProvider.staticKeywordWeights = rsToMap(crs.getResultSet());
             crs.close();
 
