@@ -96,13 +96,13 @@ public class InsertOperation extends AbstractOperation {
      */
     @Override
     public boolean wasSuccessful() {
-        return errValue.equals(BucketErrorCode.OBJECT_INSERTED) || errValue.equals(BucketErrorCode.SOFTCAPACITY_EXCEEDED);
+        return isErrorCode(BucketErrorCode.OBJECT_INSERTED, BucketErrorCode.SOFTCAPACITY_EXCEEDED);
     }
 
     /** End operation successfully */
     @Override
     public void endOperation() {
-        errValue = BucketErrorCode.OBJECT_INSERTED;
+        endOperation(BucketErrorCode.OBJECT_INSERTED);
     }
 
     /**

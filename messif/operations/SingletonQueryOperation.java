@@ -177,11 +177,11 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      */
     @Override
     public void updateFrom(AbstractOperation operation) throws IllegalArgumentException {
-        super.updateFrom(operation);
         if (!(operation instanceof SingletonQueryOperation))
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());
         if (answer == null)
             addToAnswer(((SingletonQueryOperation)operation).answer);
+        super.updateFrom(operation);
     }
 
     /**

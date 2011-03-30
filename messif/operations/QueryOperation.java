@@ -67,21 +67,15 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
 
     //****************** Error code utilities ******************//
 
-    /**
-     * Returns <tt>true</tt> if this operation has finished successfuly.
-     * Otherwise, <tt>false</tt> is returned - the operation was either unsuccessful or is has not finished yet.
-     *
-     * @return <tt>true</tt> if this operation has finished successfuly
-     */
     @Override
     public boolean wasSuccessful() {
-        return errValue.equals(OperationErrorCode.RESPONSE_RETURNED);
+        return isErrorCode(OperationErrorCode.RESPONSE_RETURNED);
     }
 
     /** End operation successfully */
     @Override
     public void endOperation() {
-        errValue = OperationErrorCode.RESPONSE_RETURNED;
+        endOperation(OperationErrorCode.RESPONSE_RETURNED);
     }
 
 

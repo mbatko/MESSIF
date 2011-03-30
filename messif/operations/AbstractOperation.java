@@ -68,7 +68,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     /** Additional parameters for this operation */
     private Map<String, Serializable> additionalParameters;
     /** Operation result code */
-    protected ErrorCode errValue = ErrorCode.NOT_SET;
+    private ErrorCode errValue = ErrorCode.NOT_SET;
 
 
     //****************** Operation ID ******************//
@@ -318,6 +318,20 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     }
 
     /**
+     * Returns whether ther result code of this operation is one of the given {@code errorCodes}.
+     * @param errorCodes the result codes to check
+     * @return <tt>true</tt> if this operation's error code is equal to one of the given error codes
+     *          or <tt>false</tt> if the error code is different
+     */
+    public boolean isErrorCode(ErrorCode... errorCodes) {
+        if (errorCodes != null)
+            for (int i = 0; i < errorCodes.length; i++)
+                if (errValue.equals(errorCodes[i]))
+                    return true;
+        return false;
+    }
+
+    /**
      * Returns <tt>true</tt> if this operation has finished its processing - either successfully or unsuccessfully.
      * In other words, <tt>true</tt> is returned if the error code of this operation is set.
      * If the operation has not finished yet (i.e. the error code is {@link ErrorCode#NOT_SET not set},
@@ -340,6 +354,14 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         if (errValue == null || errValue.equals(ErrorCode.NOT_SET))
             throw new IllegalArgumentException("Can't finish operation - invalid error code specified");
         this.errValue = errValue;
+
+        // Check all parametric objects whether they are finishable
+        if (additionalParameters != null) {
+            for (Serializable parameter : additionalParameters.values()) {
+                if (parameter instanceof EndOperationListener)
+                    ((EndOperationListener)parameter).onEndOperation(this, errValue);
+            }
+        }
     }
 
     /**
@@ -370,11 +392,13 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
 
     /**
      * Update the error code of this operation from another operation.
+     * If the updated operation was not successful, the value overrides this
+     * operation's error code (so that the errors propagate up).
      * @param operation the source operation from which to get the update
      * @throws ClassCastException if the specified operation is incompatible with this operation
      */
     public void updateFrom(AbstractOperation operation) throws ClassCastException {
-        if (!errValue.isSet() || !operation.wasSuccessful())
+        if (!errValue.isSet() || (operation.isFinished() && !operation.wasSuccessful()))
             errValue = operation.errValue;
     }
 

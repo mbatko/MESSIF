@@ -24,6 +24,7 @@ import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
+import messif.utility.ErrorCode;
 
 
 /**
@@ -299,11 +300,11 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     @Override
     public final void updateFrom(AbstractOperation operation) throws IllegalArgumentException {
-        super.updateFrom(operation);
         if (operation instanceof RankingQueryOperation)
             updateFrom((RankingQueryOperation)operation);
         else
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());
+        super.updateFrom(operation);
     }
 
     /**
@@ -312,6 +313,13 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     protected void updateFrom(RankingQueryOperation operation) {
         answer.addAll(operation.answer);
+    }
+
+    @Override
+    public void endOperation(ErrorCode errValue) throws IllegalArgumentException {
+        super.endOperation(errValue);
+        if (answer instanceof EndOperationListener)
+            ((EndOperationListener)answer).onEndOperation(this, errValue);
     }
 
     /**

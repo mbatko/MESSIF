@@ -113,23 +113,12 @@ public class BulkInsertOperation extends AbstractOperation {
 
     @Override
     public boolean wasSuccessful() {
-        return errValue.equals(BucketErrorCode.OBJECT_INSERTED) || errValue.equals(BucketErrorCode.SOFTCAPACITY_EXCEEDED);
+        return isErrorCode(BucketErrorCode.OBJECT_INSERTED, BucketErrorCode.SOFTCAPACITY_EXCEEDED);
     }
 
     @Override
     public void endOperation() {
-        errValue = BucketErrorCode.OBJECT_INSERTED;
-    }
-
-    /**
-     * Update the error code of this operation from another operation.
-     * All codes other than OBJECT_INSERTED have priority and should propagete up.
-     * @param operation the source operation from which to get the update
-     */
-    @Override
-    public void updateFrom(AbstractOperation operation) {
-        if (!errValue.isSet() || errValue.equals(BucketErrorCode.OBJECT_INSERTED))
-            errValue = operation.getErrorCode();
+        endOperation(BucketErrorCode.OBJECT_INSERTED);
     }
 
     @Override

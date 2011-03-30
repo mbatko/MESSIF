@@ -161,13 +161,6 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
 
     //****************** End operation overrides ******************//
 
-    /** End operation successfully */
-    @Override
-    public void endOperation() {
-        errValue = OperationErrorCode.RESPONSE_RETURNED;
-        this.nnAddedToAnswer = 0;
-    }
-    
     /**
      * End operation with a specific error code.
      * @param errValue the error code to set

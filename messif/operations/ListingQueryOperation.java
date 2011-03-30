@@ -182,7 +182,6 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     @Override
     public final void updateFrom(AbstractOperation operation) throws IllegalArgumentException {
-        super.updateFrom(operation);
         if (operation instanceof SingletonQueryOperation)
             updateFrom((SingletonQueryOperation)operation);
         else if (operation instanceof ListingQueryOperation)
@@ -191,6 +190,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
             updateFrom((RankingQueryOperation)operation);
         else
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());
+        super.updateFrom(operation);
     }
 
     /**
