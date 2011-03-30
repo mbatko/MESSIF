@@ -23,7 +23,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLRecoverableException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -146,15 +148,17 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      *
      * @param statement the previous cached statement that matches the given {@code sql} (can be <tt>null</tt>)
      * @param sql the SQL command to prepare and execute
+     * @param returnGeneratedKeys flag whether to set the {@link Statement#RETURN_GENERATED_KEYS} on the prepared statement
      * @param parameters the values for the SQL parameters (denoted by "?" chars in the SQL command)
      * @return an executed prepared statement
+     * @throws SQLFeatureNotSupportedException if the {@link Statement#RETURN_GENERATED_KEYS} is not supported by the driver
      * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
      */
-    protected final PreparedStatement prepareAndExecute(PreparedStatement statement, String sql, Object... parameters) throws SQLException {
+    protected final PreparedStatement prepareAndExecute(PreparedStatement statement, String sql, boolean returnGeneratedKeys, Object... parameters) throws SQLFeatureNotSupportedException, SQLException {
         for (;;) {
             // Prepare statement
             if (statement == null || statement.isClosed())
-                statement = getConnection().prepareStatement(sql);
+                statement = getConnection().prepareStatement(sql, returnGeneratedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
 
             // Map parameters
             if (parameters != null)
@@ -185,7 +189,7 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      * @throws SQLException if there was a problem parsing or executing the SQL command
      */
     protected final Object executeSingleValue(String sql, Object... parameters) throws NoSuchElementException, SQLException {
-        ResultSet rs = prepareAndExecute(null, sql, parameters).getResultSet();
+        ResultSet rs = prepareAndExecute(null, sql, false, parameters).getResultSet();
         try {
             if (!rs.next())
                 throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
@@ -264,12 +268,13 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
          *
          * @param statement the previous cached statement that matches the given {@code sql} (can be <tt>null</tt>)
          * @param sql the SQL command to prepare and execute
+         * @param returnGeneratedKeys flag whether to set the {@link Statement#RETURN_GENERATED_KEYS} on the prepared statement
          * @param parameters the values for the SQL parameters (denoted by "?" chars in the SQL command)
          * @return an executed prepared statement
          * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
          */
-        public PreparedStatement prepareAndExecuteStatement(PreparedStatement statement, String sql, Object... parameters) throws SQLException {
-            return super.prepareAndExecute(statement, sql, parameters);
+        public PreparedStatement prepareAndExecuteStatement(PreparedStatement statement, String sql, boolean returnGeneratedKeys, Object... parameters) throws SQLException {
+            return super.prepareAndExecute(statement, sql, returnGeneratedKeys, parameters);
         }
 
         /**
