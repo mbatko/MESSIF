@@ -100,9 +100,10 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        for (float number : precompDist) {
-            stream.write(' ');
-            stream.write(Float.toString(number).getBytes());
+        for (int i = 0; i < precompDist.length; i++) {
+            if (i > 0)
+                stream.write(' ');
+            stream.write(Float.toString(precompDist[i]).getBytes());
         }
     }
 
