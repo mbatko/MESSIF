@@ -182,7 +182,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
-        return objects;
+        return Collections.unmodifiableMap(objects);
     }
 
     @Override

@@ -37,10 +37,12 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * Implementation of {@link MetaObject} that stores encapsulated objects
- * in a hash table.
- * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes.
+ * Extension of the standard {@link MetaObjectParametric} that stores encapsulated
+ * {@link LocalAbstractObject}s in a map under their symbolic names (strings).
+ *
+ * The metric distance function for this object is defined as a binary function returning
+ * <code>0</code> for identical objects (as of {@link #equals(java.lang.Object) equals} on object's locator) and 
+ * <code>1</code> for different objects.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -59,6 +61,19 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
 
     //****************** Constructors ******************//
     
+    /**
+     * Creates a new instance of MetaObjectParametricMap from a collection of named objects.
+     * A new unique object ID is generated and the
+     * object's key (locatorURI) is set to <tt>null</tt>.
+     *
+     * @param additionalParameters additional parameters for this meta object
+     * @param objects collection of objects with their symbolic names
+     */
+    public MetaObjectParametricMap(Map<String, ? extends Serializable> additionalParameters, Map<String, LocalAbstractObject> objects) {
+        super(additionalParameters);
+        this.objects = new TreeMap<String, LocalAbstractObject>(objects);
+    }
+
     /**
      * Creates a new instance of MetaObjectParametricMap from a collection of named objects.
      * The locatorURI of every object from the collection is set to the provided
@@ -204,7 +219,7 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
      */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
-        return objects;
+        return Collections.unmodifiableMap(objects);
     }
 
     @Override
@@ -229,7 +244,8 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
 
     /**
      * The actual implementation of the metric function.
-     * The distance is a trivial metric on locator URIs of this object and {@code obj}.
+     * The distance is a trivial metric on locator URIs of this object and {@code obj} and
+     * returns <code>0</code> when locators are equal and <code>1</code> otherwise.
      * The array <code>metaDistances</code> is ignored.
      *
      * @param obj the object to compute distance to

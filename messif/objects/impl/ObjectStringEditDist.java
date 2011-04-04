@@ -20,6 +20,8 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
 
 
 /**
@@ -196,6 +198,20 @@ public class ObjectStringEditDist extends ObjectString {
     @Override
     protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
         return Math.abs(this.text.length() + ((ObjectString)obj).text.length()) * getInsertDeleteWeight();
+    }
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectString loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectString from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected ObjectStringEditDist(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        text = serializator.readString(input);
     }
 
 }
