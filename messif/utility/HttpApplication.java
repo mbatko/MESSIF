@@ -240,7 +240,7 @@ public class HttpApplication extends Application {
 
     @Override
     protected String usage() {
-        return "<http port> [-httpThreads <0|n>]" + super.usage();
+        return "<http port> [-httpThreads <0|n>] [-httpBacklog <m>]" + super.usage();
     }
 
     @Override
@@ -273,8 +273,22 @@ public class HttpApplication extends Application {
             }
         }
 
+        int httpBacklog = 0;
+        if (argIndex < args.length && args[argIndex].equalsIgnoreCase("-httpBacklog")) {
+            try {
+                httpBacklog = Integer.parseInt(args[argIndex + 1]);
+                argIndex += 2;
+            } catch (IndexOutOfBoundsException e) {
+                System.err.println("httpBacklog parameter requires a number of incoming connections in the backlog");
+                return false;
+            } catch (NumberFormatException e) {
+                System.err.println("Size of httpBacklog is invalid: " + e.getMessage());
+                return false;
+            }
+        }
+
         try {
-            httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
+            httpServer = HttpServer.create(new InetSocketAddress(httpPort), httpBacklog);
             if (httpThreads == 0) {
                 httpServer.setExecutor(Executors.newCachedThreadPool());
             } else if (httpThreads > 1) {
