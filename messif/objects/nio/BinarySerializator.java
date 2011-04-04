@@ -579,7 +579,7 @@ public abstract class BinarySerializator {
 
         // Write object size (this method is final to ensure that the object size is written first)
         int objectSize = getBinarySize(binarySerializableObject);
-        BufferOutputStream buf = new BufferOutputStream(objectSize + 4, bufferDirect);
+        BufferOutputStream buf = new BufferOutputStream(Math.max(BufferOutputStream.MINIMAL_BUFFER_SIZE, objectSize + 4), bufferDirect);
         write(buf, objectSize);
 
         // Write object data
