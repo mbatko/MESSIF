@@ -211,7 +211,6 @@ public class ObjectStringEditDist extends ObjectString {
      */
     protected ObjectStringEditDist(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-        text = serializator.readString(input);
     }
 
 }
