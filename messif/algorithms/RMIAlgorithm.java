@@ -20,16 +20,19 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import messif.objects.LocalAbstractObject;
 import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
 import messif.statistics.OperationStatistics;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Uses a RMI connection to remote algorithm to simulate local algorithm.
@@ -220,7 +223,7 @@ public class RMIAlgorithm extends Algorithm {
      * @throws IllegalStateException if there was a problem communicating with the remote algorithm
      * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
      */
-    private Object methodExecute(String methodName, Object... methodArguments) throws IllegalArgumentException, IllegalStateException {
+    private Object methodExecuteHandleException(String methodName, Object... methodArguments) throws IllegalArgumentException, IllegalStateException {
         Object rtv = methodExecute(methodName, connectionRetries, methodArguments);
         if (rtv instanceof Exception)
             throw handleException(rtv);
@@ -254,18 +257,18 @@ public class RMIAlgorithm extends Algorithm {
 
     @Override
     public String getName() {
-        return (String)methodExecute("getName");
+        return (String)methodExecuteHandleException("getName");
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Class<? extends LocalAbstractObject> getObjectClass() {
-        return (Class<? extends LocalAbstractObject>)methodExecute("getObjectClass"); // This cast IS checked
+        return (Class<? extends LocalAbstractObject>)methodExecuteHandleException("getObjectClass"); // This cast IS checked
     }
 
     @Override
     public int getRunningOperationsCount() {
-        return (Integer)methodExecute("getRunningOperationsCount");
+        return (Integer)methodExecuteHandleException("getRunningOperationsCount");
     }
 
     @Override
@@ -275,40 +278,40 @@ public class RMIAlgorithm extends Algorithm {
 
     @Override
     public AbstractOperation getRunningOperationById(UUID operationId) {
-        return (AbstractOperation)methodExecute("getRunningOperationById", operationId);
+        return (AbstractOperation)methodExecuteHandleException("getRunningOperationById", operationId);
     }
 
     @Override
     public AbstractOperation getRunningOperation() {
-        return (AbstractOperation)methodExecute("getRunningOperation");
+        return (AbstractOperation)methodExecuteHandleException("getRunningOperation");
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Collection<AbstractOperation> getAllRunningOperations() {
-        return (Collection<AbstractOperation>)methodExecute("getAllRunningOperations");
+        return (Collection<AbstractOperation>)methodExecuteHandleException("getAllRunningOperations");
     }
 
     @Override
     public OperationStatistics getOperationStatistics() {
-        return (OperationStatistics)methodExecute("getOperationStatistics");
+        return (OperationStatistics)methodExecuteHandleException("getOperationStatistics");
     }
 
     @Override
     public void resetOperationStatistics() {
-        methodExecute("resetOperationStatistics");
+        methodExecuteHandleException("resetOperationStatistics");
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public List<Class<? extends AbstractOperation>> getSupportedOperations() {
-        return (List<Class<? extends AbstractOperation>>)methodExecute("getSupportedOperations"); // This cast IS checked
+        return (List<Class<? extends AbstractOperation>>)methodExecuteHandleException("getSupportedOperations"); // This cast IS checked
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T extends AbstractOperation> List<Class<? extends T>> getSupportedOperations(Class<? extends T> subclassToSearch) {
-        return (List<Class<? extends T>>)methodExecute("getSupportedOperations", subclassToSearch); // This cast IS checked
+        return (List<Class<? extends T>>)methodExecuteHandleException("getSupportedOperations", subclassToSearch); // This cast IS checked
     }
 
     @Override
@@ -326,4 +329,30 @@ public class RMIAlgorithm extends Algorithm {
         }
     }
 
+    @Override
+    Object methodExecute(String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
+        Object rtv = methodExecute("methodExecute", connectionRetries, convertStringArguments, namedInstances, methodArguments);
+        if (rtv instanceof Exception) {
+            if (rtv instanceof InvocationTargetException)
+                throw (InvocationTargetException)rtv;
+            if (rtv instanceof NoSuchInstantiatorException)
+                throw (NoSuchInstantiatorException)rtv;
+            throw handleException(rtv);
+        } else {
+            return rtv;
+        }
+    }
+
+    /**
+     * Executes a given method on this algorithm and returns the result.
+     * @param methodName the name of the method to execute on the remote algorithm
+     * @param methodArguments the arguments for the method
+     * @return the method result or exception
+     * @throws InvocationTargetException if the executed method throws an exception
+     * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
+     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
+     */
+    public Object methodExecute(String methodName, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
+        return methodExecute(methodName, false, null, methodArguments);
+    }
 }
