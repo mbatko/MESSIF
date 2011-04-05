@@ -40,6 +40,13 @@ public interface Parametric {
     public abstract Collection<String> getParameterNames();
 
     /**
+     * Returns whether a parameter with the given {@code name} exists in this parametric object.
+     * @param name the name of the additional parameter to get
+     * @return <tt>true</tt> if this object contains a parameter of the given {@code name} or <tt>false</tt> if it does not
+     */
+    public boolean containsParameter(String name);
+
+    /**
      * Returns an additional parameter with the given {@code name}.
      * @param name the name of the additional parameter to get
      * @return the value of the parameter {@code name} or <tt>null</tt> if it is not set

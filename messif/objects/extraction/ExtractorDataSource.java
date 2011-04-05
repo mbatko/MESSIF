@@ -210,6 +210,11 @@ public class ExtractorDataSource implements Closeable, Parametric {
     }
 
     @Override
+    public boolean containsParameter(String name) {
+        return additionalParameters != null && additionalParameters.containsKey(name);
+    }
+
+    @Override
     public Object getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }

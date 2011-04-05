@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
@@ -57,6 +58,8 @@ import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
+import messif.utility.reflection.MethodInstantiator;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 
 /**
@@ -733,6 +736,46 @@ public abstract class Algorithm implements Serializable {
                 throw new InternalError("Method getExecutorParamClasses is not compatible with the actual operation call");
             }
         throw new InternalError("Method getExecutorParamClasses does not have an AbstractOperation class");
+    }
+
+
+    //****************** Method execute ******************//
+
+    /**
+     * Executes a given method on this algorithm and returns the result.
+     * @param methodName the name of the method to execute on the remote algorithm
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted to proper types if possible
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param methodArguments the arguments for the method
+     * @return the method return value
+     * @throws InvocationTargetException if the executed method throws an exception
+     * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
+     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
+     */
+    Object methodExecute(String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
+        try {
+            return MethodInstantiator.getMethod(getClass(), methodName, convertStringArguments, true, namedInstances, methodArguments).invoke(this, methodArguments);
+        } catch (IllegalAccessException e) {
+            throw new InternalError("Method cannot be invoked even though it is public"); // This should never happen
+        }
+    }
+
+    /**
+     * Executes a given method on this algorithm and returns the result.
+     * This method is a convenience method for APIs and should not be called from a native Java application.
+     *
+     * @param methodNameAndArguments the array that contains a method name and its arguments as string
+     * @param methodNameIndex the index in the {@code methodNameAndArguments} array where the method name is (the following arguments are considered to be the arguments)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return the method return value
+     * @throws InvocationTargetException if the executed method throws an exception
+     * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
+     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
+     */
+    public final Object executeMethodWithStringArguments(String[] methodNameAndArguments, int methodNameIndex, Map<String, Object> namedInstances) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
+        Object[] arguments = new Object[methodNameAndArguments.length - methodNameIndex - 1];
+        System.arraycopy(methodNameAndArguments, methodNameIndex + 1, arguments, 0, arguments.length);
+        return methodExecute(methodNameAndArguments[methodNameIndex], true, namedInstances, arguments);
     }
 
 

@@ -123,6 +123,11 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     }
 
     @Override
+    public boolean containsParameter(String name) {
+        return additionalParameters != null && additionalParameters.containsKey(name);
+    }
+
+    @Override
     public Object getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }
@@ -157,12 +162,13 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * Set additional {@code name} parameter of this operation to {@code value}.
      * @param name the name of the additional parameter to set
      * @param value the value of the additional parameter to set
-     * @return the previous value of the parameter {@code name} or <tt>null</tt> if it was not set
+     * @return this operation to allow chaining
      */
-    public Serializable setParameter(String name, Serializable value) {
+    public AbstractOperation setParameter(String name, Serializable value) {
         if (additionalParameters == null)
             additionalParameters = new HashMap<String, Serializable>();
-        return additionalParameters.put(name, value);
+        additionalParameters.put(name, value);
+        return this;
     }
 
     /**

@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
@@ -984,10 +983,9 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args method name followed by the values for its arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     * @throws InvocationTargetException if there was an error while calling the method
      */
     @ExecutableMethod(description = "directly execute a method of the running algorithm", arguments = {"method name", "arguments for the method ..."})
-    public boolean methodExecute(PrintStream out, String... args) throws InvocationTargetException {
+    public boolean methodExecute(PrintStream out, String... args) {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
             return false;
@@ -998,29 +996,13 @@ public class CoreApplication {
         }
 
         try {
-            // Get executed method
-            for (Method method : algorithm.getClass().getMethods()) {
-                // Check method name
-                if (!method.getName().equals(args[1]))
-                    continue;
-
-                // Check method argument count
-                Class<?>[] argTypes = method.getParameterTypes();
-                if (argTypes.length != args.length - 2)
-                    if (argTypes.length == 0 || !argTypes[argTypes.length - 1].isArray() || argTypes.length > args.length - 1)
-                        continue;
-
-                // Try to invoke the method
-                Object rtv = method.invoke(algorithm, Convert.parseTypesFromString(args, argTypes, true, 2, namedInstances));
-                if (!method.getReturnType().equals(void.class))
-                    out.println(rtv);
-                return true;
-            }
-
+            Object rtv = algorithm.executeMethodWithStringArguments(args, 1, namedInstances);
+            if (!(rtv instanceof Void))
+                out.println(rtv);
+            return true;
+        } catch (NoSuchInstantiatorException e) {
             out.println("Method '" + args[1] + "' with " + (args.length - 2) + " arguments was not found in algorithm");
             return false;
-        } catch (InvocationTargetException e) {
-            throw e;
         } catch (Exception e) {
             logException(e);
             out.println(e.toString());
