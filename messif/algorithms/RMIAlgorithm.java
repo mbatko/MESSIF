@@ -331,7 +331,7 @@ public class RMIAlgorithm extends Algorithm {
 
     @Override
     Object methodExecute(String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
-        Object rtv = methodExecute("methodExecute", connectionRetries, convertStringArguments, namedInstances, methodArguments);
+        Object rtv = methodExecute("methodExecute", connectionRetries, methodName, convertStringArguments, namedInstances, methodArguments);
         if (rtv instanceof Exception) {
             if (rtv instanceof InvocationTargetException)
                 throw (InvocationTargetException)rtv;
