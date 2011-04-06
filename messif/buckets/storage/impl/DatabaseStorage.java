@@ -585,7 +585,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
 
     @Override
     public IntStorageSearch<T> search() throws IllegalStateException {
-        return search(null, null, null);
+        return new DatabaseStorageSearch<T>(null, -2 /* Full scan */, null,  null);
     }
 
     /**
