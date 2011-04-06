@@ -312,9 +312,8 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Returns the operation executed in this thread.
-     * If this thread is not an algorithm execution thread, <tt>null</tt> is returned.
-     * @return the executed operation or <tt>null</tt> if this thread is not executing any operation
+     * Returns the collection of all operations currently being processed by this algorithm.
+     * @return collection of all operations currently being processed by this algorithm (or empty collection)
      */
     public Collection<AbstractOperation> getAllRunningOperations() {
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing

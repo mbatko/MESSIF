@@ -38,6 +38,12 @@ public class OperationErrorCode extends ErrorCode {
     
     /** Response to a query has not been returned completely, i.e. the same operation should be called again. */
     public static OperationErrorCode HAS_NEXT = new OperationErrorCode("having more objects to return");
+
+    /** The processing was aborted by the user. */
+    public static OperationErrorCode ABORTED_BY_USER = new OperationErrorCode("operation processing aborted by user");
+
+    /** The processing of the operation was aborted by unknown error. */
+    public static OperationErrorCode ABORTED_BY_ERROR = new OperationErrorCode("operation processing aborted by error");
     
     /** Creates a new instance of OperationErrorCode
      * 
