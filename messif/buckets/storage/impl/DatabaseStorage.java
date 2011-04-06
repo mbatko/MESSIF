@@ -326,6 +326,19 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     //****************** Column conversion support ******************//
 
     /**
+     * Retrieve a column convertor assigned for the passed column name
+     * @param colName name of the column
+     * @return an instance of a column convertor, <code>null</code> if not found.
+     */
+    public ColumnConvertor<T> getColumnConvertor(String colName) {
+        for (int i = 0; i < columnNames.length; i++) {
+            if (columnNames[i].equals(colName))
+                return columnConvertors[i];
+        }
+        return null;
+    }
+    
+    /**
      * Closes connection to the database.
      * @throws SQLException if there was an error while closing the connection
      */
