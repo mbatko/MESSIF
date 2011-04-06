@@ -312,12 +312,19 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Returns the collection of all operations currently being processed by this algorithm.
-     * @return collection of all operations currently being processed by this algorithm (or empty collection)
+     * Returns all operations currently executed by this algorithm.
+     * Note that the returned collection is new independent instance, thus any
+     * modifications are not propagated, so it is <em>not</em> unmodifiable.
+     * @return a collection of all operations
      */
     public Collection<AbstractOperation> getAllRunningOperations() {
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-            return Collections.unmodifiableCollection(runningOperations.values());
+            // The list of operations must be copied to a serializable list
+            Collection<AbstractOperation> ret = new ArrayList<AbstractOperation>(runningOperations.size());
+            for (AbstractOperation op : runningOperations.values())
+                if (op != null) // This is needed since the operations are in a weak-ref map
+                    ret.add(op);
+            return ret;
         }
     }
 
