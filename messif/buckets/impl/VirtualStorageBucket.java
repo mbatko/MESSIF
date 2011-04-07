@@ -29,11 +29,10 @@ import messif.buckets.index.impl.LongStorageIndex;
 import messif.buckets.storage.IntStorage;
 import messif.buckets.storage.LongStorage;
 import messif.buckets.storage.Storage;
+import messif.buckets.storage.Storages;
 import messif.objects.LocalAbstractObject;
 import messif.utility.Convert;
 import messif.utility.reflection.InstantiatorSignature;
-import messif.utility.reflection.MethodInstantiator;
-import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Encapsulating bucket for generic indices and storages.
@@ -120,30 +119,9 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
     public static VirtualStorageBucket<?> getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
-        if (parameters == null)
-            throw new IllegalArgumentException("No parameters specified");
-
-        try {
-            // Create storage - retrieve class from parameter and use "create" factory method
-            Class<? extends Storage> storageClass = null;
-            try {
-                storageClass = Convert.genericCastToClass(parameters.get("storageClass"), Storage.class);
-            } catch (ClassCastException classCastException) {
-                storageClass = Convert.getClassForName((String) parameters.get("storageClass"), Storage.class);
-            }
-            //Class<? extends Storage> storageClass = Convert.getParameterValue(parameters, "storageClass", Class.class, null);
-            @SuppressWarnings("unchecked")
-            Storage<LocalAbstractObject> storage = MethodInstantiator.callFactoryMethod(storageClass, "create", false, true, null, LocalAbstractObject.class, (Object)parameters);
-
-            // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
-            return getBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage, createComparator(parameters));
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(e.toString());
-        } catch (NoSuchInstantiatorException e) {
-            throw new IllegalArgumentException(e.toString());
-        } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException(e.getCause().toString());
-        }
+        @SuppressWarnings("unchecked")
+        Storage<LocalAbstractObject> storage = Storages.createStorageClassParameter(LocalAbstractObject.class, parameters, "storageClass", Storage.class);
+        return getBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage, createComparator(parameters));
     }
 
     /**

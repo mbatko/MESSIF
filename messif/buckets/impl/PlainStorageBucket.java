@@ -17,15 +17,12 @@
 package messif.buckets.impl;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import messif.buckets.LocalBucket;
 import messif.buckets.index.ModifiableIndex;
 import messif.buckets.storage.StorageIndexed;
+import messif.buckets.storage.Storages;
 import messif.objects.LocalAbstractObject;
-import messif.utility.Convert;
-import messif.utility.reflection.MethodInstantiator;
-import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Encapsulating bucket for a plain storage.
@@ -103,29 +100,9 @@ public final class PlainStorageBucket extends LocalBucket {
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
     public static PlainStorageBucket getBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, Map<String, Object> parameters) throws IOException, IllegalArgumentException, ClassNotFoundException {
-        if (parameters == null)
-            throw new IllegalArgumentException("No parameters specified");
-
-        try {
-            // Create storage - retrieve class from parameter and use "create" factory method
-            Class<? extends StorageIndexed> storageClass = null;
-            try {
-                storageClass = Convert.genericCastToClass(parameters.get("storageClass"), StorageIndexed.class);
-            } catch (ClassCastException classCastException) {
-                storageClass = Convert.getClassForName((String) parameters.get("storageClass"), StorageIndexed.class);
-            }
-            @SuppressWarnings("unchecked")
-            StorageIndexed<LocalAbstractObject> storage = MethodInstantiator.callFactoryMethod(storageClass, "create", false, true, null, LocalAbstractObject.class, (Object)parameters);
-
-            // Create the comparator from the parameters, encapsulate it with an index and then by the virtual bucket
-            return new PlainStorageBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage);
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(e.toString());
-        } catch (NoSuchInstantiatorException e) {
-            throw new IllegalArgumentException(e.toString());
-        } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException(e.getCause().toString());
-        }
+        @SuppressWarnings("unchecked")
+        StorageIndexed<LocalAbstractObject> storage = Storages.createStorageClassParameter(LocalAbstractObject.class, parameters, "storageClass", StorageIndexed.class);
+        return new PlainStorageBucket(capacity, softCapacity, lowOccupation, occupationAsBytes, storage);
     }
 
 }
