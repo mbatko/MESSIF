@@ -64,6 +64,20 @@ public interface Parametric {
 
     /**
      * Returns an additional parameter with the given {@code name}.
+     * If the parameter with the given {@code name} is not set or is not an
+     * instance of {@code parameterClass}, an exception is thrown.
+     *
+     * @param <T> the class of the parameter
+     * @param name the name of the additional parameter to get
+     * @param parameterClass the class of the parameter to get
+     * @return the parameter value
+     * @throws IllegalArgumentException if the parameter with the given {@code name} is not set
+     * @throws ClassCastException if the parameter with the given {@code name} is not an instance of {@code parameterClass}
+     */
+    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException;
+
+    /**
+     * Returns an additional parameter with the given {@code name}.
      * If the parameter is not set or is not an instance of {@code parameterClass},
      * the {@code defaultValue} is returned instead.
      *

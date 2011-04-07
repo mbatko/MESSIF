@@ -228,6 +228,11 @@ public class ExtractorDataSource implements Closeable, Parametric {
     }
 
     @Override
+    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException {
+        return parameterClass.cast(getRequiredParameter(name));
+    }
+
+    @Override
     public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
         Object value = getParameter(name);
         return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
