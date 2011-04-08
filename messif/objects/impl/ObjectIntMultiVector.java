@@ -151,6 +151,28 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
     }
 
     /**
+     * Returns the number of items in the respective data array of this object.
+     * @param array the index of the array the length of which is returned
+     * @return the number of items in the respective data array
+     * @throws IndexOutOfBoundsException if the given {@code array} index is negative or greater or equal to {@link #getVectorDataCount()}
+     */
+    public int getVectorDataItemCount(int array) throws IndexOutOfBoundsException {
+        return data[array].length;
+    }
+
+    /**
+     * Returns the value at the given {@code index} of the respective data array of this object.
+     * @param array the index of the array the item of which is returned
+     * @param index the index of the item in the respective data array to retrieve
+     * @return a single value of the respective data array
+     * @throws IndexOutOfBoundsException if the given {@code array} or {@code index} is negative or
+     *      greater or equal to {@link #getVectorDataCount()} or {@link #getVectorDataItemCount(int)} respectively
+     */
+    public int getVectorDataItem(int array, int index) throws IndexOutOfBoundsException {
+        return data[array][index];
+    }
+
+    /**
      * Returns the vector of all integer values, which represents the contents of all the
      * respective data array of this object. The respective arrays are concatenated
      * according to their position.

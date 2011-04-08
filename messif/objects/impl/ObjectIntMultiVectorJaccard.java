@@ -259,6 +259,25 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             return weights[iterator.getCurrentVectorDataIndex()];
         }
 
+        /**
+         * Returns the weights for data arrays encapsulated in this {@link WeightProvider}.
+         * Note that a copy is returned, so any modifications in the returned array are
+         * not reflected by the provider.
+         * @return the weights for data arrays
+         */
+        public float[] getWeights() {
+            return weights.clone();
+        }
+
+        /**
+         * Returns the weight for the given data array encapsulated in this {@link WeightProvider}.
+         * @param array the index of the data array for which to get the weight
+         * @return the weight for the given data array
+         */
+        public float getWeight(int array) {
+            return weights[array];
+        }
+
         @Override
         public float getWeightSum(ObjectIntMultiVector obj) {
             float sum = 0;

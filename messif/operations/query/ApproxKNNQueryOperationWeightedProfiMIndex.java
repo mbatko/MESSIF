@@ -82,6 +82,31 @@ public class ApproxKNNQueryOperationWeightedProfiMIndex extends ApproxKNNQueryOp
         this.filterTerritory = filterTerritory;
     }
 
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationWeightedProfiMIndex
+     * with specified parameters for centralized approximation.
+     * No territory is filtered.
+     *
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param from index of the first objects returned from the answer (to simulate an incremental query)
+     * @param keywordsWeight weight for the keywords jaccard coefficient
+     * @param queryWeights the weights provider for query object's keywords
+     * @param dbWeights the weights provider for database objects' keywords
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return",
+            "Text similarity weight", "Query keywords weight provider", "Database keywords weight provider",
+            "Local search param", "Type of local search param", "Answer type"})
+    public ApproxKNNQueryOperationWeightedProfiMIndex(MetaObjectProfiSCT queryObject, int k, int from,
+            float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights,
+            int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
+    ) {
+        this(queryObject, k, from, keywordsWeight, queryWeights, dbWeights, null, localSearchParam, localSearchType, answerType);
+    }
+
     @Override
     public int getAnswerCount() {
         return super.getAnswerCount() - from;
