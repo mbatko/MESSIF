@@ -51,7 +51,7 @@ public abstract class Storages {
      * @throws IllegalArgumentException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
-    public static <T, S extends Storage<T>> S createStorage(Class<? extends S> storageClass, Class<T> storedObjectsClass, Map<String, Object> parameters) throws IllegalArgumentException, ClassNotFoundException {
+    public static <T, S extends Storage<T>> S createStorage(Class<? extends S> storageClass, Class<T> storedObjectsClass, Map<String, ?> parameters) throws IllegalArgumentException, ClassNotFoundException {
         try {
             return MethodInstantiator.callFactoryMethod(storageClass, "create", false, true, null, storedObjectsClass, (Object)parameters);
         } catch (ClassCastException e) {
@@ -73,16 +73,16 @@ public abstract class Storages {
      * 
      * @param <T> the class of objects that the new storage will work with
      * @param <S> the class of the storage to create
-     * @param storageClassToCheck the super-class of the storage to create (i.e. {@link Storage})
      * @param storedObjectsClass the class of objects that the new storage will work with
-     * @param storageClassParamName the name of the parameter where the storage class is stored
      * @param parameters list of named parameters for the storage to create, it must contain at least
      *      the {@code storageClass} parameter that specifies the storage class to create
+     * @param storageClassParamName the name of the parameter where the storage class is stored
+     * @param storageClassToCheck the super-class of the storage to create (i.e. {@link Storage})
      * @return a new storage instance
      * @throws IllegalArgumentException if the parameters specified are invalid (non existent directory, null values, etc.)
      * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
      */
-    public static <T, S extends Storage<T>> S createStorageClassParameter(Class<T> storedObjectsClass, Map<String, Object> parameters, String storageClassParamName, Class<? extends S> storageClassToCheck) throws IllegalArgumentException, ClassNotFoundException {
+    public static <T, S extends Storage<T>> S createStorageClassParameter(Class<T> storedObjectsClass, Map<String, ?> parameters, String storageClassParamName, Class<? extends S> storageClassToCheck) throws IllegalArgumentException, ClassNotFoundException {
         if (parameters == null)
             throw new IllegalArgumentException("No parameters specified");
 
@@ -97,5 +97,25 @@ public abstract class Storages {
         return createStorage(storageClass, storedObjectsClass, parameters);
     }
 
-    
+    /**
+     * Creates a storage using factory method.
+     * A factory method of the following prototype (which every storage class should implement) is used:
+     * <pre>
+     *      public static AStorageType create(Class storedObjectsClass, Map&lt;String, Object&gt; parameters)
+     * </pre>
+     * The parameters map is filled with storage-specific instantiation values.
+     *
+     * @param <T> the class of objects that the new storage will work with
+     * @param storedObjectsClass the class of objects that the new storage will work with
+     * @param parameters list of named parameters for the storage to create, it must contain at least
+     *      the {@code storageClass} parameter that specifies the storage class to create
+     * @param storageClassParamName the name of the parameter where the storage class is stored
+     * @return a new storage instance
+     * @throws IllegalArgumentException if the parameters specified are invalid (non existent directory, null values, etc.)
+     * @throws ClassNotFoundException if the parameter <em>class</em> could not be resolved or is not a descendant of LocalAbstractObject
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Storage<T> createStorageClassParameter(Class<T> storedObjectsClass, Map<String, ?> parameters, String storageClassParamName) throws IllegalArgumentException, ClassNotFoundException {
+        return createStorageClassParameter(storedObjectsClass, parameters, storageClassParamName, Storage.class);
+    }
 }
