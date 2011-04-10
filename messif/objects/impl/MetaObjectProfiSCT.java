@@ -1848,7 +1848,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
                 // Read data from the extractor
                 if (extractorCommand != null) {
-                    str = Extractors.readStringData(Extractors.callExternalExtractor(extractorCommand, false, dataSource), str);
+                    str = Convert.readStringData(Extractors.callExternalExtractor(extractorCommand, false, dataSource), str);
                     if (str.length() == 0)
                         throw new IllegalArgumentException("There were no data extracted");
                     if (str.charAt(str.length() - 1) != '\n')
