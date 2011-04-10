@@ -31,9 +31,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import javax.naming.InitialContext;
@@ -228,6 +231,43 @@ public class ExtendedProperties extends Properties {
         return restrictProperties(properties, prefix, null);
     }
 
+    /**
+     * Return a new instance of {@link ExtendedProperties} loaded from the specified {@code map}.
+     * @param map the map of key-value pairs to load into the properties
+     * @return a new instance of {@link ExtendedProperties}
+     */
+    public static ExtendedProperties createPropertiesFromMap(Map<String, String> map) {
+        ExtendedProperties ret = new ExtendedProperties();
+        ret.load(map);
+        return ret;
+    }
+
+    /**
+     * Creates a new instance of {@link ExtendedProperties} from the given {@code properties}.
+     * If a {@code clazz} is given and a property file for that class exists, it
+     * is used as properties default for the new instance.
+     * @param properties the properties to load into the new instance
+     * @param clazz the class to load the properties for
+     * @return a new instance of {@link ExtendedProperties}
+     * @throws IllegalArgumentException if there was an error reading the class properties
+     */
+    public static ExtendedProperties createPropertiesWithClassDefault(Properties properties, Class<?> clazz) throws IllegalArgumentException {
+        ExtendedProperties ret = new ExtendedProperties();
+        if (clazz != null) {
+            try {
+                ret.load(clazz);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Cannot read class properties: " + e, e);
+            }
+        }
+        if (properties != null) {
+            if (!ret.isEmpty())
+                ret = new ExtendedProperties(ret);
+            ret.load(properties, null);
+        }
+        return ret;
+    }
+
 
     //****************** Additional load methods ******************//
 
@@ -323,6 +363,17 @@ public class ExtendedProperties extends Properties {
             if (variables != null)
                 value = Convert.substituteVariables(value, variableRegex, variableRegexGroup, defaultValueRegexGroup, variables);
             setProperty((prefix == null)?name:name.substring(prefix.length()), value);
+        }
+    }
+
+    /**
+     * Populate this properties with the data from a {@link Map}.
+     * Note that any existing keys are replaced.
+     * @param map the map of key-value pairs to load
+     */
+    public void load(Map<String, String> map) {
+        for (Entry<String, String> entry : map.entrySet()) {
+            setProperty(entry.getKey(), entry.getValue());
         }
     }
 
@@ -464,29 +515,44 @@ public class ExtendedProperties extends Properties {
      * Returns an array of property values.
      * The array will have exactly <code>count</code> items and each item
      * will be filled with value of the property <code>key#</code>, where #
-     * is an index of the respective item starting from 1.
+     * is an index of the respective item starting from 1. If {@code count}
+     * is negative, the properties <code>key#</code> are tried until the last
+     * one is found.
      * @param key the hashtable key (index number will be appended)
      * @param count the number of items to retrieve
      * @return an array of property values
      */
     public String[] getMultiProperty(String key, int count) {
-        String[] ret = new String[count];
-        for (int i = 0; i < count; i++)
-            ret[i] = getProperty(key + (i + 1));
-        return ret;
+        if (count < 0) {
+            List<String> ret = new ArrayList<String>();
+            int i = 1;
+            String lastProp = getProperty(key + i++);
+            while (lastProp != null) {
+                ret.add(lastProp);
+                lastProp = getProperty(key + i++);
+            }
+            return ret.toArray(new String[ret.size()]);
+        } else {
+            String[] ret = new String[count];
+            for (int i = 1; i <= count; i++)
+                ret[i] = getProperty(key + i);
+            return ret;
+        }
     }
 
     /**
      * Returns an array of property values.
      * The array size will be retrieved from property name <code>key</code>.
      * Each item will be filled with value of the property <code>key#</code>, where #
-     * is a zero-based index of the respective item.
+     * is an index of the respective item starting from 1.
+     * If the property <code>key</code> does not exist, properties <code>key#</code>
+     * are tried until the last one is found.
      * @param key the hashtable key (index number will be appended)
      * @return an array of property values
      * @throws ExtendedPropertiesException if the property's value is not a non-negative integer
      */
     public String[] getMultiProperty(String key) throws ExtendedPropertiesException {
-        return getMultiProperty(key, getIntProperty(key, -1, 0, Integer.MAX_VALUE));
+        return getMultiProperty(key, getIntProperty(key, -1, -1, Integer.MAX_VALUE));
     }
 
     /**

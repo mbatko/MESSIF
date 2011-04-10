@@ -17,6 +17,7 @@
 package messif.objects.extraction;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,10 +27,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
-import messif.utility.Parametric;
+import messif.utility.ParametricBase;
 
 /**
  * Provides a data source for {@link Extractor}s.
@@ -51,7 +50,7 @@ import messif.utility.Parametric;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractorDataSource implements Closeable, Parametric {
+public class ExtractorDataSource extends ParametricBase implements Closeable {
     /** Number of bytes that the {@link #getBinaryData()} method allocates */
     private static final int readStreamDataAllocation = 4096;
 
@@ -59,8 +58,6 @@ public class ExtractorDataSource implements Closeable, Parametric {
 
     /** Remembered data source (can be {@link File}, {@link InputStream} or {@link URL}) */
     private final Object dataSource;
-    /** Additional parameters for this data source */
-    private final Map<String, ? extends Object> additionalParameters;
     /** Input stream that provides data for this data source */
     private InputStream inputStream;
     /** Number of bytes available in the input stream or zero if this is unknown in advance */
@@ -77,9 +74,8 @@ public class ExtractorDataSource implements Closeable, Parametric {
      * @param additionalParameters the additional parameters for this data source
      */
     public ExtractorDataSource(InputStream inputStream, Map<String, ? extends Object> additionalParameters) {
-        this.dataSource = inputStream;
-        this.additionalParameters = additionalParameters;
-        openDataSource(inputStream);
+        super(additionalParameters);
+        this.dataSource = openDataSource(inputStream);
     }
 
     /**
@@ -91,6 +87,24 @@ public class ExtractorDataSource implements Closeable, Parametric {
     }
 
     /**
+     * Create new instance of ExtractorDataSource using data from the given array of bytes.
+     * @param inputData the array of bytes that represents the data
+     * @param additionalParameters the additional parameters for this data source
+     */
+    public ExtractorDataSource(byte[] inputData, Map<String, ? extends Object> additionalParameters) {
+        super(additionalParameters);
+        this.dataSource = openDataSource(inputData);
+    }
+
+    /**
+     * Create new instance of ExtractorDataSource using data from the given array of bytes.
+     * @param inputData the array of bytes that represents the data
+     */
+    public ExtractorDataSource(byte[] inputData) {
+        this(inputData, null);
+    }
+
+    /**
      * Create new instance of ExtractorDataSource using data downloaded from {@link URL}.
      * @param url the URL from which to download the data
      * @param mimeTypeRegexp regular expression for the mimetype of the data on the given {@code url}
@@ -98,6 +112,8 @@ public class ExtractorDataSource implements Closeable, Parametric {
      * @throws IOException if there was an error reading the data
      */
     public ExtractorDataSource(URL url, String mimeTypeRegexp, Map<String, ? extends Object> additionalParameters) throws IOException {
+        super(additionalParameters);
+
         // Open url connection
         URLConnection conn = url.openConnection();
 
@@ -105,9 +121,7 @@ public class ExtractorDataSource implements Closeable, Parametric {
         if (mimeTypeRegexp != null && conn.getContentType() != null && !conn.getContentType().matches(mimeTypeRegexp))
             throw new IOException("Cannot read '" + conn.getContentType() + "' data");
 
-        this.dataSource = url;
-        this.additionalParameters = additionalParameters;
-        openDataSource(conn);
+        this.dataSource = openDataSource(conn);
     }
 
     /**
@@ -127,9 +141,8 @@ public class ExtractorDataSource implements Closeable, Parametric {
      * @throws IOException if there was an error opening the file
      */
     public ExtractorDataSource(File file, Map<String, ? extends Object> additionalParameters) throws IOException {
-        this.dataSource = file;
-        this.additionalParameters = additionalParameters;
-        openDataSource(file);
+        super(additionalParameters);
+        this.dataSource = openDataSource(file);
     }
 
     /**
@@ -153,6 +166,8 @@ public class ExtractorDataSource implements Closeable, Parametric {
     private void openDataSourceAnonymous(Object dataSource) throws IOException {
         if (dataSource instanceof InputStream) {
             openDataSource((InputStream)dataSource);
+        } else if (dataSource instanceof byte[]) {
+            openDataSource((byte[])dataSource);
         } else if (dataSource instanceof File) {
             openDataSource((File)dataSource);
         } else if (dataSource instanceof URL) {
@@ -167,88 +182,54 @@ public class ExtractorDataSource implements Closeable, Parametric {
     /**
      * Open data source from an {@link InputStream}.
      * @param stream the stream to use as data source
+     * @return <tt>null</tt> is returned, since the input stream cannot be reset
      */
-    private void openDataSource(InputStream stream) {
+    private InputStream openDataSource(InputStream stream) {
         this.inputStream = stream;
         this.bytesAvailable = -1;
+        return null;
+    }
+
+    /**
+     * Open data source from an {@link InputStream}.
+     * @param inputData the array of bytes that represents the data
+     * @return the passed {@code inputData} is returned
+     */
+    private byte[] openDataSource(byte[] inputData) {
+        this.inputStream = new ByteArrayInputStream(inputData);
+        this.bytesAvailable = -1;
+        return inputData;
     }
 
     /**
      * Open data source from a {@link File}.
      * @param file the file to use as data source
+     * @return the passed {@code file} is returned
      * @throws IOException if there was an I/O error opening the given file
      */
-    private void openDataSource(File file) throws IOException {
+    private File openDataSource(File file) throws IOException {
         long fileSize = file.length();
         if (fileSize >= Integer.MAX_VALUE)
             throw new IOException("Cannot load data from " + file + ": file is too big");
         this.inputStream = new FileInputStream(file);
         this.bytesAvailable = (int)fileSize;
+        return file;
     }
 
     /**
      * Open data source from a {@link URLConnection}.
      * @param conn the URL connection to use as data source
+     * @return the passed {@code conn} is returned
      * @throws IOException if there was an I/O error opening the given URL connection
      */
-    private void openDataSource(URLConnection conn) throws IOException {
+    private URLConnection openDataSource(URLConnection conn) throws IOException {
         this.inputStream = conn.getInputStream();
         this.bytesAvailable = conn.getContentLength();
+        return conn;
     }
 
 
     //****************** Data access methods *************//
-
-    @Override
-    public int getParameterCount() {
-        return additionalParameters != null ? additionalParameters.size() : 0;
-    }
-
-    @Override
-    public Collection<String> getParameterNames() {
-        return additionalParameters != null ? Collections.unmodifiableCollection(additionalParameters.keySet()) : null;
-    }
-
-    @Override
-    public boolean containsParameter(String name) {
-        return additionalParameters != null && additionalParameters.containsKey(name);
-    }
-
-    @Override
-    public Object getParameter(String name) {
-        return additionalParameters != null ? additionalParameters.get(name) : null;
-    }
-
-    @Override
-    public Object getRequiredParameter(String name) throws IllegalArgumentException {
-        Object parameter = getParameter(name);
-        if (parameter == null)
-            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
-        return parameter;
-    }
-
-    @Override
-    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException {
-        return parameterClass.cast(getRequiredParameter(name));
-    }
-
-    @Override
-    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
-        Object value = getParameter(name);
-        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
-    }
-
-    @Override
-    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
-        return getParameter(name, parameterClass, null);
-    }
-
-    @Override
-    public Map<String, ? extends Object> getParameterMap() {
-        if (additionalParameters == null)
-            return null;
-        return Collections.unmodifiableMap(additionalParameters);
-    }
 
     /**
      * Returns the remembered data source (can be {@link File}, {@link InputStream} or {@link URL}).
@@ -289,6 +270,9 @@ public class ExtractorDataSource implements Closeable, Parametric {
     public byte[] getBinaryData() throws IOException {
         if (bufferedReader != null)
             throw new IOException("Cannot use binary data getter - the buffered reader was used");
+        if (dataSource instanceof byte[]) // No need to read the byte[] data source again
+            return ((byte[])dataSource);
+
         // Create buffer (has always at least bufferSize bytes available)
         byte[] buffer = new byte[bytesAvailable > 0 ? bytesAvailable : readStreamDataAllocation];
         int offset = 0;
@@ -325,10 +309,14 @@ public class ExtractorDataSource implements Closeable, Parametric {
      * @throws IOException if there was an error reading from this data source or writing to the output stream
      */
     public void pipe(OutputStream outputStream) throws IOException {
-        byte[] buffer = new byte[readStreamDataAllocation];
-        int bytes;
-        while ((bytes = inputStream.read(buffer)) > 0)
-            outputStream.write(buffer, 0, bytes);
+        if (dataSource instanceof byte[]) { // No need to read the byte[] data source again
+            outputStream.write((byte[])dataSource);
+        } else {
+            byte[] buffer = new byte[readStreamDataAllocation];
+            int bytes;
+            while ((bytes = inputStream.read(buffer)) > 0)
+                outputStream.write(buffer, 0, bytes);
+        }
 
         // Close the input stream, since all data was read
         inputStream.close();

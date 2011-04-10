@@ -27,6 +27,8 @@ import java.net.URL;
 import java.util.Iterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
+import messif.utility.ExtendedProperties;
+import messif.utility.ExtendedPropertiesException;
 
 /**
  * Collection of utility methods for {@link Extractor}s.
@@ -245,6 +247,18 @@ public abstract class Extractors {
             dataSource.pipe(os);
             os.close();
         }
+
+        // Check whether the process has not failed
+        try {
+            int errCode = extractorProcess.exitValue();
+            if (extractorProcess.exitValue() != 0) {
+                // Read the error stream
+                String error = readStringData(extractorProcess.getErrorStream(), new StringBuilder()).toString();
+                throw new IOException("External extractor returned " + errCode + ": " + error);
+            }
+        } catch (IllegalThreadStateException ignore) { // The process is still running, so we are probably good...
+        }
+        
         return extractorProcess.getInputStream();
     }
 
@@ -396,4 +410,74 @@ public abstract class Extractors {
             throw new IllegalArgumentException("Class " + usingClass.getName() + " is not valid parameter for creating extractor");
         }
     }
+
+    /**
+     * Creates an instance of {@link Extractor} from property values.
+     * A property with the given {@code key} must be a type of extractor to create.
+     * <p>
+     * If type is "external", additional property {@code <key>.command} is required
+     * to contain the external command to execute. Optionally, {@code <key>.fileAsArgument},
+     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createExternalExtractor(java.lang.Class, java.lang.String, boolean, java.lang.String, java.lang.Object[]) createExternalExtractor}.
+     * </p>
+     * <p>
+     * If type is "text", no additional parameters are required. Optionally,
+     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.Object[]) createTextExtractor}.
+     * </p>
+     *
+     * @param <T> the class of objects that will be created by the extractor
+     * @param objectClass the class of objects that will be created by the extractor
+     * @param properties the properties with values
+     * @param key the key property name
+     * @return a new instance of extractor
+     * @throws ExtendedPropertiesException if there some of the required properties were missing or invalid
+     * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createExtractorFromProperties(Class<? extends T> objectClass, ExtendedProperties properties, String key) throws ExtendedPropertiesException, IllegalArgumentException {
+        String extractorType = properties.getRequiredProperty(key).trim().toLowerCase();
+        if (extractorType.equals("external")) {
+            return createExternalExtractor(
+                    objectClass,
+                    properties.getRequiredProperty(key + ".command"),
+                    properties.getBoolProperty(key + ".fileAsArgument", false),
+                    properties.getProperty(key + ".locatorParameter"),
+                    (Object[])properties.getMultiProperty(key + ".additionalArg")
+            );
+        } else if (extractorType.equals("text")) {
+            return createTextExtractor(objectClass,
+                    properties.getProperty(key + ".locatorParameter"),
+                    (Object[])properties.getMultiProperty(key + ".additionalArg")
+            );
+        }
+        throw new ExtendedPropertiesException("Unknown extractor type: " + extractorType);
+    }
+
+    /**
+     * Creates an instance of {@link Extractor} from property values.
+     * A property with the given {@code key} must be a type of extractor to create.
+     * A property {@code <key>.class} must contain the name of the object class
+     * (descendant of {@link LocalAbstractObject}) that will be created by the extractor.
+     * <p>
+     * If type is "external", additional property {@code <key>.command} is required
+     * to contain the external command to execute. Optionally, {@code <key>.fileAsArgument},
+     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createExternalExtractor(java.lang.Class, java.lang.String, boolean, java.lang.String, java.lang.Object[]) createExternalExtractor}.
+     * </p>
+     * <p>
+     * If type is "text", no additional parameters are required. Optionally,
+     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.Object[]) createTextExtractor}.
+     * </p>
+     *
+     * @param properties the properties with values
+     * @param key the key property name
+     * @return a new instance of extractor
+     * @throws ExtendedPropertiesException if there some of the required properties were missing or invalid
+     * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
+     */
+    public static Extractor<?> createExtractorFromProperties(ExtendedProperties properties, String key) throws ExtendedPropertiesException, IllegalArgumentException {
+        return createExtractorFromProperties(properties.getClassProperty(key + ".class", true, LocalAbstractObject.class), properties, key);
+    }
+
 }
