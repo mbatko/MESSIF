@@ -16,12 +16,11 @@
  */
 package messif.objects.extraction;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Iterator;
@@ -29,6 +28,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.utility.ExtendedProperties;
 import messif.utility.ExtendedPropertiesException;
+import messif.utility.ExternalProcessInputStream;
 
 /**
  * Collection of utility methods for {@link Extractor}s.
@@ -38,87 +38,6 @@ import messif.utility.ExtendedPropertiesException;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public abstract class Extractors {
-
-    /** Number of bytes that the {@link #readStreamData(java.io.InputStream, int) readStreamData} method allocates */
-    private static final int readStreamDataAllocation = 4096;
-
-    /**
-     * Read data from input stream into a byte buffer.
-     * If the {@code maxBytes} parameter is greater than zero, then no more than
-     * {@code maxBytes} will be read from the input stream. Otherwise, the buffer
-     * will contain all the data from the input stream until the end-of-stream.
-     * <p>
-     * Note that the stream is not closed.
-     * </p>
-     *
-     * @param inputStream the stream from which to read the data
-     * @param maxBytes maximal number of bytes to read from the stream (unlimited if less or equal to zero)
-     * @return a buffer containing the data
-     * @throws IOException if there was a problem reading from the input stream
-     */
-    public static byte[] readStreamData(InputStream inputStream, int maxBytes) throws IOException {
-        // Create buffer (has always at least bufferSize bytes available)
-        byte[] buffer = new byte[maxBytes > 0 ? maxBytes : readStreamDataAllocation];
-        int offset = 0;
-        int bytes;
-        while ((bytes = inputStream.read(buffer, offset, buffer.length - offset)) > 0) {
-            offset += bytes;
-            // Check if the buffer is not full
-            if (offset == buffer.length && maxBytes <= 0) {
-                // Add some space
-                byte[] copy = new byte[offset + readStreamDataAllocation];
-                System.arraycopy(buffer, 0, copy, 0, offset);
-                buffer = copy;
-            }
-        }
-
-        // Shrink the array
-        if (offset != buffer.length) {
-            byte[] copy = new byte[offset];
-            System.arraycopy(buffer, 0, copy, 0, offset);
-            buffer = copy;
-        }
-
-        return buffer;
-    }
-
-    /**
-     * Read data from the string reader into a string builder.
-     * Note that the reader {@code data} is {@link Reader#close() closed} after
-     * the data are read.
-     * @param data the reader to retrieve the data from
-     * @param str the buffer to store the data to
-     * @return the string buffer with data (i.e. the {@code str} or,
-     *          if {@code str} was <tt>null</tt>, a new instance of {@link StringBuilder})
-     * @throws IOException if there was a problem reading the data
-     */
-    public static StringBuilder readStringData(Reader data, StringBuilder str) throws IOException {
-        if (str == null)
-            str = new StringBuilder();
-        try {
-            char[] buf = new char[1024];
-            int len = 0;
-            while ((len = data.read(buf)) != -1)
-                str.append(buf, 0, len);
-        } finally {
-            data.close();
-        }
-        return str;
-    }
-
-    /**
-     * Read data from the input stream into a string builder.
-     * Note that the input stream {@code data} is {@link InputStream#close() closed} after
-     * the data are read.
-     * @param data the stream to retrieve the data from
-     * @param str the buffer to store the data to
-     * @return the string buffer with data (i.e. the {@code str} or,
-     *          if {@code str} was <tt>null</tt>, a new instance of {@link StringBuilder})
-     * @throws IOException if there was a problem reading the data
-     */
-    public static StringBuilder readStringData(InputStream data, StringBuilder str) throws IOException {
-        return readStringData(new InputStreamReader(data), str);
-    }
 
     /**
      * Returns a type-safe cast of a given extractor instance.
@@ -248,18 +167,7 @@ public abstract class Extractors {
             os.close();
         }
 
-        // Check whether the process has not failed
-        try {
-            int errCode = extractorProcess.exitValue();
-            if (extractorProcess.exitValue() != 0) {
-                // Read the error stream
-                String error = readStringData(extractorProcess.getErrorStream(), new StringBuilder()).toString();
-                throw new IOException("External extractor returned " + errCode + ": " + error);
-            }
-        } catch (IllegalThreadStateException ignore) { // The process is still running, so we are probably good...
-        }
-        
-        return extractorProcess.getInputStream();
+        return new BufferedInputStream(new ExternalProcessInputStream(extractorProcess));
     }
 
     /**

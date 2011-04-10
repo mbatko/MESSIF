@@ -17,6 +17,10 @@
 package messif.utility;
 
 /**
+ * Indicates an error working with {@link ExtendedProperties}.
+ * This typically means that some of the extended getters accesses an invalid or
+ * non-existent value in the properties. See the respective methods of
+ * {@link ExtendedProperties} that throw {@link ExtendedPropertiesException} for more details.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
