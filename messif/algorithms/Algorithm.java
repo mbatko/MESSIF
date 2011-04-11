@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.executor.Executable;
 import messif.executor.MethodClassExecutor;
@@ -567,6 +568,27 @@ public abstract class Algorithm implements Serializable {
         } catch (Exception e) {
             throw new AlgorithmMethodException(e);
         }
+    }
+
+    /**
+     * Execute algorithm operation on background independently, i.e. without the
+     * possibility to wait for its finish. Use the {@link #getAllRunningOperations()}
+     * or {@link #getRunningOperationById(java.util.UUID)} to access the operation.
+     * Method {@link #terminateOperation(java.util.UUID)} can be used to stop the operation.
+     * After the operation is finished, there is no way to access it.
+     * @param operation the operation to execute on this algorithm
+     */
+    public void backgroundExecuteOperationIndependent(final AbstractOperation operation) {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    executeOperation(operation);
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, "Independent " + operation + " has failed: " + e, e);
+                }
+            }
+        }.start();
     }
 
     /**
