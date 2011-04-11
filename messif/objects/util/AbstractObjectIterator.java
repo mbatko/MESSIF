@@ -336,4 +336,41 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
         return rtv;
     }
 
+    //****************** Singleton implementation ******************//
+
+    /**
+     * Returns an iterator on a single object.
+     * @param <T> the class of the object returned by the iterator
+     * @param object the object returned by the iterator
+     * @return an iterator on a single object
+     */
+    public static <T extends LocalAbstractObject> AbstractObjectIterator<T> singleton(final T object) {
+        return new AbstractObjectIterator<T>() {
+            private boolean returned = false;
+            @Override
+            public T getCurrentObject() throws NoSuchElementException {
+                if (!returned)
+                    throw new NoSuchElementException();
+                return object;
+            }
+
+            @Override
+            public boolean hasNext() {
+                return !returned;
+            }
+
+            @Override
+            public T next() {
+                if (returned)
+                    throw new NoSuchElementException();
+                returned = true;
+                return object;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported on singleton iterator");
+            }
+        };
+    }
 }
