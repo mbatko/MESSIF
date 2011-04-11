@@ -330,6 +330,11 @@ public class RMIAlgorithm extends Algorithm {
     }
 
     @Override
+    public void backgroundExecuteOperationIndependent(AbstractOperation operation) {
+         methodExecuteHandleException("backgroundExecuteOperationIndependent", operation);
+    }
+
+    @Override
     Object methodExecute(String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
         Object rtv = methodExecute("methodExecute", connectionRetries, methodName, convertStringArguments, namedInstances, methodArguments);
         if (rtv instanceof Exception) {
