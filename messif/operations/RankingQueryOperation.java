@@ -16,6 +16,7 @@
  */
 package messif.operations;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
@@ -142,6 +143,17 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     @Override
     public Class<? extends RankedAbstractObject> getAnswerClass() {
         return RankedAbstractObject.class;
+    }
+    
+    /**
+     * Class of the current answer assigned in the operation.
+     * @return class of answer collection.
+     */
+    public Class<? extends RankedSortedCollection> getAnswerCollectionClass() {
+        if (answer == null)
+            return RankedSortedCollection.class;
+        else
+            return answer.getClass();
     }
 
     @Override
