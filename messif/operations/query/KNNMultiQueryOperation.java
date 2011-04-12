@@ -114,6 +114,7 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param queryObjects the objects to which the nearest neighbors are searched
      * @param k the number of nearest neighbors to retrieve
      * @param aggregationFunction function to aggregate distances between set of query objects and data objects
+     * @param metaObjectAggregation parameter for {@link #metaObjectAggregation}
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Distance aggregation", "Meta-object aggregation"})
     public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, DistanceAggregation aggregationFunction, AggregationFunction metaObjectAggregation) {
@@ -126,6 +127,7 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param k the number of nearest neighbors to retrieve
      * @param answerType the type of objects this operation stores in its answer
      * @param aggregationFunction function to aggregate distances between set of query objects and data objects
+     * @param metaObjectAggregation parameter for {@link #metaObjectAggregation}
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type", "Distance aggregation", "Meta-object aggregation"})
     public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, AnswerType answerType, DistanceAggregation aggregationFunction, AggregationFunction metaObjectAggregation) {
@@ -139,7 +141,8 @@ public class KNNMultiQueryOperation extends RankingQueryOperation {
      * @param storedIndividualDistances if <tt>true</tt>, all distances between the data object and all query objects are
      *          stored in {@link messif.objects.util.RankedAbstractMetaObject sub-distances}
      * @param answerType the type of objects this operation stores in its answer
-     * @param aggregationFunction function to aggregate distances between set of query objects and data objects
+     * @param distanceAggregation  function to aggregate distances between set of query objects and data objects
+     * @param metaObjectAggregation parameter for {@link #metaObjectAggregation}
      */
     @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store individual obj-queries distances?", "Answer type", "Distance aggregation", "Meta-object aggregation"})
     public KNNMultiQueryOperation(Collection<LocalAbstractObject> queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, DistanceAggregation distanceAggregation, AggregationFunction metaObjectAggregation) {
