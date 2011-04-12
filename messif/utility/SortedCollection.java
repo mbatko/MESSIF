@@ -154,6 +154,14 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
         return comparator.compare(key, object);
     }
 
+    /**
+     * Returns the comparator used by this collection.
+     * @return the comparator used by this collection
+     */
+    protected Comparator<? super T> getComparator() {
+        return comparator;
+    }
+
 
     //****************** Data access methods ******************//
 
