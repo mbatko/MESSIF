@@ -125,8 +125,8 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
      */
     public MetaObjectShape(BufferedReader stream, Set<String> restrictNames) throws IOException {
         Map<String, LocalAbstractObject> objects = readObjects(stream, restrictNames, readObjectsHeader(stream), new HashMap<String, LocalAbstractObject>(descriptorNames.length));
-        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[3]);
-        this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[4]);
+        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[0]);
+        this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[1]);
     }
 
     /**

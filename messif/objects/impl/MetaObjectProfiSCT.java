@@ -847,6 +847,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             return false;
         if (keyWords != null && castObj.keyWords != null && !keyWords.dataEquals(castObj.keyWords))
             return false;
+        if (getLocatorURI() != null && castObj.getLocatorURI() != null && !getLocatorURI().equals(castObj.getLocatorURI()))
+            return false;
         return true;
     }
 
