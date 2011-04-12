@@ -997,7 +997,7 @@ public class CoreApplication {
 
         try {
             Object rtv = algorithm.executeMethodWithStringArguments(args, 1, namedInstances);
-            if (!(rtv instanceof Void))
+            if (rtv != null)
                 out.println(rtv);
             return true;
         } catch (NoSuchInstantiatorException e) {
