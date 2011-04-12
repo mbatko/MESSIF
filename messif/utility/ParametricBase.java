@@ -50,7 +50,9 @@ public class ParametricBase implements Parametric {
 
     @Override
     public Collection<String> getParameterNames() {
-        return map != null ? Collections.unmodifiableCollection(map.keySet()) : null;
+        if (map == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(map.keySet());
     }
 
     @Override
@@ -90,7 +92,7 @@ public class ParametricBase implements Parametric {
     @Override
     public Map<String, ? extends Object> getParameterMap() {
         if (map == null)
-            return null;
+            return Collections.emptyMap();
         return Collections.unmodifiableMap(map);
     }
 

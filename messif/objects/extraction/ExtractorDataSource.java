@@ -58,6 +58,8 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
 
     /** Remembered data source (can be {@link File}, {@link InputStream} or {@link URL}) */
     private final Object dataSource;
+    /** Locator of the data source */
+    private final String locator;
     /** Input stream that provides data for this data source */
     private InputStream inputStream;
     /** Number of bytes available in the input stream or zero if this is unknown in advance */
@@ -71,11 +73,22 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     /**
      * Create new instance of ExtractorDataSource using data from {@link InputStream}.
      * @param inputStream the input stream from which to download the data
+     * @param locator locator of the input stream data
+     * @param additionalParameters the additional parameters for this data source
+     */
+    public ExtractorDataSource(InputStream inputStream, String locator, Map<String, ? extends Object> additionalParameters) {
+        super(additionalParameters);
+        this.dataSource = openDataSource(inputStream);
+        this.locator = locator;
+    }
+
+    /**
+     * Create new instance of ExtractorDataSource using data from {@link InputStream}.
+     * @param inputStream the input stream from which to download the data
      * @param additionalParameters the additional parameters for this data source
      */
     public ExtractorDataSource(InputStream inputStream, Map<String, ? extends Object> additionalParameters) {
-        super(additionalParameters);
-        this.dataSource = openDataSource(inputStream);
+        this(inputStream, null, additionalParameters);
     }
 
     /**
@@ -89,11 +102,22 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     /**
      * Create new instance of ExtractorDataSource using data from the given array of bytes.
      * @param inputData the array of bytes that represents the data
+     * @param locator locator of the byte input data
+     * @param additionalParameters the additional parameters for this data source
+     */
+    public ExtractorDataSource(byte[] inputData, String locator, Map<String, ? extends Object> additionalParameters) {
+        super(additionalParameters);
+        this.dataSource = openDataSource(inputData);
+        this.locator = locator;
+    }
+
+    /**
+     * Create new instance of ExtractorDataSource using data from the given array of bytes.
+     * @param inputData the array of bytes that represents the data
      * @param additionalParameters the additional parameters for this data source
      */
     public ExtractorDataSource(byte[] inputData, Map<String, ? extends Object> additionalParameters) {
-        super(additionalParameters);
-        this.dataSource = openDataSource(inputData);
+        this(inputData, null, additionalParameters);
     }
 
     /**
@@ -122,6 +146,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
             throw new IOException("Cannot read '" + conn.getContentType() + "' data");
 
         this.dataSource = openDataSource(conn);
+        this.locator = url.toString();
     }
 
     /**
@@ -143,6 +168,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     public ExtractorDataSource(File file, Map<String, ? extends Object> additionalParameters) throws IOException {
         super(additionalParameters);
         this.dataSource = openDataSource(file);
+        this.locator = file.getPath();
     }
 
     /**
@@ -240,6 +266,14 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     }
 
     /**
+     * Returns the locator of the data source.
+     * @return the locator of the data source
+     */
+    public String getLocator() {
+        return locator;
+    }
+
+    /**
      * Return this data source as input stream.
      * <p>Note that the data source is <i>not</i> closed - use {@link InputStream#close()} method instead.</p>
      * @return this data source as input stream
@@ -268,10 +302,10 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
      * @throws IOException if there was a problem reading from the data source
      */
     public byte[] getBinaryData() throws IOException {
-        if (bufferedReader != null)
-            throw new IOException("Cannot use binary data getter - the buffered reader was used");
         if (dataSource instanceof byte[]) // No need to read the byte[] data source again
             return ((byte[])dataSource);
+        if (bufferedReader != null)
+            throw new IOException("Cannot use binary data getter - the buffered reader was used");
 
         // Create buffer (has always at least bufferSize bytes available)
         byte[] buffer = new byte[bytesAvailable > 0 ? bytesAvailable : readStreamDataAllocation];

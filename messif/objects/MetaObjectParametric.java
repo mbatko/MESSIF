@@ -97,7 +97,9 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
 
     @Override
     public Collection<String> getParameterNames() {
-        return additionalParameters != null ? Collections.unmodifiableCollection(additionalParameters.keySet()) : null;
+        if (additionalParameters == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(additionalParameters.keySet());
     }
 
     @Override
@@ -137,7 +139,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
     @Override
     public Map<String, ? extends Serializable> getParameterMap() {
         if (additionalParameters == null)
-            return null;
+            return Collections.emptyMap();
         return Collections.unmodifiableMap(additionalParameters);
     }
 

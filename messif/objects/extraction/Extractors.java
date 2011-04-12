@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.Iterator;
 import messif.objects.LocalAbstractObject;
@@ -357,6 +358,25 @@ public abstract class Extractors {
                     properties.getProperty(key + ".locatorParameter"),
                     (Object[])properties.getMultiProperty(key + ".additionalArg")
             );
+        } else if (extractorType.equals("constructor")) {
+            try {
+                Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
+                return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key)), objectClass);
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e, e);
+            } catch (Exception e) {
+                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
+            }
+        } else if (extractorType.equals("method")) {
+            try {
+                Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".methodClass", true, Extractor.class);
+                Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
+                return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key)), objectClass);
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e, e);
+            } catch (Exception e) {
+                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
+            }
         }
         throw new ExtendedPropertiesException("Unknown extractor type: " + extractorType);
     }

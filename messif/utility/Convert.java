@@ -911,6 +911,57 @@ public abstract class Convert {
     }
 
     /**
+     * Copies values from the {@code sourceMap} to {@code destinationMap}.
+     * Note that only non-<tt>null</tt> values that are instances of
+     * {@code valuesClass} are copied.
+     *
+     * @param <K> the type of keys in the returned map
+     * @param <V> the type of values in the returned map
+     * @param sourceMap the source map that provides the values
+     * @param keysToRetrieve the keys for which the values are copied from the source map
+     * @param destinationMap the target map into which the values are put
+     *          (if <tt>null</tt>, a new instance of {@link HashMap} is used)
+     * @param valuesClass the class to cast the map values to
+     * @return the modified map with the copied values
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<K, V> copyMapValues(Map<?, ?> sourceMap, Iterable<? extends K> keysToRetrieve, Map<K, V> destinationMap, Class<? extends V> valuesClass) {
+        if (destinationMap == null)
+            destinationMap = new HashMap<K, V>();
+        for (K key : keysToRetrieve) {
+            Object value = sourceMap.get(key);
+            if (value != null && valuesClass.isInstance(value))
+                destinationMap.put(key, (V)value); // This cast IS checked on the previous line
+        }
+        return destinationMap;
+    }
+
+    /**
+     * Copies all values from the {@code sourceMap} to {@code destinationMap}.
+     * Note that only non-<tt>null</tt> values that are instances of
+     * {@code valuesClass} are copied.
+     *
+     * @param <K> the type of keys in the returned map
+     * @param <V> the type of values in the returned map
+     * @param sourceMap the source map that provides the values
+     * @param destinationMap the target map into which the values are put
+     *          (if <tt>null</tt>, a new instance of {@link HashMap} is used)
+     * @param valuesClass the class to cast the map values to
+     * @return the modified map with the copied values
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<K, V> copyAllMapValues(Map<? extends K, ?> sourceMap, Map<K, V> destinationMap, Class<? extends V> valuesClass) {
+        if (destinationMap == null)
+            destinationMap = new HashMap<K, V>();
+        for (Map.Entry<? extends K, ?> entry : sourceMap.entrySet()) {
+            Object value = entry.getKey();
+            if (value != null && valuesClass.isInstance(value))
+                destinationMap.put(entry.getKey(), (V)value); // This cast IS checked on the previous line
+        }
+        return destinationMap;
+    }
+
+    /**
      * Returns an object from parameter table.
      * If the parameter table is <tt>null</tt> or if it does not contain
      * the parameter with the specified name, the default value is returned.
