@@ -43,7 +43,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     private static final float SIZE_INCREASE_FACTOR = 0.3f;
 
     /** Default initial capacity of the internal array */
-    private static final int DEFAULT_INITIAL_CAPACITY = 16;
+    protected static final int DEFAULT_INITIAL_CAPACITY = 16;
 
 
     //****************** Attributes ******************//
@@ -68,7 +68,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
-     * @param initialCapacity the initial capacity of the collection
+     * @param initialCapacity the initial capacity of the collection (if zero, the {@link #DEFAULT_INITIAL_CAPACITY} is used)
      * @param maximalCapacity the maximal capatity of the collection
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
@@ -78,6 +78,8 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
             this.comparator = new Comparable2IndexComparator<T>();
         else
             this.comparator = comparator;
+        if (initialCapacity == 0)
+            initialCapacity = maximalCapacity > 0 && maximalCapacity < DEFAULT_INITIAL_CAPACITY ? maximalCapacity : DEFAULT_INITIAL_CAPACITY;
         if (initialCapacity < 1)
             throw new IllegalArgumentException("Illegal capacity: " + initialCapacity);
         if (maximalCapacity < initialCapacity)
