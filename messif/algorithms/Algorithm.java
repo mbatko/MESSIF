@@ -295,12 +295,10 @@ public abstract class Algorithm implements Serializable {
      * @return the executed operation or <tt>null</tt> if there was no running operation with that identifier
      */
     public AbstractOperation getRunningOperationById(UUID operationId) {
-        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-            for (AbstractOperation operation : runningOperations.values())
-                if (operation.getOperationID().equals(operationId))
-                    return operation;
-            return null;
-        }
+        for (AbstractOperation operation : getAllRunningOperations())
+            if (operation.getOperationID().equals(operationId))
+                return operation;
+        return null;
     }
 
     /**
@@ -316,15 +314,19 @@ public abstract class Algorithm implements Serializable {
      * Returns all operations currently executed by this algorithm.
      * Note that the returned collection is new independent instance, thus any
      * modifications are not propagated, so it is <em>not</em> unmodifiable.
+     * Note also that the thread processing the operation must be still alive
+     * in order to be returned by this method.
+     *
      * @return a collection of all operations
      */
     public Collection<AbstractOperation> getAllRunningOperations() {
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
             // The list of operations must be copied to a serializable list
             Collection<AbstractOperation> ret = new ArrayList<AbstractOperation>(runningOperations.size());
-            for (AbstractOperation op : runningOperations.values())
-                if (op != null) // This is needed since the operations are in a weak-ref map
-                    ret.add(op);
+            for (Entry<Thread, AbstractOperation> entry : runningOperations.entrySet()) { // Note that the entryset never returns a key weak-ref that is garbage collected
+                if (entry.getKey().isAlive())
+                    ret.add(entry.getValue());
+            }
             return ret;
         }
     }
