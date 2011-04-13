@@ -66,6 +66,8 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     private int bytesAvailable;
     /** Internal buffered reader that access the input stream */
     private BufferedReader bufferedReader;
+    /** Flag holding the information if the data source has been closed */
+    private boolean closed;
 
 
     //****************** Constructors *************//
@@ -213,6 +215,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     private InputStream openDataSource(InputStream stream) {
         this.inputStream = stream;
         this.bytesAvailable = -1;
+        this.closed = false;
         return null;
     }
 
@@ -224,6 +227,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     private byte[] openDataSource(byte[] inputData) {
         this.inputStream = new ByteArrayInputStream(inputData);
         this.bytesAvailable = -1;
+        this.closed = false;
         return inputData;
     }
 
@@ -239,6 +243,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
             throw new IOException("Cannot load data from " + file + ": file is too big");
         this.inputStream = new FileInputStream(file);
         this.bytesAvailable = (int)fileSize;
+        this.closed = false;
         return file;
     }
 
@@ -251,6 +256,7 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     private URLConnection openDataSource(URLConnection conn) throws IOException {
         this.inputStream = conn.getInputStream();
         this.bytesAvailable = conn.getContentLength();
+        this.closed = false;
         return conn;
     }
 
@@ -304,8 +310,12 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
     public byte[] getBinaryData() throws IOException {
         if (dataSource instanceof byte[]) // No need to read the byte[] data source again
             return ((byte[])dataSource);
-        if (bufferedReader != null)
-            throw new IOException("Cannot use binary data getter - the buffered reader was used");
+        if (closed) {
+            if (dataSource == null)
+                throw new IOException("Cannot use binary data getter - the buffered reader was used");
+            else
+                reset();
+        }
 
         // Create buffer (has always at least bufferSize bytes available)
         byte[] buffer = new byte[bytesAvailable > 0 ? bytesAvailable : readStreamDataAllocation];
@@ -353,11 +363,12 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
         }
 
         // Close the input stream, since all data was read
-        inputStream.close();
+        close();
     }
 
     @Override
     public void close() throws IOException {
+        closed = true;
         inputStream.close();
     }
 
