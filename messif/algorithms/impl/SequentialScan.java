@@ -78,9 +78,9 @@ public class SequentialScan extends Algorithm {
      *                                   <li>the correct constructor of storageClass is not accesible</li>
      *                                   <li>the constuctor of storageClass has failed</li></ul>
      */
-    @Algorithm.AlgorithmConstructor(description = "SequantialScan Access Structure", arguments = {"bucket class", "bucket class params", "pivots", "pivot count", "pivotDistsValidIfGiven"})
+    @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "bucket class params", "pivots", "pivot count", "pivotDistsValidIfGiven"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) throws CapacityFullException, InstantiationException {
-        super("SequantialScan");
+        super("SequentialScan");
         
         // Create an empty bucket (using the provided bucket class and parameters)
         bucket = BucketDispatcher.createBucket(bucketClass, Long.MAX_VALUE, Long.MAX_VALUE, 0, true, bucketClassParams);
@@ -110,7 +110,7 @@ public class SequentialScan extends Algorithm {
      *                                   <li>the correct constructor of storageClass is not accesible</li>
      *                                   <li>the constuctor of storageClass has failed</li></ul>
      */
-    @Algorithm.AlgorithmConstructor(description = "SequantialScan Access Structure", arguments = {"bucket class", "pivots", "pivot count", "pivotDistsValidIfGiven"})
+    @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "pivots", "pivot count", "pivotDistsValidIfGiven"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) throws CapacityFullException, InstantiationException {
         this(bucketClass, null, pivotIter, pivotCount, pivotDistsValidIfGiven);
     }
@@ -127,7 +127,7 @@ public class SequentialScan extends Algorithm {
      *                                   <li>the correct constructor of storageClass is not accesible</li>
      *                                   <li>the constuctor of storageClass has failed</li></ul>
      */
-    @Algorithm.AlgorithmConstructor(description = "SequantialScan Access Structure", arguments = {"bucket class", "bucket class params"})
+    @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "bucket class params"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams) throws CapacityFullException, InstantiationException {
         this(bucketClass, bucketClassParams, null, 0, false);
     }
@@ -142,7 +142,7 @@ public class SequentialScan extends Algorithm {
      *                                   <li>the correct constructor of storageClass is not accesible</li>
      *                                   <li>the constuctor of storageClass has failed</li></ul>
      */
-    @Algorithm.AlgorithmConstructor(description = "SequantialScan Access Structure", arguments = {"bucket class"})
+    @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass) throws CapacityFullException, InstantiationException {
         this(bucketClass, null);
     }
@@ -156,7 +156,7 @@ public class SequentialScan extends Algorithm {
      *                                   <li>the correct constructor of storageClass is not accesible</li>
      *                                   <li>the constuctor of storageClass has failed</li></ul>
      */
-    @Algorithm.AlgorithmConstructor(description = "SequantialScan Access Structure", arguments = {})
+    @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {})
     public SequentialScan() throws CapacityFullException, InstantiationException {
         this(MemoryStorageBucket.class);
     }
