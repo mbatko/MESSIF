@@ -38,7 +38,7 @@ public class Application extends DistributedApplication {
 
     /**
      * Creates an RMI service for the current algorithm.
-     * An arugment specifying the RMI TCP port is required.
+     * An argument specifying the RMI TCP port is required.
      * 
      * <p>
      * Example of usage:
