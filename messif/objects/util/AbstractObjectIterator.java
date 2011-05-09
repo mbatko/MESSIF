@@ -89,8 +89,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws NoSuchElementException if such an object cannot be found.
      */
     public E getObjectByPosition(int position) throws NoSuchElementException {
-        for (; position > 0; position--)
-            next(); // NoSuchElement is thrown automatically
+        skip(position);
         
         return getCurrentObject();
     }
@@ -373,4 +372,19 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
             }
         };
     }
+
+    //****************** Other iterator methods ******************//
+
+    /**
+     * Skip the passed number of objects in the iterator.
+     * @param cnt number of objects to skip
+     * @throws NoSuchElementException if there are fewer objects than <code>cnt</code> remaining.
+     * @return <code>this</code>
+     */
+    public AbstractObjectIterator<E> skip(int cnt) throws NoSuchElementException {
+        for (; cnt > 0; cnt--)
+            next(); // NoSuchElement is thrown automatically
+        return this;
+    }
+
 }

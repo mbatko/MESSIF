@@ -16,11 +16,11 @@
  */
 package messif.operations;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
@@ -96,14 +96,26 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the maximal answer size is negative
      */
     protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) throws IllegalArgumentException {
-        super(answerType);
-        this.storeMetaDistances = storeMetaDistances;
-        if (maxAnswerSize < Integer.MAX_VALUE)
-            this.answer = new RankedSortedCollection(maxAnswerSize, maxAnswerSize);
-        else
-            this.answer = new RankedSortedCollection();
+        this(answerType, 
+             ((maxAnswerSize < Integer.MAX_VALUE) ? new RankedSortedCollection(maxAnswerSize, maxAnswerSize) : new RankedSortedCollection()), 
+             storeMetaDistances);
     }
 
+    /**
+     * Creates a new instance of RankingQueryOperation.
+     * @param answerType the type of objects this operation stores in its answer
+     * @param answerCollection collection to be used as answer (it must be empty, otherwise it will be cleared)
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
+     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
+     * @throws NullPointerException if the passed collection is <code>null</code>
+     */
+    protected RankingQueryOperation(AnswerType answerType, RankedSortedCollection answerCollection, boolean storeMetaDistances) {
+        super(answerType);
+        this.storeMetaDistances = storeMetaDistances;
+        if (!answerCollection.isEmpty())
+            answerCollection.clear();
+        this.answer = answerCollection;
+    }
 
     //****************** Clonning ******************//
     
@@ -266,7 +278,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return addToAnswer(object, distance, metaDistances);
     }
 
-     /**
+    /**
      * Add a distance-ranked object to the answer.
      * Preserve the information about distances of the respective sub-objects.
      * @param object the object to add

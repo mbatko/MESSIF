@@ -18,7 +18,6 @@ package messif.objects.util;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
@@ -31,7 +30,7 @@ import messif.utility.SortedCollection;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RankedSortedCollection extends SortedCollection<RankedAbstractObject> {
+public class RankedSortedCollection extends DistanceRankedSortedCollection<RankedAbstractObject>  {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -115,64 +114,5 @@ public class RankedSortedCollection extends SortedCollection<RankedAbstractObjec
      */
     public RankedSortedCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
         this(referenceObject, referenceObject, objectProvider);
-    }
-
-
-    //****************** Distance operations ******************//
-
-    /**
-     * Returns the distance of the last object in this collection.
-     * @return the distance of the last object in this collection
-     * @throws NoSuchElementException if this collection is empty
-     */
-    public float getLastDistance() throws NoSuchElementException {
-        return last().getDistance();
-    }
-
-    /**
-     * Returns the threshold distance for this collection.
-     * If this collection has not reached the maximal size (specified in constructor) yet,
-     * {@link LocalAbstractObject#MAX_DISTANCE} is returned.
-     * Otherwise, the distance of the last object of this collection is returned.
-     * @return the distance to the last object in this collection or
-     *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
-     */
-    public float getThresholdDistance() {
-        if (isFull())
-            return getLastDistance();
-        else
-            return LocalAbstractObject.MAX_DISTANCE;
-    }
-
-    /**
-     * Returns a distance-restricted iterator.
-     * Only objects within the specified distance range are returned by the iterator.
-     * @param minDistance the minimal distance of the ranked objects to return
-     * @param maxDistance the maximal distance of the ranked objects to return
-     * @return iterator over the objects of this collection that are within the specified range
-     */
-    public Iterator<RankedAbstractObject> iteratorDistanceRestricted(float minDistance, float maxDistance) {
-        // Search for lower and upper bounds
-        int minDistancePos = 0;
-        int maxDistancePos = size() - 1;
-        for (int i = 0; i <= maxDistancePos; i++) {
-            float dist = get(i).getDistance();
-            if (dist < minDistance)
-                minDistancePos = i + 1;
-            if (dist > maxDistance)
-                maxDistancePos = i - 1;
-        }
-
-        return iterator(minDistancePos, maxDistancePos - minDistancePos + 1);
-    }
-
-    /**
-     * Returns a distance-restricted iterator.
-     * Only objects that are smaller than the specified distance are returned by the iterator.
-     * @param maxDistance the maximal distance of the ranked objects to return
-     * @return iterator over the objects of this collection that are smaller than the specified distance
-     */
-    public Iterator<RankedAbstractObject> iteratorDistanceRestricted(float maxDistance) {
-        return iteratorDistanceRestricted(0, maxDistance);
     }
 }
