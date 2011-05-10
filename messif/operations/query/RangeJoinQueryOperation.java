@@ -19,8 +19,13 @@ package messif.operations.query;
 import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
 import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.RMIAlgorithm;
 import messif.objects.LocalAbstractObject;
@@ -35,7 +40,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
 /**
  * Similarity join query operation evaluated using range queries on an external index.
  * 
- * It works as documented at {@link #evaluate(messif.objects.util.AbstractObjectIterator) }.
+ * It works as documented at {@link #evaluateSerially(messif.objects.util.AbstractObjectIterator) }.
  * 
  * See {@link JoinQueryOperation} for details.
  * 
@@ -51,7 +56,10 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
     //****************** Attributes ******************//
     
     /** Remote algorithm for evaluating "range" queries */
-    private final RMIAlgorithm remoteAlgo;
+    private Algorithm algorithm;
+    
+    /** Number of queries to run in parallel over a passed algorithm */
+    private int parallelQueries;
     
     /** Cosntructor for the operation to execute on the remote algorithm */
     private final ConstructorInstantiator<RankingQueryOperation> operConstructor;
@@ -70,6 +78,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * @param answerType the type of objects this operation stores in pairs in its answer
      * @param host the remote algorithm's IP address
      * @param port the remote algorithm's RMI port
+     * @param parallelQueries number of range queries to run in parallel (pass <tt>1</tt> to execute queries serially)
      * @param queryCls name of class of {@link RankingQueryOperation} to execute on the algorithm at host:port;
      *                 so {@link RangeQueryOperation} or {@link KNNQueryOperation} can be passed
      * @param queryParams parameters of a constructor of queryCls but the first one, which is a query object
@@ -79,14 +88,77 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * @throws InvocationTargetException thrown during the construction of the passed class of {@link RankingQueryOperation}
      */
     @AbstractOperation.OperationConstructor({"Distance threshold", "Number of nearest pairs", "Skip symmetric pairs", "Answer type",
-                                             "Hostname of remote algorithm", "Port number of remote algorithm",
+                                             "Hostname of remote algorithm", "Port number of remote algorithm", "Number of range queries to run in parallel",
                                              "Class name of query to execute on remote algorithm", "Parameters of the query class..."})
     public RangeJoinQueryOperation(float mu, int k, boolean skipSymmetricPairs, AnswerType answerType,
-                                   String host, int port, Class<RankingQueryOperation> queryCls, String... queryParams) throws UnknownHostException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
+                                   String host, int port, int parallelQueries,
+                                   Class<RankingQueryOperation> queryCls, String... queryParams) throws UnknownHostException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
         super(mu, k, skipSymmetricPairs, answerType);
         
-        remoteAlgo = new RMIAlgorithm(host, port);
+        algorithm = new RMIAlgorithm(host, port);
+        this.parallelQueries = parallelQueries;
 
+        // Prepare parameters first, since they will be converted from Strings to correct type by ConstructorInstantiator below.
+        operParams = new Object[queryParams.length+1];
+        System.arraycopy(queryParams, 0, operParams, 1, queryParams.length);
+        try {
+            operConstructor = new ConstructorInstantiator<RankingQueryOperation>(queryCls, true, null, operParams);
+        } catch (NoSuchInstantiatorException ex) {
+            throw new RuntimeException("RangeJoin: Cannot instantiate the passed class " + queryCls.getName() + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Creates an instance of range join query.
+     * No algorithm to evaluateSerially range queries is given, so it must be specified within 
+     * 
+     * @param mu the distance threshold
+     * @param k the number of nearest pairs to retrieve
+     * @param skipSymmetricPairs flag whether symmetric pairs should be avoided in the answer
+     * @param answerType the type of objects this operation stores in pairs in its answer
+     * @param parallelQueries number of range queries to run in parallel (pass <tt>1</tt> to execute queries serially)
+     * @param queryCls name of class of {@link RankingQueryOperation} to execute on the algorithm at host:port;
+     *                 so {@link RangeQueryOperation} or {@link KNNQueryOperation} can be passed
+     * @param queryParams parameters of a constructor of queryCls but the first one, which is a query object
+     * @throws NoSuchMethodException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     * @throws IllegalArgumentException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     * @throws InvocationTargetException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     */
+    @AbstractOperation.OperationConstructor({"Distance threshold", "Number of nearest pairs", "Skip symmetric pairs", "Answer type",
+                                             "Class name of query to execute on remote algorithm", "Parameters of the query class..."})
+    public RangeJoinQueryOperation(float mu, int k, boolean skipSymmetricPairs, AnswerType answerType,
+                                   int parallelQueries, 
+                                   Class<RankingQueryOperation> queryCls, String... queryParams) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
+        this(mu, k, skipSymmetricPairs, answerType, null, parallelQueries, queryCls, queryParams);
+    }
+
+    /**
+     * Creates an instance of range join query.
+     * 
+     * @param mu the distance threshold
+     * @param k the number of nearest pairs to retrieve
+     * @param skipSymmetricPairs flag whether symmetric pairs should be avoided in the answer
+     * @param answerType the type of objects this operation stores in pairs in its answer
+     * @param alg algorithm to evaluateSerially range queries
+     * @param parallelQueries number of range queries to run in parallel (pass <tt>1</tt> to execute queries serially)
+     * @param queryCls name of class of {@link RankingQueryOperation} to execute on the algorithm at host:port;
+     *                 so {@link RangeQueryOperation} or {@link KNNQueryOperation} can be passed
+     * @param queryParams parameters of a constructor of queryCls but the first one, which is a query object
+     * @throws NoSuchMethodException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     * @throws IllegalArgumentException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     * @throws InvocationTargetException thrown during the construction of the passed class of {@link RankingQueryOperation}
+     */
+    @AbstractOperation.OperationConstructor({"Distance threshold", "Number of nearest pairs", "Skip symmetric pairs", "Answer type",
+                                             "Instance of algorithm to run range queries on", 
+                                             "Class name of query to execute on remote algorithm", "Parameters of the query class..."})
+    public RangeJoinQueryOperation(float mu, int k, boolean skipSymmetricPairs, AnswerType answerType,
+                                   Algorithm alg, int parallelQueries,
+                                   Class<RankingQueryOperation> queryCls, String... queryParams) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
+        super(mu, k, skipSymmetricPairs, answerType);
+        
+        algorithm = null;
+        this.parallelQueries = parallelQueries;
+        
         // Prepare parameters first, since they will be converted from Strings to correct type by ConstructorInstantiator below.
         operParams = new Object[queryParams.length+1];
         System.arraycopy(queryParams, 0, operParams, 1, queryParams.length);
@@ -107,11 +179,29 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
      * The reange query is instantiated from the parameters passed in the constructor.
      *
-     * @param objects the collection of objects on which to evaluate this query
+     * @param objects the collection of objects on which to evaluateSerially this query
      * @return number of objects satisfying the query
      */
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
+        if (parallelQueries <= 1)
+            return evaluateSerially(objects, algorithm);
+        else
+            return evaluateInParallel(objects, algorithm, parallelQueries);
+    }
+
+    /**
+     * Evaluate this join query on a given set of objects.
+     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
+     * 
+     * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
+     * The reange query is instantiated from the parameters passed in the constructor.
+     *
+     * @param objects the collection of objects on which to evaluateSerially this query
+     * @param alg algorithm to evaluateSerially range queries
+     * @return number of objects satisfying the query
+     */
+    public int evaluateSerially(AbstractObjectIterator<? extends LocalAbstractObject> objects, Algorithm alg) {
         int beforeCount = getAnswerCount();
         
         try {
@@ -121,11 +211,15 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
                 // Run the query
                 operParams[0] = q;
                 RankingQueryOperation op = operConstructor.instantiate(operParams);
-                op = remoteAlgo.executeOperation(op);
+                op = alg.executeOperation(op);
                 
                 for (Iterator<RankedAbstractObject> it = op.getAnswer(); it.hasNext();) {
                     RankedAbstractObject ranked = it.next();
-                    addToAnswer(q, (LocalAbstractObject)ranked.getObject(), ranked.getDistance(), getDistanceThreshold());
+                    float dist = ranked.getDistance();
+                    LocalAbstractObject obj = (LocalAbstractObject)ranked.getObject();
+                    if (dist == 0f && q.dataEquals(obj))
+                        continue;
+                    addToAnswer(q, obj, dist, getDistanceThreshold());
                 }
             }
         } catch (IllegalArgumentException ex) {
@@ -139,5 +233,140 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
         }
 
         return getAnswerCount() - beforeCount;
+    }
+    
+    /**
+     * Evaluate this join query on a given set of objects.
+     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
+     * 
+     * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
+     * The reange query is instantiated from the parameters passed in the constructor.
+     *
+     * @param objects the collection of objects on which to evaluateSerially this query
+     * @param alg algorithm to evaluateSerially range queries
+     * @param threads number of range queries to run in parallel
+     * @return number of objects satisfying the query
+     */
+    public int evaluateInParallel(AbstractObjectIterator<? extends LocalAbstractObject> objects, Algorithm alg, int threads) {
+        int beforeCount = getAnswerCount();
+        // Prepare the thread pool executor
+        ThreadPoolExecutor pool = new MyThreadPool(this, threads);
+        
+        try {
+            while (objects.hasNext()) {
+                LocalAbstractObject q = objects.next();
+                
+                // Prepare the query
+                operParams[0] = q;
+                RankingQueryOperation op = operConstructor.instantiate(operParams);
+                
+                pool.execute(new MyTask(alg, q, op));
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException("RangeJoin: Cannot instantiate the passed RankingQueryOperation! " + ex.getMessage(), ex);
+        } catch (InvocationTargetException ex) {
+            throw new RuntimeException("RangeJoin: Cannot instantiate the passed RankingQueryOperation! " + ex.getMessage(), ex);
+        }
+        
+        // Shutdown the pool
+        pool.shutdown();
+        try {
+            pool.awaitTermination(1, TimeUnit.DAYS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(RangeJoinQueryOperation.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return getAnswerCount() - beforeCount;
+    }
+    
+    private static class MyTask implements Runnable {
+        private final Algorithm alg;
+        private final LocalAbstractObject query;
+        private RankingQueryOperation oper;
+
+        public MyTask(Algorithm alg, LocalAbstractObject q, RankingQueryOperation oper) {
+            this.alg = alg;
+            this.query = q;
+            this.oper = oper;
+        }
+        
+        @Override
+        public void run() {
+            try {
+                oper = alg.executeOperation(oper);
+            } catch (AlgorithmMethodException ex) {
+                throw new RuntimeException("RangeJoin: Cannot run the passed RankingQueryOperation on the remote algorithm!", ex);
+            } catch (NoSuchMethodException ex) {
+                throw new RuntimeException("RangeJoin: Cannot run the passed RankingQueryOperation on the remote algorithm!", ex);
+            }
+        }
+        
+        public LocalAbstractObject getQuery() {
+            return query;
+        }
+
+        public Iterator<RankedAbstractObject> getAnswer() {
+            return oper.getAnswer();
+        }
+    }        
+    
+    private static class MyThreadPool extends ThreadPoolExecutor implements RejectedExecutionHandler {
+        private final RangeJoinQueryOperation joinOper;
+
+        /**
+         * Constructor.
+         * @param join    join operation for processing range query results
+         * @param threads number of threads to execute
+         */
+        public MyThreadPool(RangeJoinQueryOperation join, int threads) {
+
+            // Sets the pool to create a queue of 3 times longer than the number of threads
+            super(threads, threads, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(3*threads));
+            setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+
+            // Sets the pool to execute tasks directly (without queueing) and rejected taks 
+            // (due to all threads being active) are resubmitted later
+//            super(threads, threads, 120, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
+//            setRejectedExecutionHandler(this);
+
+            joinOper = join;
+            prestartAllCoreThreads();
+        }        
+        
+        @Override
+        protected void afterExecute(Runnable r, Throwable t) {
+            if (!(r instanceof MyTask))
+                return;
+            MyTask task = (MyTask)r;
+            
+            // Process the taks response
+            LocalAbstractObject q = task.getQuery();
+            for (Iterator<RankedAbstractObject> it = task.getAnswer(); it.hasNext();) {
+                RankedAbstractObject ranked = it.next();
+                float dist = ranked.getDistance();
+                LocalAbstractObject obj = (LocalAbstractObject)ranked.getObject();
+                if (dist == 0f && q.dataEquals(obj))
+                    continue;
+                joinOper.addToAnswer(q, obj, dist, joinOper.getDistanceThreshold());
+            }
+        }
+
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            // Wait until a thread finishes and reexecute the task.
+//            System.out.print("Max Threads: " + getMaximumPoolSize() + ", Threads: " + getActiveCount());
+            while (getActiveCount() >= getMaximumPoolSize() && !executor.isShutdown()) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ex) {
+                    // Ignore it
+                }
+//                System.out.print(", " + getActiveCount());
+            }
+//            System.out.println();
+            if (!executor.isShutdown())
+                execute(r);
+        }
+        
     }
 }
