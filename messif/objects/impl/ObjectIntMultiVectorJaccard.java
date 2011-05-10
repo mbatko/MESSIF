@@ -19,7 +19,10 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
+import java.util.logging.Logger;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -244,7 +247,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         private static final long serialVersionUID = 1L;
 
         /** Weights for data arrays - all the items in the respective data array has a single weight */
-        private final float[] weights;
+        protected final float[] weights;
 
         /**
          * Creates a new instance of MultiWeightProvider with the the given array of weights.
@@ -389,4 +392,57 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         }
 
     }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     *  and it ignores a specified list of integers (created from a given list of keywords) - the ignore weight is specified in the
+     *  last weight in the weight array.
+     */
+    public static class MultiWeightIgnoreProvider extends MultiWeightProvider {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 51101L;
+
+        /** Weight used for the specified list of ignored keywords. */
+        private final float ignoreWeight;
+
+        /** Set of integer IDs to be ignored */
+        private final Set<Integer> ignoredItems;
+
+        /**
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
+         * @param ignoreWeight weight used for the {@code ignoredKeywords}
+         * @param ignoredItems  set of IDs to be ignored 
+         */
+        public MultiWeightIgnoreProvider(float[] weights, float ignoreWeight, Set<Integer> ignoredItems) {
+            super(weights);
+            this.ignoreWeight = ignoreWeight;
+            this.ignoredItems = ignoredItems;
+        }
+
+        @Override
+        public float getWeight(SortedDataIterator iterator) {
+            if (ignoredItems.contains(iterator.currentInt())) {
+                return ignoreWeight;
+            }
+            return super.getWeight(iterator);
+        }
+
+        @Override
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                sum += obj.data[i].length * weights[i];
+                // substract the IDs to be ignored
+                for (int j= 0; j < obj.data[i].length; j++) {
+                    if (ignoredItems.contains(obj.data[i][j])) {
+                        sum += (ignoreWeight - weights[i]);
+                    }
+                }
+            }
+            return sum;
+        }
+    }
+
+
 }

@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
@@ -35,6 +36,8 @@ import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
+import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -358,7 +361,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, IntStorageIndexed<String> keyWordIndex) {
+    private static int[] keywordsToIdentifiers(String[] keyWords, Set<String> ignoreWords, IntStorageIndexed<String> keyWordIndex) {
         if (keyWords == null)
             return new int[0];
 
@@ -390,7 +393,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
                 ret[retIndex] = keyWordIndex.store(keyWord).getAddress();
                 retIndex++;
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot insert '" + keyWord + "' for object '" + getLocatorURI() + "': " + e.toString());
+                Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot insert '" + keyWord + "': " + e.toString());
             }
         }
 
@@ -404,6 +407,41 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         return ret;
     }
 
+    /**
+     * Implementation of {@link WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     *  and it ignores a specified list of integers (created from a given list of keywords).
+     */
+    public static class MultiWeightIgnoreProviderPixMac extends ObjectIntMultiVectorJaccard.MultiWeightIgnoreProvider {
+
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 51201L;
+
+        /**
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
+         * @param ignoreWeight weight used for the {@code ignoredKeywords}
+         * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
+         */
+        public MultiWeightIgnoreProviderPixMac(float[] weights, float ignoreWeight, String[] ignoredKeywords, IntStorageIndexed<String> keyWordIndex) {
+            super(weights, ignoreWeight, getIgnoredIDs(ignoredKeywords, keyWordIndex));
+        }
+
+        /**
+         * Internal method to create a set of integer IDs for specified keywords given a PixMac keyword -> ID index.
+         * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
+         * @return
+         */
+        private static Set<Integer> getIgnoredIDs(String[] ignoredKeywords, IntStorageIndexed<String> keyWordIndex) {
+            HashSet<Integer> retVal = new HashSet<Integer>();
+            int[] keywordsToIdentifiers = keywordsToIdentifiers(ignoredKeywords, new HashSet<String>(), keyWordIndex);
+            for (int id : keywordsToIdentifiers) {
+                retVal.add(id);
+            }
+            return retVal;
+        }
+    }
 
     //****************** MetaObject overrides ******************//
 

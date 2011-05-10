@@ -584,7 +584,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    private static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+    protected static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
         if (words == null)
             return new int[0];
 
@@ -625,6 +625,44 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         return ret;
+    }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     *  and it ignores a specified list of integers (created from a given list of keywords).
+     */
+    public static class MultiWeightIgnoreProviderProfi extends ObjectIntMultiVectorJaccard.MultiWeightIgnoreProvider {
+
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 51201L;
+
+        /**
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
+         * @param ignoreWeight weight used for the {@code ignoredKeywords}
+         * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param stemmer instances that provides a {@link Stemmer} for word transformation
+         * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
+         */
+        public MultiWeightIgnoreProviderProfi(float[] weights, float ignoreWeight, String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+            super(weights, ignoreWeight, getIgnoredIDs(ignoredKeywords, stemmer, keyWordIndex));
+        }
+
+        /**
+         * Internal method to create a set of integer IDs for specified keywords given a PixMac keyword -> ID index.
+         * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
+         * @return
+         */
+        private static Set<Integer> getIgnoredIDs(String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+            HashSet<Integer> retVal = new HashSet<Integer>();
+            int[] keywordsToIdentifiers = MetaObjectProfiSCT.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex);
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).info("the following words will be ignored: '" + Arrays.deepToString(ignoredKeywords) + "' with the following IDs: " + Arrays.toString(keywordsToIdentifiers));
+            for (int id : keywordsToIdentifiers) {
+                retVal.add(id);
+            }
+            return retVal;
+        }
     }
 
 
