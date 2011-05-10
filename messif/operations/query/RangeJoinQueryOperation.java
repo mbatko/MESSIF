@@ -186,10 +186,24 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      */
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
+        return evaluate(objects, algorithm);
+    }
+    
+    /**
+     * Evaluate this join query on a given set of objects and algorithm to run on.
+     * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
+     * 
+     * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
+     * The range query is instantiated from the parameters passed in the constructor.
+     *
+     * @param objects the collection of objects on which to evaluateSerially this query
+     * @return number of objects satisfying the query
+     */
+    public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects, Algorithm alg) {
         if (parallelQueries <= 1)
-            return evaluateSerially(objects, algorithm);
+            return evaluateSerially(objects, alg);
         else
-            return evaluateInParallel(objects, algorithm, parallelQueries);
+            return evaluateInParallel(objects, alg, parallelQueries);
     }
 
     /**
