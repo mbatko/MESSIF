@@ -41,7 +41,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RMIAlgorithm extends Algorithm {
+public class RMIAlgorithm extends Algorithm implements Cloneable {
     /** class id for serialization */
     private static final long serialVersionUID = 659874587001L;
 
@@ -125,6 +125,10 @@ public class RMIAlgorithm extends Algorithm {
         disconnect();
     }
 
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return new RMIAlgorithm(host, port, connectionRetries);
+    }
 
     //****************** Connection control methods ******************//
 
