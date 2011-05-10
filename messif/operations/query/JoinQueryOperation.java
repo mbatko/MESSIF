@@ -275,7 +275,7 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
      *      the pair is not added
      * @return the distance-ranked join object that was added to answer or <tt>null</tt> if the object was not added
      */
-    public RankedJoinObject addToAnswer(LocalAbstractObject leftObject, LocalAbstractObject rightObject, float distance, float distThreshold) {
+    public synchronized RankedJoinObject addToAnswer(LocalAbstractObject leftObject, LocalAbstractObject rightObject, float distance, float distThreshold) {
         if (leftObject == null || rightObject == null)
             return null;
         
