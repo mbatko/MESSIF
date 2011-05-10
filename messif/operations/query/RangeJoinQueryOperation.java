@@ -20,7 +20,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -55,7 +57,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
 
     //****************** Attributes ******************//
     
-    /** Remote algorithm for evaluating "range" queries */
+    /** Algorithm for evaluating "range" queries */
     private Algorithm algorithm;
     
     /** Number of queries to run in parallel over a passed algorithm */
@@ -191,6 +193,23 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
     }
 
     /**
+     * Add the answer of a range query to this join operation
+     * @param q      query object used in the range query
+     * @param answer answer of the range query
+     */
+    private void processQueryAnswer(LocalAbstractObject q, Iterator<RankedAbstractObject> answer) {
+        // Process the taks response
+        while (answer.hasNext()) {
+            RankedAbstractObject ranked = answer.next();
+            float dist = ranked.getDistance();
+            LocalAbstractObject obj = (LocalAbstractObject)ranked.getObject();
+            if (dist == 0f && q.dataEquals(obj))
+                continue;
+            addToAnswer(q, obj, dist, getDistanceThreshold());
+        }
+    }
+    
+    /**
      * Evaluate this join query on a given set of objects.
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
      * 
@@ -213,14 +232,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
                 RankingQueryOperation op = operConstructor.instantiate(operParams);
                 op = alg.executeOperation(op);
                 
-                for (Iterator<RankedAbstractObject> it = op.getAnswer(); it.hasNext();) {
-                    RankedAbstractObject ranked = it.next();
-                    float dist = ranked.getDistance();
-                    LocalAbstractObject obj = (LocalAbstractObject)ranked.getObject();
-                    if (dist == 0f && q.dataEquals(obj))
-                        continue;
-                    addToAnswer(q, obj, dist, getDistanceThreshold());
-                }
+                processQueryAnswer(q, op.getAnswer());
             }
         } catch (IllegalArgumentException ex) {
             throw new RuntimeException("RangeJoin: Cannot instantiate the passed RankingQueryOperation! " + ex.getMessage(), ex);
@@ -250,7 +262,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
     public int evaluateInParallel(AbstractObjectIterator<? extends LocalAbstractObject> objects, Algorithm alg, int threads) {
         int beforeCount = getAnswerCount();
         // Prepare the thread pool executor
-        ThreadPoolExecutor pool = new MyThreadPool(this, threads);
+        ThreadPoolExecutor pool = new MyThreadPool(this, alg, threads);
         
         try {
             while (objects.hasNext()) {
@@ -280,7 +292,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
     }
     
     private static class MyTask implements Runnable {
-        private final Algorithm alg;
+        private Algorithm alg;
         private final LocalAbstractObject query;
         private RankingQueryOperation oper;
 
@@ -308,21 +320,32 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
         public Iterator<RankedAbstractObject> getAnswer() {
             return oper.getAnswer();
         }
+
+        public void setAlgorithm(Algorithm alg) {
+            this.alg = alg;
+        }
+
+        public boolean isRMIAlgorithm() {
+            return (alg instanceof RMIAlgorithm);
+        }
+        
     }        
     
     private static class MyThreadPool extends ThreadPoolExecutor implements RejectedExecutionHandler {
         private final RangeJoinQueryOperation joinOper;
+        private Algorithm algorithm;
 
         /**
          * Constructor.
          * @param join    join operation for processing range query results
+         * @param alg     algorithm to evaluate the range queries
          * @param threads number of threads to execute
          */
-        public MyThreadPool(RangeJoinQueryOperation join, int threads) {
+        public MyThreadPool(RangeJoinQueryOperation join, Algorithm alg, int threads) {
 
             // Sets the pool to create a queue of 3 times longer than the number of threads
-            super(threads, threads, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(3*threads));
-            setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+            super(threads, threads, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(3*threads), getThreadFactory(alg));
+            setRejectedExecutionHandler(new MyCallerRunsPolicy(join));
 
             // Sets the pool to execute tasks directly (without queueing) and rejected taks 
             // (due to all threads being active) are resubmitted later
@@ -330,8 +353,24 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
 //            setRejectedExecutionHandler(this);
 
             joinOper = join;
+            algorithm = alg;
             prestartAllCoreThreads();
         }        
+        
+        private static ThreadFactory getThreadFactory(Algorithm alg) {
+            if (alg instanceof RMIAlgorithm)
+                return new MyThreadFactory((RMIAlgorithm)alg);
+            else
+                return Executors.defaultThreadFactory();
+        }
+
+        @Override
+        protected void beforeExecute(Thread t, Runnable r) {
+            if (t instanceof MyThread && r instanceof MyTask) {
+                // Set the algorithm to an internal and clonned RMIAlgorithm
+                ((MyTask)r).setAlgorithm(((MyThread)t).getAlgorithm());
+            }
+        }
         
         @Override
         protected void afterExecute(Runnable r, Throwable t) {
@@ -340,15 +379,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
             MyTask task = (MyTask)r;
             
             // Process the taks response
-            LocalAbstractObject q = task.getQuery();
-            for (Iterator<RankedAbstractObject> it = task.getAnswer(); it.hasNext();) {
-                RankedAbstractObject ranked = it.next();
-                float dist = ranked.getDistance();
-                LocalAbstractObject obj = (LocalAbstractObject)ranked.getObject();
-                if (dist == 0f && q.dataEquals(obj))
-                    continue;
-                joinOper.addToAnswer(q, obj, dist, joinOper.getDistanceThreshold());
-            }
+            joinOper.processQueryAnswer(task.getQuery(), task.getAnswer());
         }
 
         @Override
@@ -367,6 +398,53 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
             if (!executor.isShutdown())
                 execute(r);
         }
+
+        private static class MyThreadFactory implements ThreadFactory {
+            private final RMIAlgorithm algorithm;
+
+            public MyThreadFactory(RMIAlgorithm alg) {
+                algorithm = alg;
+            }
+
+            @Override
+            public Thread newThread(Runnable r) {
+                try {
+                    return new MyThread(r, (RMIAlgorithm)algorithm.clone());
+                } catch (CloneNotSupportedException ex) {
+                    throw new RuntimeException("Cloning RMIAlgorithm failed.", ex);
+                }
+            }
+        }
         
+        private static class MyThread extends Thread {
+            private final RMIAlgorithm privAlg;
+
+            public MyThread(Runnable target, RMIAlgorithm alg) {
+                super(target);
+                privAlg = alg;
+            }
+
+            public RMIAlgorithm getAlgorithm() {
+                return privAlg;
+            }
+        }
+        
+        private static class MyCallerRunsPolicy implements RejectedExecutionHandler {
+            private final RangeJoinQueryOperation joinOper;
+
+            public MyCallerRunsPolicy(RangeJoinQueryOperation joinOper) {
+                this.joinOper = joinOper;
+            }
+
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+                if (!e.isShutdown()) {
+                    MyTask task = (MyTask)r;
+                    task.run();
+                    joinOper.processQueryAnswer(task.getQuery(), task.getAnswer());
+                }
+            }
+            
+        }
     }
 }
