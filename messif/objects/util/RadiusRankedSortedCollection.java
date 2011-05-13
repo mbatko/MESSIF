@@ -54,7 +54,7 @@ public class RadiusRankedSortedCollection extends RankedSortedCollection {
 
     @Override
     public boolean add(RankedAbstractObject e) {
-        if (e.getDistance() >= radius) {
+        if (e.getDistance() <= radius) {
             return super.add(e);
         }
         return false;
