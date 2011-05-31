@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
@@ -213,20 +214,15 @@ public class CoreApplication {
      * If the passed exception is either {@link InvocationTargetException} or {@link AlgorithmMethodException},
      * the causing exception is unwrapped first.
      * @param exception the exception to process
-     * @param ignoreExceptionClass the class of exceptions to ignore
      * @param out the output stream where to show the error (if not <tt>null</tt>)
      * @param logException if <tt>true</tt>, the exception is logged via {@link #logException(java.lang.Throwable)}
-     * @return <tt>true</tt> if the exception is <tt>null</tt> or ignored,
-     *          otherwise the exception is processed and <tt>false</tt> is returned
      */
-    protected boolean processException(Throwable exception, Class<? extends Throwable> ignoreExceptionClass, PrintStream out, boolean logException) {
+    protected void processException(Throwable exception, PrintStream out, boolean logException) {
         String message = null;
         if (exception instanceof InvocationTargetException || exception instanceof AlgorithmMethodException) {
             message = exception.getMessage();
             exception = exception.getCause();
         }
-        if (exception == null || (ignoreExceptionClass != null && ignoreExceptionClass.isInstance(exception)))
-            return true;
         if (logException)
             logException(exception);
         if (out != null) {
@@ -234,7 +230,6 @@ public class CoreApplication {
             if (message != null)
                 out.println(message);
         }
-        return false;
     }
 
 
@@ -579,6 +574,36 @@ public class CoreApplication {
         return null;
     }
 
+
+    /**
+     * Prepares a new instance of the specified operation without executing it.
+     * Similarly to the {@link #algorithmStart}, the name of operation's class
+     * must be provided and all the additional arguments are passed to its constructor.
+     * The operation can be modified using {@link #operationChangeAnswerCollection}
+     * or {@link #operationSetParameter} and the executed by {@link #operationExecuteAgain}.
+     * Note that if there is another call to {@link #operationPrepare}, {@link #operationExecute},
+     * or {@link #operationBgExecute}, the prepared operation is replaced.
+     *
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationPrepare messif.operations.query.RangeQueryOperation objects 1.3
+     * </pre>
+     * Note that the {@link messif.operations.query.RangeQueryOperation range query operation}
+     * requires two parameters - a {@link messif.objects.LocalAbstractObject}
+     * and a radius. The {@link messif.objects.LocalAbstractObject} is usually entered
+     * as a next object from a stream (see {@link #objectStreamOpen}).
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args operation class followed by constructor arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating an instance of the operation
+     */
+    @ExecutableMethod(description = "prepare the specified operation", arguments = {"operation class", "arguments for constructor ..."})
+    public boolean operationPrepare(PrintStream out, String... args) throws InvocationTargetException {
+        lastOperation = createOperation(out, args);
+        return lastOperation != null;
+    }
+
     /**
      * Executes a specified operation on current algorithm.
      * Operations allows querying and manipulating data stored by the algorithm.
@@ -763,11 +788,11 @@ public class CoreApplication {
 
     /**
      * Show information about the last executed operation.
-     * Specifically, the information about the operation created by last call to
-     * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
-     * the operation might be still running if the {@link #operationBgExecute} was
-     * used and thus the results might not be complete. Use {@link #operationWaitBg}
-     * to wait for background operations to finish.
+     * Specifically, the information about the operation created by the last call to
+     * {@link #operationPrepare}, {@link #operationExecute}, or {@link #operationBgExecute}
+     * is shown. Note that the operation might be still running if the
+     * {@link #operationBgExecute} was used and thus the results might not be complete.
+     * Use {@link #operationWaitBg} to wait for background operations to finish.
      * 
      * <p>
      * Example of usage:
@@ -783,6 +808,108 @@ public class CoreApplication {
     @ExecutableMethod(description = "show information about the last executed operation", arguments = {})
     public boolean operationInfo(PrintStream out, String... args) {
         out.println(lastOperation);
+        return true;
+    }
+
+    /**
+     * Show argument of the last executed operation.
+     * Specifically, the argument of the operation created by the last call to
+     * {@link #operationPrepare}, {@link #operationExecute}, or {@link #operationBgExecute}
+     * is shown. Note that the operation might be still running if the
+     * {@link #operationBgExecute} was used and thus the results might not be complete.
+     * Use {@link #operationWaitBg} to wait for background operations to finish.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationArgument 0
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args zero-based index of the argument to show
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
+    @ExecutableMethod(description = "show an argument of the last executed operation", arguments = {"index of the argument to show"})
+    public boolean operationArgument(PrintStream out, String... args) {
+        if (lastOperation == null) {
+            out.println("No operation has been executed yet. Use operationExecute method first.");
+            return false;
+        }
+
+        // Read the argument
+        int argIndex = -1;
+        try {
+            argIndex = Integer.parseInt(args[1]);
+        } catch (IndexOutOfBoundsException ignore) {
+            out.println("operationArgument method requires the index of the argument");
+            return false;
+        } catch (NumberFormatException ignore) {
+        }
+        if (argIndex < 0 || argIndex >= lastOperation.getArgumentCount()) {
+            out.println("operationArgument index '" + args[1] + "' is not within <0;" + lastOperation.getArgumentCount() + ") bounds");
+            return false;
+        }
+
+        // Display it
+        out.println(lastOperation.getArgument(argIndex));
+        return true;
+    }
+
+    /**
+     * Show or set a parameter of the last executed operation.
+     * Specifically, the parameter of the operation created by the last call to
+     * {@link #operationPrepare}, {@link #operationExecute}, or {@link #operationBgExecute}
+     * is shown. Note that the operation might be still running if the
+     * {@link #operationBgExecute} was used and thus the results might not be complete.
+     * Use {@link #operationWaitBg} to wait for background operations to finish.
+     * Note that a set parameter can be used when {@link #operationExecuteAgain} is called.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationParam myparam 1 java.lang.Integer
+     * MESSIF &gt;&gt;&gt; operationParam myparam
+     * </pre>
+     * </p>
+     * The first example set the parameter "myparam" to "1" converted to integer.
+     * The second example shows the value of the parameter myparam, i.e. "1" is displayed.
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args name of the parameter to show (if this is the only argument) or set (if a value is provided),
+     *              the new value of the parameter, and the class of the parameter (must be {@link Convert#stringToType convertible})
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "show or set a parameter of the last executed operation", arguments = {"name of the parameter to show or set", "new value of the parameter (optional)", "class of the value being set (optional)"})
+    public boolean operationParam(PrintStream out, String... args) {
+        if (lastOperation == null) {
+            out.println("No operation has been executed yet. Use operationExecute method first.");
+            return false;
+        }
+        if (args.length < 2) {
+            out.println("operationParam method requires the name of the parameter");
+            return false;
+        }
+
+        if (args.length > 2) { // Set parameter
+            // Read parameter class (defaults to String)
+            Class<? extends Serializable> parameterClass;
+            try {
+                parameterClass = args.length > 3 ? Convert.getClassForName(args[3], Serializable.class) : String.class;
+            } catch (ClassNotFoundException e) {
+                out.println("Cannot set parameter " + args[1] + ": " + e);
+                return false;
+            }
+            // Convert the parameter and set it
+            try {
+                lastOperation.setParameter(args[1], Convert.stringToType(args[2], parameterClass, namedInstances));
+            } catch (InstantiationException e) {
+                out.println("Cannot convert '" + args[2] + "' to " + parameterClass);
+                return false;
+            }
+        } else { // Show parameter
+            out.println(lastOperation.getParameter(args[1]));
+        }
         return true;
     }
 
@@ -2137,15 +2264,14 @@ public class CoreApplication {
      * @param props the properties with actions
      * @param actionName the name of the action to execute
      * @param variables the current variables' environment
-     * @param repeatUntilExceptionClass the current repeat-until exception class
      * @return the action's repeat-until exception class or <tt>null</tt> if they are not specified
      */
-    protected Class<? extends Throwable> getCFActionException(PrintStream out, Properties props, String actionName, Map<String,String> variables, Class<? extends Throwable> repeatUntilExceptionClass) {
+    protected Class<? extends Throwable> getCFActionException(PrintStream out, Properties props, String actionName, Map<String,String> variables) {
         String repeatUntilException = props.getProperty(actionName + ".repeatUntilException");
+        if (repeatUntilException == null)
+            return null;
         try {
-            return repeatUntilException != null ?
-                Convert.getClassForName(substituteVariables(repeatUntilException, variables).trim(), Exception.class) :
-                repeatUntilExceptionClass;
+            return Convert.getClassForName(substituteVariables(repeatUntilException, variables).trim(), Exception.class);
         } catch (ClassNotFoundException e) {
             out.println("Wrong repeatUntilException for action '" + actionName + "': " + e.getMessage());
             return Throwable.class;
@@ -2193,10 +2319,11 @@ public class CoreApplication {
      * @param actionName the name of the action to execute
      * @param variables the current variables' environment
      * @param outputStreams currently opened output streams
-     * @param repeatUntilExceptionClass the current repeat-until exception class
+     * @param throwException flag whether to throw the {@link InvocationTargetException} when an action encounters error instead of handling it
      * @return <tt>true</tt> if the action was executed successfuly
+     * @throws InvocationTargetException if there was an error executing the action while the {@code throwException} is <tt>true</tt>
      */
-    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, Class<? extends Throwable> repeatUntilExceptionClass) {
+    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {
         // Parse action name and arguments
         List<String> arguments = getCFActionArguments(props, actionName, variables);
         String methodName = arguments.get(0);
@@ -2217,7 +2344,7 @@ public class CoreApplication {
 
         // Read number of repeats of this method
         String[] foreachValues = getCFActionForeach(out, props, actionName, variables);
-        repeatUntilExceptionClass = getCFActionException(out, props, actionName, variables, repeatUntilExceptionClass);
+        Class<? extends Throwable> repeatUntilExceptionClass = getCFActionException(out, props, actionName, variables);
         if (repeatUntilExceptionClass == Throwable.class)
             return false;
         int repeat = getCFActionRepeat(out, props, actionName, variables, foreachValues, repeatUntilExceptionClass);
@@ -2247,7 +2374,7 @@ public class CoreApplication {
                 if (methodName.indexOf(' ') != -1) {
                     // Special "block" method 
                     for (String blockActionName : methodName.split("[ \t]+"))
-                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, repeatUntilExceptionClass))
+                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null))
                             return false; // Stop execution of block if there was an error
                 } else try {
                     Object rtv;
@@ -2274,13 +2401,18 @@ public class CoreApplication {
                         return false; // Execution unsuccessful, method/action not found
                     } else
                         // There was no method for the action, so we try is as a name of block
-                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, repeatUntilExceptionClass))
+                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, throwException || repeatUntilExceptionClass != null))
                             return false;
                 }
             }
         } catch (InvocationTargetException e) {
-            if (!processException(e.getCause(), repeatUntilExceptionClass, out, true))
+            // Check whether the repeat-until is not captured
+            if (repeatUntilExceptionClass == null || !repeatUntilExceptionClass.isInstance(e.getCause())) {
+                if (throwException) // Exception is being handled by a higher call
+                    throw e;
+                processException(e.getCause(), out, true);
                 return false;
+            }
         }
 
         // Remove foreach/repeat value
@@ -2346,7 +2478,12 @@ public class CoreApplication {
         }
 
         // Execute the first action
-        boolean rtv = controlFileExecuteAction(out, props, action, variables, outputStreams, null);
+        boolean rtv;
+        try {
+            rtv = controlFileExecuteAction(out, props, action, variables, outputStreams, false);
+        } catch (InvocationTargetException e) {
+            throw new InternalError("Action execution cannot throw exception when throwException is false: " + e.getCause());
+        }
         
         // Close all opened output streams
         for (PrintStream stream : outputStreams.values())
@@ -2406,7 +2543,7 @@ public class CoreApplication {
                 // Get appropriate method
                 methodExecutor.execute(out, arguments);
             } catch (InvocationTargetException e) {
-                processException(e.getCause(), null, out, false);
+                processException(e.getCause(), out, false);
             } catch (NoSuchMethodException e) {
                 out.println("Unknown command: " + arguments[0]);
                 out.println("Use 'help' to see all available commands");

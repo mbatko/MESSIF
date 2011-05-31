@@ -16,6 +16,7 @@
  */
 package messif.algorithms;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -202,7 +203,7 @@ public abstract class Algorithm implements Serializable {
      * @throws ClassCastException if the filename doesn't contain serialized algorithm
      */
     public static <T extends Algorithm> T restoreFromFile(String filepath, Class<T> algorithmClass) throws IOException, NullPointerException, ClassNotFoundException, ClassCastException {
-        ObjectInputStream in = new ObjectInputStream(new FileInputStream(filepath));
+        ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filepath)));
         try {
             T rtv = algorithmClass.cast(in.readObject());
             log.info("Algorithm restored from: " + filepath);

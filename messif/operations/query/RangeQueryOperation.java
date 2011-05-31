@@ -217,7 +217,7 @@ public class RangeQueryOperation extends RankingQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (queryObject.excludeUsingPrecompDist(object, getRadius())) 
+            if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
 
             addToAnswer(queryObject, object, getRadius());
