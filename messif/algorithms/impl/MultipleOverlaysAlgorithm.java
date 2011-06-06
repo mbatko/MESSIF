@@ -17,6 +17,7 @@
 package messif.algorithms.impl;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -62,7 +63,7 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      */
     @Algorithm.AlgorithmConstructor(description = "Basic empty constructor", arguments = {})
     public MultipleOverlaysAlgorithm() throws IllegalArgumentException {
-        super("Multiple-overlays Algorithm");
+        super("Multioverlay Algorithm");
     }
 
     /**
@@ -71,9 +72,9 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      * @param overlays array of host+RMI port values to connect to
      * @throws java.lang.IllegalArgumentException
      */
-    //@Algorithm.AlgorithmConstructor(description = "Constructor with given list of host+port ids of algorithms", arguments = {"list of host+port identifications"})
+    @Algorithm.AlgorithmConstructor(description = "Constructor with given list of host+port ids of algorithms", arguments = {"list of host+port identifications"})
     public MultipleOverlaysAlgorithm(NetworkNode [] overlays) throws IllegalArgumentException {
-        this();
+        super("Multioverlay Algorithm");
 
         try {
             for (int i = 0; i < overlays.length; i++) {
@@ -106,9 +107,10 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      * @param networkNode
      * @throws messif.algorithms.AlgorithmMethodException
      */
-    public void addAlgorithm(NetworkNode networkNode) throws AlgorithmMethodException {
-        addAlgorithm(String.valueOf(System.currentTimeMillis()), networkNode);
+    public final void addAlgorithm(NetworkNode networkNode) throws AlgorithmMethodException {
+        addAlgorithm(networkNode.toString(), networkNode);
     }
+    
     /**
      * Add a new remote algorithm stub to the
      * @param identifier overlay identifier
@@ -117,7 +119,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      */
     public void addAlgorithm(String identifier, NetworkNode networkNode) throws AlgorithmMethodException {
         try {
-            log.info("to add: " + identifier + ": " + networkNode);
             RMIAlgorithm newAlgorithm = new RMIAlgorithm(networkNode);
             log.info("adding: " + identifier + ": " + networkNode);
             newAlgorithm.connect();

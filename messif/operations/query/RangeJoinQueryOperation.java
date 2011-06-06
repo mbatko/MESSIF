@@ -285,7 +285,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
                 // Prepare the query
                 operParams[0] = q;
                 RankingQueryOperation op = operConstructor.instantiate(operParams);
-                
+
                 pool.execute(new MyTask(alg, q, op));
             }
         } catch (IllegalArgumentException ex) {
