@@ -73,7 +73,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @param connectionRetries the number of reconnection tries if the RMI connection fails
      */
     public RMIAlgorithm(InetAddress host, int port, int connectionRetries) {
-        super(null);
+        super(new NetworkNode(host, port).toString());
         this.host = host;
         this.port = port;
         this.connectionRetries = connectionRetries;
