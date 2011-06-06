@@ -59,7 +59,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
      * @param additionalParameters additional parameters for this meta object
      */
     public MetaObjectParametric(Map<String, ? extends Serializable> additionalParameters) {
-        this.additionalParameters = additionalParameters;
+        this.additionalParameters = new HashMap<String, Serializable> (additionalParameters);
     }
 
     /**
@@ -71,7 +71,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
      */
     public MetaObjectParametric(AbstractObjectKey objectKey, Map<String, ? extends Serializable> additionalParameters) {
         super(objectKey);
-        this.additionalParameters = additionalParameters;
+        this.additionalParameters = new HashMap<String, Serializable> (additionalParameters);
     }
 
     /**
@@ -84,7 +84,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
      */
     public MetaObjectParametric(String locatorURI, Map<String, ? extends Serializable> additionalParameters) {
         super(locatorURI);
-        this.additionalParameters = additionalParameters;
+        this.additionalParameters = new HashMap<String, Serializable> (additionalParameters);
     }
 
 

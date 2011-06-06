@@ -388,18 +388,24 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     /**
      * Create a duplicate of this operation.
      * Check (and override) the implementation in subclasses if there are mutable object attributes.
-     * Note that supplemental data ({@link #suppData}) is not clonned (but the reference is kept).
-     * Note also that the answer of the query operations is not clonned but
-     * a new collection is created.
+     * Note that supplemental data ({@link #suppData}) is not cloned (but the reference is kept).
+     * Note also that the answer of the query operations is not cloned but
+     * a new collection is created. 
+     * The additional parameters are cloned - the map, not the values of the parameters.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
      */
     @Override
     public AbstractOperation clone() throws CloneNotSupportedException {
-        return (AbstractOperation)super.clone();
-    }
+        AbstractOperation operation = (AbstractOperation) super.clone();
 
+        if (additionalParameters != null) {
+            operation.additionalParameters = new HashMap<String, Serializable>(additionalParameters);
+        }
+        
+        return operation;
+    }
 
     //****************** Data manipulation ******************//
 

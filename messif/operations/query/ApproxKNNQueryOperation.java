@@ -241,4 +241,14 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation {
             radiusGuaranteed = operation.radiusGuaranteed;
     }
 
+    /**
+     * Returns the information about this operation.
+     * @return the information about this operation
+     */
+    @Override
+    public String toString() {
+        return new StringBuffer(super.toString()).
+                append("; local search param: ").append(localSearchParam).append(" of type: ").append(localSearchType.toString()).toString();
+    }
+    
 }
