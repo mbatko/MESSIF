@@ -51,6 +51,7 @@ import messif.executor.MethodNameExecutor;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractStreamObjectIterator;
+import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AbstractOperation;
@@ -170,7 +171,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  */
 public class CoreApplication {
     /** Logger */
-    protected static Logger log = Logger.getLogger("application");
+    protected static final Logger log = Logger.getLogger("application");
 
     /** Currently running algorithm */
     protected Algorithm algorithm = null;
@@ -1034,7 +1035,8 @@ public class CoreApplication {
      *   <ul>
      *     <li>objects separator (defaults to newline)</li>
      *     <li>result type - can be 'All' = display everything,
-     *            'Object' = displays just objects or 'Locator' = display just locators</li>
+     *            'Objects' = displays just objects, 'Locators' = display just locators,
+     *             or 'DistanceLocators' = display format 'distance: locator'</li>
      *   </ul>
      * </p>
      * 
@@ -1081,6 +1083,17 @@ public class CoreApplication {
                 while (itObjects.hasNext()) {
                     out.print(itObjects.next().getLocatorURI());
                     if (itObjects.hasNext())
+                        out.print(separator);
+                }
+                break;
+            case 'D':
+                Iterator<RankedAbstractObject> answer = ((RankingQueryOperation)operation).getAnswer();
+                while (answer.hasNext()) {
+                    RankedAbstractObject next = answer.next();
+                    out.print(next.getDistance());
+                    out.print(": ");
+                    out.print(next.getObject().getLocatorURI());
+                    if (answer.hasNext())
                         out.print(separator);
                 }
                 break;
@@ -1887,7 +1900,7 @@ public class CoreApplication {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args number of miliseconds to sleep after the garbage collection
+     * @param args number of milliseconds to sleep after the garbage collection
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "shedule full garbage collection", arguments = { "time to sleep (optional)" })

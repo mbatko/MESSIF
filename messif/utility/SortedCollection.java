@@ -160,7 +160,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Returns the comparator used by this collection.
      * @return the comparator used by this collection
      */
-    protected Comparator<? super T> getComparator() {
+    public Comparator<? super T> getComparator() {
         return comparator;
     }
 
@@ -396,8 +396,18 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      */
     @Override
     public boolean add(T e) {
+        return add(e, binarySearch(e, 0, size - 1, false));
+    }
+
+    /**
+     * Adds the specified element to this list given an index on which the object should be stored.
+     * Use carefully - this method does not check, if the order of the objects is preserved.
+     * @param e element to be appended to this list
+     * @param i index on which the object should be stored
+     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     */
+    protected boolean add(T e, int i) {
         modCount++;
-        int i = binarySearch(e, 0, size - 1, false);
 
         // If array is too small to hold new item
         if (size == items.length) {
@@ -437,7 +447,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
         return true;
     }
-
+    
     /**
      * Removes the first occurrence of the specified element from this list,
      * if it is present.  If the list does not contain the element, it is

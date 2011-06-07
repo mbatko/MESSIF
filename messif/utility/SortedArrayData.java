@@ -93,17 +93,17 @@ public abstract class SortedArrayData<K, T> {
      * @throws IllegalStateException if there was an error accessing object via {@link #get}
      */
     protected int binarySearch(K key, int low, int high, boolean indicateFailure) throws IndexOutOfBoundsException, IllegalStateException {
-	while (low <= high) {
-	    int mid = (low + high) >>> 1;
-            int cmp = compare(key, get(mid));
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+                int cmp = compare(key, get(mid));
 
-	    if (cmp > 0)
-		low = mid + 1;
-	    else if (cmp < 0)
-		high = mid - 1;
-	    else
-		return mid; // key found
-	}
+            if (cmp > 0)
+            low = mid + 1;
+            else if (cmp < 0)
+            high = mid - 1;
+            else
+            return mid; // key found
+        }
 
         // Key not found
         if (indicateFailure)
