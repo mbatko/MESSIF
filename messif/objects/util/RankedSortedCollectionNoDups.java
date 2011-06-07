@@ -31,7 +31,8 @@ import messif.utility.SortedCollection;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RankedSortedCollection extends DistanceRankedSortedCollection<RankedAbstractObject>  {
+public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
+    
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -44,7 +45,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
+    public RankedSortedCollectionNoDups(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, comparator);
     }
 
@@ -55,7 +56,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param maximalCapacity the maximal capatity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
+    public RankedSortedCollectionNoDups(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, null);
     }
 
@@ -66,7 +67,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * is not limited.
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection() throws IllegalArgumentException {
+    public RankedSortedCollectionNoDups() throws IllegalArgumentException {
         super();
     }
 
@@ -79,7 +80,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
+    public <T extends AbstractObject> RankedSortedCollectionNoDups(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
         while (iterator.hasNext())
             add(new RankedAbstractObject(iterator.next(), distanceFunction, referenceObject));
     }
@@ -93,7 +94,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
+    public <T extends AbstractObject> RankedSortedCollectionNoDups(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
         this(distanceFunction, referenceObject, (Iterator<? extends T>)objectProvider.provideObjects());
     }
 
@@ -103,7 +104,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public RankedSortedCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
+    public RankedSortedCollectionNoDups(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
         this(referenceObject, referenceObject, iterator);
     }
 
@@ -113,16 +114,47 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public RankedSortedCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
+    public RankedSortedCollectionNoDups(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
         this(referenceObject, referenceObject, objectProvider);
     }
-
+    
     /**
      * Constructor from an existing operation - all parameters are copied from the operation answer.
      * @param operation operation with collection to copy all parameters from
      */
-    public RankedSortedCollection(RankingQueryOperation operation) {
-        super(operation.getAnswerCount(), operation.getAnswerMaximalCapacity(), operation.getAnswerComparator());
+    public RankedSortedCollectionNoDups(RankingQueryOperation operation) {
+        super(operation);
     }
     
+    @Override
+    public boolean add(RankedAbstractObject e) {
+        if (isEmpty()) {
+            return super.add(e, 0);
+        }        
+        int index = binarySearch(e, 0, size() - 1, false);
+        if (index < size() && areEqual(e.getObject(), get(index).getObject()) || (index > 0 && areEqual(e.getObject(), get(index - 1).getObject()))) {
+            return false;
+        }
+        
+        return super.add(e, index);
+    }
+    
+    /**
+     * Given two objects, this method compares them according to locator (if not null) and, if both locators null,
+     *  then according to {@link LocalAbstractObject#dataEquals(java.lang.Object)}.
+     * @param e1 first object
+     * @param e2 second object
+     * @return <b>true</b> only if the locators are not null and equal or both null and data are equal
+     */
+    protected boolean areEqual(AbstractObject e1, AbstractObject e2) {
+        if (e1.getLocatorURI() != null && e2.getLocatorURI() != null) {
+            return e1.getLocatorURI().equals(e2.getLocatorURI());
+        }
+        if (e1.getLocatorURI() == null &&  e2.getLocatorURI() == null && e1 instanceof LocalAbstractObject && e2 instanceof LocalAbstractObject) {
+            return ((LocalAbstractObject) e1).dataEquals((LocalAbstractObject) e2);
+        }
+        return false;
+    }
+    
+
 }

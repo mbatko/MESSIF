@@ -16,6 +16,7 @@
  */
 package messif.operations;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
@@ -171,6 +172,22 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     @Override
     public int getAnswerCount() {
         return answer.size();
+    }
+    
+    /**
+     * Returns the maximal capacity of the answer collection.
+     * @return the maximal capacity of the answer collection
+     */
+    public int getAnswerMaximalCapacity() {
+        return answer.getMaximalCapacity();
+    }
+    
+    /**
+     * Returns the internal comparator of the answer collection (often null).
+     * @return the internal comparator of the answer collection
+     */
+    public Comparator<? super RankedAbstractObject> getAnswerComparator() {
+        return answer.getComparator();
     }
     
     @Override
