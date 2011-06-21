@@ -17,16 +17,20 @@
 package messif.objects;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.utility.Convert;
 import messif.utility.Parametric;
 
 /**
@@ -43,6 +47,12 @@ import messif.utility.Parametric;
 public abstract class MetaObjectParametric extends MetaObject implements Parametric {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
+
+    //****************** Constants ******************//
+
+    /** Pattern for parsing param comment lines */
+    private static final Pattern paramCommentPattern = Pattern.compile("^#param \"(.*?)(?<!\\\\)\" (\\S+)\\s+(.*)");
+
 
     //****************** Attributes ******************//
 
@@ -142,6 +152,54 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
             return Collections.emptyMap();
         return Collections.unmodifiableMap(additionalParameters);
     }
+
+
+    //****************** Text stream I/O helper methods for parametric ******************//
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected boolean parseObjectComment(String line) throws IllegalArgumentException {
+        if (super.parseObjectComment(line))
+            return true;
+        Matcher matcher = paramCommentPattern.matcher(line);
+        if (!matcher.matches())
+            return false;
+        try {
+            if (additionalParameters != null) {
+                // This put is not safe, but the additional parameters in this case should be created in constructor
+                ((Map<String, Serializable>)additionalParameters).put(matcher.group(1),
+                        Convert.stringToType(matcher.group(3), Convert.getClassForName(matcher.group(2), Serializable.class)));
+            }
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Class not found: " + e.getMessage());
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Cannot instantiate value: " + e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    protected final void writeData(OutputStream stream) throws IOException {
+        if (additionalParameters != null) {
+            StringBuilder str = new StringBuilder("#param \"");
+            for (Map.Entry<String, ? extends Serializable> entry : additionalParameters.entrySet()) {
+                str.replace(8, str.length(), entry.getKey());
+                str.append("\" ").append(entry.getValue().getClass().getName());
+                str.append(' ').append(Convert.typeToString(entry.getValue())).append('\n');
+                stream.write(str.toString().getBytes());
+            }
+        }
+        writeDataImpl(stream);
+    }
+
+    /**
+     * Store this object's data to a text stream.
+     * This method should have the opposite deserialization in constructor of a given object class.
+     *
+     * @param stream the stream to store this object to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected abstract void writeDataImpl(OutputStream stream) throws IOException;
 
 
     //************ Protected methods of BinarySerializable interface ************//

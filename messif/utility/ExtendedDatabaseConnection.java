@@ -68,13 +68,41 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
      * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
      * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+     * @param lazyConnection flag whether to open the database connection immediately (<tt>false</tt>)
+     *          or when a first command is executed (<tt>true</tt>)
+     * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    protected ExtendedDatabaseConnection(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, boolean lazyConnection) throws IllegalArgumentException, SQLException {
+        this.dbConnUrl = dbConnUrl;
+        this.dbConnInfo = dbConnInfo;
+        if (!lazyConnection)
+            this.dbConnection = createConnection(dbConnUrl, dbConnInfo, dbDriverClass);
+    }
+
+    /**
+     * Creates a new extended database connection.
+     *
+     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
      * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
      * @throws SQLException if there was a problem connecting to the database
      */
     protected ExtendedDatabaseConnection(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
-        this.dbConnUrl = dbConnUrl;
-        this.dbConnInfo = dbConnInfo;
-        this.dbConnection = createConnection(dbConnUrl, dbConnInfo, dbDriverClass);
+        this(dbConnUrl, dbConnInfo, dbDriverClass, false);
+    }
+
+    /**
+     * Creates a new extended database connection with parameters taken from another connection.
+     *
+     * @param sourceConnection the database connection from which to get the connection string and info
+     * @param lazyConnection flag whether to open the database connection immediately (<tt>false</tt>)
+     *          or when a first command is executed (<tt>true</tt>)
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    protected ExtendedDatabaseConnection(ExtendedDatabaseConnection sourceConnection, boolean lazyConnection) throws SQLException {
+        this(sourceConnection.dbConnUrl, sourceConnection.dbConnInfo, null, lazyConnection);
     }
 
     /**
@@ -84,9 +112,7 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      * @throws SQLException if there was a problem connecting to the database
      */
     protected ExtendedDatabaseConnection(ExtendedDatabaseConnection sourceConnection) throws SQLException {
-        this.dbConnUrl = sourceConnection.dbConnUrl;
-        this.dbConnInfo = sourceConnection.dbConnInfo;
-        this.dbConnection = createConnection(dbConnUrl, dbConnInfo, null); // Driver is not needed, since it was registered by the previous connection
+        this(sourceConnection, false);
     }
 
     @Override
@@ -237,11 +263,38 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
          * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
          * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
          * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+         * @param lazyConnection flag whether to open the database connection immediately (<tt>false</tt>)
+         *          or when a first command is executed (<tt>true</tt>)
+         * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public ExtendedDatabaseConnectionPublic(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, boolean lazyConnection) throws IllegalArgumentException, SQLException {
+            super(dbConnUrl, dbConnInfo, dbDriverClass, lazyConnection);
+        }
+
+        /**
+         * Creates a new extended database connection.
+         *
+         * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+         * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+         * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
          * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
          * @throws SQLException if there was a problem connecting to the database
          */
         public ExtendedDatabaseConnectionPublic(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
             super(dbConnUrl, dbConnInfo, dbDriverClass);
+        }
+
+        /**
+         * Creates a new extended database connection with parameters taken from another connection.
+         *
+         * @param sourceConnection the database connection from which to get the connection string and info
+         * @param lazyConnection flag whether to open the database connection immediately (<tt>false</tt>)
+         *          or when a first command is executed (<tt>true</tt>)
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public ExtendedDatabaseConnectionPublic(ExtendedDatabaseConnectionPublic sourceConnection, boolean lazyConnection) throws SQLException {
+            super(sourceConnection, lazyConnection);
         }
 
         /**

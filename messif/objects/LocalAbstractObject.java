@@ -543,7 +543,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
                 return currentFilter;
 
             currentFilter = currentFilter.nextFilter;
-            position--;    
+            position--;
         }
 
         throw new IndexOutOfBoundsException("There is no filter at position " + position);
@@ -605,10 +605,10 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
 
     /**
      * Deletes the specified filter from this object's filter chain.
-     * A concerete instance of filter is deleted (the same reference must be present in the chain).
+     * A concrete instance of filter is deleted (the same reference must be present in the chain).
      * 
      * @param filter the concrete instance of filter to delete from this object's filter chain
-     * @return <tt>true</tt> if the filter was unchained (deleted). If the given filter was not found, <tt>false</tt> is returned.
+     * @return <tt>true</tt> if the filter was un-chained (deleted). If the given filter was not found, <tt>false</tt> is returned.
      */
     public final boolean unchainFilter(PrecomputedDistancesFilter filter) {
         if (distanceFilter == null)
@@ -642,7 +642,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
     /**
-     * Clear non-messif data stored in this object.
+     * Clear non-MESSIF data stored in this object.
      * In addition to changing object key, this method removes
      * the {@link #suppData supplemental data} and
      * all {@link #distanceFilter distance filters}.
@@ -822,7 +822,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
 
     /**
      * Creates a new LocalAbstractObject of the specified type from string.
-     * The object data is feeded through string buffer stream to the stream constructor of the object.
+     * The object data is fed through string buffer stream to the stream constructor of the object.
      *
      * @param <E> the class of the object to create
      * @param objectClass the class of the object to create
@@ -844,7 +844,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * of "copy" may depend on the class of the object.
      *
      * @return a clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public final LocalAbstractObject clone() throws CloneNotSupportedException {
@@ -855,9 +855,9 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * Creates and returns a copy of this object. The precise meaning 
      * of "copy" may depend on the class of the object.
      *
-     * @param cloneFilterChain the flag whether the filter chain should be clonned as well
+     * @param cloneFilterChain the flag whether the filter chain should be cloned as well
      * @return a clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         LocalAbstractObject rtv = (LocalAbstractObject)super.clone();
@@ -885,9 +885,9 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * The modification depends on particular subclass implementation.
      *
      * @param args any parameters required by the subclass implementation - usually two objects with 
-     *        the miminal and the maximal possible values
+     *        the minimal and the maximal possible values
      * @return a randomly modified clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         throw new CloneNotSupportedException("Object " + getClass() + " have no random modification implemented");
@@ -905,7 +905,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     /**
      * Indicates whether some other object has the same data as this one.
      * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object is the same as the obj
+     * @return  <code>true</code> if this object is the same as the {@code obj}
      *          argument; <code>false</code> otherwise.
      */
     public abstract boolean dataEquals(Object obj);
@@ -953,7 +953,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
         /**
          * Indicates whether some other object has the same data as this one.
          * @param   obj   the reference object with which to compare.
-         * @return  <code>true</code> if this object is the same as the obj
+         * @return  <code>true</code> if this object is the same as the {@code obj}
          *          argument; <code>false</code> otherwise.
          */
         @Override
@@ -969,36 +969,56 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     //****************** Serialization ******************//
 
     /**
-     * Processes the comment line of text representation of the object.
-     * The comment is of format "#typeOfComment class value".
-     * Recognized types of comments are: <ul>
-     *   <li>"#objectKey keyClass keyValue", where keyClass extends AbstractObjectKey and the comment {@link #setObjectKey(messif.objects.keys.AbstractObjectKey) sets the object key}</li>
-     *   <li>"#filter filterClass filterValue", where filterClass extends PrecomputedDistancesFilter and the comment {@link #chainFilter(messif.objects.PrecomputedDistancesFilter, boolean) adds a precomputed distances filter}</li>
-     * </ul>
+     * Processes all the comment lines of text representation of the object.
+     * The first line that does not have the requested format is returned.
+     * If the end-of-stream is reached, the method throws {@link EOFException}.
+     * See {@link #parseObjectComment(java.lang.String)} for more information
+     * about the comment format.
+     *
      * @param reader the reader from which to get lines with comments
      * @return the first line that does not have the requested format (this method never returns <tt>null</tt>)
      * @throws EOFException if the last line was read
      * @throws IOException if the comment type was recognized but its value is illegal
      */
-    protected String readObjectComments(BufferedReader reader) throws EOFException, IOException {
+    protected final String readObjectComments(BufferedReader reader) throws EOFException, IOException {
         for (;;) {
             String line = reader.readLine();
             if (line == null)
                 throw new EOFException("EoF reached while initializing " + getClass().getName());
 
             try {
-                if (line.startsWith("#objectKey ")) {
-                    // Create and set the key
-                    setObjectKey(Convert.stringAndClassToType(line.substring(11), ' ', AbstractObjectKey.class));
-                } else if (line.startsWith("#filter ")) {
-                    // Create and set the filter
-                    chainFilter(Convert.stringAndClassToType(line.substring(8), ' ', PrecomputedDistancesFilter.class), false);
-                } else {
+                if (!parseObjectComment(line))
                     return line;
-                }
             } catch (IllegalArgumentException e) {
                 throw new IOException(e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Processes a comment line of text representation of the object.
+     * The comment is of format "#typeOfComment class value".
+     * Recognized types of comments are: <ul>
+     *   <li>"#objectKey keyClass keyValue", where keyClass extends AbstractObjectKey and the comment {@link #setObjectKey(messif.objects.keys.AbstractObjectKey) sets the object key}</li>
+     *   <li>"#filter filterClass filterValue", where filterClass extends PrecomputedDistancesFilter and the comment {@link #chainFilter(messif.objects.PrecomputedDistancesFilter, boolean) adds a precomputed distances filter}</li>
+     * </ul>
+     *
+     * @param line a line with comment
+     * @return <tt>true</tt> if the line was parsed as comment; <tt>false</tt>
+     *          is returned to indicate that the line does not contain comment
+     * @throws IllegalArgumentException if there was a problem converting the line's comment, e.g. due to invalid format
+     */
+    protected boolean parseObjectComment(String line) throws IllegalArgumentException {
+        if (line.startsWith("#objectKey ")) {
+            // Create and set the key
+            setObjectKey(Convert.stringAndClassToType(line.substring(11), ' ', AbstractObjectKey.class));
+            return true;
+        } else if (line.startsWith("#filter ")) {
+            // Create and set the filter
+            chainFilter(Convert.stringAndClassToType(line.substring(8), ' ', PrecomputedDistancesFilter.class), false);
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -1008,10 +1028,10 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      *   <li>"#objectKey keyClass key value", where keyClass extends AbstractObjectKey</li>
      *   <li>"#filter filterClass filter value", where filterClass extends </li>
      * </ul>
-     * The data are stored by a overriden method <code>writeData</code>.
+     * The data are stored by a overridden method <code>writeData</code>.
      * 
      * @param stream the stream to write the comments and data to
-     * @throws java.io.IOException if any problem occures during comment writing
+     * @throws java.io.IOException if any problem occurs during comment writing
      */
     public final void write(OutputStream stream) throws IOException {
         write(stream, true);
@@ -1023,11 +1043,11 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      *   <li>"#objectKey keyClass key value", where keyClass extends AbstractObjectKey</li>
      *   <li>"#filter filterClass filter value", where filterClass extends </li>
      * </ul>
-     * The data are stored by a overriden method <code>writeData</code>.
+     * The data are stored by a overridden method <code>writeData</code>.
      * 
      * @param stream the stream to write the comments and data to
      * @param writeComments if true then the comments are written
-     * @throws java.io.IOException if any problem occures during comment writing
+     * @throws java.io.IOException if any problem occurs during comment writing
      */
     public final void write(OutputStream stream, boolean writeComments) throws IOException {
         if (writeComments) {

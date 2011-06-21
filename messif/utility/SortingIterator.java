@@ -46,14 +46,21 @@ public class SortingIterator<T> implements Iterator<T> {
 
     /**
      * Internal class that encapsulates iterator, holds the last element got from
-     * {@link #next()} and makes it comparable using the encapsulating class's
-     * comparator on the current items.
+     * {@link #next()} and makes it comparable using the comparator of the 
+     * encapsulating class on the current items.
      */
     private class Item implements Iterator<T>, Comparable<Item> {
-        protected T current;
-        protected final Iterator<? extends T> iterator;
+        /** Actual item that is retrieved from the iterator and being comparable */
+        private T current;
+        /** Iterator used to get additional items */
+        private final Iterator<? extends T> iterator;
 
-        public Item(Iterator<? extends T> iterator) throws NoSuchElementException {
+        /**
+         * Creates a new instance of Item using the given iterator.
+         * @param iterator the iterator wrapped by this item iterator
+         * @throws NoSuchElementException if the iterator does not have any items
+         */
+        private Item(Iterator<? extends T> iterator) throws NoSuchElementException {
             this.current = iterator.next();
             this.iterator = iterator;
         }
@@ -89,7 +96,7 @@ public class SortingIterator<T> implements Iterator<T> {
      * @return a new Item[] array
      */
     @SuppressWarnings("unchecked")
-    private final Item[] createItemArray(int size) {
+    private Item[] createItemArray(int size) {
         return (Item[])Array.newInstance(Item.class, size); // This cast IS A STUPID BUG
     }
 

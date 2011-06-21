@@ -581,7 +581,7 @@ public class CoreApplication {
      * Similarly to the {@link #algorithmStart}, the name of operation's class
      * must be provided and all the additional arguments are passed to its constructor.
      * The operation can be modified using {@link #operationChangeAnswerCollection}
-     * or {@link #operationSetParameter} and the executed by {@link #operationExecuteAgain}.
+     * or {@link #operationParam} and the executed by {@link #operationExecuteAgain}.
      * Note that if there is another call to {@link #operationPrepare}, {@link #operationExecute},
      * or {@link #operationBgExecute}, the prepared operation is replaced.
      *
@@ -2635,7 +2635,7 @@ public class CoreApplication {
             return ret;
         } catch (IOException e) {
             System.err.println("Can't open telnet interface: " + e.toString());
-            log.warning("Can't open telnet interface: " + e.toString());
+            log.log(Level.WARNING, "Can't open telnet interface: {0}", e);
             return null;
         }
     }

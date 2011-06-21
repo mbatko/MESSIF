@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Map;
-import java.util.logging.Logger;
 import messif.utility.ParametricBase;
 
 /**

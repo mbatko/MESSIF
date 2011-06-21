@@ -67,7 +67,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
 /**
  *  Abstract algorithm framework - support for algorithm naming and operation executive
  *
- *  Every algorithm may suport any number of operations (subclasses of AbstractOperation).
+ *  Every algorithm may support any number of operations (subclasses of AbstractOperation).
  *  This algorithm framework automatically register all methods that have a subclass
  *  of AbstractOperation as the only argument.
  *
@@ -85,7 +85,7 @@ public abstract class Algorithm implements Serializable {
     //****************** Constants ******************//
 
     /** Logger */
-    protected static Logger log = Logger.getLogger("messif.algorithm");
+    protected static final Logger log = Logger.getLogger("messif.algorithm");
 
     /** Maximal number of currently executed operations */
     protected static final int maximalConcurrentOperations = 1024;
@@ -206,7 +206,7 @@ public abstract class Algorithm implements Serializable {
         ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filepath)));
         try {
             T rtv = algorithmClass.cast(in.readObject());
-            log.info("Algorithm restored from: " + filepath);
+            log.log(Level.INFO, "Algorithm restored from: {0}", filepath);
             return rtv;
         } finally {
             in.close();
@@ -251,7 +251,7 @@ public abstract class Algorithm implements Serializable {
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
             try {
                 out.writeObject(this);
-                log.info("Algorithm stored to: " + file.getAbsolutePath());
+                log.log(Level.INFO, "Algorithm stored to: {0}", file.getAbsolutePath());
             } finally {
                 out.close();
             }
@@ -268,7 +268,7 @@ public abstract class Algorithm implements Serializable {
     /**
      * Returns the number of currently evaluated operations.
      * Every thread inside executeOperation is counted as well as every invocation of backgroundExecute
-     * that was not yet exctracted by waitBackgroundExecuteOperation.
+     * that was not yet extracted by waitBackgroundExecuteOperation.
      * @return the number of currently evaluated operations
      */
     public int getRunningOperationsCount() {
@@ -545,7 +545,7 @@ public abstract class Algorithm implements Serializable {
 
     /**
      * Wait for all operations executed on background to finish.
-     * Only objects (executed methods' arguments) with the specified class are returned.
+     * Only objects (executed methods arguments) with the specified class are returned.
      * 
      * @param <E> type of the returned operations
      * @param argClass filter on the returned operation classes
@@ -639,12 +639,12 @@ public abstract class Algorithm implements Serializable {
          * Create a new instance of StatisticsEnabledMethodThreadList.
          * @param methodExecutor the executor to use to actually execute code
          */
-        public StatisticsEnabledMethodThreadList(MethodExecutor methodExecutor) {
+        private StatisticsEnabledMethodThreadList(MethodExecutor methodExecutor) {
             super(methodExecutor);
         }
 
         /**
-         * Mark the current thread's statistics for future merge.
+         * Mark the current thread statistics for future merge.
          * Must be called from within the thread whose statistics are going to be merged.
          */
         @Override
@@ -758,7 +758,7 @@ public abstract class Algorithm implements Serializable {
      * @param params the parameters for the executor
      * @return the instance of {@link AbstractOperation}
      */
-    private final AbstractOperation getExecutorOperationParam(Object... params) {
+    private AbstractOperation getExecutorOperationParam(Object... params) {
         Class<?>[] executorParamClasses = getExecutorParamClasses();
         for (int i = 0; i < executorParamClasses.length; i++)
             if (executorParamClasses[i] == AbstractOperation.class) {
@@ -830,7 +830,7 @@ public abstract class Algorithm implements Serializable {
         String description();
         /**
          * A list of descriptions for constructor parameters.
-         * Each parameter should have a positionally-matching
+         * Each parameter should have a position-matching
          * descriptor value.
          * @return list of descriptions for constructor parameters
          */
@@ -866,9 +866,9 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Returns constructor argument descriptions for the provided algorithm constuctor.
+     * Returns constructor argument descriptions for the provided algorithm constructor.
      * List of available constructors of an algorithm class can be retrieved using {@link #getAnnotatedConstructors getAnnotatedConstructors}.
-     * This is used by auto-generated clients to show descriptiron during algorithm creation.
+     * This is used by auto-generated clients to show description during algorithm creation.
      * @param constructor an algorithm constructor to get the descriptions for
      * @return constructor argument descriptions
      */
@@ -878,9 +878,9 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Returns constructor description (without description of arguments) for the provided algorithm constuctor.
+     * Returns constructor description (without description of arguments) for the provided algorithm constructor.
      * List of available constructors of an algorithm class can be retrieved using {@link #getAnnotatedConstructors getAnnotatedConstructors}.
-     * This is used by auto-generated clients to show descriptiron during algorithm creation.
+     * This is used by auto-generated clients to show description during algorithm creation.
      * @param constructor an algorithm constructor to get the descriptions for
      * @return constructor description
      */
@@ -896,7 +896,7 @@ public abstract class Algorithm implements Serializable {
     /**
      * Returns algorithm constructor description including descriptions for all its arguments.
      * List of available constructors of an algorithm class can be retrieved using {@link #getAnnotatedConstructors getAnnotatedConstructors}.
-     * This is used by auto-generated clients to show descriptiron during algorithm creation.
+     * This is used by auto-generated clients to show description during algorithm creation.
      * 
      * @param constructor an algorithm constructor to get the descriptions for
      * @return constructor description including descriptions for all its arguments
@@ -907,7 +907,7 @@ public abstract class Algorithm implements Serializable {
             return "";
         
         // Construct the following description string: <algorithm class> [<argument description> ...]\n\t...<constructor description>
-        StringBuffer rtv = new StringBuffer(constructor.getDeclaringClass().getName());
+        StringBuilder rtv = new StringBuilder(constructor.getDeclaringClass().getName());
         for (String arg : annotation.arguments())
             rtv.append(" <").append(arg).append(">");
         rtv.append("\n\t...").append(annotation.description());

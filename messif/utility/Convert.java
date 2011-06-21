@@ -226,6 +226,30 @@ public abstract class Convert {
     }
 
     /**
+     * Returns a string serialization of the given {@code object}.
+     * Note that the {@link #stringToType} methods are able to convert the object back.
+     * @param object the object to convert
+     * @return a string serialization of the object
+     */
+    public static String typeToString(Object object) {
+        if (object instanceof Number || object instanceof Character || object instanceof Boolean || object instanceof String)
+            return object.toString();
+        if (object instanceof TextSerializable)
+            return ((TextSerializable)object).toString();
+        if (object.getClass().isArray()) {
+            int size = Array.getLength(object);
+            StringBuilder str = new StringBuilder();
+            for (int i = 0; i < size; i++) {
+                if (i > 0)
+                    str.append(',');
+                str.append(typeToString(Array.get(object, i)));
+            }
+            return str.toString();
+        }
+        throw new IllegalArgumentException("Class " + object.getClass().getName() + " cannot be serialized to string");
+    }
+
+    /**
      * Returns a wrapper class for primitive type.
      * If the type is not primitive, it is returned as is.
      * @param <T> a primitive type class
@@ -454,7 +478,7 @@ public abstract class Convert {
      * Class loader with type check.
      * @param <E> the type of the returned class
      * @param name the fully qualified name of the class
-     * @param checkClass the superclass of the returned class for the generics check
+     * @param checkClass the superclass of the returned class for the generic check
      * @return the <code>Class</code> object associated with the class or
      *         interface with the given string name
      * @throws ClassNotFoundException if the class cannot be located
@@ -468,14 +492,14 @@ public abstract class Convert {
     }
 
     /**
-     * Cast the provided object to Class with generics typing.
-     * If the generics type check fails, the <code>ClassCastException</code> is thrown
+     * Cast the provided object to Class with generic typing.
+     * If the generic type check fails, the <code>ClassCastException</code> is thrown
      * even if the provided <code>classObject</code> is a valid <code>Class</code>.
      * 
      * @param <E> the type of the returned object
      * @param classObject the class object to be cast
-     * @param checkClass the generics typed class that is returned
-     * @return the generics-typed <code>Class</code> object
+     * @param checkClass the generic typed class that is returned
+     * @return the generic-typed <code>Class</code> object
      * @throws ClassCastException if passed <code>classObject</code> is not subclass of <code>checkClass</code>
      */
     @SuppressWarnings("unchecked")
@@ -490,15 +514,15 @@ public abstract class Convert {
     }
 
     /**
-     * Convert the provided object to Class with generics typing. The specified
+     * Convert the provided object to Class with generic typing. The specified
      * {@code classObject} should be either instance of {@link String} or {@link Class}.
-     * If the generics type check fails, the <code>ClassCastException</code> is thrown
+     * If the generic type check fails, the <code>ClassCastException</code> is thrown
      * even if the provided <code>classObject</code> is a valid <code>Class</code>.
      * 
      * @param <E> the type of the returned object
      * @param classObject the class object to be cast
-     * @param checkClass the generics typed class that is returned
-     * @return the generics-typed <code>Class</code> object
+     * @param checkClass the generic typed class that is returned
+     * @return the generic-typed <code>Class</code> object
      * @throws ClassCastException if passed <code>classObject</code> is not subclass of <code>checkClass</code>
      */
     public static <E> Class<E> toGenericClass(Object classObject, Class<E> checkClass) throws ClassCastException {
@@ -516,15 +540,15 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * Only parameters from <code>argStartIndex</code> to <code>argEndIndex</code> of <code>strings</code>
      * array will be used.
      *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
      * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
-     * @param argStartIndex index in the strings array which denotes the first changable argument
-     * @param argEndIndex index in the strings array which denotes the last changable argument
+     * @param argStartIndex index in the strings array which denotes the first changeable argument
+     * @param argEndIndex index in the strings array which denotes the last changeable argument
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
@@ -552,20 +576,20 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * Only parameters from <code>argStartIndex</code> to <code>argEndIndex</code> of <code>strings</code>
      * array will be used.
      *
      * <p>
-     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
+     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this functionality,
      * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
      * </p>
      *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
      * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
-     * @param argStartIndex index in the strings array which denotes the first changable argument
-     * @param argEndIndex index in the strings array which denotes the last changable argument
+     * @param argStartIndex index in the strings array which denotes the first changeable argument
+     * @param argEndIndex index in the strings array which denotes the last changeable argument
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
@@ -574,19 +598,19 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will
      * be used.
      *
      * <p>
-     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
+     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this functionality,
      * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
      * </p>
      *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
      * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
-     * @param argStartIndex index in the strings array which denotes the first changable argument
+     * @param argStartIndex index in the strings array which denotes the first changeable argument
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
@@ -595,14 +619,14 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * All the parameters from <code>argStartIndex</code> till the end of <code>strings</code> array will
      * be used.
      *
      * @param strings array of strings that hold the values
      * @param types array of classes that the strings should be converted to
      * @param handleVarArgs flag whether to handle the variable number of arguments (<tt>true</tt>) or not (<tt>false</tt>)
-     * @param argStartIndex index in the strings array which denotes the first changable argument
+     * @param argStartIndex index in the strings array which denotes the first changeable argument
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
@@ -612,11 +636,11 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * All the parameters from <code>strings</code> array will be used.
      *
      * <p>
-     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this fuctionality,
+     * Note that {@link messif.objects.LocalAbstractObject} parameters will not be converted. For this functionality,
      * use the full {@link #parseTypesFromString parseTypesFromString} method instead.
      * </p>
      *
@@ -631,7 +655,7 @@ public abstract class Convert {
     }
 
     /**
-     * Parses array of strings into array of objects accoring to the types provided in the second argument.
+     * Parses array of strings into array of objects according to the types provided in the second argument.
      * All the parameters from <code>strings</code> array will be used.
      *
      * @param strings array of strings that hold the values
@@ -662,7 +686,7 @@ public abstract class Convert {
      * Returns type-safe constructors of the given class.
      * @param <E> the class for which to get the constructors
      * @param objectClass the class for which to get the constructors
-     * @param publicOnlyConstructors flag wheter to return all declared constructors (<tt>false</tt>) or only the public ones (<tt>true</tt>)
+     * @param publicOnlyConstructors flag whether to return all declared constructors (<tt>false</tt>) or only the public ones (<tt>true</tt>)
      * @return a list of constructors of the given class
      */
     @SuppressWarnings("unchecked")
@@ -889,7 +913,7 @@ public abstract class Convert {
      *
      * @param <K> the type of keys in the returned map
      * @param <V> the type of values in the returned map
-     * @param object the object that sould be cast to other type
+     * @param object the object that should be cast to other type
      * @param keysClass the class to cast the map keys to
      * @param valuesClass the class to cast the map values to
      * @throws ClassCastException if there was an incompatible key or value or the object is not {@link java.util.Map}
@@ -965,7 +989,7 @@ public abstract class Convert {
      * Returns an object from parameter table.
      * If the parameter table is <tt>null</tt> or if it does not contain
      * the parameter with the specified name, the default value is returned.
-     * Otherwise, the class of the parametr is checked and if it is not the
+     * Otherwise, the class of the parameter is checked and if it is not the
      * requested class (but it is a {@link String}), the {@link #stringToType}
      * conversion is tried.
      *
@@ -973,7 +997,7 @@ public abstract class Convert {
      * @param parameters the parameter table
      * @param paramName the name of parameter to get from the table; if there is no parameter of that 
      * @param paramClass the class to cast the value to
-     * @param defaultValue the deault value to return if there is no parameter
+     * @param defaultValue the default value to return if there is no parameter
      * @throws ClassCastException if there was an incompatible key or value or the object cannot be converted from string
      * @return a value from the parameter table
      */
@@ -999,7 +1023,7 @@ public abstract class Convert {
     }
 
     /**
-     * Replace all occurances of the variable pattern with the value from the hash table.
+     * Replace all occurrences of the variable pattern with the value from the hash table.
      * The specified pattern group is used the the variable name.
      *
      * @param string the string to be modified
@@ -1043,7 +1067,7 @@ public abstract class Convert {
 
     /**
      * Returns the today's specified time in miliseconds.
-     * @param time the time in "hh:mm:ss.iii" format (seconds and miliseconds are optional)
+     * @param time the time in {@code hh:mm:ss.iii} format (seconds and miliseconds are optional)
      * @return the today's specified time in miliseconds
      * @throws NumberFormatException if the specified time has invalid format
      */
@@ -1077,7 +1101,7 @@ public abstract class Convert {
             return calendar.getTimeInMillis();
         } catch (IllegalArgumentException e) {
             // The value for a field (message of the exception) was invalid
-            StringBuffer str = new StringBuffer("Value of ");
+            StringBuilder str = new StringBuilder("Value of ");
             str.append(e.getMessage().toLowerCase());
             str.append(" is invalid");
             throw new NumberFormatException(str.toString());
@@ -1085,7 +1109,7 @@ public abstract class Convert {
     }
 
     /**
-     * Returns a table of all values from the specified enum keyed by the enum value's name.
+     * Returns a table of all values from the specified enum keyed by the enum value name.
      * @param <E> the enum type
      * @param values the class of the enum for which to get the map
      * @return a table of all values from the specified enum

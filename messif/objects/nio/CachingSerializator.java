@@ -102,7 +102,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
      * @return the position in the cache
      * @throws IllegalArgumentException if the class has invalid constructor/factory method or there is already another class on this position
      */
-    protected int addToCache(Class<? extends BinarySerializable> classToAdd) throws IllegalArgumentException {
+    private int addToCache(Class<? extends BinarySerializable> classToAdd) throws IllegalArgumentException {
         // Get the constructor/factory method for the predefined class
         Constructor<?> selConstructor = getNativeSerializableConstructor(classToAdd);
         Method selFactoryMethod = getNativeSerializableFactoryMethod(classToAdd);
@@ -179,8 +179,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
             return position;
 
         // Other class
-        if (log.isLoggable(Level.INFO))
-            log.info("Consider using cache for class " + object.getClass());
+        log.log(Level.INFO, "Consider using cache for class {0}", object.getClass());
         return CLASSNAME_SERIALIZATION;
     }
 
@@ -205,7 +204,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
      * In particular, the other object must be CachingSerializator and have
      * the same cached classes.
      * @param obj the reference object with which to compare
-     * @return <code>true</code> if this serializator is the same as the obj
+     * @return <code>true</code> if this serializator is the same as the {@code obj}
      *          argument; <code>false</code> otherwise.
      */
     @Override
@@ -224,7 +223,12 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
 
     //****************** Serialization ******************//
 
-    /** Read this serializator from the object stream */
+    /**
+     * Read this serializator from the object stream
+     * @param in the stream to read this serialized object data from
+     * @throws IOException if there was a problem reading data from the stream
+     * @throws ClassNotFoundException if there was an instance of an unknown class in the stream
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
         // Proceed with standard deserialization first
         in.defaultReadObject();

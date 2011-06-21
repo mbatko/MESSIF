@@ -25,8 +25,10 @@ package messif.objects.util;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class RadiusRankedSortedCollection extends RankedSortedCollection {
+    /** class serial id for serialization */
+    private static final long serialVersionUID = 1L;
 
-    /** The maximal distance of the {@link RankedAbstrawctObjects} to be stored in this collection */
+    /** The maximal distance of the {@link RankedAbstractObject}s to be stored in this collection */
     private final float radius;
 
     /**
