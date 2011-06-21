@@ -194,9 +194,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * Constructs an empty database storage.
      *
      * @param storedObjectsClass the class of objects that the storage will work with
-     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
-     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
-     * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+     * @param dbConnection
      * @param tableName the name of the table in the database
      * @param primaryKeyColumn the name of the column that is the primary key of the table
      * @param columnNames the names of columns where the data are stored
@@ -205,8 +203,8 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @throws IllegalArgumentException if the column names and column convertors do not match
      * @throws SQLException if there was a problem connecting to the database
      */
-    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
-        super(dbConnUrl, dbConnInfo, dbDriverClass);
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, ExtendedDatabaseConnection dbConnection, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+        super(dbConnection);
 
         // Check provided values
         if (tableName == null)
@@ -272,6 +270,25 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         updateSQL = columnUpdateList.append(" where ").append(primaryKeyColumn).append(" = ?").toString();
         // Delete all
         deleteAllSQL = "delete from " + tableName;
+    }
+
+    /**
+     * Constructs an empty database storage.
+     *
+     * @param storedObjectsClass the class of objects that the storage will work with
+     * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+     * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+     * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+     * @param tableName the name of the table in the database
+     * @param primaryKeyColumn the name of the column that is the primary key of the table
+     * @param columnNames the names of columns where the data are stored
+     * @param columnConvertors the convertors that convert between the storage instances and database column;
+     *          there must be one convertor for every data column name from {@code columnNames}
+     * @throws IllegalArgumentException if the column names and column convertors do not match
+     * @throws SQLException if there was a problem connecting to the database
+     */
+    public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, String[] columnNames, ColumnConvertor<T>[] columnConvertors) throws IllegalArgumentException, SQLException {
+        this(storedObjectsClass, new ExtendedDatabaseConnectionPublic(dbConnUrl, dbConnInfo, dbDriverClass, true), tableName, primaryKeyColumn, columnNames, columnConvertors);
     }
 
     /**
@@ -392,7 +409,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @param object the instance that is converted to database columns using {@link #columnConvertors} (if <tt>null</tt> the parameters are not set)
      * @param returnGeneratedKeys flag whether to set the {@link java.sql.Statement#RETURN_GENERATED_KEYS} on the prepared statement
      * @return an executed prepared statement
-     * @throws SQLFeatureNotSupportedException if the {@link Statement#RETURN_GENERATED_KEYS} is not supported by the driver
+     * @throws SQLFeatureNotSupportedException if the {@link java.sql.Statement#RETURN_GENERATED_KEYS} is not supported by the driver
      * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
      * @throws BucketStorageException if there was an error converting a column value
      */

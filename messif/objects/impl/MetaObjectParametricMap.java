@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -134,7 +135,7 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
      *         EOFException is returned if end of the given stream is reached.
      */
     public MetaObjectParametricMap(BufferedReader stream, Set<String> restrictNames) throws IOException {
-        this(stream, restrictNames, null);
+        this(stream, restrictNames, new HashMap<String, Serializable>());
     }    
 
     /**
@@ -205,7 +206,7 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
     //****************** Text stream I/O ******************//
 
     @Override
-    protected void writeData(OutputStream stream) throws IOException {
+    protected void writeDataImpl(OutputStream stream) throws IOException {
         writeObjects(stream, writeObjectsHeader(stream, objects));
     }
 
