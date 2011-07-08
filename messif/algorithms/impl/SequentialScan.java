@@ -29,15 +29,12 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.PrecomputedDistancesFixedArrayFilter;
-import messif.operations.query.ApproxKNNQueryOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.data.DeleteOperation;
-import messif.operations.query.IncrementalNNQueryOperation;
 import messif.operations.data.InsertOperation;
 import messif.operations.QueryOperation;
-import messif.operations.query.RangeQueryOperation;
-import messif.operations.query.KNNQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 
 /**
  * Implementation of the naive sequential scan algorithm.
@@ -274,66 +271,20 @@ public class SequentialScan extends Algorithm {
     /**************************************************************/
     /******* SEARCH ALGORITHMS ************************************/
     /**************************************************************/
-    
+
     /**
-     * Performs the range search operation with given RangeQueryOperation object.
-     * The answer is held in the RangeQueryOperation object.
-     *
-     * @param operation The range query operation which carries the query object and radius as well as the response list.
+     * Evaluates a ranking single query object operation on this algorithm.
+     * Note that the operation is evaluated sequentially on all objects of this algorithm.
+     * @param operation the operation to evaluate
      */
-    public void rangeSearch(RangeQueryOperation operation) {
+    public void singleQueryObjectSearch(RankingSingleQueryOperation operation) {
         // If pivot-based filtering is required, store the distances from pivots.
         if (pivots != null)
             addPrecompDist(operation.getQueryObject());
         bucket.processQuery(operation);
         operation.endOperation();
     }
-    
-    
-    /**
-     * Performs the k-nearest neighbor search operation with given KNNQueryOperation object.
-     * The answer is held in the KNNQueryOperation object.
-     *
-     * @param operation The kNN query operation which carries the query object and k as well as the response list.
-     */
-    public void knnSearch(KNNQueryOperation operation) {
-        // If pivot-based filtering is required, store the distances from pivots.
-        if (pivots != null)
-            addPrecompDist(operation.getQueryObject());
-        bucket.processQuery(operation);
-        operation.endOperation();
-    }
-    
-    
-    /**
-     * Performs the incremental nearest neighbor search operation with given IncrementalNNQueryOperation object.
-     * The answer is held in the IncrementalNNQueryOperation object.
-     *
-     * @param operation The incremental NN query operation which carries the query object as well as the response list.
-     */
-    public void incrementalNNSearch(IncrementalNNQueryOperation operation) {
-        // If pivot-based filtering is required, store the distances from pivots.
-        if (pivots != null)
-            addPrecompDist(operation.getQueryObject());
-        bucket.processQuery(operation);
-        operation.endOperation();
-    }
-    
-    
-    /**
-     * Performs the approximate k-nearest neighbor search operation with given ApproxKNNQueryOperation object.
-     * The answer is held in the ApproxKNNQueryOperation object.
-     *
-     * @param operation The approximate kNN query operation which carries the query object and k as well as the response list.
-     */
-    public void approxKNNSearch(ApproxKNNQueryOperation operation) {
-        // If pivot-based filtering is required, store the distances from pivots.
-        if (pivots != null)
-            addPrecompDist(operation.getQueryObject());
-        bucket.processQuery(operation);
-        operation.endOperation();
-    }
-    
+
     /**
      * Performs a generic query operation.
      * Note that this method cannot provide precomputed distances.
@@ -346,7 +297,7 @@ public class SequentialScan extends Algorithm {
         bucket.processQuery(operation);
         operation.endOperation();
     }
-    
+
     /**
      * Converts the object to a string representation
      * @return String representation of this algorithm
