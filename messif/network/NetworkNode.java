@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import messif.utility.Convert;
 
 /**
  * Identification of a network node, that is able to communicate over network.
@@ -44,7 +45,7 @@ public class NetworkNode implements Serializable {
     /** class serial id for serialization */     
     private static final long serialVersionUID = 3L;
 
-    /****************** Attributes ******************/
+    //****************** Attributes ******************//
 
     /** IP address of this network node */
     protected InetAddress host;
@@ -60,7 +61,7 @@ public class NetworkNode implements Serializable {
     protected final Integer nodeID;
 
 
-    /****************** Attribute access ******************/
+    //****************** Attribute access ******************//
 
     /**
      * Returns the IP address of this network node.
@@ -97,7 +98,7 @@ public class NetworkNode implements Serializable {
     }
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
     /**
      * Creates a new instance of NetworkNode for the specified host, port and nodeID.
@@ -114,7 +115,6 @@ public class NetworkNode implements Serializable {
 
     /**
      * Creates a new instance of NetworkNode for the specified host, port and nodeID.
-     * 
      * 
      * @param host the FQDN address of the network node
      * @param port the TCP/UDP port of the network node
@@ -186,7 +186,7 @@ public class NetworkNode implements Serializable {
     /**
      * Creates a new instance of NetworkNode from string "host:port#node".
      * The port part is optional - a free port is then assigned by OS automatically.
-     * The node part is optional - if it is ommited, the nodeID is set to <tt>null</tt>.
+     * The node part is optional - if it is omitted, the nodeID is set to <tt>null</tt>.
      * 
      * 
      * @param hostPortNode the string to parse the NetworkNode from - its format should be "host", "host:port" or "host:port#node"
@@ -206,7 +206,7 @@ public class NetworkNode implements Serializable {
     }
 
 
-    /****************** Comparison override ******************/
+    //****************** Comparison override ******************//
 
     /**
      * Compares this network node with another object.
@@ -217,7 +217,7 @@ public class NetworkNode implements Serializable {
      * otherwise, the nodeID is ignored.
      *
      * @param obj the object to compare with
-     * @return <tt>true</tt> if this object is the same as the obj
+     * @return <tt>true</tt> if this object is the same as the {@code obj}
      *         argument; <code>false</code> otherwise.
      */
     @Override
@@ -236,7 +236,7 @@ public class NetworkNode implements Serializable {
     
     /**
      * Compare the address and port of actual network node with other network node's host and port.
-     * @param node the other network node to compare this netnode with
+     * @param node the other network node to compare this network node with
      * @return <code>true</code> if host and port of this network node is equal to the host and port of the netNode argument;
      *         <code>false</code> is returned otherwise
      */
@@ -254,7 +254,7 @@ public class NetworkNode implements Serializable {
     }
 
 
-    /****************** Serialization overrides ******************/
+    //****************** Serialization overrides ******************//
 
     /** Mapping table for translating original host names (optionally plus ports) to new ones */
     protected static Map<InetAddress, Map<Integer, NetworkNode>> netnodeMappingTable = null;
@@ -342,7 +342,10 @@ public class NetworkNode implements Serializable {
 
     /**
      * Deserialization method.
-     * Object is loaded as usuall, but its host (and optionally port) is changed according to the mapping table.
+     * Object is loaded as usual, but its host (and optionally port) is changed according to the mapping table.
+     * @param in the object stream from which to read the disk storage
+     * @throws IOException if there was an I/O error during deserialization
+     * @throws ClassNotFoundException if there was an unknown object in the stream
      */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
@@ -372,11 +375,10 @@ public class NetworkNode implements Serializable {
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(host.getHostName());
-        rtv.append(":").append(port);
-        if (nodeID != null)
-            rtv.append("#").append(nodeID);
-        return rtv.toString();
+        if (nodeID == null)
+            return Convert.inetAddressToString(host, port);
+        else
+            return Convert.inetAddressToString(host, port) + '#' + nodeID;
     }
     
 }
