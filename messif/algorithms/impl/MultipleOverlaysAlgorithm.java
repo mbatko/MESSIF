@@ -17,7 +17,6 @@
 package messif.algorithms.impl;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -119,8 +118,8 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      */
     public void addAlgorithm(String identifier, NetworkNode networkNode) throws AlgorithmMethodException {
         try {
-            RMIAlgorithm newAlgorithm = new RMIAlgorithm(networkNode);
-            log.info("adding: " + identifier + ": " + networkNode);
+            RMIAlgorithm newAlgorithm = new RMIAlgorithm(networkNode.getHost(), networkNode.getPort());
+            log.log(Level.INFO, "adding: {0}: {1}", new Object[]{identifier, networkNode});
             newAlgorithm.connect();
             log.info("... connected");
             overlays.put(identifier, newAlgorithm);
@@ -267,11 +266,11 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
                     LocalAbstractObject queryObject = objectClass.getConstructor(MetaObject.class).newInstance((MetaObject) approxOperation.getQueryObject());
 
                     ApproxKNNQueryOperationMIndex newOperation = new ApproxKNNQueryOperationMIndex(queryObject, approxOperation);
-                    log.info("processing operation: " + newOperation.toString());
+                    log.log(Level.INFO, "processing operation: {0}", newOperation.toString());
                     newOperation = pair.getValue().executeOperation(newOperation);
                     operation.updateFrom(newOperation);
 
-                    log.info("stats: " + pair.getValue().getOperationStatistics().printStatistics());
+                    log.log(Level.INFO, "stats: {0}", pair.getValue().getOperationStatistics().printStatistics());
 
                     return true;
                 } catch (Exception ex) {
