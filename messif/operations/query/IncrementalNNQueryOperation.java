@@ -22,7 +22,7 @@ import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.OperationErrorCode;
-import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 import messif.utility.ErrorCode;
 
 
@@ -49,14 +49,11 @@ import messif.utility.ErrorCode;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("incremental nearest neighbors query")
-public class IncrementalNNQueryOperation extends RankingQueryOperation {
+public class IncrementalNNQueryOperation extends RankingSingleQueryOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 2L;
 
     //****************** Attributes ******************//
-
-    /** kNN query object */
-    protected final LocalAbstractObject queryObject;
 
     /**
      * Minimum number of objects returned by this query.
@@ -106,21 +103,13 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Minimum number of nearest objects", "Answer type"})
     public IncrementalNNQueryOperation(LocalAbstractObject queryObject, int minNN, AnswerType answerType) {
-        this.queryObject = queryObject;
+        super(queryObject, answerType, false);
         this.minNN = minNN;
         this.nnAddedToAnswer = 0;
     }
 
 
     //****************** Attribute access ******************//
-
-    /**
-     * Returns the kNN query object.
-     * @return the kNN query object
-     */
-    public LocalAbstractObject getQueryObject() {
-        return queryObject;
-    }
 
     /**
      * Returns the minimum number of objects returned by this query.
@@ -172,9 +161,9 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
         this.nnAddedToAnswer = 0;
     }
 
-    
+
     //****************** Implementation of query evaluation ******************/
-    
+
     /**
      * Evaluate this query on a given set of objects.
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
@@ -189,12 +178,12 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
 
         // Iterate through all supplied objects
         while (objects.hasNext())
-            addToAnswer(queryObject, objects.next(), getAnswerThreshold());
+            addToAnswer(objects.next(), getAnswerThreshold());
 
         return getAnswerCount() - beforeSize;
     }
 
-    
+
     //****************** Overrides ******************//
 
     /**
@@ -207,23 +196,11 @@ public class IncrementalNNQueryOperation extends RankingQueryOperation {
     }
 
     @Override
-    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+    public RankedAbstractObject addToAnswer(LocalAbstractObject object, float distThreshold) {
+        RankedAbstractObject addedObject = super.addToAnswer(object, distThreshold);
         if (addedObject != null)
             nnAddedToAnswer++;
         return addedObject;
-    }
-
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        queryObject.clearSurplusData();
     }
 
 

@@ -20,7 +20,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 
 /**
  * K-nearest neighbors query operation.
@@ -32,15 +32,12 @@ import messif.operations.RankingQueryOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("k-nearest neighbors query")
-public class KNNQueryOperation extends RankingQueryOperation {
+public class KNNQueryOperation extends RankingSingleQueryOperation {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Attributes ******************//
-
-    /** Query object */
-    protected final LocalAbstractObject queryObject;
 
     /** Number of nearest objects to retrieve */
     protected final int k;
@@ -67,8 +64,7 @@ public class KNNQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Answer type"})
     public KNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
-        super(answerType, k);
-        this.queryObject = queryObject;
+        super(queryObject, answerType, k);
         this.k = k;
     }
 
@@ -82,21 +78,12 @@ public class KNNQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type"})
     public KNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType) {
-        super(answerType, k, storeMetaDistances);
-        this.queryObject = queryObject;
+        super(queryObject, answerType, k, storeMetaDistances);
         this.k = k;
     }
 
 
     //****************** Attribute access ******************//
-
-    /**
-     * Returns the query object of this k-NN query.
-     * @return the query object of this k-NN query
-     */
-    public LocalAbstractObject getQueryObject() {
-        return queryObject;
-    }
 
     /**
      * Returns the number of nearest objects to retrieve.
@@ -156,25 +143,10 @@ public class KNNQueryOperation extends RankingQueryOperation {
             if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
 
-            addToAnswer(queryObject, object, getAnswerThreshold());
+            addToAnswer(object, getAnswerThreshold());
         }
 
         return getAnswerCount() - beforeCount;
-    }
-    
-
-    //****************** Overrides ******************//
-    
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        queryObject.clearSurplusData();
     }
 
 

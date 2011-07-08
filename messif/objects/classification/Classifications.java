@@ -87,7 +87,9 @@ public abstract class Classifications {
      * @throws ClassCastException if the given object does not implement the {@link ClassificationWithConfidence} interface or the categories are represented by a different class
      */
     public static <C> ClassificationWithConfidence<C> convertToClassificationWithConfidence(Object object, Class<? extends C> categoriesClass, float confidence, float lowestConfidence, float highestConfidence) {
-        if (object instanceof ClassificationWithConfidence) {
+        if (object == null) {
+            return null;
+        } else if (object instanceof ClassificationWithConfidence) {
             return new ClassificationWithConfidenceBase<C>(categoriesClass, lowestConfidence, highestConfidence).
                     addAll((ClassificationWithConfidence<C>)castToClassification(object, categoriesClass));
         } else if (object instanceof Classification) { // It is not a classification with confidence, so the confidence is added

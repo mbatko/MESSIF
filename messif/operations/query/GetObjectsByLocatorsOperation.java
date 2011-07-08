@@ -26,7 +26,7 @@ import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 
 /**
  * This operation returns objects with given locators.
@@ -36,7 +36,7 @@ import messif.operations.RankingQueryOperation;
   * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
 */
 @AbstractOperation.OperationName("Get objects by locators")
-public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
+public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 3L;
 
@@ -44,9 +44,6 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
 
     /** The locators of the desired objects */
     protected final Set<String> locators;
-
-    /** The object to compute distances to; if <tt>null</tt>, UNKNOWN_DISTANCE will be used in answer */
-    protected final LocalAbstractObject queryObjectForDistances;
 
 
     //****************** Constructors ******************//
@@ -61,9 +58,8 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Answer type", "Limit for number of objects in answer"})
     public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerSize) {
-        super(answerType, maxAnswerSize);
+        super(queryObjectForDistances, answerType, maxAnswerSize);
         this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
-        this.queryObjectForDistances = queryObjectForDistances;
     }
 
     /**
@@ -152,7 +148,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         case 0:
             return locators;
         case 1:
-            return queryObjectForDistances;
+            return queryObject;
         default:
             throw new IndexOutOfBoundsException("GetObjectsByLocatorsOperation has only one argument");
         }
@@ -164,15 +160,7 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return queryObjectForDistances == null ? 1 : 2;
-    }
-
-    /**
-     * Returns the object the distance to which is used for the answer rank.
-     * @return the query object of this ranking query
-     */
-    public LocalAbstractObject getQueryObject() {
-        return queryObjectForDistances;
+        return queryObject == null ? 1 : 2;
     }
 
     /**
@@ -228,8 +216,8 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
         try {
             while (!locators.isEmpty()) {
                 LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-                if (queryObjectForDistances != null)
-                    addToAnswer(queryObjectForDistances, object, LocalAbstractObject.MAX_DISTANCE);
+                if (queryObject != null)
+                    addToAnswer(object);
                 else
                     addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
                 count++;
@@ -250,21 +238,6 @@ public class GetObjectsByLocatorsOperation extends RankingQueryOperation {
     @Override
     public Class<? extends RankedAbstractObject> getAnswerClass() {
         return RankedAbstractObject.class;
-    }
-
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-
-        // Clear query object if there is one
-        if (queryObjectForDistances != null)
-            queryObjectForDistances.clearSurplusData();
     }
 
 

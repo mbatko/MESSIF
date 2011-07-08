@@ -63,7 +63,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
 
     /** Supplemental data object associated with this operation instance */
     public Object suppData = null;
-    /** An universaly unique identification of the operation */
+    /** An universally unique identification of the operation */
     private final UUID operID = UUID.randomUUID();
     /** Additional parameters for this operation */
     private Map<String, Serializable> additionalParameters;
@@ -442,15 +442,16 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * They are added in the same order as in the constructor.
      * Leading space is added.
      * @param str the string to add the arguments to
+     * @return the passed {@link StringBuilder} to allow chaining 
      */
-    protected void appendArguments(StringBuilder str) {
+    protected StringBuilder appendArguments(StringBuilder str) {
         if (getArgumentCount() <= 0)
-            return;
+            return str;
         str.append(" <");
-        str.append(getArgument(0));
+        str.append(getArgumentString(0));
         for (int i = 1; i < getArgumentCount(); i++)
-            str.append(", ").append(getArgument(i));
-        str.append('>');
+            str.append(", ").append(getArgumentString(i));
+        return str.append('>');
     }
 
     /**
@@ -647,7 +648,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
      */
     public static String getConstructorDescription(Class<? extends AbstractOperation> operationClass) throws NoSuchMethodException {
-        StringBuffer rtv = new StringBuffer();
+        StringBuilder rtv = new StringBuilder();
         rtv.append(operationClass.getName());
         for (String argdesc : getConstructorArgumentDescriptions(operationClass))
             rtv.append(" <").append(argdesc).append(">");
@@ -687,6 +688,18 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      */
     public Object getArgument(int index) throws IndexOutOfBoundsException, UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation doesn't support construction argument retrieval");
+    }
+
+    /**
+     * Returns the string representation of an argument that was passed while constructing instance.
+     * If the argument is not stored within operation, <tt>null</tt> is returned.
+     * @param index zero-based index of an argument passed to constructor
+     * @return argument that was passed while constructing instance
+     * @throws IndexOutOfBoundsException if index parameter is out of range
+     * @throws UnsupportedOperationException if this operation doesn't support construction argument retrieval
+     */
+    public String getArgumentString(int index) throws IndexOutOfBoundsException, UnsupportedOperationException {
+        return String.valueOf(getArgument(index));
     }
 
     /**

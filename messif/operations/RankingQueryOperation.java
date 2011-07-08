@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
-import messif.objects.util.DistanceRanked;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
@@ -36,8 +34,8 @@ import messif.utility.ErrorCode;
  * distance to the query object.
  * 
  * <p>
- * Each object in the answer must implement a {@link DistanceRanked} interface
- * that provides access to the distance of the particular answer.
+ * Each object in the answer is a {@link RankedAbstractObject}
+ * that provides access to the distance and the object of the particular answer.
  * Note that the distance only makes sense in the context of a query.
  * </p>
  * 
@@ -47,15 +45,13 @@ import messif.utility.ErrorCode;
  */
 public abstract class RankingQueryOperation extends QueryOperation<RankedAbstractObject> {
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** Attributes ******************//
 
     /** Set holding the answer of this query */
     private RankedSortedCollection answer;
 
-    /** Flag whether to store sub-distances for metaobjects */
-    private final boolean storeMetaDistances;
 
     //****************** Constructor ******************//
 
@@ -80,43 +76,37 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Creates a new instance of RankingQueryOperation.
+     * Unlimited number of objects can be added to the answer.
      * @param answerType the type of objects this operation stores in its answer
-     * @param maxAnswerSize sets the maximal answer size
      * @throws IllegalArgumentException if the maximal answer size is negative
      */
-    protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize) throws IllegalArgumentException {
-        this(answerType, maxAnswerSize, false);
+    protected RankingQueryOperation(AnswerType answerType) throws IllegalArgumentException {
+        this(answerType, Integer.MAX_VALUE);
     }
 
     /**
      * Creates a new instance of RankingQueryOperation.
      * @param answerType the type of objects this operation stores in its answer
      * @param maxAnswerSize sets the maximal answer size
-     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
-     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
      * @throws IllegalArgumentException if the maximal answer size is negative
      */
-    protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) throws IllegalArgumentException {
-        this(answerType, 
-             ((maxAnswerSize < Integer.MAX_VALUE) ? new RankedSortedCollection(maxAnswerSize, maxAnswerSize) : new RankedSortedCollection()), 
-             storeMetaDistances);
+    protected RankingQueryOperation(AnswerType answerType, int maxAnswerSize) throws IllegalArgumentException {
+        this(answerType, ((maxAnswerSize < Integer.MAX_VALUE) ? new RankedSortedCollection(maxAnswerSize, maxAnswerSize) : new RankedSortedCollection()));
     }
 
     /**
      * Creates a new instance of RankingQueryOperation.
      * @param answerType the type of objects this operation stores in its answer
      * @param answerCollection collection to be used as answer (it must be empty, otherwise it will be cleared)
-     * @param storeMetaDistances if <tt>true</tt>, all processed {@link MetaObject meta objects} will
-     *          store their {@link RankedAbstractMetaObject sub-distances} in the answer
      * @throws NullPointerException if the passed collection is <code>null</code>
      */
-    protected RankingQueryOperation(AnswerType answerType, RankedSortedCollection answerCollection, boolean storeMetaDistances) {
+    protected RankingQueryOperation(AnswerType answerType, RankedSortedCollection answerCollection) {
         super(answerType);
-        this.storeMetaDistances = storeMetaDistances;
         if (!answerCollection.isEmpty())
             answerCollection.clear();
         this.answer = answerCollection;
     }
+
 
     //****************** Clonning ******************//
     
@@ -264,35 +254,6 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     public float getAnswerThreshold() {
         return answer.getThresholdDistance();
-    }
-
-    /**
-     * Returns <tt>true</tt> if sub-distances for metaobjects are stored in the answer.
-     * @return <tt>true</tt> if sub-distances for metaobjects are stored in the answer
-     */
-    public boolean isStoringMetaDistances() {
-        return storeMetaDistances;
-    }
-    
-    /**
-     * Add an object to the answer. The rank of the object is computed automatically
-     * as a distance between the query object and the specified object.
-     * 
-     * @param queryObject the query object against which to compute the distance (rank)
-     * @param object the object to add
-     * @param distThreshold the threshold on distance;
-     *      if the computed distance exceeds the threshold (sharply),
-     *      the object is not added to the answer
-     * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
-     */
-    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        if (object == null)
-            return null;
-        float[] metaDistances = storeMetaDistances?queryObject.createMetaDistancesHolder():null;
-        float distance = queryObject.getDistance(object, metaDistances, distThreshold);
-        if (distance > distThreshold)
-            return null;
-        return addToAnswer(object, distance, metaDistances);
     }
 
     /**

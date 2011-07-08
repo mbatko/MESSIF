@@ -25,86 +25,95 @@ import messif.operations.AnswerType;
 import messif.operations.RankingMultiQueryOperation;
 
 /**
- * K-nearest neighbors query operation with multiple query objects.
- * Retrieves <code>k</code> objects that are nearest to the specified query objects
- * (according to the distance measure).
+ * Range query operation with multiple query objects.
+ * Retrieves all objects that have their distances to the specified query objects
+ * less than or equal to the specified radius.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-@AbstractOperation.OperationName("KNN multi-object query")
-public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
+@AbstractOperation.OperationName("Range multi-object query")
+public class RangeMultiQueryOperation extends RankingMultiQueryOperation {
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 1L;
 
     //****************** Attributes ******************//
 
-    /** Number of nearest objects to retrieve */
-    private final int k;
+    /** Range query radius */
+    protected final float radius;
 
 
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of KNNMultiQueryOperation for given query objects and maximal number of objects to return.
+     * Creates a new instance of RangeMultiQueryOperation for given query objects and radius.
      * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
      * The distance function is {@link DistanceFunctionMultiObjectAggregation#SUM sum aggregation}.
      * @param queryObjects the objects to which the nearest neighbors are searched
-     * @param k the number of nearest neighbors to retrieve
+     * @param radius the query radius
      */
-    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects"})
-    public KNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k) {
-        this(queryObjects, k, DistanceFunctionMultiObjectAggregation.SUM);
+    @AbstractOperation.OperationConstructor({"Query objects", "Radius"})
+    public RangeMultiQueryOperation(LocalAbstractObject[] queryObjects, float radius) {
+        this(queryObjects, radius, DistanceFunctionMultiObjectAggregation.SUM);
     }
 
     /**
-     * Creates a new instance of KNNMultiQueryOperation for given query objects and maximal number of objects to return.
+     * Creates a new instance of RangeMultiQueryOperation for given query objects and radius.
      * Objects added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
      * @param queryObjects the objects to which the nearest neighbors are searched
-     * @param k the number of nearest neighbors to retrieve
+     * @param radius the query radius
      * @param distanceFunction the distance function for computing the distances between a data object and all query objects
      */
-    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Distance aggregation function"})
-    public KNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
-        this(queryObjects, k, AnswerType.NODATA_OBJECTS, distanceFunction);
+    @AbstractOperation.OperationConstructor({"Query objects", "Radius", "Distance aggregation function"})
+    public RangeMultiQueryOperation(LocalAbstractObject[] queryObjects, float radius, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
+        this(queryObjects, radius, AnswerType.NODATA_OBJECTS, distanceFunction);
     }
 
     /**
-     * Creates a new instance of KNNMultiQueryOperation for given query objects and maximal number of objects to return.
+     * Creates a new instance of RangeMultiQueryOperation for given query objects and radius.
      * @param queryObjects the objects to which the nearest neighbors are searched
-     * @param k the number of nearest neighbors to retrieve
+     * @param radius the query radius
      * @param answerType the type of objects this operation stores in its answer
      * @param distanceFunction the distance function for computing the distances between a data object and all query objects
      */
-    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Answer type", "Distance aggregation function"})
-    public KNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, AnswerType answerType, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
-        this(queryObjects, k, false, answerType, distanceFunction);
+    @AbstractOperation.OperationConstructor({"Query objects", "Radius", "Answer type", "Distance aggregation function"})
+    public RangeMultiQueryOperation(LocalAbstractObject[] queryObjects, float radius, AnswerType answerType, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
+        this(queryObjects, radius, false, answerType, distanceFunction);
     }
 
     /**
-     * Creates a new instance of KNNMultiQueryOperation for given query objects and maximal number of objects to return.
+     * Creates a new instance of RangeMultiQueryOperation for given query objects and radius.
      * @param queryObjects the objects to which the nearest neighbors are searched
-     * @param k the number of nearest neighbors to retrieve
+     * @param radius the query radius
      * @param storedIndividualDistances if <tt>true</tt>, all distances between the data object and all query objects are
      *          stored in {@link messif.objects.util.RankedAbstractMetaObject sub-distances}
      * @param answerType the type of objects this operation stores in its answer
      * @param distanceFunction the distance function for computing the distances between a data object and all query objects
      */
-    public KNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
-        super(queryObjects, distanceFunction, storedIndividualDistances, answerType, k);
-        this.k = k;
+    @AbstractOperation.OperationConstructor({"Query objects", "Radius", "Store individual obj-queries distances?", "Answer type", "Distance aggregation function"})
+    public RangeMultiQueryOperation(LocalAbstractObject[] queryObjects, float radius, boolean storedIndividualDistances, AnswerType answerType, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
+        super(queryObjects, distanceFunction, storedIndividualDistances, answerType);
+        this.radius = radius;
     }
 
 
     //****************** Attribute access ******************//
 
     /**
-     * Returns the number of nearest objects to retrieve.
-     * @return the number of nearest objects to retrieve
+     * Returns the radius of this range query.
+     * @return the radius of this range query
      */
-    public int getK() {
-        return k;
+    public float getRadius() {
+        return this.radius;
+    }
+
+    @Override
+    public float getAnswerThreshold() {
+        float dist = super.getAnswerThreshold();
+        if (dist > radius)
+            return radius;
+        return dist;
     }
 
     @Override
@@ -113,7 +122,7 @@ public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
         case 0:
             return getQueryObjects();
         case 1:
-            return k;
+            return radius;
         case 2:
             return getDistanceFunction();
         default:
@@ -146,9 +155,9 @@ public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
     @Override
     protected boolean dataEqualsImpl(AbstractOperation obj) {
         // The argument obj is always kNNQueryOperation or its descendant, because it has only abstract ancestors
-        KNNMultiQueryOperation castObj = (KNNMultiQueryOperation)obj;
+        RangeMultiQueryOperation castObj = (RangeMultiQueryOperation)obj;
 
-        if (k != castObj.k)
+        if (radius != castObj.radius)
             return false;
 
         return super.dataEquals(obj);
@@ -156,7 +165,7 @@ public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
 
     @Override
     public int dataHashCode() {
-        return super.dataHashCode() + k;
+        return super.dataHashCode() + Float.floatToIntBits(radius);
     }
 
 }

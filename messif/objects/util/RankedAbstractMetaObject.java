@@ -49,7 +49,7 @@ public class RankedAbstractMetaObject extends RankedAbstractObject {
      */
     public RankedAbstractMetaObject(AbstractObject object, float distance, float[] subDistances) {
         super(object, distance);
-        this.subDistances = subDistances;
+        this.subDistances = subDistances.clone();
     }
 
 

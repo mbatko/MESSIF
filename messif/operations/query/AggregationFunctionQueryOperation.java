@@ -22,7 +22,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AggregationFunction;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 
 
 /**
@@ -38,15 +38,12 @@ import messif.operations.RankingQueryOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Aggregation-function query")
-public class AggregationFunctionQueryOperation extends RankingQueryOperation {
+public class AggregationFunctionQueryOperation extends RankingSingleQueryOperation {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 29601L;
 
     //****************** Attributes ******************//
-
-    /** Query object (accessible directly) */
-    protected final MetaObject queryObject;
 
     /** Number of nearest (top) objects to retrieve */
     protected final int k;
@@ -85,8 +82,7 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Aggregation function", "Answer type", "store also the sub-distances?"})
     public AggregationFunctionQueryOperation(LocalAbstractObject queryObject, int k, AggregationFunction aggregationFunction, AnswerType answerType, boolean storeMetaDistances) {
-        super(answerType, k, storeMetaDistances);
-        this.queryObject = (MetaObject)queryObject;
+        super((MetaObject)queryObject, answerType, k, storeMetaDistances);
         this.k = k;
         this.aggregationFunction = aggregationFunction;
     }
@@ -125,8 +121,9 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
      * Returns the query (meta) object of this query operation.
      * @return the query (meta) object of this query operation
      */
+    @Override
     public MetaObject getQueryObject() {
-        return queryObject;
+        return (MetaObject)super.getQueryObject();
     }
 
     /**
@@ -159,39 +156,21 @@ public class AggregationFunctionQueryOperation extends RankingQueryOperation {
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {
         int beforeCount = getAnswerCount();
 
+        // Prepare array for subdistances
+        float[] descriptorDistances = isStoringMetaDistances() ? new float[aggregationFunction.getParameterNames().length] : null;
+
         while (objects.hasNext()) {
             // Get current object
             MetaObject object = (MetaObject)objects.next();
 
-            // Prepare array for subdistances
-            float[] descriptorDistances;
-            if (isStoringMetaDistances())
-                descriptorDistances = new float[aggregationFunction.getParameterNames().length];
-            else
-                descriptorDistances = null;
-
             // Compute overall distance (the object must be MetaObject otherwise ClassCastException is thrown)
-            float distance = aggregationFunction.getDistance(queryObject, object, descriptorDistances);
+            float distance = aggregationFunction.getDistance(getQueryObject(), object, descriptorDistances);
 
             // Object satisfies the query (i.e. distance is smaller than radius)
             addToAnswer(object, distance, descriptorDistances);
         }
 
         return getAnswerCount() - beforeCount;
-    }
-
-    //****************** Overrides ******************//
-
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        queryObject.clearSurplusData();
     }
 
 

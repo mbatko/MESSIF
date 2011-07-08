@@ -18,10 +18,9 @@ package messif.operations.query;
 
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 
 /**
  * Range query operation.
@@ -33,15 +32,13 @@ import messif.operations.RankingQueryOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Range query")
-public class RangeQueryOperation extends RankingQueryOperation {
+public class RangeQueryOperation extends RankingSingleQueryOperation {
 
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
     //****************** Attributes ******************//
 
-    /** Range query object */
-    protected final LocalAbstractObject queryObject;
     /** Range query radius */
     protected final float radius;
 
@@ -92,7 +89,8 @@ public class RangeQueryOperation extends RankingQueryOperation {
      *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
      */
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, boolean storeMetaDistances) {
-        this(queryObject, radius, answerType, Integer.MAX_VALUE, storeMetaDistances);
+        super(queryObject, answerType, storeMetaDistances);
+        this.radius = radius;
     }
 
     /**
@@ -104,7 +102,8 @@ public class RangeQueryOperation extends RankingQueryOperation {
      */
     // This cannot have annotation, since it has also three parameters
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, int maxAnswerSize) {
-        this(queryObject, radius, AnswerType.NODATA_OBJECTS, maxAnswerSize);
+        super(queryObject, maxAnswerSize);
+        this.radius = radius;
     }
 
     /**
@@ -116,7 +115,8 @@ public class RangeQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize) {
-        this(queryObject, radius, answerType, maxAnswerSize, false);
+        super(queryObject, answerType, maxAnswerSize);
+        this.radius = radius;
     }
 
     /**
@@ -130,21 +130,12 @@ public class RangeQueryOperation extends RankingQueryOperation {
      */
     @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size", "Store the meta-object subdistances?"})
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) {
-        super(answerType, maxAnswerSize, storeMetaDistances);
-        this.queryObject = queryObject;
+        super(queryObject, answerType, maxAnswerSize, storeMetaDistances);
         this.radius = radius;
     }
 
 
     //****************** Attribute access ******************//
-
-    /**
-     * Returns the query object of this range query.
-     * @return the query object of this range query
-     */
-    public LocalAbstractObject getQueryObject() {
-        return queryObject;
-    }
 
     /**
      * Returns the radius of this range query.
@@ -154,14 +145,6 @@ public class RangeQueryOperation extends RankingQueryOperation {
         return this.radius;
     }
 
-    /**
-     * Returns the threshold distance for the current answer of this query.
-     * If the answer has not reached the maximal size (specified in constructor) yet,
-     * {@link #getRadius()} is returned.
-     * Otherwise, the distance of the last answer's object is returned.
-     * @return the distance to last object in the answer or
-     *         {@link #getRadius()} if there are not enough objects.
-     */
     @Override
     public float getAnswerThreshold() {
         float dist = super.getAnswerThreshold();
@@ -220,34 +203,10 @@ public class RangeQueryOperation extends RankingQueryOperation {
             if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
 
-            addToAnswer(queryObject, object, getRadius());
+            addToAnswer(object, getRadius());
         }
 
         return getAnswerCount() - beforeCount;
-    }
-
-
-    //****************** Overrides ******************//
-
-    /**
-     * Returns the class of objects this operation stores in its answer.
-     * @return the class of objects this operation stores in its answer
-     */
-    @Override
-    public Class<? extends RankedAbstractObject> getAnswerClass() {
-        return RankedAbstractObject.class;
-    }
-
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        queryObject.clearSurplusData();
     }
 
 

@@ -82,10 +82,16 @@ public class GetRandomObjectsQueryOperation extends ListingQueryOperation {
         return 1;
     }
 
-    /** Returns the number of objects to be returned by this operation */
+    /**
+     * Returns the number of objects to be returned by this operation.
+     * Note that this is the requested number, the actual number of objects
+     * returned is provided by {@link #getAnswerCount()}.
+     * @return the number of objects to be returned by this operation
+     */
     public int getCount() {
         return count;
     }
+
 
     //****************** Default implementation of query evaluation ******************//
 

@@ -226,26 +226,42 @@ public abstract class Convert {
     }
 
     /**
+     * Returns a string serialization of the given {@code array}.
+     * @param array the array object to convert
+     * @param deep if <tt>true</tt>, the {@link #typeToString(java.lang.Object)}
+     *       method is applied to array items, otherwise a simple {@link Object#toString()} is used
+     * @return a string representation of the array
+     * @throws IllegalArgumentException if the argument is not an array
+     */
+    public static String arrayToString(Object array, boolean deep) throws IllegalArgumentException {
+        int size = Array.getLength(array);
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            if (i > 0)
+                str.append(',');
+            if (deep)
+                str.append(typeToString(Array.get(array, i)));
+            else
+                str.append(Array.get(array, i));
+        }
+        return str.toString();
+    }
+
+    /**
      * Returns a string serialization of the given {@code object}.
      * Note that the {@link #stringToType} methods are able to convert the object back.
      * @param object the object to convert
      * @return a string serialization of the object
      */
     public static String typeToString(Object object) {
+        if (object == null)
+            return "null";
         if (object instanceof Number || object instanceof Character || object instanceof Boolean || object instanceof String)
             return object.toString();
         if (object instanceof TextSerializable)
             return ((TextSerializable)object).toString();
-        if (object.getClass().isArray()) {
-            int size = Array.getLength(object);
-            StringBuilder str = new StringBuilder();
-            for (int i = 0; i < size; i++) {
-                if (i > 0)
-                    str.append(',');
-                str.append(typeToString(Array.get(object, i)));
-            }
-            return str.toString();
-        }
+        if (object.getClass().isArray())
+            return arrayToString(object, true);
         throw new IllegalArgumentException("Class " + object.getClass().getName() + " cannot be serialized to string");
     }
 
