@@ -28,6 +28,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -245,6 +246,18 @@ public abstract class Convert {
                 str.append(Array.get(array, i));
         }
         return str.toString();
+    }
+
+    /**
+     * Returns a string representation of the given IP address and port.
+     * @param host the IP address to convert
+     * @param port the port to convert (zero or negative port is ignored)
+     * @return a string representation of the given IP address and port
+     */
+    public static String inetAddressToString(InetAddress host, int port) {
+        if (port <= 0)
+            return host.getHostName();
+        return new StringBuilder(host.getHostName()).append(":").append(port).toString();
     }
 
     /**
