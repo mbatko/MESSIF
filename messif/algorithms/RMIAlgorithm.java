@@ -29,9 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import messif.objects.LocalAbstractObject;
-import messif.network.NetworkNode;
 import messif.operations.AbstractOperation;
 import messif.statistics.OperationStatistics;
+import messif.utility.Convert;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
@@ -73,7 +73,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @param connectionRetries the number of reconnection tries if the RMI connection fails
      */
     public RMIAlgorithm(InetAddress host, int port, int connectionRetries) {
-        super(new NetworkNode(host, port).toString());
+        super(Convert.inetAddressToString(host, port));
         this.host = host;
         this.port = port;
         this.connectionRetries = connectionRetries;
@@ -108,15 +108,6 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
     @AlgorithmConstructor(description = "creates an RMI algorithm stub", arguments = {"host", "RMI port"})
     public RMIAlgorithm(String host, int port) throws UnknownHostException {
         this(InetAddress.getByName(host), port);
-    }
-
-    /**
-     * Creates a new instance of RMI algorithm.
-     * @param networkNode host + RMI port of the remote algorithm
-     */
-    @AlgorithmConstructor(description = "creates an RMI algorithm stub", arguments = {"network node"})
-    public RMIAlgorithm(NetworkNode networkNode) {
-        this(networkNode.getHost(), networkNode.getPort());
     }
 
     @Override
@@ -188,7 +179,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
 
     /**
      * Executes a given method on the remote algorithm and returns result.
-     * If an I/O error occurrs during the communication, the connection is tried
+     * If an I/O error occurs during the communication, the connection is tried
      * to be reestablished for <code>reconnectRetries</code> times. After that
      * an {@link IllegalStateException} is thrown.
      * Note that the result returned might be an exception.

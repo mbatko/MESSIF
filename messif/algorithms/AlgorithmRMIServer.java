@@ -44,7 +44,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  */
 public class AlgorithmRMIServer extends Thread {
     /** Logger */
-    private static Logger log = Logger.getLogger("rmi");
+    private static final Logger log = Logger.getLogger("rmi");
 
     /** Incoming connections socket */
     private final ServerSocketChannel socket;
@@ -109,7 +109,7 @@ public class AlgorithmRMIServer extends Thread {
                                 try {
                                     methodArguments = (Object[]) in.readUnshared();
                                 } catch (ClassNotFoundException e) {
-                                    log.severe("Received unknown class from RMI client: " + e.getMessage());
+                                    log.log(Level.SEVERE, "Received unknown class from RMI client: {0}", e.getMessage());
                                     out.writeUnshared(e);
                                     break;
                                 }
@@ -135,7 +135,7 @@ public class AlgorithmRMIServer extends Thread {
                         } catch (EOFException e) {
                             // Connection closed, exiting
                         } catch (IOException e) {
-                            log.warning("Error communicating with RMI client: " + e);
+                            log.log(Level.WARNING, "Error communicating with RMI client: {0}", e);
                         } finally {
                             // ignore exceptions when closing
                             try {
