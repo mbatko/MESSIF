@@ -112,8 +112,8 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
     //****************** Answer methods ******************//
 
     @Override
-    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
-        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+    public RankedAbstractObject addToAnswer(LocalAbstractObject object, float distThreshold) {
+        RankedAbstractObject addedObject = super.addToAnswer(object, distThreshold);
         if (addedObject != null && currentPartition != null)
             currentPartition.add(addedObject);
 

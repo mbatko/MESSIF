@@ -134,12 +134,12 @@ public class PartitionedKNNQueryOperation extends KNNQueryOperation {
     //****************** Answer methods ******************//
 
     @Override
-    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+    public RankedAbstractObject addToAnswer(LocalAbstractObject object, float distThreshold) {
         // Remember the last object in the answer, if the answer is full
         RankedAbstractObject lastObject = isAnswerFull()?getLastAnswer():null;
 
         // Call the actuall add-to-answer
-        RankedAbstractObject addedObject = super.addToAnswer(queryObject, object, distThreshold);
+        RankedAbstractObject addedObject = super.addToAnswer(object, distThreshold);
 
         // If there was an object inserted
         if (addedObject != null) {

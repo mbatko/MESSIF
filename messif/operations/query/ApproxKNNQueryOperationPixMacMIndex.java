@@ -23,7 +23,6 @@ import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardPowerSor
 import messif.objects.impl.MetaObjectPixMacShapeAndColor.KeywordsJaccardSortedCollection;
 import messif.objects.util.DoubleSortedCollection;
 import messif.objects.util.RankedAbstractObject;
-import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
@@ -85,12 +84,12 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
     }
 
     @Override
-    public RankedAbstractObject addToAnswer(LocalAbstractObject queryObject, LocalAbstractObject object, float distThreshold) {
+    public RankedAbstractObject addToAnswer(LocalAbstractObject object, float distThreshold) {
         if (collection == null)
-            return super.addToAnswer(queryObject, object, distThreshold);
+            return super.addToAnswer(object, distThreshold);
         if (object == null)
             return null;
-        float distance = queryObject.getDistance(object, distThreshold);
+        float distance = getQueryObject().getDistance(object, distThreshold);
 
         // Create ranked object with new distance
         try {

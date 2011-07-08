@@ -42,7 +42,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
 /**
  * Similarity join query operation evaluated using range queries on an external index.
  * 
- * It works as documented at {@link #evaluateSerially(messif.objects.util.AbstractObjectIterator) }.
+ * It works as documented at {@link #evaluateSerially}.
  * 
  * See {@link JoinQueryOperation} for details.
  * 
