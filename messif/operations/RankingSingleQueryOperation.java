@@ -158,7 +158,8 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        queryObject.clearSurplusData();
+        if (queryObject != null)
+            queryObject.clearSurplusData();
     }
 
     /**
@@ -174,6 +175,8 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     public RankedAbstractObject addToAnswer(LocalAbstractObject object, float distThreshold) {
         if (object == null)
             return null;
+        if (queryObject == null)
+            return addToAnswer(object);
         float[] metaDistances = storeMetaDistances ? queryObject.createMetaDistancesHolder() : null;
         float distance = queryObject.getDistance(object, metaDistances, distThreshold);
         if (distance > distThreshold)
