@@ -35,11 +35,9 @@ import messif.operations.AbstractOperation;
 
 /**
  * Encapsulates a given {@link HttpApplicationProcessor} and returns its
- * value as {@link SimpleResponseText} or {@link SimpleResponseXml}.
- * Note that the value returned by the processor is converted to text using
- * {@link Object#toString()}.
+ * value according to {@link HttpApplicationOutputType}.
  * If the processor throws an exception, it is captured and returned as
- * text response too.
+ * an {@link HttpApplicationOutputType#respondHttpExchangeException(com.sun.net.httpserver.HttpExchange, java.lang.Exception) error output response}.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
