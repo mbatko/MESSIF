@@ -130,7 +130,7 @@ public class IncrementalNNQueryOperation extends RankingSingleQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return minNN;
         default:
@@ -217,7 +217,7 @@ public class IncrementalNNQueryOperation extends RankingSingleQueryOperation {
         // The argument obj is always kNNQueryOperation or its descendant, because it has only abstract ancestors
         IncrementalNNQueryOperation castObj = (IncrementalNNQueryOperation)obj;
 
-        if (!queryObject.dataEquals(castObj.queryObject))
+        if (!getQueryObject().dataEquals(castObj.getQueryObject()))
             return false;
 
         return minNN == castObj.minNN;
@@ -229,7 +229,7 @@ public class IncrementalNNQueryOperation extends RankingSingleQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return (queryObject.dataHashCode() << 8) + minNN;
+        return (getQueryObject().dataHashCode() << 8) + minNN;
     }
 
 }

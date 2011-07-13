@@ -39,7 +39,7 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     //****************** Attributes ******************//
 
     /** Query object */
-    protected final LocalAbstractObject queryObject;
+    private LocalAbstractObject queryObject;
 
     /** Flag whether to store sub-distances for metaobjects */
     private final boolean storeMetaDistances;
@@ -146,6 +146,24 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     public boolean isStoringMetaDistances() {
         return storeMetaDistances;
     }
+
+
+    //****************** Clonning ******************//
+
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not cloned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public RankingSingleQueryOperation clone() throws CloneNotSupportedException {
+        RankingSingleQueryOperation operation = (RankingSingleQueryOperation)super.clone();
+        operation.queryObject = operation.queryObject.clone();
+        return operation;
+    }
+
 
     //****************** Overrides ******************//
 

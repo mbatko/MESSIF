@@ -164,7 +164,7 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return radius;
         default:
@@ -200,7 +200,7 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
+            if (getQueryObject().excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
 
             addToAnswer(object, getRadius());
@@ -223,7 +223,7 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
         // The argument obj is always RangeQueryOperation or its descendant, because it has only abstract ancestors
         RangeQueryOperation castObj = (RangeQueryOperation)obj;
 
-        if (!queryObject.dataEquals(castObj.queryObject))
+        if (!getQueryObject().dataEquals(castObj.getQueryObject()))
             return false;
 
         return radius == castObj.radius;
@@ -235,7 +235,7 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return queryObject.dataHashCode() ^ Float.floatToIntBits(radius);
+        return getQueryObject().dataHashCode() ^ Float.floatToIntBits(radius);
     }
 
 }

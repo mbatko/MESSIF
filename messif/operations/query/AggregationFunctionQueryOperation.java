@@ -98,7 +98,7 @@ public class AggregationFunctionQueryOperation extends RankingSingleQueryOperati
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return k;
         case 2:
@@ -187,7 +187,7 @@ public class AggregationFunctionQueryOperation extends RankingSingleQueryOperati
         // The argument obj is always TopCombinedQueryOperation or its descendant, because it has only abstract ancestors
         AggregationFunctionQueryOperation castObj = (AggregationFunctionQueryOperation)obj;
 
-        if (!queryObject.dataEquals(castObj.queryObject))
+        if (!getQueryObject().dataEquals(castObj.getQueryObject()))
             return false;
         if (k != castObj.k)
             return false;
@@ -200,7 +200,7 @@ public class AggregationFunctionQueryOperation extends RankingSingleQueryOperati
      */
     @Override
     public int dataHashCode() {
-        return (queryObject.dataHashCode() << 8) + k;
+        return (getQueryObject().dataHashCode() << 8) + k;
     }
 
 }

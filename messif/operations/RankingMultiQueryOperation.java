@@ -42,7 +42,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     //****************** Attributes ******************//
 
     /** Array with the query objects */
-    private final LocalAbstractObject[] queryObjects;
+    private LocalAbstractObject[] queryObjects;
 
     /** Distance function for computing the distances between a data object and all query objects */
     private final DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction;
@@ -196,6 +196,26 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      */
     public boolean isStoringIndividualDistances() {
         return storeIndividualDistances;
+    }
+
+
+    //****************** Clonning ******************//
+
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is not cloned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public RankingMultiQueryOperation clone() throws CloneNotSupportedException {
+        RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone();
+        LocalAbstractObject[] clonnedQueryObjects = new LocalAbstractObject[operation.queryObjects.length];
+        for (int i = 0; i < clonnedQueryObjects.length; i++)
+            clonnedQueryObjects[i] = operation.queryObjects[i].clone();
+        operation.queryObjects = clonnedQueryObjects;
+        return operation;
     }
 
 

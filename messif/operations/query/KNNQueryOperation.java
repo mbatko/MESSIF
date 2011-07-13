@@ -104,7 +104,7 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return k;
         default:
@@ -140,7 +140,7 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (queryObject.excludeUsingPrecompDist(object, getAnswerThreshold()))
+            if (getQueryObject().excludeUsingPrecompDist(object, getAnswerThreshold()))
                 continue;
 
             addToAnswer(object, getAnswerThreshold());
@@ -163,7 +163,7 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
         // The argument obj is always kNNQueryOperation or its descendant, because it has only abstract ancestors
         KNNQueryOperation castObj = (KNNQueryOperation)obj;
 
-        if (!queryObject.dataEquals(castObj.queryObject))
+        if (!getQueryObject().dataEquals(castObj.getQueryObject()))
             return false;
 
         return k == castObj.k;
@@ -175,7 +175,7 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
      */
     @Override
     public int dataHashCode() {
-        return (queryObject.dataHashCode() << 8) + k;
+        return (getQueryObject().dataHashCode() << 8) + k;
     }
 
 }

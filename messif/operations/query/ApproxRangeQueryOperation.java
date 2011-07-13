@@ -175,7 +175,7 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
     @Override
     public String toString() {
         return new StringBuffer("Approximate Range query <").
-                append(queryObject).append(',').
+                append(getQueryObject()).append(',').
                 append(radius).append(',').
                 append(radiusGuaranteed).append("> returned ").
                 append(getAnswerCount()).append(" objects").

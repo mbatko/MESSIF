@@ -146,9 +146,9 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return locators;
+            return Collections.unmodifiableSet(locators);
         case 1:
-            return queryObject;
+            return getQueryObject();
         default:
             throw new IndexOutOfBoundsException("GetObjectsByLocatorsOperation has only one argument");
         }
@@ -160,7 +160,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      */
     @Override
     public int getArgumentCount() {
-        return queryObject == null ? 1 : 2;
+        return getQueryObject() == null ? 1 : 2;
     }
 
     /**
@@ -216,7 +216,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
         try {
             while (!locators.isEmpty()) {
                 LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-                if (queryObject != null)
+                if (getQueryObject() != null)
                     addToAnswer(object);
                 else
                     addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
