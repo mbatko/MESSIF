@@ -2424,6 +2424,7 @@ public class CoreApplication {
                 if (throwException) // Exception is being handled by a higher call
                     throw e;
                 processException(e.getCause(), out, true);
+                out.println("Action '" + actionName + "' failed - control file execution was terminated");
                 return false;
             }
         }

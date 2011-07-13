@@ -119,8 +119,10 @@ public abstract class Convert {
 
         // Converting static arrays
         if (type.isArray()) {
-            String[] items = string.split("\\p{Space}*[|,]\\p{Space}*");
             Class<?> componentType = type.getComponentType();
+            if (string.isEmpty())
+                return type.cast(Array.newInstance(componentType, 0));
+            String[] items = string.split("\\p{Space}*[|,]\\p{Space}*", -1);
             Object array = Array.newInstance(componentType, items.length);
             for (int i = 0; i < items.length; i++)
                 Array.set(array, i, stringToType(items[i], componentType, namedInstances));

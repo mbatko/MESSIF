@@ -59,7 +59,7 @@ public class InstantiatorSignature {
             if (leftParenthesis == signature.length() - 2)
                 this.args = new String[0];
             else
-                this.args = signature.substring(leftParenthesis + 1, signature.length() - 1).split("\\s*,\\s*");
+                this.args = signature.substring(leftParenthesis + 1, signature.length() - 1).split("\\s*,\\s*", -1);
             // Remove arguments from the signature (already parsed)
             signature = signature.substring(0, leftParenthesis);
             try {
