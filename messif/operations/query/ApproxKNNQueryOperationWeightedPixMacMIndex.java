@@ -124,7 +124,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
 
     @Override
     public String toString() {
-        return new StringBuilder("Pixmac search q=").append(queryObject.getLocatorURI()).append(" <from=").append(from).append(", k=").append(getK()).append("> ").
+        return new StringBuilder("Pixmac search q=").append(getQueryObject().getLocatorURI()).append(" <from=").append(from).append(", k=").append(getK()).append("> ").
                 append(" precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
     }
 

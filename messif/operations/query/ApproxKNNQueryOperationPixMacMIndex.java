@@ -122,7 +122,7 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
         // Create a new double sorted collection for the answer set
         if (collection != null) {
             operation.collection = new KeywordsJaccardPowerSortedCollection(
-                    k + from, collection.getMaximalCapacity(), ((MetaObjectPixMacShapeAndColor) queryObject).getKeyWords(),
+                    k + from, collection.getMaximalCapacity(), ((MetaObjectPixMacShapeAndColor) getQueryObject()).getKeyWords(),
                     ((KeywordsJaccardSortedCollection) collection).getKeywordsWeight()
             );
             operation.setAnswerCollection(operation.collection);

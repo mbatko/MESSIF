@@ -109,7 +109,7 @@ public class LocalRangeQueryOperation extends RangeQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return radius;
         case 2:
@@ -135,7 +135,7 @@ public class LocalRangeQueryOperation extends RangeQueryOperation {
      */
     @Override
     public String toString() {
-        return new StringBuffer("Local range query <").append(queryObject).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects").toString();
+        return new StringBuffer("Local range query <").append(getQueryObject()).append(',').append(radius).append("> returned ").append(getAnswerCount()).append(" objects").toString();
     }
 
 

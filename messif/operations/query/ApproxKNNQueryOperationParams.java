@@ -147,7 +147,7 @@ public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         switch (index) {
         case 0:
-            return queryObject;
+            return getQueryObject();
         case 1:
             return k;
         case 2:
