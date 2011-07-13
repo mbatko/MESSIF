@@ -71,7 +71,7 @@ public class OperationProcessor<T extends AbstractOperation> implements HttpAppl
         this.processors = new HttpApplicationProcessor<?>[length];
         int argsProcessed = 0;
         for (int i = 0; i < length; i++) {
-            processors[i] = HttpApplicationUtils.createProcessor(operationParamTypes[i], algorithm, args, offset + argsProcessed, length - argsProcessed, namedInstances);
+            processors[i] = HttpApplicationHandler.createProcessor(operationParamTypes[i], algorithm, args, offset + argsProcessed, length - argsProcessed, namedInstances);
             argsProcessed += processors[i].getProcessorArgumentCount();
         }
     }

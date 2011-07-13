@@ -28,7 +28,8 @@ import java.util.concurrent.Executors;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
 import messif.utility.http.HttpApplicationAuthenticator;
-import messif.utility.http.HttpApplicationUtils;
+import messif.utility.http.HttpApplicationHandler;
+import messif.utility.http.HttpApplicationOutputType;
 
 /**
  * Provides a HTTP extension to {@link Application} that allows to execute operations
@@ -52,16 +53,18 @@ public class HttpApplication extends Application {
 
     /**
      * Adds a context to the HTTP server that is processed by the specified operation.
-     * Additional arguments can be specified for the constructor of the operation.
+     * First, a name of the context must be given. Then the specification of the output
+     * type (see {@link HttpApplicationOutputType} enum for possible values), followed
+     * by the operation class and its constructor arguments similarly to the {@link #operationExecute}.
      * For constructor arguments where a {@link LocalAbstractObject} is required,
-     * an extractor must be provided. If a parameter is specified via
-     * the URL, use a quoted URL parameter name. Otherwise the argument is a constant
-     * that will be used for each query.
-     *  
+     * an extractor must be provided - see {@link #namedInstanceAdd} for example syntax.
+     * For other constructor arguments either a parameter from the called URI query string can be used
+     * by writing a quoted parameter name, or the argument is a constant that will be used for each query.
+     * 
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; httpAddContext /search messif.operations.query.ApproxKNNQueryOperation messif.objects.extraction.Extractors.createTextExtractor(messif.objects.impl.MetaObjectMap) "k" REMOTE_OBJECTS
+     * MESSIF &gt;&gt;&gt; httpAddContext /search OPERATION_ANSWER_RANKED_TEXT messif.operations.query.ApproxKNNQueryOperation messif.objects.extraction.Extractors.createTextExtractor(messif.objects.impl.MetaObjectMap,) "k" REMOTE_OBJECTS
      * </pre>
      * This will create a Context that will execute {@link messif.operations.query.ApproxKNNQueryOperation}
      * using a three parameters. The first parameter will be instance of an extractor created by call to
@@ -73,8 +76,9 @@ public class HttpApplication extends Application {
      * </p>
      *
      * @param out a stream where the application writes information for the user
-     * @param args the context path and the operation class (fully specified)
-     *          followed by the additional arguments for the operation's constructor
+     * @param args the context path, the {@link HttpApplicationOutputType output type},
+     *          and the operation class (fully specified) followed by the additional
+     *          arguments for the operation constructor
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "add HTTP server context", arguments = {"context path", "operation class", "additional operation arguments ..."})
@@ -89,8 +93,8 @@ public class HttpApplication extends Application {
             return false;
         }
 
-        if (args.length < 3) {
-            out.println("At least the context path and the operation class must be provided");
+        if (args.length < 4) {
+            out.println("At least the context path, the output type and the operation class must be provided");
             return false;
         }
 
@@ -102,7 +106,7 @@ public class HttpApplication extends Application {
         try {
             HttpContext context = httpServer.createContext(
                     args[1],
-                    HttpApplicationUtils.createHandler(log, algorithm, args, 2, args.length - 2, namedInstances)
+                    new HttpApplicationHandler(algorithm, args, 3, args.length - 3, namedInstances, HttpApplicationOutputType.valueOf(args[2]), log)
             );
             httpServerContexts.put(args[1], context);
             return true;
@@ -244,6 +248,7 @@ public class HttpApplication extends Application {
     }
 
     @Override
+    @SuppressWarnings("UseOfSystemOutOrSystemErr")
     protected boolean parseArguments(String[] args, int argIndex) {
         if (argIndex >= args.length)
             return false;

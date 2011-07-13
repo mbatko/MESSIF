@@ -18,11 +18,13 @@ package messif.utility.http;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,55 +34,84 @@ import messif.objects.util.AbstractObjectList;
 import messif.operations.AbstractOperation;
 
 /**
- * Utility methods for this package.
+ * Encapsulates a given {@link HttpApplicationProcessor} and returns its
+ * value as {@link SimpleResponseText} or {@link SimpleResponseXml}.
+ * Note that the value returned by the processor is converted to text using
+ * {@link Object#toString()}.
+ * If the processor throws an exception, it is captured and returned as
+ * text response too.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class HttpApplicationUtils {
+public class HttpApplicationHandler implements HttpHandler {
     /** Parser regular expression for HTTP request parameters */
     private static final Pattern paramParser = Pattern.compile("([^=]+)=([^&]*)(?:&|$)");
 
-    //****************** Handler factory method ******************//
+    /** Processor that actually handles the request */
+    private final HttpApplicationProcessor<?> processor;
+    /** Output type used to create the response that will be written back to user */
+    private final HttpApplicationOutputType outputType;
+    /** Logger */
+    @SuppressWarnings("NonConstantLogger")
+    private final Logger log;
 
     /**
-     * Factory method for creating {@link HttpHandler handlers}.
-     * The first argument is expected to be a class according to which this factory
-     * picks the handler.
-     *
-     * <p>
-     * The following classes are supported:
-     * <ul>
-     * <li>{@link AbstractOperation} - the {@link OperationHandler} is created</li>
-     * <li>anything else - the {@link SimpleHandler} is created</li>
-     * </ul>
-     * </p>
-     *
+     * Creates a new instance of HttpApplicationHandler with the given processor and output type.
+     * @param processor the processor that will actually handle the requests
+     * @param outputType the output type used to create the response that will be written back to user
      * @param log the logger to use for logging errors (if <tt>null</tt> is passed, no logging is done)
+     */
+    protected HttpApplicationHandler(HttpApplicationProcessor<?> processor, HttpApplicationOutputType outputType, Logger log) {
+        if (!outputType.isCompatible(processor.getProcessorReturnType()))
+            throw new IllegalArgumentException("Output type " + outputType + " cannot be used for " + processor.getProcessorReturnType());
+        this.processor = processor;
+        this.outputType = outputType;
+        this.log = log;
+    }
+
+    /**
+     * Creates a new {@link HttpHandler handler} using a processor derived from the arguments.
+     * The first argument is expected to be a class that is created by the derived processor.
+     * See {@link #createProcessor} for more information about the recognized processors.
+     *
      * @param algorithm the algorithm on which the new handler operates
      * @param args arguments for the handler
      * @param offset the index into {@code args} where the first argument is
      * @param length the number of arguments to use
      * @param namedInstances collection of named instances that are used when converting string parameters
-     * @return a new handler instance
+     * @param outputType the output type used to create the response that will be written back to user
+     * @param log the logger to use for logging errors (if <tt>null</tt> is passed, no logging is done)
      * @throws IndexOutOfBoundsException if the {@code offset} or {@code length} are not valid for {@code args} array
      * @throws IllegalArgumentException if there was a problem creating the handler
+     * @throws ClassNotFoundException if the {@code offset} argument is not a valid class name
      */
-    @SuppressWarnings("unchecked")
-    public static HttpHandler createHandler(Logger log, Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
+    public HttpApplicationHandler(Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances, HttpApplicationOutputType outputType, Logger log) throws IndexOutOfBoundsException, IllegalArgumentException, ClassNotFoundException {
+        this(createProcessor(Class.forName(args[offset]), algorithm, args, offset + 1, length - 1, namedInstances), outputType, log);
+    }
+
+    /**
+     * Handles a HTTP request by executing the processor and returning
+     * response.
+     *
+     * @param exchange the HTTP request/response exchange
+     * @throws IOException if there was a problem reading the HTTP request or writing the HTTP response
+     */
+    @Override
+    public final void handle(HttpExchange exchange) throws IOException {
+        // Process the exchange by processor
         try {
-            Class<?> handlerClass = Class.forName(args[offset]);
-            offset++;
-            length--;
-            if (AbstractOperation.class.isAssignableFrom(handlerClass))
-                return new OperationHandler(log, algorithm, handlerClass, args, offset, length, namedInstances); // This IS checked on previous line
-            else
-                return new SimpleHandler<Object>(log, true, createProcessor(handlerClass, algorithm, args, offset, length, namedInstances));
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Unknown class: " + e.getMessage());
+            outputType.respondHttpExchangeData(exchange, processor.processHttpExchange(exchange, parseParameters(exchange.getRequestURI().getQuery())));
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            if (log != null)
+                log.log(Level.WARNING, "Error processing {0}: {1}", new Object[]{exchange.getRequestURI(), e});
+            outputType.respondHttpExchangeException(exchange, e);
         }
     }
+
 
     //****************** Processor factory method ******************//
 

@@ -67,7 +67,7 @@ public class InstantiatorProcessor<T> implements HttpApplicationProcessor<T> {
         int argsProcessed = 0;
         String args[] = instantiatorSignature.getParsedArgs();
         for (int i = 0; i < prototype.length; i++) {
-            processors[i] = HttpApplicationUtils.createProcessor(
+            processors[i] = HttpApplicationHandler.createProcessor(
                     prototype[i], algorithm,
                     args, argsProcessed, args.length - argsProcessed,
                     namedInstances
