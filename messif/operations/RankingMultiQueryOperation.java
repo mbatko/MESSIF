@@ -268,7 +268,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     /**
      * Adds an object to the answer. The rank of the object is computed automatically
      * as a distance between all the {@link #getQueryObjects() query objects} and the specified object
-     * combined into the overall distance by {@link #getDistanceAggregation()}. The
+     * using the specified {@link #getDistanceFunction() aggretate distance function}. The
      * passed array {@code individualDistances} will be filled with the distances
      * of the individual query objects.
      * 
@@ -297,7 +297,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     /**
      * Adds an object to the answer. The rank of the object is computed automatically
      * as a distance between all the {@link #getQueryObjects() query objects} and the specified object
-     * combined into the overall distance by {@link #getDistanceAggregation()}.
+     * using the specified {@link #getDistanceFunction() aggretate distance function}.
      * 
      * @param object the object to add
      * @param distThreshold the threshold on distance;
@@ -311,8 +311,9 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
 
     /**
      * Adds an object to the answer. The rank of the object is computed automatically
-     * as a distance between the {@link #getQueryObject() query object} and the specified object.
-     *
+     * as a distance between the all the {@link #getQueryObjects() query objects} and the specified object
+     * using the specified {@link #getDistanceFunction() aggretate distance function}.
+     * 
      * @param object the object to add
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
      */
