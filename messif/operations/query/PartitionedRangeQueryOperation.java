@@ -122,7 +122,7 @@ public class PartitionedRangeQueryOperation extends RangeQueryOperation {
 
     /**
      * Returns the partial answer for the specified partition.
-     * @param partitionIdentifier the idetifier to select a particular partition
+     * @param partitionIdentifier the identifier to select a particular partition
      * @return the partial answer for the specified partition
      */
     public Iterator<RankedAbstractObject> getPartitionAnswer(Object partitionIdentifier) {
