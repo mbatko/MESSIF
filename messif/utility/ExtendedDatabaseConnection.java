@@ -78,6 +78,8 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
         this.dbConnInfo = dbConnInfo;
         if (!lazyConnection)
             this.dbConnection = createConnection(dbConnUrl, dbConnInfo, dbDriverClass);
+        else if (dbDriverClass != null)
+            DriverManager.registerDriver(createDriver(dbDriverClass));            
     }
 
     /**
@@ -125,6 +127,25 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
     //****************** SQL connection ******************//
 
     /**
+     * Creates a new instance of a database driver for the given driver class.
+     * Note that the driver should automatically register itself to {@link DriverManager},
+     * so use of the driver directly should be avoided.
+     * @param dbDriverClass class of the database driver to use
+     * @return a new instance of a database driver
+     * @throws IllegalArgumentException if the driver class cannot be created
+     */
+    public static Driver createDriver(String dbDriverClass) throws IllegalArgumentException {
+        if (dbDriverClass == null)
+            return null;
+        try {
+            // Create an instance of the new driver (it should register itself automatically) and return the connection
+            return (Convert.getClassForName(dbDriverClass, Driver.class).newInstance());
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Cannot create database driver " + dbDriverClass + ": " + ex, ex);
+        }
+    }
+
+    /**
      * Creates a new database connection.
      * @return the database connection
      * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
@@ -136,13 +157,14 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
     public static Connection createConnection(String dbConnUrl, Properties dbConnInfo, String dbDriverClass) throws IllegalArgumentException, SQLException {
         if (dbConnUrl == null)
             throw new IllegalArgumentException("Database connection URL cannot be null");
-        if (dbDriverClass != null)
-            try {
-                DriverManager.registerDriver(Convert.getClassForName(dbDriverClass, Driver.class).newInstance());
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Cannot register database driver " + dbDriverClass + ": " + e, e);
-            }
-        return DriverManager.getConnection(dbConnUrl, dbConnInfo);
+        try {
+            return DriverManager.getConnection(dbConnUrl, dbConnInfo);
+        } catch (SQLException e) {
+            // If the driver is not provided, we cannot establish a connection
+            if (dbDriverClass == null)
+                throw e;
+            return createDriver(dbDriverClass).connect(dbConnUrl, dbConnInfo);
+        }
     }
 
     /**
