@@ -560,7 +560,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         if (keyWord.isEmpty())
             return null;
         // Remove diacritics and make lower case
-        keyWord = Normalizer.normalize(keyWord.toLowerCase(), Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        keyWord = Normalizer.normalize(keyWord.toLowerCase(), Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("ß", "ss");
         // Perform stemming
         if (stemmer != null)
             keyWord = stemmer.stem(keyWord);
