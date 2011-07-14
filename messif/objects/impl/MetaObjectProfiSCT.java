@@ -28,6 +28,7 @@ import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +41,10 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.LocalAbstractObjectOrder;
@@ -94,6 +98,12 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public static final String TITLE_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
     /** Regular expression used to split keywords */
     public static final String KEYWORD_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
+    /** Regular expression used to split search string */
+    public static final String SEARCH_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
+    /** Pattern used to search for normalized strings, each group corresponds to the replacement string in {@link #NORMALIZER_REPLACE_STRINGS} */
+    private static final Pattern NORMALIZER_REPLACE_PATTERN = Pattern.compile("(\\p{InCombiningDiacriticalMarks}+)|(ß)|(-)|(\\b[\\p{javaLowerCase}\\p{javaUpperCase}]\\b)|('[\\p{javaLowerCase}\\p{javaUpperCase}]{0,2})");
+    /** Replacement strings for the {@link #NORMALIZER_REPLACE_PATTERN} */
+    private static final String[] NORMALIZER_REPLACE_STRINGS = new String[] { "", "ss", "", "", "" };
 
 
     //****************** Stemmer interface ******************//
@@ -303,16 +313,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
-     * @param titleWords the title words to set for the new object
-     * @param keywordWords the keyword words to set for the new object
-     * @param searchWords the searched words to set for the new object
+     * @param titleString the title to set for the new object
+     * @param keywordString the keywords to set for the new object
+     * @param searchString the searched string to set for the new object
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String[] titleWords, String[] keywordWords, String[] searchWords) {
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         this(object, false);
-        if (titleWords != null || keywordWords != null || searchWords != null)
-            this.keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleWords, keywordWords, searchWords);
+        if (titleString != null || keywordString != null || searchString != null)
+            this.keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleString, keywordString, searchString);
     }
 
     /**
@@ -344,13 +354,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
-     * @param titleWords the title words to set for the new object
-     * @param keywordWords the keyword words to set for the new object
+     * @param titleString the title words to set for the new object
+     * @param keywordString the keyword words to set for the new object
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String[] titleWords, String[] keywordWords) {
-        this(object, stemmer, wordIndex, titleWords, keywordWords, (String[])null);
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString) {
+        this(object, stemmer, wordIndex, titleString, keywordString, (String)null);
     }
 
     /**
@@ -358,28 +368,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
-     * @param titleWords the title words to set for the new object
-     * @param keywordWords the keyword words to set for the new object
-     * @param searchWords the searched words to set for the new object
+     * @param searchString the searched string to set for the new object
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String[] titleWords, String[] keywordWords, String searchWords) {
-        this(object, stemmer, wordIndex, titleWords, keywordWords, (searchWords == null || searchWords.isEmpty()) ? null : searchWords.split("\\s+"));
-    }
-
-    /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
-     * and given set of keywords. The locator and the encapsulated objects from the source
-     * {@code object} are taken.
-     * @param object the source metaobject from which to get the data
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
-     * @param wordIndex the index for translating words to addresses
-     * @param searchWords the searched words to set for the new object
-     */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchWords) {
-        this(object, (searchWords == null || searchWords.isEmpty()) ? null :
-            wordsToIdentifiers(searchWords.split("\\s+"), null, stemmer, wordIndex));
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchString) {
+        this(object, (searchString == null || searchString.isEmpty()) ? null :
+            wordsToIdentifiers(normalizeString(searchString).split(SEARCH_SPLIT_REGEXP), null, stemmer, wordIndex, false));
     }
 
     /**
@@ -389,7 +384,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * descriptor {@link LocalAbstractObject} is loaded.
      *
      * @param stream the stream from which the data are read
-     * @param haveWords flag whether the data contains titlewords and keywords lines
+     * @param haveWords flag whether the data contains title and keywords lines
      * @param wordsConverted flag whether to read the title and keyword word lines
      *                          as integer vectors (<tt>true</tt>) or strings (<tt>false</tt>)
      * @throws IOException if there was an error reading the data from the stream
@@ -438,15 +433,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * A keyword index is used to translate keywords to addresses.
      *
      * @param stream stream to read the data from
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
-     * @param searchWords the additional keywords that will be encapsulated in the keyWords object as the third array
+     * @param searchString the additional keywords that will be encapsulated in the keyWords object as the third array
      * @throws IOException if reading from the stream fails
      */
-    public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchWords) throws IOException {
+    public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchString) throws IOException {
         this(stream, true, false);
         // Note that the additional words are added AS THE LAST LINE OF THE OBJECT!
-        keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleString.split(TITLE_SPLIT_REGEXP), keywordString.split(KEYWORD_SPLIT_REGEXP), searchWords != null ? searchWords.split(KEYWORD_SPLIT_REGEXP) : null);
+        keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleString, keywordString, searchString);
     }
 
     /**
@@ -454,7 +449,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * A keyword index is used to translate keywords to addresses.
      *
      * @param stream stream to read the data from
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
      * @throws IOException if reading from the stream fails
      */
@@ -466,21 +461,84 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     //****************** Conversion methods ******************//
 
     /**
+     * Returns the group that has matched in the given matcher.
+     * Note that the returned value is the number of the pattern group that
+     * are counted starting from 1.
+     * @param matcher the pattern matcher with a currently matched data
+     * @return the group that has matched in the given matcher or zero if no groups are matching
+     * @throws IllegalStateException if no match has yet been attempted, or if the previous match operation failed on the given matcher
+     */
+    private static int matcherGroupMatched(Matcher matcher) {
+        for (int i = 1; i <= matcher.groupCount(); i++)
+            if (matcher.start(i) != -1)
+                return i;
+        return 0;
+    }
+
+    /**
+     * Normalizes the given string by lower-casing, replacing the diacritics characters
+     * with their Latin counter-parts, and removing/replacing other unwanted character sequences.
+     * @param string the string to normalize
+     * @return the normalized string
+     * @see #NORMALIZER_REPLACE_PATTERN
+     * @see #NORMALIZER_REPLACE_STRINGS
+     */
+    private static String normalizeString(String string) {
+        Matcher matcher = NORMALIZER_REPLACE_PATTERN.matcher(Normalizer.normalize(string.toLowerCase(), Form.NFD));
+        StringBuffer str = new StringBuffer();
+        while (matcher.find())
+            matcher.appendReplacement(str, NORMALIZER_REPLACE_STRINGS[matcherGroupMatched(matcher) - 1]);
+        matcher.appendTail(str);
+        return str.toString();
+    }
+
+    /**
+     * Return a collection of stemmed, non-ignored words.
+     * Note that the ignore words are updated whenever a non-ignored word is found,
+     * thus if {@code ignoreWords} is not <tt>null</tt> the resulting collection
+     * does not contain duplicate words.
+     * @param keyWords the list of keywords to transform
+     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
+     *          if <tt>null</tt>, all keywords are added
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param normalize if <tt>true</tt>, each keyword is first {@link #normalizeString(java.lang.String) normalized}
+     * @return a set of stemmed, non-duplicate, non-ignored words
+     */
+    private static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) {
+        Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
+        for (int i = 0; i < keyWords.length; i++) {
+            String keyWord = keyWords[i].trim();
+            if (normalize)
+                keyWord = normalizeString(keyWord);
+            if (keyWord.isEmpty())
+                continue;
+            // Perform stemming
+            if (stemmer != null)
+                keyWord = stemmer.stem(keyWord);
+            // Check if not ignored
+            if (ignoreWords != null && !ignoreWords.add(keyWord))
+                continue;
+            processedKeyWords.add(keyWord);
+        }
+        return processedKeyWords;
+    }
+
+    /**
      * Convert the given title, key and additional words to a int multi-vector
      * object with Jaccard distance function.
      *
      * @param stemmer the stemmer to use for stemming of the words
      * @param wordIndex the index used to transform the words into integers
-     * @param titleWords the title words to convert
-     * @param keywordWords the key words to convert
-     * @param searchWords the additional words to convert
+     * @param titleString the title string to convert
+     * @param keywordString the keywords string to convert
+     * @param searchString the search string to convert
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String[] titleWords, String[] keywordWords, String[] searchWords) {
+    private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         try {
-            return convertWordsToIdentifiersException(stemmer, wordIndex, titleWords, keywordWords, searchWords);
+            return convertWordsToIdentifiersException(stemmer, wordIndex, titleString, keywordString, searchString);
         } catch (Exception e) {
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
             return new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
     }
@@ -491,23 +549,23 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      *
      * @param stemmer the stemmer to use for stemming of the words
      * @param wordIndex the index used to transform the words into integers
-     * @param titleWords the title words to convert
-     * @param keyWords the key words to convert
-     * @param additionalWords the additional words to convert
+     * @param titleString the title string to convert
+     * @param keywordString the keywords string to convert
+     * @param searchString the search string to convert
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    private static ObjectIntMultiVectorJaccard convertWordsToIdentifiersException(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String[] titleWords, String[] keyWords, String[] additionalWords) {
-        int[][] data = new int[additionalWords != null ? 3 : 2][];
+    private static ObjectIntMultiVectorJaccard convertWordsToIdentifiersException(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+        int[][] data = new int[searchString != null ? 3 : 2][];
         Set<String> ignoreWords = new HashSet<String>();
-        if (additionalWords != null)
-            data[2] = wordsToIdentifiers(additionalWords, ignoreWords, stemmer, wordIndex);
-        data[0] = wordsToIdentifiers(titleWords, ignoreWords, stemmer, wordIndex);
-        data[1] = wordsToIdentifiers(keyWords, ignoreWords, stemmer, wordIndex);
+        if (searchString != null)
+            data[2] = wordsToIdentifiers(normalizeString(searchString).split(SEARCH_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
+        data[0] = wordsToIdentifiers(normalizeString(titleString).split(TITLE_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
+        data[1] = wordsToIdentifiers(normalizeString(keywordString).split(KEYWORD_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
         return new ObjectIntMultiVectorJaccard(data);
     }
 
     /**
-     * Convert the given array of word ids to words using the given storage.
+     * Convert the given array of word identifiers to words using the given storage.
      * @param wordIndex the index used to transform the integers to words
      * @param ids the array of integers to convert
      * @return an array of converted words
@@ -521,53 +579,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 ret[i] = wordIndex.read(ids[i]);
             return ret;
         } catch (Exception e) {
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot convert ids to strings in object '" + getLocatorURI() + "': " + e);
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot convert ids to strings in object ''{0}'': {1}", new Object[]{getLocatorURI(), e});
             return new String[0];
         }
-    }
-
-    /**
-     * Return a collection of stemmed, non-ignored words.
-     * Note that the ignore words are updated whenever a non-ignored word is found,
-     * thus if {@code ignoreWords} is not <tt>null</tt> the resulting collection
-     * does not contain duplicate words.
-     * @param keyWords the list of keywords to transform
-     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
-     *          if <tt>null</tt>, all keywords are added
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
-     * @return a set of stemmed, non-duplicate, non-ignored words
-     */
-    private static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer) {
-        Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
-        for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = unifyWord(keyWords[i], ignoreWords, stemmer);
-            if (keyWord != null)
-                processedKeyWords.add(keyWord);
-        }
-        return processedKeyWords;
-    }
-
-    /**
-     * Return a stemmed, non-ignored word with stripped diacritics.
-     * Note that the ignore words are updated whenever a non-ignored word is found.
-     * @param keyWord the keyword to transform
-     * @param ignoreWords set of words to ignore
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
-     * @return a stemmed, non-ignored word with stripped diacritics
-     */
-    private static String unifyWord(String keyWord, Set<String> ignoreWords, Stemmer stemmer) {
-        keyWord = keyWord.trim();
-        if (keyWord.isEmpty())
-            return null;
-        // Remove diacritics and make lower case
-        keyWord = Normalizer.normalize(keyWord.toLowerCase(), Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").replaceAll("ß", "ss");
-        // Perform stemming
-        if (stemmer != null)
-            keyWord = stemmer.stem(keyWord);
-        // Check if not ignored
-        if (ignoreWords != null && !ignoreWords.add(keyWord))
-            return null;
-        return keyWord;
     }
 
     /**
@@ -579,17 +593,18 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param words the list of words to transform
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
-     * @param stemmer instances that provides a {@link Stemmer} for word transformation
+     * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
+     * @param normalize if <tt>true</tt>, each word is first {@link #normalizeString(java.lang.String) normalized}
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      */
-    protected static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+    protected static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) {
         if (words == null)
             return new int[0];
 
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
-        Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stemmer);
+        Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stemmer, normalize);
 
         // If the keywords list is empty after ignored words, return
         if (processedKeyWords.isEmpty())
@@ -613,7 +628,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 ret[retIndex] = wordIndex.store(keyWord).getAddress();
                 retIndex++;
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectProfiSCT.class.getName()).warning("Cannot insert '" + keyWord + "': " + e.toString());
+                Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'': {1}", new Object[]{keyWord, e.toString()});
             }
         }
 
@@ -641,7 +656,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param weights the weights for the data arrays
          * @param ignoreWeight weight used for the {@code ignoredKeywords}
          * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
-         * @param stemmer instances that provides a {@link Stemmer} for word transformation
+         * @param stemmer a {@link Stemmer} for word transformation
          * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
          */
         public MultiWeightIgnoreProviderProfi(float[] weights, float ignoreWeight, String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
@@ -651,13 +666,14 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         /**
          * Internal method to create a set of integer IDs for specified keywords given a PixMac keyword -> ID index.
          * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param stemmer a {@link Stemmer} for word transformation
          * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
          * @return
          */
         private static Set<Integer> getIgnoredIDs(String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
             HashSet<Integer> retVal = new HashSet<Integer>();
-            int[] keywordsToIdentifiers = MetaObjectProfiSCT.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex);
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).info("the following words will be ignored: '" + Arrays.deepToString(ignoredKeywords) + "' with the following IDs: " + Arrays.toString(keywordsToIdentifiers));
+            int[] keywordsToIdentifiers = MetaObjectProfiSCT.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex, true);
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.INFO, "the following words will be ignored: ''{0}'' with the following IDs: {1}", new Object[]{Arrays.deepToString(ignoredKeywords), Arrays.toString(keywordsToIdentifiers)});
             for (int id : keywordsToIdentifiers) {
                 retVal.add(id);
             }
@@ -673,7 +689,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
+        return descriptorNames.clone();
     }
 
     /**
@@ -954,7 +970,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @return the weights used in the distance function
      */
     public static float[] getWeights() {
-        return visualWeights;
+        return visualWeights.clone();
     }
 
     @Override
@@ -1277,7 +1293,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @return the stopword list
          * @throws IllegalArgumentException if there was a database problem loading the stopwords
          */
-        public List<Integer> loadStopWords(String tableName, String[] categories) throws IllegalArgumentException {
+        public final List<Integer> loadStopWords(String tableName, String[] categories) throws IllegalArgumentException {
             // Prepare SQL string
             StringBuilder sql = new StringBuilder("SELECT keyword_id FROM ").append(tableName);
             if (categories != null && categories.length > 0) {
@@ -1312,7 +1328,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @return the list of stopwords
          */
         public Collection<Integer> getStopwords() {
-            return stopwords;
+            return Collections.unmodifiableCollection(stopwords);
         }
 
         /**
@@ -1342,7 +1358,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws IllegalStateException if there was a problem reading the index
          */
         public int[] wordsToIdentifiers(String[] words) throws IllegalStateException {
-            return MetaObjectProfiSCT.wordsToIdentifiers(words, null, stemmer, wordIndex);
+            return MetaObjectProfiSCT.wordsToIdentifiers(words, null, stemmer, wordIndex, true);
         }
 
         /**
@@ -1505,15 +1521,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param titleWords the title words to search for
          * @param keywordWords the keyword words to search for
          * @param searchWords the search words to search for
-         * @param weights the weigths to use for title, keyword, and search words
+         * @param weights the weights to use for title, keyword, and search words
          * @param useIdf flag whether to use inverse-document-frequencies of the words (<tt>true</tt>) or a simpler weighted sum search (<tt>false</tt>)
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
          * @throws IllegalArgumentException if there was a problem executing the search on the database
          */
         public Collection<RankedAbstractObject> searchByText(String[] titleWords, String[] keywordWords, String[] searchWords, float[] weights, boolean useIdf, int count) throws IllegalArgumentException {
-            Collection<String> processedTitleWords = (titleWords != null ? unifyWords(titleWords, null, stemmer) : new ArrayList<String>());
-            Collection<String> processedSearchWords = (searchWords != null ? unifyWords(searchWords, null, stemmer) : new ArrayList<String>());
+            Collection<String> processedTitleWords = (titleWords != null ? unifyWords(titleWords, null, stemmer, true) : new ArrayList<String>());
+            Collection<String> processedSearchWords = (searchWords != null ? unifyWords(searchWords, null, stemmer, true) : new ArrayList<String>());
             if (processedTitleWords.isEmpty() && processedSearchWords.isEmpty())
                 return null;
 
@@ -1836,7 +1852,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
              * @param additionalKeyWordsParamName the name of the {@link ExtractorDataSource} parameter that contains the additional keywords
              * @param removeObjects if <tt>true</tt>, the object is removed from the database after it is retrieved
              */
-            public LocatorExtractor(String locatorParamName, String additionalKeyWordsParamName, boolean removeObjects) {
+            LocatorExtractor(String locatorParamName, String additionalKeyWordsParamName, boolean removeObjects) {
                 this.locatorParamName = locatorParamName;
                 this.additionalKeyWordsParamName = additionalKeyWordsParamName;
                 this.removeObjects = removeObjects;
@@ -1876,7 +1892,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
              * @param storeObjects if <tt>true</tt> every object successfully extracted by this extractor
              *          is added to the encapsulated storage via {@link #storeObject(messif.objects.impl.MetaObjectProfiSCT)}
              */
-            public ImageExtractor(String extractorCommand, String[] dataLineParameterNames, boolean storeObjects) {
+            ImageExtractor(String extractorCommand, String[] dataLineParameterNames, boolean storeObjects) {
                 this.extractorCommand = extractorCommand;
                 this.dataLineParameterNames = dataLineParameterNames;
                 this.storeObjects = storeObjects;
