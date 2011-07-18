@@ -215,11 +215,11 @@ public enum HttpApplicationOutputType {
                 break;                
             case OPERATION_ANSWER_TEXT:
                 appendAnswerObjects(
-                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()),
+                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append('['),
                     (QueryOperation<?>)data,
                     JSON_DATA_OBJECT,
                     ","
-                ).close();
+                ).append(']').close();
                 break;
             case OPERATION_ANSWER_XML:
                 appendAnswerObjects(
@@ -231,11 +231,11 @@ public enum HttpApplicationOutputType {
                 break;                
             case OPERATION_ANSWER_RANKED_TEXT:
                 appendRankedAnswerObjects(
-                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()),
+                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append('['),
                     (RankingQueryOperation)data,
                     JSON_DATA_RANKED_OBJECT,
                     ","
-                ).close();
+                ).append(']').close();
                 break;
             case OPERATION_ANSWER_RANKED_XML:
                 appendRankedAnswerObjects(
