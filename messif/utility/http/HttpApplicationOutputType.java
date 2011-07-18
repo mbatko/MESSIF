@@ -18,6 +18,7 @@ package messif.utility.http;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import messif.objects.AbstractObject;
@@ -101,7 +101,7 @@ public enum HttpApplicationOutputType {
     /** Closing tag for JSON data */
     private static final String JSON_DATA_END = "]";
     /** Buffer size for copying input stream to output stream */
-    private final static int COPY_BUFFER_SIZE = 4096;
+    private static final int COPY_BUFFER_SIZE = 4096;
 
 
     //****************** External methods for processing the output ******************//
@@ -145,21 +145,23 @@ public enum HttpApplicationOutputType {
      */
     public void respondHttpExchangeException(HttpExchange httpExchange, Exception exception) throws IOException {
         int errorCode = exception instanceof IllegalArgumentException ? ERROR_CODE_INVALID_ARGUMENT : ERROR_CODE_INTERNAL_ERROR;
+        Appendable output;
         switch (this) {
             case XML:
             case OPERATION_STATUS_XML:
             case OPERATION_ANSWER_XML:
             case OPERATION_ANSWER_RANKED_XML:
-                prepareXmlResponse(httpExchange, errorCode, Charset.defaultCharset())
-                        .append(XML_ERROR_BEGIN).append(exception.toString()).append(XML_ERROR_END)
-                        .close();
+                output = prepareXmlResponse(httpExchange, errorCode, Charset.defaultCharset())
+                        .append(XML_ERROR_BEGIN).append(exception.toString()).append(XML_ERROR_END);
                 break;
             default:
-                prepareTextResponse(httpExchange, errorCode, CONTENT_TYPE_TEXT, Charset.defaultCharset())
-                        .append(exception.toString())
-                        .close();
+                output = prepareTextResponse(httpExchange, errorCode, CONTENT_TYPE_TEXT, Charset.defaultCharset())
+                        .append(exception.toString());
                 break;
         }
+
+        if (output instanceof Closeable)
+            ((Closeable)output).close();
     }
 
     /**
@@ -172,23 +174,22 @@ public enum HttpApplicationOutputType {
      * @throws ClassCastException if the given data are not compatible with this output type
      */
     public void respondHttpExchangeData(HttpExchange httpExchange, Object data) throws IOException, ClassCastException {
+        Appendable output;
         switch (this) {
             case TEXT:
-                prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset())
-                        .append(data.toString())
-                        .close();
+                output = prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset())
+                        .append(data.toString());
                 break;
             case XML:
-                prepareXmlResponse(httpExchange, ERROR_CODE_SUCCESS, Charset.defaultCharset())
-                        .append(XML_DATA_BEGIN).append(data.toString()).append(XML_DATA_END)
-                        .close();
+                output = prepareXmlResponse(httpExchange, ERROR_CODE_SUCCESS, Charset.defaultCharset())
+                        .append(XML_DATA_BEGIN).append(data.toString()).append(XML_DATA_END);
                 break;
             case INPUT_STREAM:
                 appendInputStreamBinaryData(
                     prepareBinaryResponse(httpExchange, null, 0),
                     (InputStream)data
                 ).close();
-                break;
+                return;
             case FILE:
                 try {
                     File file = (File)data;
@@ -200,54 +201,57 @@ public enum HttpApplicationOutputType {
                 } catch (FileNotFoundException e) {
                     respondHttpExchangeException(httpExchange, e);
                 }
-                break;
+                return;
             case OPERATION_STATUS_TEXT:
-                appendOperationStatus(
+                output = appendOperationStatus(
                     prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()),
                     (AbstractOperation)data
-                ).close();
+                );
                 break;
             case OPERATION_STATUS_XML:
-                appendOperationStatus(
+                output = appendOperationStatus(
                     prepareXmlResponse(httpExchange, ERROR_CODE_SUCCESS, Charset.defaultCharset()).append(XML_DATA_BEGIN),
                     (AbstractOperation)data
-                ).append(XML_DATA_END).close();
+                ).append(XML_DATA_END);
                 break;                
             case OPERATION_ANSWER_TEXT:
-                appendAnswerObjects(
-                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append('['),
+                output = appendAnswerObjects(
+                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append(JSON_DATA_BEGIN),
                     (QueryOperation<?>)data,
                     JSON_DATA_OBJECT,
                     ","
-                ).append(']').close();
+                ).append(JSON_DATA_END);
                 break;
             case OPERATION_ANSWER_XML:
-                appendAnswerObjects(
+                output = appendAnswerObjects(
                     prepareXmlResponse(httpExchange, ERROR_CODE_SUCCESS, Charset.defaultCharset()).append(XML_DATA_BEGIN),
                     (QueryOperation<?>)data,
                     XML_DATA_OBJECT,
                     null
-                ).append(XML_DATA_END).close();
+                ).append(XML_DATA_END);
                 break;                
             case OPERATION_ANSWER_RANKED_TEXT:
-                appendRankedAnswerObjects(
-                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append('['),
+                output = appendRankedAnswerObjects(
+                    prepareTextResponse(httpExchange, ERROR_CODE_SUCCESS, CONTENT_TYPE_TEXT, Charset.defaultCharset()).append(JSON_DATA_BEGIN),
                     (RankingQueryOperation)data,
                     JSON_DATA_RANKED_OBJECT,
                     ","
-                ).append(']').close();
+                ).append(JSON_DATA_END);
                 break;
             case OPERATION_ANSWER_RANKED_XML:
-                appendRankedAnswerObjects(
+                output = appendRankedAnswerObjects(
                     prepareXmlResponse(httpExchange, ERROR_CODE_SUCCESS, Charset.defaultCharset()).append(XML_DATA_BEGIN),
                     (RankingQueryOperation)data,
                     XML_DATA_RANKED_OBJECT,
                     null
-                ).append(XML_DATA_END).close();
+                ).append(XML_DATA_END);
                 break;                
             default:
                 throw new InternalError("No compatibility was defined for " + this);
         }
+
+        if (output instanceof Closeable)
+            ((Closeable)output).close();
     }
 
 
@@ -262,7 +266,7 @@ public enum HttpApplicationOutputType {
      * @return the {@link Writer} prepared for sending the text data (note that it must be closed when finished)
      * @throws IOException if there was a problem preparing the exchange result
      */
-    private Writer prepareTextResponse(HttpExchange exchange, int errorCode, String contentType, Charset charset) throws IOException {
+    private Appendable prepareTextResponse(HttpExchange exchange, int errorCode, String contentType, Charset charset) throws IOException {
         exchange.getResponseHeaders().set("Content-type", contentType + ";charset=" + charset.name());
         exchange.sendResponseHeaders(errorCode, 0);
         return new OutputStreamWriter(exchange.getResponseBody(), charset);
@@ -277,8 +281,8 @@ public enum HttpApplicationOutputType {
      * @return the {@link Writer} prepared for sending the text data (note that it must be closed when finished)
      * @throws IOException if there was a problem preparing the exchange result
      */
-    private Writer prepareXmlResponse(HttpExchange exchange, int errorCode, Charset charset) throws IOException {
-        Writer writer = prepareTextResponse(exchange, errorCode, CONTENT_TYPE_XML, charset);
+    private Appendable prepareXmlResponse(HttpExchange exchange, int errorCode, Charset charset) throws IOException {
+        Appendable writer = prepareTextResponse(exchange, errorCode, CONTENT_TYPE_XML, charset);
         writer.append("<?xml version=\"1.0\" encoding=\"");
         writer.append(charset.name());
         writer.append("\"?>");
@@ -317,7 +321,7 @@ public enum HttpApplicationOutputType {
      * @return the passed {@code output} to allow chaining
      * @throws IOException if there was a problem appending to the output
      */
-    private Writer appendRankedAnswerObjects(Writer output, RankingQueryOperation operation, String itemFormat, String itemSeparator) throws IOException {
+    private Appendable appendRankedAnswerObjects(Appendable output, RankingQueryOperation operation, String itemFormat, String itemSeparator) throws IOException {
         Iterator<RankedAbstractObject> iterator = operation.getAnswer();
         while (iterator.hasNext()) {
             RankedAbstractObject object = iterator.next();
@@ -338,7 +342,7 @@ public enum HttpApplicationOutputType {
      * @return the passed {@code output} to allow chaining
      * @throws IOException if there was a problem appending to the output
      */
-    private Writer appendAnswerObjects(Writer output, QueryOperation<?> operation, String itemFormat, String itemSeparator) throws IOException {
+    private Appendable appendAnswerObjects(Appendable output, QueryOperation<?> operation, String itemFormat, String itemSeparator) throws IOException {
         Iterator<AbstractObject> iterator = operation.getAnswerObjects();
         while (iterator.hasNext()) {
             output.append(String.format(itemFormat, iterator.next().getLocatorURI()));
@@ -356,7 +360,7 @@ public enum HttpApplicationOutputType {
      * @return the passed {@code output} to allow chaining
      * @throws IOException if there was a problem appending to the output
      */
-    private Writer appendOperationStatus(Writer output, AbstractOperation operation) throws IOException {
+    private Appendable appendOperationStatus(Appendable output, AbstractOperation operation) throws IOException {
         if (!operation.wasSuccessful() && operation.isFinished()) {
             output.append("Operation failed: ");
             output.append(operation.getErrorCode().toString());
