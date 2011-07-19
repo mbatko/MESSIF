@@ -211,7 +211,19 @@ public class CoreApplication {
     }
 
     /**
-     * Process exception from exection.
+     * Returns the cause exception unwrapped from the {@link InvocationTargetException}s.
+     * @param invocationTargetException the {@link InvocationTargetException} to unwrap
+     * @return the cause exception
+     */
+    protected Throwable getRootCauseInvocationTargetException(InvocationTargetException invocationTargetException) {
+        Throwable cause = invocationTargetException.getCause();
+        while (cause instanceof InvocationTargetException)
+            cause = cause.getCause();
+        return cause;
+    }
+
+    /**
+     * Process exception from exception.
      * If the passed exception is either {@link InvocationTargetException} or {@link AlgorithmMethodException},
      * the causing exception is unwrapped first.
      * @param exception the exception to process
@@ -2420,7 +2432,7 @@ public class CoreApplication {
             }
         } catch (InvocationTargetException e) {
             // Check whether the repeat-until is not captured
-            if (repeatUntilExceptionClass == null || !repeatUntilExceptionClass.isInstance(e.getCause())) {
+            if (repeatUntilExceptionClass == null || !repeatUntilExceptionClass.isInstance(getRootCauseInvocationTargetException(e))) {
                 if (throwException) // Exception is being handled by a higher call
                     throw e;
                 processException(e.getCause(), out, true);
