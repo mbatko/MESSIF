@@ -17,7 +17,10 @@
 package messif.operations.data;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 import messif.buckets.BucketErrorCode;
 import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
@@ -50,28 +53,33 @@ public class BulkInsertOperation extends AbstractOperation {
      * Creates a new instance of BulkInsertOperation.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
+     * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    @AbstractOperation.OperationConstructor({"List of objects to insert"})
-    public BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) {
+    protected BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
         this.insertedObjects = insertedObjects;
+        if (this.insertedObjects.isEmpty())
+            throw new NoSuchElementException();
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
      *
      * @param insertedObjects a list of objects to be inserted by this operation
+     * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) {
-        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
+    @AbstractOperation.OperationConstructor({"Collection of objects to insert"})
+    public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
+        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects));
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
+     * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) {
-        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(insertedObjects);
+    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
+        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects));
     }
 
     /**
@@ -79,10 +87,11 @@ public class BulkInsertOperation extends AbstractOperation {
      *
      * @param objectsIterator an iterator from which to get the list of objects to be inserted
      * @param count the number of objects to read from the iterator
+     * @throws NoSuchElementException if the inserted objects list is empty 
      */
     @AbstractOperation.OperationConstructor({"Iterator (e.g. object stream) to read the objects to insert from", "Number of objects to read"})
-    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> objectsIterator, int count) {
-        this.insertedObjects = new AbstractObjectList<LocalAbstractObject>(objectsIterator, count);
+    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> objectsIterator, int count) throws NoSuchElementException {
+        this(new AbstractObjectList<LocalAbstractObject>(objectsIterator, count));
     }
 
 
@@ -92,8 +101,8 @@ public class BulkInsertOperation extends AbstractOperation {
      * Returns the list of objects to insert.
      * @return the list of objects to insert
      */
-    public AbstractObjectList<? extends LocalAbstractObject> getInsertedObjects() {
-        return insertedObjects;
+    public List<? extends LocalAbstractObject> getInsertedObjects() {
+        return Collections.unmodifiableList(insertedObjects);
     }
 
 
@@ -103,7 +112,7 @@ public class BulkInsertOperation extends AbstractOperation {
     public Object getArgument(int index) throws IndexOutOfBoundsException {
         if (index != 0)
             throw new IndexOutOfBoundsException("BulkInsertOperation has only one argument");
-        return insertedObjects;
+        return getInsertedObjects();
     }
 
     @Override
