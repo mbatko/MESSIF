@@ -16,6 +16,7 @@
  */
 package messif.algorithms;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -156,7 +157,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
             socket = new Socket(host, port);
             out = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             out.flush();
-            in = new ObjectInputStream(socket.getInputStream());
+            in = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
         }
     }
 

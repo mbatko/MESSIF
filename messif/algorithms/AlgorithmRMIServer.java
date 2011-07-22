@@ -17,6 +17,7 @@
 package messif.algorithms;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -94,11 +95,12 @@ public class AlgorithmRMIServer extends Thread {
             while (!isInterrupted()) {
                 // Get a connection (blocking mode)
                 final Socket connection = socket.accept().socket();
+                connection.setReceiveBufferSize(connection.getReceiveBufferSize() * 2);
                 new Thread("RMIServerConnectionThread") {
                     @Override
                     public void run() {
                         try {
-                            ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(connection.getOutputStream()));
+                            ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(connection.getOutputStream(), 64*1024));
                             out.flush();
                             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
                             Class<? extends Algorithm> algorithmClass = algorithm.getClass();
