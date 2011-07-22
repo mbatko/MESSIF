@@ -149,6 +149,29 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     public abstract int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException;
 
     /**
+     * Delete all objects from this bucket that have the specified {@code locatorURI}.
+     * If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
+     * objects with the given locator are deleted.
+     * 
+     * @param locatorURI the object locator to match
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
+     * @return the number of deleted objects
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
+     */
+    public abstract int deleteObject(String locatorURI, int deleteLimit) throws BucketStorageException;
+
+    /**
+     * Delete all objects from this bucket that have the specified {@code locatorURI}.
+     * 
+     * @param locatorURI the object locator to match
+     * @return the number of deleted objects
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
+     */
+    public final int deleteObject(String locatorURI) throws BucketStorageException {
+        return deleteObject(locatorURI, 0);
+    }
+
+    /**
      * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
      * the specified object.
      * 
@@ -156,7 +179,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @return the number of deleted objects
      * @throws BucketStorageException if the object cannot be deleted from the bucket
      */
-    public int deleteObject(LocalAbstractObject object) throws BucketStorageException {
+    public final int deleteObject(LocalAbstractObject object) throws BucketStorageException {
         return deleteObject(object, 0);
     }
 

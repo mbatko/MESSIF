@@ -437,10 +437,23 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     @Override
-   public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
-        // Search for object with the same data
-        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object);
+    public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
+        return deleteObjects(getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object), deleteLimit);
+    }
 
+    @Override
+    public synchronized int deleteObject(String locatorURI, int deleteLimit) throws BucketStorageException {
+        return deleteObjects(getModifiableIndex().search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locatorURI), deleteLimit);
+    }
+
+    /**
+     * Delete objects that are retrieved by the given search.
+     * @param search the search that supplies the objects to delete
+     * @param deleteLimit the maximal number of deleted objects (zero means unlimited)
+     * @return the number of deleted objects
+     * @throws BucketStorageException if there was an object that cannot be deleted from the bucket
+     */
+    protected synchronized int deleteObjects(ModifiableSearch<LocalAbstractObject> search, int deleteLimit) throws BucketStorageException {
         int count = 0;
         try {
             // If there is another object found by the search
