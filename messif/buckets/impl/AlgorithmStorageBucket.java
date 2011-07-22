@@ -50,6 +50,7 @@ import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
 import messif.operations.AnswerType;
 import messif.operations.data.BulkInsertOperation;
+import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
 import messif.utility.reflection.ConstructorInstantiator;
@@ -277,6 +278,28 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         DeleteOperation operation;
         try {
             operation = algorithm.executeOperation(new DeleteOperation(object, deleteLimit));
+        } catch (NoSuchMethodException e) {
+            throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
+        } catch (AlgorithmMethodException e) {
+            throw new StorageFailureException("DeleteOperation executed on " + algorithm.getName() + " failed", e.getCause());
+        }
+
+        // Update object count
+        if (operation.wasSuccessful())
+            objectCount -= operation.getObjects().size();
+        return operation.getObjects().size();
+    }
+
+    /**
+     * Removes the given object by calling {@link DeleteByLocatorOperation} on the
+     * encapsulated algorithm.
+     * @throws BucketStorageException if the algorithm does not support delete operation or there was an error deleting the object
+     */
+    @Override
+    public synchronized int deleteObject(String locatorURI, int deleteLimit) throws BucketStorageException {
+        DeleteByLocatorOperation operation;
+        try {
+            operation = algorithm.executeOperation(new DeleteByLocatorOperation(Collections.singleton(locatorURI), deleteLimit));
         } catch (NoSuchMethodException e) {
             throw new StorageFailureException("Cannot delete object from algorithm, because DeleteOperation is not supported", e);
         } catch (AlgorithmMethodException e) {
