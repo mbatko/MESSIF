@@ -1124,6 +1124,8 @@ public abstract class Convert {
                 calendar.set(Calendar.SECOND, 0);
                 calendar.set(Calendar.MILLISECOND, 0);
                 break;
+            case 1:
+                return Long.parseLong(time);
             default:
                 throw new NumberFormatException("At least hours and minutes must be specified");
         }

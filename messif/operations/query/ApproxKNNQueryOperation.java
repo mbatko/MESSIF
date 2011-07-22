@@ -59,7 +59,12 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation {
          * Stop after a specific number of "data regions" (buckets, clusters) is accessed and searched.
          * {@link #localSearchParam} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
          */
-        DATA_PARTITIONS
+        DATA_PARTITIONS,
+        /**
+         * Stop after a specific number of I/O operations (page reads)..
+         * {@link #localSearchParam} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
+         */
+        PAGE_READS
     }
 
     /** Type of the local approximation parameter used. */

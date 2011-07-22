@@ -163,7 +163,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     public int getAnswerCount() {
         return answer.size();
     }
-    
+
     /**
      * Returns the maximal capacity of the answer collection.
      * @return the maximal capacity of the answer collection

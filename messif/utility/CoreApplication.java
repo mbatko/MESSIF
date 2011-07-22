@@ -1956,6 +1956,26 @@ public class CoreApplication {
     }
 
     /**
+     * Returns current time in miliseconds.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; currentTime
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "returns current time in milis", arguments = { })
+    public boolean currentTime(PrintStream out, String... args) {
+        out.print(System.currentTimeMillis());
+        return true;
+    }
+    
+    /**
      * Shows a list of commands with help.
      *
      * <p>
