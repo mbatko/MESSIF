@@ -503,7 +503,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
         rtv += edgeHistogram.dataHashCode();
         rtv += scalableColor.dataHashCode();
         rtv += regionShape.dataHashCode();
-        rtv += keyWords.dataHashCode();
+        //rtv += keyWords.dataHashCode();
         return rtv;
     }
 
@@ -522,8 +522,8 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
             return false;
         if (!regionShape.dataEquals(castObj.regionShape))
             return false;
-        if (keyWords != null && castObj.keyWords != null && !keyWords.dataEquals(castObj.keyWords))
-            return false;
+        //if (keyWords != null && castObj.keyWords != null && !keyWords.dataEquals(castObj.keyWords))
+        //    return false;
         return true;
     }
 

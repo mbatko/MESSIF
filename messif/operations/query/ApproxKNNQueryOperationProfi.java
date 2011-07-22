@@ -16,9 +16,12 @@
  */
 package messif.operations.query;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import messif.objects.AbstractObject;
-import messif.objects.impl.MetaObjectPixMacSCT;
+import messif.objects.LocalAbstractObject;
+import messif.objects.impl.MetaObjectProfiSCT;
+import messif.objects.impl.MetaObjectProfiSCT.Territory;
 import messif.objects.impl.ObjectIntMultiVectorJaccard;
 import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
@@ -27,18 +30,15 @@ import messif.operations.AnswerType;
 import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
 
 /**
- * Special query for {@link MetaObjectPixMacSCT} objects with keywords.
+ * Special query for {@link MetaObjectProfiSCT} objects with keywords.
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-@AbstractOperation.OperationName("Approximate kNN Query parametrized for Metric Index using PixMac text data")
-public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryOperationMIndex {
+@AbstractOperation.OperationName("Approximate kNN Query parametrized for Metric Index using Profi text data")
+public class ApproxKNNQueryOperationProfi extends ApproxKNNQueryOperation {
     /** Class serial id for serialization. */
-    private static final long serialVersionUID = 1L;
-
-    /** Maximal value of "k" */
-    public static final int MAX_K = 5000;
+    private static final long serialVersionUID = 2L;
 
     /** Index of the first objects returned from the answer (to simulate an incremental query) */
     private final int from;
@@ -49,10 +49,45 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     private final WeightProvider queryWeights;
     /** Weights for database objects' keywords */
     private final WeightProvider dbWeights;
+    /** The territory used to filter the answer */
+    private final Territory filterTerritory;
 
     /**
-     * Creates a new instance of ApproxKNNQueryOperationPixMacMIndex
+     * Creates a new instance of ApproxKNNQueryOperationProfi
      * with specified parameters for centralized approximation.
+     *
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param from index of the first objects returned from the answer (to simulate an incremental query)
+     * @param keywordsWeight weight for the keywords jaccard coefficient
+     * @param queryWeights the weights provider for query object's keywords
+     * @param dbWeights the weights provider for database objects' keywords
+     * @param filterTerritory the territory used to filter the answer
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return",
+            "Text similarity weight", "Query keywords weight provider", "Database keywords weight provider", "Filter territory",
+            "Local search param", "Type of local search param", "Answer type"})
+    public ApproxKNNQueryOperationProfi(MetaObjectProfiSCT queryObject, int k, int from,
+            float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights, Territory filterTerritory,
+            int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
+    ) {
+        super(queryObject, k + from, answerType, localSearchParam, localSearchType, LocalAbstractObject.UNKNOWN_DISTANCE);
+        if (from < 0)
+            throw new IllegalArgumentException("From parameter cannot be negative and must be smaller than k");
+        this.from = from;
+        this.keywordsWeight = keywordsWeight;
+        this.queryWeights = queryWeights;
+        this.dbWeights = dbWeights;
+        this.filterTerritory = filterTerritory;
+    }
+
+    /**
+     * Creates a new instance of ApproxKNNQueryOperationProfi
+     * with specified parameters for centralized approximation.
+     * No territory is filtered.
      *
      * @param queryObject query object
      * @param k number of objects to be returned
@@ -67,17 +102,11 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     @AbstractOperation.OperationConstructor({"Query object", "# of nearest objects", "Starting index of object to return",
             "Text similarity weight", "Query keywords weight provider", "Database keywords weight provider",
             "Local search param", "Type of local search param", "Answer type"})
-    public ApproxKNNQueryOperationWeightedPixMacMIndex(MetaObjectPixMacSCT queryObject, int k, int from,
+    public ApproxKNNQueryOperationProfi(MetaObjectProfiSCT queryObject, int k, int from,
             float keywordsWeight, WeightProvider queryWeights, WeightProvider dbWeights,
             int localSearchParam, LocalSearchType localSearchType, AnswerType answerType
     ) {
-        super(queryObject, Math.min(k + from, MAX_K), localSearchParam, localSearchType, answerType);
-        if (from < 0)
-            throw new IllegalArgumentException("From parameter cannot be negative and must be smaller than k");
-        this.from = from;
-        this.keywordsWeight = keywordsWeight;
-        this.queryWeights = queryWeights;
-        this.dbWeights = dbWeights;
+        this(queryObject, k, from, keywordsWeight, queryWeights, dbWeights, null, localSearchParam, localSearchType, answerType);
     }
 
     @Override
@@ -91,21 +120,25 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
     }
 
     @Override
-    public MetaObjectPixMacSCT getQueryObject() {
-        return (MetaObjectPixMacSCT)super.getQueryObject();
+    public MetaObjectProfiSCT getQueryObject() {
+        return (MetaObjectProfiSCT)super.getQueryObject();
     }
 
     @Override
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        if (keywordsWeight != 0 && object != null && object instanceof MetaObjectPixMacSCT) {
+        MetaObjectProfiSCT castObj = (MetaObjectProfiSCT)object;
+        if (filterTerritory != null && !castObj.containsTerritory(filterTerritory))
+            return null;
+
+        if (keywordsWeight != 0 && castObj != null) {
             // Compute new distance
-            distance += keywordsWeight * getKeywordsDistance((MetaObjectPixMacSCT)object);
+            distance += keywordsWeight * getKeywordsDistance(castObj);
         }
 
         if (distance > getAnswerThreshold())
             return null;
 
-        return super.addToAnswer(object, distance, objectDistances);
+        return super.addToAnswer(castObj, distance, objectDistances);
     }
 
     /**
@@ -113,7 +146,7 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
      * @param dbObject the database object for which to get the distance
      * @return the query and database objects' keywords distance
      */
-    protected float getKeywordsDistance(MetaObjectPixMacSCT dbObject) {
+    protected float getKeywordsDistance(MetaObjectProfiSCT dbObject) {
         ObjectIntMultiVectorJaccard queryKeyWords = getQueryObject().getKeyWords();
         ObjectIntMultiVectorJaccard dbObjectKeyWords = dbObject.getKeyWords();
         if (queryKeyWords == null || dbObjectKeyWords == null)
@@ -124,8 +157,11 @@ public class ApproxKNNQueryOperationWeightedPixMacMIndex extends ApproxKNNQueryO
 
     @Override
     public String toString() {
-        return new StringBuilder("Pixmac search q=").append(getQueryObject().getLocatorURI()).append(" <from=").append(from).append(", k=").append(getK()).append("> ").
-                append(" precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
+        return new StringBuilder(" Profi search q=").append(getQueryObject().getLocatorURI()).append(" <from=").append(", k=").append(getK()).append("> ").
+                append(" approx precision: ").append(localSearchParam).append(" ").append(localSearchType.toString()).toString();
+//                .append("\n\tquery keywords: ").append(Arrays.toString(((MetaObjectProfiSCT) getQueryObject()).getKeyWords().getVectorData()))
+//                .append("\n\tfirst obj kwrs: ").append(Arrays.toString(((MetaObjectProfiSCT) getAnswer().next().getObject()).getKeyWords().getVectorData())).append(" (locator=").append(getAnswer().next().getObject().getLocatorURI()).append(")")
+//                .toString();
     }
 
 }
