@@ -100,6 +100,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * Returns the ID of the bucket on remote node.
      * @return the ID of the bucket on remote node
      */
+    @Override
     public int getBucketID() {
         return bucketID;
     }
@@ -146,6 +147,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * {@inheritDoc}
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
+    @Override
     public LocalAbstractObject getObject(UniqueID objectID) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -166,6 +168,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * {@inheritDoc}
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
+    @Override
     public LocalAbstractObject getObject(String locator) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -186,6 +189,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * {@inheritDoc}
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
+    @Override
     public LocalAbstractObject getObject(AbstractObjectKey key) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -207,6 +211,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * @return iterator over all objects from the remote bucket
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
+    @Override
     public AbstractObjectIterator<LocalAbstractObject> getAllObjects() throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -269,6 +274,7 @@ public class RemoteBucket extends Bucket implements Serializable {
         return 0;
     }
 
+    @Override
     public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -285,10 +291,28 @@ public class RemoteBucket extends Bucket implements Serializable {
         return null;
     }
 
+    @Override
     public int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).deleteObject(object, deleteLimit);
+        
+        // Otherwise, send message to remote netnode
+        /* FIXME:
+        try {
+            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
+        } catch (IOException e) {
+            throw new IllegalStateException("Network error while deleting Object (" + object + ") from " + toString(), e);
+        }
+         */
+        return 0;
+    }
+
+    @Override
+    public int deleteObject(String locatorURI, int deleteLimit) throws BucketStorageException {
+        // If this remote bucket points is current node, use local bucket
+        if (isLocalBucket())
+            return netbucketDisp.getBucket(bucketID).deleteObject(locatorURI, deleteLimit);
         
         // Otherwise, send message to remote netnode
         /* FIXME:
