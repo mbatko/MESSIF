@@ -143,6 +143,7 @@ public class HttpApplication extends Application {
         }
 
         httpServer.removeContext(args[1]);
+        httpServerContexts.remove(args[1]);
         return true;
     }
 
