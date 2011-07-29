@@ -32,6 +32,7 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
 import messif.utility.Parametric;
+import messif.utility.ParametricBase;
 
 /**
  * Extension of the standard {@link MetaObject} that allows to store (in addition
@@ -151,6 +152,20 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
         if (additionalParameters == null)
             return Collections.emptyMap();
         return Collections.unmodifiableMap(additionalParameters);
+    }
+
+    /**
+     * {@inheritDoc }
+     * 
+     * Note that {@link Parametric parameters} that are {@link Clearable}
+     * are {@link Clearable#clearSurplusData() cleared} and the other non-primitive
+     * parameters are <em>removed</em> from the parameters.
+     */
+    @Override
+    public void clearSurplusData() {
+        super.clearSurplusData();
+        if (additionalParameters != null)
+            ParametricBase.clearSurplusData(additionalParameters.values().iterator(), true, true);
     }
 
 

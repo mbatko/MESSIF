@@ -34,6 +34,7 @@ import messif.buckets.index.IndexComparator;
 import messif.utility.Clearable;
 import messif.utility.Convert;
 import messif.utility.Parametric;
+import messif.utility.ParametricBase;
 
 
 /**
@@ -427,10 +428,16 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * This method is intended to be called whenever the operation is
      * sent back to client in order to minimize problems with unknown
      * classes after deserialization.
+     * Note that {@link Parametric parameters} that are {@link Clearable}
+     * are {@link Clearable#clearSurplusData() cleared} and the other non-primitive
+     * parameters are <em>removed</em> from the parameters.
      */
     @Override
     public void clearSurplusData() {
         suppData = null;
+        
+        if (additionalParameters != null)
+            ParametricBase.clearSurplusData(additionalParameters.values().iterator(), true, true);
     }
 
 

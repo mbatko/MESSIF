@@ -419,6 +419,40 @@ public abstract class Convert {
     }
 
     /**
+     * Returns whether the given class is a primitive-writable.
+     * That is, the type is either primitive, a wrapper-class for a primitive type,
+     * {@link String}, or a static array with primitive-writable components.
+     * Note that the static arrays are only checked if {@code checkArrays} is <tt>true</tt>.
+     * @param type the class to check
+     * @param checkArrays flag whether the static arrays should be considered writable
+     * @return <tt>true</tt> if the given class is a primitive-writable
+     */
+    public static boolean isPrimitiveWritableClass(Class<?> type, boolean checkArrays) {
+        if (type == Integer.TYPE || type.equals(Integer.class))
+            return true;
+        else if (type == Float.TYPE || type.equals(Float.class))
+            return true;
+        else if (type == Long.TYPE || type.equals(Long.class))
+            return true;
+        else if (type == Short.TYPE || type.equals(Short.class))
+            return true;
+        else if (type == Byte.TYPE || type.equals(Byte.class))
+            return true;
+        else if (type == Double.TYPE || type.equals(Double.class))
+            return true;
+        else if (type == Character.TYPE || type.equals(Character.class))
+            return true;
+        else if (type == Boolean.TYPE || type.equals(Boolean.class))
+            return true;
+        else if (type.equals(String.class))
+            return true;
+        else if (checkArrays && type.isArray())
+            return isPrimitiveWritableClass(type.getComponentType(), true);
+        else
+            return false;
+    }
+
+    /**
      * Returns the number of bits used to represent the specified primitive class.
      * @param type the primitive type for which to get the size
      * @return the number of bits used to represent the specified primitive class

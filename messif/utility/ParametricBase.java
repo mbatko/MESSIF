@@ -18,6 +18,7 @@ package messif.utility;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -96,4 +97,48 @@ public class ParametricBase implements Parametric {
         return Collections.unmodifiableMap(map);
     }
 
+
+    //****************** Clearable interface support ******************//
+
+    /**
+     * Iterates all items in the given {@code data} iterator for objects that
+     * implements {@link Clearable} interface and {@link #clearSurplusData(java.lang.Object) clears}
+     * them. All values that do not implement the {@link Clearable} interface
+     * are removed if {@code removeNonClearables} is <tt>true</tt>.
+     * 
+     * @param data the iterator with items to clear
+     * @param treatPrimitiveAsClearable flag whether to consider {@link Convert#isPrimitiveWritableClass(java.lang.Class, boolean) primitive}
+     *          classes as implicitly cleared
+     * @param removeNonClearables if <tt>true</tt> the iterator's {@link Iterator#remove() remove}
+     *      method is called on values that do not implement the {@link Clearable} interface
+     */
+    public static void clearSurplusData(Iterator<?> data, boolean removeNonClearables, boolean treatPrimitiveAsClearable) {
+        if (data != null) {
+            while (data.hasNext()) {
+                if (!clearSurplusData(data.next(), treatPrimitiveAsClearable) && removeNonClearables)
+                    data.remove();
+            }
+        }
+    }
+
+    /**
+     * {@link Clearable#clearSurplusData() Clears the surplus data} from the
+     * given {@code object} if is supports the {@link Clearable} interface.
+     * @param object the object to clear
+     * @param treatPrimitiveAsClearable flag whether to consider {@link Convert#isPrimitiveWritableClass(java.lang.Class, boolean) primitive}
+     *          classes as implicitly cleared
+     * @return <tt>true</tt> if the object cannot be cleared (<tt>false</tt>) or
+     *      the object is clean (<tt>true</tt>)
+     */
+    public static boolean clearSurplusData(Object object, boolean treatPrimitiveAsClearable) {
+        if (object == null)
+            return true;
+        if (object instanceof Clearable) {
+            ((Clearable)object).clearSurplusData();
+            return true;
+        }
+        if (treatPrimitiveAsClearable && Convert.isPrimitiveWritableClass(object.getClass(), true))
+            return true;
+        return false;
+    }
 }
