@@ -305,7 +305,8 @@ public abstract class MetaObject extends LocalAbstractObject {
             try {
                 LocalAbstractObject object = readObject(stream, namesAndClasses[i]);
                 if (readObject) {
-                    object.setObjectKey(this.getObjectKey());
+                    if (object.getObjectKey() == null)
+                        object.setObjectKey(this.getObjectKey());
                     objects.put(namesAndClasses[i - 1], object);
                 }
             } catch (IOException e) {
