@@ -64,7 +64,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      *
      * @param locatorURI the locator URI for this object and all the provided objects will be set as well
      * @param objects collection of objects with their symbolic names
-     * @param cloneObjects if <tt>true</tt> the provided <code>objects</code> will be cloned, otherwise the
+     * @param cloneObjects if <tt>true</tt> the provided <code>objects</code> will be cloned and the
      *        the locators of the provided <code>objects</code> will be replaced by the specified one
      * @throws CloneNotSupportedException if the clonning of the <code>objects</code> was unsuccessful
      */
