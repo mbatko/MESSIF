@@ -220,17 +220,4 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
             addToAnswer(iter.next().getObject());
     }
 
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        for (AbstractObject obj : answer)
-            obj.clearSurplusData();
-    }
-
 }

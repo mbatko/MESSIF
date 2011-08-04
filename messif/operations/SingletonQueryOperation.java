@@ -184,17 +184,4 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
         super.updateFrom(operation);
     }
 
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        if (answer != null)
-            answer.clearSurplusData();
-    }
-
 }

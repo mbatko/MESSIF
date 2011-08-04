@@ -323,18 +323,4 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         if (answer instanceof EndOperationListener)
             ((EndOperationListener)answer).onEndOperation(this, errValue);
     }
-
-    /**
-     * Clear non-messif data stored in operation.
-     * This method is intended to be called whenever the operation is
-     * sent back to client in order to minimize problems with unknown
-     * classes after deserialization.
-     */
-    @Override
-    public void clearSurplusData() {
-        super.clearSurplusData();
-        for (RankedAbstractObject obj : answer)
-            obj.clearSurplusData();
-    }
-
 }
