@@ -120,7 +120,7 @@ public class SearchAbstractObjectIterator<T extends LocalAbstractObject> extends
      * @return <tt>true</tt> if the current number of iterations has reached its maximum
      */
     public final boolean isLimitReached() {
-        return (limit != -1) && (count > limit);
+        return (limit != -1) && (count >= limit);
     }
 
 
