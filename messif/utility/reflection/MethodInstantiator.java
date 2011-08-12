@@ -58,7 +58,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the provided method is not static or does not return the given objectClass
      */
     public MethodInstantiator(Class<? extends T> objectClass, Method method, Object callInstance) throws NoSuchInstantiatorException {
-        if (!objectClass.isAssignableFrom(method.getReturnType()))
+        if (!Convert.wrapPrimitiveType(objectClass).isAssignableFrom(Convert.wrapPrimitiveType(method.getReturnType())))
             throw new NoSuchInstantiatorException("Method " + method + " does not return requested " + objectClass);
         if (callInstance == null) {
             if (!Modifier.isStatic(method.getModifiers()))

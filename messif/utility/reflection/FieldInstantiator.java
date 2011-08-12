@@ -19,6 +19,7 @@ package messif.utility.reflection;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import messif.utility.Convert;
 
 /**
  * This class allows to create instances of a given class.
@@ -56,7 +57,7 @@ public class FieldInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the provided field has not the given objectClass type
      */
     public FieldInstantiator(Class<? extends T> objectClass, Field field, Object fieldInstance) throws NoSuchInstantiatorException {
-        if (!objectClass.isAssignableFrom(field.getType()))
+        if (!Convert.wrapPrimitiveType(objectClass).isAssignableFrom(Convert.wrapPrimitiveType(field.getType())))
             throw new NoSuchInstantiatorException("Field " + field + " has not the requested " + objectClass);
         if (fieldInstance == null) {
             if (!Modifier.isStatic(field.getModifiers()))
