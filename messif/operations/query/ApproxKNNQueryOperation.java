@@ -19,6 +19,7 @@ package messif.operations.query;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.Approximate;
 import messif.operations.RankingQueryOperation;
 
 /**
@@ -30,42 +31,11 @@ import messif.operations.RankingQueryOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Approximate k-nearest neighbors query")
-public class ApproxKNNQueryOperation extends KNNQueryOperation {
+public class ApproxKNNQueryOperation extends KNNQueryOperation implements Approximate {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 3L;
 
     //****************** Attributes ******************//
-
-    /**
-     * Enumeration of types of the stop condition for approximation's early termination strategy.
-     */
-    public static enum LocalSearchType {
-        /**
-         * Stop after inspecting given percentage of data.
-         * {@link #localSearchParam} holds the value between 0-100.
-         */
-        PERCENTAGE,
-        /**
-         * Stop after inspecting the specific number of objects.
-         * {@link #localSearchParam} is the number of objects.
-         */
-        ABS_OBJ_COUNT,
-        /**
-         * Stop after the specific number of evaluations of distance functions.
-         * {@link #localSearchParam} is the threshold on the number of distance computations.
-         */
-        ABS_DC_COUNT,
-        /**
-         * Stop after a specific number of "data regions" (buckets, clusters) is accessed and searched.
-         * {@link #localSearchParam} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
-         */
-        DATA_PARTITIONS,
-        /**
-         * Stop after a specific number of I/O operations (page reads)..
-         * {@link #localSearchParam} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
-         */
-        PAGE_READS
-    }
 
     /** Type of the local approximation parameter used. */
     protected LocalSearchType localSearchType;
@@ -168,53 +138,32 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation {
     
     //****************** Attribute access ******************//
 
-    /**
-     * Returns the {@link LocalSearchType type of the local approximation} parameter used.
-     * @return the {@link LocalSearchType type of the local approximation} parameter used
-     */
+    @Override
     public LocalSearchType getLocalSearchType() {
         return localSearchType;
     }
 
-    /**
-     * Setter for the local search parameter {@link #localSearchParam}
-     * @param localSearchParam new local search parameter {@link #localSearchParam}
-     */
+    @Override
     public void setLocalSearchParam(int localSearchParam) {
         this.localSearchParam = localSearchParam;
     }
 
-    /**
-     * Setter for the type of the local search parameter {@link #localSearchType}
-     * @param localSearchType new {@link #localSearchType}
-     */
+    @Override
     public void setLocalSearchType(LocalSearchType localSearchType) {
         this.localSearchType = localSearchType;
     }
 
-    /**
-     * Returns the value of the local approximation parameter.
-     * Its interpretation depends on the value of {@link #getLocalSearchType() local search type}.
-     * @return the value of the local approximation parameter
-     */
+    @Override
     public int getLocalSearchParam() {
         return localSearchParam;
     }
 
-    /**
-     * Set a different value of radius within which the results are guaranteed as correct.
-     * An evaluation algorithm is completely responsible for setting the correct value.
-     * @param radiusGuaranteed new guaranteed radius value
-     */
+    @Override
     public void setRadiusGuaranteed(float radiusGuaranteed) {
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
-    /**
-     * Returns a currently set value of radius within which the results are guaranteed as correct.
-     * An evaluation algorithm is completely responsible for setting the correct value.
-     * @return the value of the currently guaranteed radius
-     */
+    @Override
     public float getRadiusGuaranteed() {
         return radiusGuaranteed;
     }

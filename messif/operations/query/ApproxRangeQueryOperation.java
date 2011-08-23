@@ -19,6 +19,7 @@ package messif.operations.query;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.Approximate;
 
 /**
  * Approximate range query with specific early termination parameters
@@ -29,37 +30,19 @@ import messif.operations.AnswerType;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Approximate range query")
-public class ApproxRangeQueryOperation extends RangeQueryOperation {    
+public class ApproxRangeQueryOperation extends RangeQueryOperation implements Approximate {    
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /** Type of the local approximation parameter: PERCENTAGE, ABS_OBJ_COUNT, ABS_DC_COUNT.
-     * It can be view as a type of stop condition for early termination strategy of approximation.
-     */
-    public static enum LocalSearchType {
-        /** Stop after inspecting given percentage of data.
-         * {@link #localSearchParam} holds the value between 0-100.
-         */
-        PERCENTAGE,
-        /** Stop after inspecting the specific number of objects.
-         * {@link #localSearchParam} is the number of objects.
-         */
-        ABS_OBJ_COUNT,
-        /** Stop after the specific number of evaluations of distance functions.
-         * {@link #localSearchParam} is the threshold on the number of distance computations.
-         */
-        ABS_DC_COUNT
-    }
-
     /** Type of the local approximation parameter used. */
-    protected final LocalSearchType localSearchType;
+    protected LocalSearchType localSearchType;
 
     /**
      * Value of the local approximation parameter. 
      * Its interpretation depends on the value of {@link #localSearchType}.
      */
-    protected final int localSearchParam;
+    protected int localSearchParam;
 
     /**
      * Radius for which the answer is guaranteed as correct.
@@ -129,43 +112,34 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation {
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
-    /**
-     * Returns currently set type of approximation, see {@link #localSearchType}.
-     * 
-     * @return current type of approximation
-     */
+    @Override
     public LocalSearchType getLocalSearchType() {
         return localSearchType;
     }
 
-    /**
-     * Returns the currently set value of approximation threshold. The interpretation
-     * of this value depends on the currently set type {@link #localSearchType}.
-     * 
-     * @return threshold value set
-     */
+    @Override
     public int getLocalSearchParam() {
         return localSearchParam;
     }
 
-    /**
-     * Set a different value of radius within which the results are guaranteed as correct.
-     * An evaluation algorithm is completely responsible for setting the correct value.
-     * 
-     * @param radiusGuaranteed new value of radius
-     */
-    public void setRadiusGuaranteed(float radiusGuaranteed) {
-        this.radiusGuaranteed = radiusGuaranteed;
+    @Override
+    public void setLocalSearchType(LocalSearchType localSearchType) {
+        this.localSearchType = localSearchType;
     }
 
-    /**
-     * Returns a currently set value of radius within which the results are guaranteed as correct.
-     * An evaluation algorithm is completely responsible for setting the correct value.
-     * 
-     * @return value of radius
-     */
+    @Override
+    public void setLocalSearchParam(int localSearchParam) {
+        this.localSearchParam = localSearchParam;
+    }
+
+    @Override
     public float getRadiusGuaranteed() {
         return radiusGuaranteed;
+    }
+
+    @Override
+    public void setRadiusGuaranteed(float radiusGuaranteed) {
+        this.radiusGuaranteed = radiusGuaranteed;
     }
 
     /**
