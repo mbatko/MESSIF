@@ -25,7 +25,6 @@ import messif.objects.util.DoubleSortedCollection;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
 
 /**
  * Special query for {@link MetaObjectPixMacShapeAndColor} objects with keywords.

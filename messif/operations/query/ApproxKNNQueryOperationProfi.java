@@ -16,7 +16,6 @@
  */
 package messif.operations.query;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
@@ -27,7 +26,6 @@ import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
 
 /**
  * Special query for {@link MetaObjectProfiSCT} objects with keywords.

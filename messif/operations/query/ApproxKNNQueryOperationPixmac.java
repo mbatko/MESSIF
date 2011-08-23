@@ -25,7 +25,6 @@ import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.query.ApproxKNNQueryOperation.LocalSearchType;
 
 /**
  * Special query for {@link MetaObjectPixMacSCT} objects with keywords.
