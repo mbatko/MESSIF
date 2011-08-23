@@ -326,6 +326,21 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public <T extends AbstractOperation> T setupStatsAndExecuteOperation(T operation, String operationStatsRegexp) throws AlgorithmMethodException, NoSuchMethodException {
+        Object rtv = methodExecute("setupStatsAndExecuteOperation", connectionRetries, operation, operationStatsRegexp);
+        if (rtv instanceof Exception) {
+            if (rtv instanceof AlgorithmMethodException)
+                throw (AlgorithmMethodException)rtv;
+            if (rtv instanceof NoSuchMethodException)
+                throw (NoSuchMethodException)rtv;
+            throw handleException(rtv);
+        } else {
+            return (T)rtv;
+        }
+    }
+
+    @Override
     public void backgroundExecuteOperationIndependent(AbstractOperation operation) {
          methodExecuteHandleException("backgroundExecuteOperationIndependent", operation);
     }
@@ -342,18 +357,5 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
         } else {
             return rtv;
         }
-    }
-
-    /**
-     * Executes a given method on this algorithm and returns the result.
-     * @param methodName the name of the method to execute on the remote algorithm
-     * @param methodArguments the arguments for the method
-     * @return the method result or exception
-     * @throws InvocationTargetException if the executed method throws an exception
-     * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
-     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
-     */
-    public Object methodExecute(String methodName, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
-        return methodExecute(methodName, false, null, methodArguments);
     }
 }
