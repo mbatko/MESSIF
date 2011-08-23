@@ -652,12 +652,7 @@ public class CoreApplication {
 
         try {
             // Execute operation
-            algorithm.resetOperationStatistics();
-            if (bindOperationStatsRegexp != null)
-                OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            lastOperation = algorithm.executeOperation(operation);
-            if (bindOperationStatsRegexp != null)
-                OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
+            lastOperation = algorithm.setupStatsAndExecuteOperation(operation, bindOperationStatsRegexp);
             return true;
         } catch (NoSuchMethodException e) {
             out.println(e.getMessage());

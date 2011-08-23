@@ -143,7 +143,7 @@ public abstract class Algorithm implements Serializable {
      * After this method is called, the behavior of executing any operation is unpredictable.
      *
      * <p>
-     * This implementation defaults to call {@link #finalize()}, but should be overriden
+     * This implementation defaults to call {@link #finalize()}, but should be overridden
      * if the algorithm needs to differentiate between finalizing and destroying. In that case
      * the "super.destroy()" should <i>not</i> be called if finalizing is not part of destroy.
      * </p>
@@ -477,6 +477,27 @@ public abstract class Algorithm implements Serializable {
     public <T extends AbstractOperation> T executeOperation(T operation) throws AlgorithmMethodException, NoSuchMethodException {
         execute(Statistics.isEnabledGlobally(), operation);
         return operation;
+    }
+
+    /**
+     * Reset {@link #resetOperationStatistics() operation statistics},
+     * bind the operation statistics according to the given regular expression, 
+     * and execute operation on this algorithm.
+     * @param <T> the type of executed operation
+     * @param operation the operation to execute on this algorithm
+     * @param operationStatsRegexp regular expression matching the statistics to bind
+     * @return the executed operation (same as the argument)
+     * @throws AlgorithmMethodException if the execution has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     */
+    public <T extends AbstractOperation> T setupStatsAndExecuteOperation(T operation, String operationStatsRegexp) throws AlgorithmMethodException, NoSuchMethodException {
+        resetOperationStatistics();
+        if (operationStatsRegexp != null)
+            OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(operationStatsRegexp);
+        T rtv = executeOperation(operation);
+        if (operationStatsRegexp != null)
+            OperationStatistics.getLocalThreadStatistics().unbindAllStats(operationStatsRegexp);
+        return rtv;
     }
 
     /**
