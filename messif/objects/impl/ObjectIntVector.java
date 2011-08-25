@@ -43,7 +43,7 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
-    //****************** Data ******************//
+    //****************** Attributes ******************//
 
     /** Data array */
     protected int[] data;
@@ -127,20 +127,22 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
      * 
      * @param data the vector of integers to output
      * @param stream the output stream to write the text to
+     * @param separator the char written between the vector numbers
+     * @param finalSeparator the char written at the end of the vector
      * @throws IOException if there was an I/O error while writing to the stream
      */
-    public static void writeIntVector(int[] data, OutputStream stream) throws IOException {
+    public static void writeIntVector(int[] data, OutputStream stream, char separator, char finalSeparator) throws IOException {
         for (int i = 0; i < data.length; i++) {
             if (i > 0)
-                stream.write(", ".getBytes());
+                stream.write(separator);
             stream.write(String.valueOf(data[i]).getBytes());
         }
-        stream.write('\n');
+        stream.write(finalSeparator);
     }
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        writeIntVector(data, stream);
+        writeIntVector(data, stream, ',', '\n');
     }
 
 
