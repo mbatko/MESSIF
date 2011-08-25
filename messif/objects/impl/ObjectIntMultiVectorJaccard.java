@@ -19,10 +19,8 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -78,15 +76,29 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
 
     /**
      * Creates a new instance of ObjectIntMultiVectorJaccard from stream - it expects that the data is already sorted!
+     * The data are stored as several lines of comma-separated integers.
      * @param stream text stream to read the data from
      * @param arrays number of arrays to read from the stream
      * @throws IOException when an error appears during reading from given stream.
-     *  or  EOFException when eof of the given stream is reached.
+     *  or  EOFException when end-of-file of the given stream is reached.
      * @throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
     public ObjectIntMultiVectorJaccard(BufferedReader stream, int arrays) throws IOException, NumberFormatException {
         super(stream, arrays);
+    }
+
+    /**
+     * Creates a new instance of ObjectIntMultiVectorJaccard from stream - it expects that the data is already sorted!
+     * The data are stored as a single line with semicolon separated lists of comma-separated integers.
+     * @param stream text stream to read the data from
+     * @throws IOException when an error appears during reading from given stream.
+     *  or  EOFException when end-of-file of the given stream is reached.
+     * @throws NumberFormatException when the line read from given stream does
+     * not consist of comma-separated or space-separated numbers.
+     */
+    public ObjectIntMultiVectorJaccard(BufferedReader stream) throws IOException, NumberFormatException {
+        super(stream);
     }
 
     /**

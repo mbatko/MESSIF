@@ -87,6 +87,7 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
 
     /**
      * Creates a new instance of ObjectIntMultiVector from text stream.
+     * The data are stored as several lines of comma-separated integers.
      * @param stream the stream from which to read lines of text
      * @param arrays number of arrays to read from the stream
      * @throws EOFException if the end-of-file of the given stream is reached
@@ -102,13 +103,38 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             this.data[i] = ObjectIntVector.parseIntVector(stream.readLine());
     }
 
+    /**
+     * Creates a new instance of ObjectIntMultiVector from text stream.
+     * The data are stored as a single line with semicolon separated lists of comma-separated integers.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
+     */
+    public ObjectIntMultiVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+        // Keep reading the lines while they are comments, then read the first line of the object
+        String line = readObjectComments(stream);
+        if (line.isEmpty()) {
+            this.data = new int[0][];
+        } else {
+            String[] arrays = line.split("\\s*;\\s*");
+            this.data = new int[arrays.length][];
+            for (int i = 0; i < data.length; i++)
+                this.data[i] = ObjectIntVector.parseIntVector(arrays[i]);
+        }
+    }
+
 
     //****************** Text file store/retrieve methods ******************//
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        for (int i = 0; i < data.length; i++)
-            ObjectIntVector.writeIntVector(data[i], stream);
+        if (data == null || data.length == 0) {
+            stream.write('\n');
+        } else {
+            for (int i = 0; i < data.length; i++)
+                ObjectIntVector.writeIntVector(data[i], stream, ',', i == data.length - 1 ? '\n' : ';');
+        }
     }
 
 

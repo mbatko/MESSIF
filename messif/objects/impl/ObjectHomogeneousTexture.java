@@ -73,9 +73,8 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         } else this.energyDeviation = null;
     }
 
-    //****************** Text file store/retrieve methods ******************
-    
-    /** Creates a new instance of ObjectHomogeneousTexture from stream.
+    /**
+     * Creates a new instance of ObjectHomogeneousTexture from stream.
      * @param stream input stream to read the data from
      * @throws IOException when an error appears during reading from given stream
      *    throws EOFException when eof of the given stream is reached.
@@ -86,58 +85,31 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
         
-        String[] fields = line.trim().split(";\\p{Space}*");
-        int averageInt = Integer.parseInt(fields[0]);
-        if ((averageInt < 0) || (averageInt > 256)) {
-            throw new NumberFormatException("the first number (average) of HomogeneousTexture must be of type unsigned8: " + averageInt);
-        }
-        this.average = (short) averageInt;
+        String[] fields = line.trim().split("\\s*;\\s*");
+        this.average = Short.parseShort(fields[0]);
+        if ((this.average < 0) || (this.average > 256))
+            throw new NumberFormatException("the first number (average) of HomogeneousTexture must be of type unsigned8: " + this.average);
         this.standardDeviation = Short.parseShort(fields[1]);
-        String[] energyStrings = fields[2].trim().split(",\\p{Space}*");
-        this.energy = new short[energyStrings.length];
-        for (int i = 0; i < energyStrings.length; i++)
-            this.energy[i] = Short.parseShort(energyStrings[i]);
-        if (fields.length >= 4 && fields[3].length() > 0) {
-            String[] energyDeviationStrings = fields[3].trim().split(",\\p{Space}*");
-            this.energyDeviation = new short[energyDeviationStrings.length];
-            for (int i = 0; i < energyDeviationStrings.length; i++)
-                this.energyDeviation[i] = Short.parseShort(energyDeviationStrings[i]);
-        } else this.energyDeviation = null;
+        this.energy = ObjectShortVector.parseShortVector(fields[3]);
+        if (fields.length >= 4 && fields[3].length() > 0)
+            this.energyDeviation = ObjectShortVector.parseShortVector(fields[3]);
+        else
+            this.energyDeviation = null;
     }
 
-    /** Write object to text stream
-     * @throws IOException
-     */
     @Override
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.valueOf(average).getBytes());
         stream.write(';');
-        stream.write(' ');
         stream.write(String.valueOf(standardDeviation).getBytes());
         stream.write(';');
-        stream.write(' ');
-
-        // Write energy vector
-        for (int i = 0; i < energy.length; i++) {
-            stream.write(String.valueOf(energy[i]).getBytes());
-            stream.write((i + 1 < energy.length)?',':';');
-            stream.write(' ');
-        }
-
-        // Write energy deviation vector
+        ObjectShortVector.writeShortVector(energy, stream, ',', energyDeviation == null ? '\n' : ';');
         if (energyDeviation != null)
-            for (int i = 0; i < energyDeviation.length; i++) {
-                stream.write(String.valueOf(energyDeviation[i]).getBytes());
-                if (i + 1 < energy.length) {
-                    stream.write(',');
-                    stream.write(' ');
-                }
-            }
-        stream.write('\n');
+            ObjectShortVector.writeShortVector(energyDeviation, stream, ',', '\n');
     }
 
 
-    /****************** Size function ******************/
+    //****************** Size function ******************//
 
     @Override
     public int getSize() {
@@ -145,7 +117,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     }
 
 
-    /****************** Data equality functions ******************/
+    //****************** Data equality functions ******************//
 
     @Override
     public boolean dataEquals(Object obj) {
@@ -165,7 +137,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     private static final int Nray = 128;		// Num of ray
     private static final int Nview = 180;		// Num of view
@@ -349,9 +321,10 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
             for(int m=0;m<AngularDivision;m++)
                 feature[n*AngularDivision+m+32]/=dmean[n][m];
     }
-    
-    /*****************************  Cloning **********************************/
-    
+
+
+    //*****************************  Cloning **********************************//
+
     /**
      * Creates and returns a randomly modified copy of this vector.
      * Selects a position in the "energy" array in random and changes it - the final value stays in the given range.

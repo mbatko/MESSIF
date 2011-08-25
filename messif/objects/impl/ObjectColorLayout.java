@@ -34,20 +34,21 @@ import messif.objects.nio.BinarySerializator;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectColorLayout extends LocalAbstractObject implements BinarySerializable {
-
     /** Class id for serialization. */
     private static final long serialVersionUID = 2L;
 
-    /****************** Attributes ******************/
+    //****************** Attributes ******************//
 
     protected byte YCoeff[];
     protected byte CbCoeff[];
     protected byte CrCoeff[];
 
 
-    /****************** Constructors ******************/
+    //****************** Constructors ******************//
 
-    /** Creates a new instance of ObjectHomogeneousTexture */
+    /**
+     * Creates a new instance of ObjectColorLayout.
+     */
     public ObjectColorLayout(byte[] YCoeff, byte[] CbCoeff, byte[] CrCoeff) {
         this.YCoeff = YCoeff;
         this.CbCoeff = CbCoeff;
@@ -55,9 +56,10 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
     }
 
 
-    //****************** Text file store/retrieve methods ******************
+    //****************** Text file store/retrieve methods ******************//
     
-    /** Creates a new instance of ObjectHomogeneousTexture from stream.
+    /**
+     * Creates a new instance of ObjectColorLayout from stream.
      * Throws IOException when an error appears during reading from given stream.
      * Throws EOFException when eof of the given stream is reached.
      * Throws NumberFormatException when the line read from given stream does 
@@ -67,45 +69,22 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
         
-        String[] fields = line.trim().split(";\\p{Space}*");
-        this.YCoeff = split(fields[0], ",\\p{Space}*");
-        this.CbCoeff = split(fields[1], ",\\p{Space}*");
-        this.CrCoeff = split(fields[2], ",\\p{Space}*");
+        String[] fields = line.trim().split("\\s*;\\s*");
+        this.YCoeff = ObjectByteVector.parseByteVector(fields[0]);
+        this.CbCoeff = ObjectByteVector.parseByteVector(fields[1]);
+        this.CrCoeff = ObjectByteVector.parseByteVector(fields[2]);
     }
 
     /** Write object to text stream */
     @Override
     public void writeData(OutputStream stream) throws IOException {
-        join(stream, YCoeff);
-        stream.write(';');
-        stream.write(' ');
-        join(stream, CbCoeff);
-        stream.write(';');
-        stream.write(' ');
-        join(stream, CrCoeff);
-        stream.write('\n');
-    }
-
-    protected static byte[] split(String str, String split) {
-        String[] values = str.trim().split(split);
-        byte[] rtv = new byte[values.length];
-        for (int i = 0; i < values.length; i++)
-            rtv[i] = Byte.parseByte(values[i]);
-        return rtv;
-    }
-
-    protected static void join(OutputStream stream, byte[] values) throws IOException {
-        for (int i = 0; i < values.length; i++) {
-            stream.write(String.valueOf(values[i]).getBytes());
-            if (i + 1 < values.length) {
-                stream.write(',');
-                stream.write(' ');
-            }
-        }
+        ObjectByteVector.writeByteVector(YCoeff, stream, ',', ';');
+        ObjectByteVector.writeByteVector(CbCoeff, stream, ',', ';');
+        ObjectByteVector.writeByteVector(CrCoeff, stream, ',', '\n');
     }
 
 
-    /****************** Size function ******************/
+    //****************** Size function ******************//
 
     @Override
     public int getSize() {
@@ -113,7 +92,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
     }
 
 
-    /****************** Data equality functions ******************/
+    //****************** Data equality functions ******************//
 
     @Override
     public boolean dataEquals(Object obj) {
@@ -132,7 +111,7 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
     }
 
 
-    /****************** Distance function ******************/
+    //****************** Distance function ******************//
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
@@ -154,9 +133,10 @@ public class ObjectColorLayout extends LocalAbstractObject implements BinarySeri
         }
         return rtv;
     }
-    
-    /********************  Cloning ***************************/
-    
+
+
+    //********************  Cloning ***************************//
+
     /**
      * Creates and returns a randomly modified copy of this vector.
      * Selects a position in the "energy" array in random and changes it - the final value stays in the given range.
