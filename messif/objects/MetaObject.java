@@ -216,7 +216,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @throws IOException if there was an error resolving the specified class or its constuctor or a problem
      *         occurred while reading from the stream
      */
-    protected LocalAbstractObject readObject(BufferedReader stream, String className) throws IOException {
+    protected static LocalAbstractObject readObject(BufferedReader stream, String className) throws IOException {
         try {
             // Read the object
             return readObject(stream, Convert.getClassForName(className, LocalAbstractObject.class));
@@ -237,7 +237,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @throws IOException if there was an error resolving the specified class or its constuctor or a problem
      *         occurred while reading from the stream
      */
-    protected <E> E readObject(BufferedReader stream, Class<E> objectClass) throws IOException {
+    protected static <E> E readObject(BufferedReader stream, Class<E> objectClass) throws IOException {
         try {
             // Read the object
             return objectClass.getConstructor(BufferedReader.class).newInstance(stream);
@@ -264,7 +264,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #writeObjectsHeader(java.io.OutputStream, java.util.Map)
      * @see #writeObjects(java.io.OutputStream, java.util.Collection)
      */
-    protected String[] readObjectsHeader(BufferedReader stream) throws IOException {
+    protected final String[] readObjectsHeader(BufferedReader stream) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
 
@@ -299,7 +299,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #writeObjectsHeader(java.io.OutputStream, java.util.Map)
      * @see #writeObjects(java.io.OutputStream, java.util.Collection)
      */
-    protected Map<String, LocalAbstractObject> readObjects(BufferedReader stream, Collection<String> restrictNames, String[] namesAndClasses, Map<String, LocalAbstractObject> objects) throws IOException {
+    protected final Map<String, LocalAbstractObject> readObjects(BufferedReader stream, Collection<String> restrictNames, String[] namesAndClasses, Map<String, LocalAbstractObject> objects) throws IOException {
         for (int i = 1; i < namesAndClasses.length; i += 2) { // Note that it is safer to keep i pointing to the class
             boolean readObject = restrictNames == null || restrictNames.contains(namesAndClasses[i - 1]);
             try {
@@ -328,7 +328,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #readObjectsHeader(java.io.BufferedReader)
      * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
      */
-    protected Collection<LocalAbstractObject> writeObjectsHeader(OutputStream stream, Map<String, LocalAbstractObject> objects) throws IOException {
+    protected final Collection<LocalAbstractObject> writeObjectsHeader(OutputStream stream, Map<String, LocalAbstractObject> objects) throws IOException {
         Collection<LocalAbstractObject> objectsToWrite = new ArrayList<LocalAbstractObject>(objects.size());
 
         // Create first line with semicolon-separated names of classes
@@ -360,7 +360,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #readObjectsHeader(java.io.BufferedReader)
      * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
      */
-    protected void writeObjects(OutputStream stream, Collection<LocalAbstractObject> objects) throws IOException {
+    protected final void writeObjects(OutputStream stream, Collection<LocalAbstractObject> objects) throws IOException {
         // Write a line for every object from the list (skip the comments)
         for (LocalAbstractObject object : objects)
             object.write(stream, false);
@@ -504,6 +504,26 @@ public abstract class MetaObject extends LocalAbstractObject {
     protected final int fillMetaDistances(MetaObject obj, float distThreshold, float[] metaDistances) {
         return fillMetaDistances(obj, distThreshold, metaDistances, getObjectNames().toArray(new String[getObjectCount()]), UNKNOWN_DISTANCE);
     }
+
+    /**
+     * Convenience method that allows to call the metric function implementation
+     * directly for encapsulated objects (so that the statistics and caching does not apply).
+     * Note that if either {@code o1} or {@code o2} is <tt>null</tt>, the
+     * {@link #UNKNOWN_DISTANCE} is returned.
+     *
+     * @param o1 the object to compute distance from
+     * @param o2 the object to compute distance to
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between o1 and o2 if the distance is lower than distThreshold or
+     *          {@link #UNKNOWN_DISTANCE} if either {@code o1} or {@code o2} is <tt>null</tt>
+     * @see LocalAbstractObject#getDistance(LocalAbstractObject, float) LocalAbstractObject.getDistance
+     */
+    protected static float implementationGetDistance(LocalAbstractObject o1, LocalAbstractObject o2, float distThreshold) {
+        if (o1 == null || o2 == null)
+            return UNKNOWN_DISTANCE;
+        return o1.getDistanceImpl(o2, distThreshold);
+    }
+
 
     //****************** Additional overrides ******************//
 

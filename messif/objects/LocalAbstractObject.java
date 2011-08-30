@@ -996,6 +996,46 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
     /**
+     * Processes all the comment lines of text representation of the object.
+     * Only lines beginning with # are read and processed, the method
+     * ends when a first line that does not start with # is encountered.
+     * If the end-of-stream is reached, the method throws {@link EOFException}.
+     * See {@link #parseObjectComment(java.lang.String)} for more information
+     * about the comment format.
+     *
+     * @param reader the reader from which to get lines with comments
+     * @throws EOFException if the last line was read
+     * @throws IOException if the comment type was recognized but its value is illegal
+     */
+    protected final void readObjectCommentsWithoutData(BufferedReader reader) throws EOFException, IOException {
+        while (peekNextChar(reader) == '#') {
+            try {
+                String line = reader.readLine();
+                if (!parseObjectComment(line))
+                    throw new IOException("Unknown comment line: " + line);
+            } catch (IllegalArgumentException e) {
+                throw new IOException(e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Looks at the next character in the given reader without changing the position.
+     * @param reader the buffered reader (so the mark method is always supported) where to peek for a char
+     * @return the next character in the given reader
+     * @throws EOFException if the end-of-file was reached in the reader
+     * @throws IOException if there was an error reading data from the reader
+     */
+    protected static char peekNextChar(BufferedReader reader) throws EOFException, IOException {
+        reader.mark(1);
+        int ch = reader.read();
+        if (ch == -1)
+            throw new EOFException();
+        reader.reset();
+        return (char)ch;
+    }
+
+    /**
      * Processes a comment line of text representation of the object.
      * The comment is of format "#typeOfComment class value".
      * Recognized types of comments are: <ul>

@@ -273,7 +273,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
      * @throws IllegalArgumentException if there was an error creating a new instance of the object
      * @throws IllegalStateException if there was an error reading from the stream
      */
-    protected E nextStreamObject() throws IllegalArgumentException, IllegalStateException {
+    protected final E nextStreamObject() throws IllegalArgumentException, IllegalStateException {
         try {
             E ret = factory.create(stream);
             objectsRead++;
