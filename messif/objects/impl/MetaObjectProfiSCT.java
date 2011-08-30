@@ -1088,7 +1088,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         if (attractiveness == null)
             stream.write('\n');
         else
-            ObjectIntVector.writeIntVector(attractiveness, stream);
+            ObjectIntVector.writeIntVector(attractiveness, stream, ',', '\n');
 
         if (titleString != null && keywordString != null) {
             stream.write(titleString.getBytes());

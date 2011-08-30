@@ -18,15 +18,10 @@ package messif.objects.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
-import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -41,7 +36,7 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MetaObjectCophirKeywords extends MetaObject {
+public class MetaObjectCophirKeywords extends MetaObjectArrayWeightedSum {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -54,34 +49,10 @@ public class MetaObjectCophirKeywords extends MetaObject {
     };
 
     /** Weights for the default distance function (location and keywords are not used) */
-    private static final float[] weights = { 0.0f, 1.5f, 2.5f, 4.5f, 0.5f, 2.5f, 0.0f };
+    private static final float[] weights = { 0.0f / 20000f, 1.5f / 300f, 2.5f / 40f / 255f, 4.5f / 68f, 0.5f / 25f, 2.5f / 3000f, 0.0f };
 
-    /** Maximal distance (computed as the sum of weights) */
-    private static final float maxDistance;
-    static {
-        float weightSum = 1; // This is a safeguard to overcome possible normalization excesses
-        for (int i = 0; i < weights.length; i++)
-            weightSum += weights[i];
-        maxDistance = weightSum;
-    }
-
-
-    //****************** Attributes ******************//
-
-    /** Object for the Location */
-    private final ObjectGPSCoordinate location;
-    /** Object for the ColorLayoutType */
-    private final ObjectColorLayout colorLayout;
-    /** Object for the ColorStructureType */
-    private final ObjectShortVectorL1 colorStructure;
-    /** Object for the EdgeHistogramType */
-    private final ObjectVectorEdgecomp edgeHistogram;
-    /** Object for the HomogeneousTextureType */
-    private final ObjectHomogeneousTexture homogeneousTexture;
-    /** Object for the ScalableColorType */
-    private final ObjectIntVectorL1 scalableColor;
-    /** Keywords of this object */
-    private final ObjectIntMultiVectorJaccard keywords;
+    /** Maximal distance */
+    private static final float maxDistance = 16;
 
 
     //****************** Constructors ******************//
@@ -98,14 +69,7 @@ public class MetaObjectCophirKeywords extends MetaObject {
      * @param keywords the keyword identifiers in multi-vector (representing title, description, and tags)
      */
     public MetaObjectCophirKeywords(String locatorURI, ObjectGPSCoordinate location, ObjectColorLayout colorLayout, ObjectShortVectorL1 colorStructure, ObjectVectorEdgecomp edgeHistogram, ObjectHomogeneousTexture homogeneousTexture, ObjectIntVectorL1 scalableColor, ObjectIntMultiVectorJaccard keywords) {
-        super(locatorURI);
-        this.location = location;
-        this.colorLayout = colorLayout;
-        this.colorStructure = colorStructure;
-        this.edgeHistogram = edgeHistogram;
-        this.homogeneousTexture = homogeneousTexture;
-        this.scalableColor = scalableColor;
-        this.keywords = keywords;
+        super(locatorURI, location, colorLayout, colorStructure, edgeHistogram, homogeneousTexture, scalableColor, keywords);
     }
 
     /**
@@ -114,14 +78,7 @@ public class MetaObjectCophirKeywords extends MetaObject {
      * @param objects the encapsulated objects to add (keys should match the {@link #descriptorNames})
      */
     public MetaObjectCophirKeywords(String locatorURI, Map<String, ? extends LocalAbstractObject> objects) {
-        super(locatorURI);
-        this.location = (ObjectGPSCoordinate)objects.get(descriptorNames[0]);
-        this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[1]);
-        this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[2]);
-        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[3]);
-        this.homogeneousTexture = (ObjectHomogeneousTexture)objects.get(descriptorNames[4]);
-        this.scalableColor = (ObjectIntVectorL1)objects.get(descriptorNames[5]);
-        this.keywords = (ObjectIntMultiVectorJaccard)objects.get(descriptorNames[6]);
+        super(locatorURI, objects, descriptorNames);
     }
 
     /**
@@ -141,35 +98,20 @@ public class MetaObjectCophirKeywords extends MetaObject {
      *         {@link java.io.EOFException} is thrown when end-of-file of the given stream is reached
      * @throws NumberFormatException when the line with the descriptor is not valid
      */
+    @SuppressWarnings("unchecked")
     public MetaObjectCophirKeywords(BufferedReader stream, int wordLines) throws IOException, NumberFormatException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        // readObjectComments method returns first line that is not a comment
-        String line = readObjectComments(stream);
-
-        // Location is the first line, but can be empty
-        if (line.isEmpty()) {
-            location = null;
-        } else {
-            location = new ObjectGPSCoordinate(new BufferedReader(new StringReader(line)));
-        }
-
-        // Load visual descriptors
-        colorLayout = new ObjectColorLayout(stream);
-        colorStructure = new ObjectShortVectorL1(stream);
-        edgeHistogram = new ObjectVectorEdgecomp(stream);
-        homogeneousTexture = new ObjectHomogeneousTexture(stream);
-        scalableColor = new ObjectIntVectorL1(stream);
-
-        // Load keywords
+        super(stream, ObjectGPSCoordinate.class, ObjectColorLayout.class, ObjectShortVectorL1.class,
+                ObjectVectorEdgecomp.class, ObjectHomogeneousTexture.class, ObjectIntVectorL1.class, null);
+        // Load keywords (special, not loaded automatically by the super constructor)
         switch (wordLines) {
             case 0:
-                keywords = null;
+                objects[6] = null;
                 break;
             case 1:
-                keywords = new ObjectIntMultiVectorJaccard(stream);
+                objects[6] = new ObjectIntMultiVectorJaccard(stream);
                 break;
             default:
-                keywords = new ObjectIntMultiVectorJaccard(stream, wordLines);
+                objects[6] = new ObjectIntMultiVectorJaccard(stream, wordLines);
         }
     }
 
@@ -185,155 +127,31 @@ public class MetaObjectCophirKeywords extends MetaObject {
         this(stream, 1);
     }
 
+    /**
+     * Creates a new instance of MetaObjectCophirKeywords loaded from binary input.
+     * 
+     * @param input the input to read the MetaObject from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    protected MetaObjectCophirKeywords(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+    }
 
-    //****************** Data access methods ******************//
+
+    //************ Overrides ************//
 
     /**
-     * Returns the number of encapsulated objects.
-     * @return the number of encapsulated objects
+     * Returns the list of the names of the possible encapsulated objects.
+     * @return the list of the names of the possible encapsulated objects
      */
-    @Override
-    public int getObjectCount() {
-        int count = 0;
-        if (location != null) {
-            count++;
-        }
-        if (colorLayout != null) {
-            count++;
-        }
-        if (colorStructure != null) {
-            count++;
-        }
-        if (edgeHistogram != null) {
-            count++;
-        }
-        if (homogeneousTexture != null) {
-            count++;
-        }
-        if (scalableColor != null) {
-            count++;
-        }
-        if (keywords != null) {
-            count++;
-        }
-        return count;
-    }
-
-    /**
-     * Returns the encapsulated object for given symbolic name.
-     *
-     * @param name the symbolic name of the object to return
-     * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
-     */
-    @Override
-    public LocalAbstractObject getObject(String name) {
-        if (descriptorNames[0].equals(name)) {
-            return location;
-        } else if (descriptorNames[1].equals(name)) {
-            return colorLayout;
-        } else if (descriptorNames[2].equals(name)) {
-            return colorStructure;
-        } else if (descriptorNames[3].equals(name)) {
-            return edgeHistogram;
-        } else if (descriptorNames[4].equals(name)) {
-            return homogeneousTexture;
-        } else if (descriptorNames[5].equals(name)) {
-            return scalableColor;
-        } else if (descriptorNames[6].equals(name)) {
-            return keywords;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Returns the object that encapsulates the keywords for this metaobject.
-     * @return the object that encapsulates the keywords
-     */
-    public ObjectIntMultiVectorJaccard getKeyWords() {
-        return keywords;
-    }
-
-
-    /**
-     * Store this object to a text stream. Print an empty line for encapsulated objects that are not present (are null).
-     * This method should have the opposite deserialization in constructor of a given object class.
-     *
-     * @param stream the stream to store this object to
-     * @throws IOException if there was an error while writing to stream
-     */
-    @Override
-    protected void writeData(OutputStream stream) throws IOException {
-        if (location != null) {
-            location.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (colorLayout != null) {
-            colorLayout.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (colorStructure != null) {
-            colorStructure.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (edgeHistogram != null) {
-            edgeHistogram.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (homogeneousTexture != null) {
-            homogeneousTexture.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (scalableColor != null) {
-            scalableColor.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
-        if (keywords != null) {
-            keywords.writeData(stream);
-        } else {
-            stream.write('\n');
-        }
+    public static String[] getDescriptorNames() {
+        return descriptorNames.clone();
     }
 
     @Override
-    public Collection<String> getObjectNames() {
-        Collection<String> names = new ArrayList<String>(6);
-        if (location != null) {
-            names.add(descriptorNames[0]);
-        }
-        if (colorLayout != null) {
-            names.add(descriptorNames[1]);
-        }
-        if (colorStructure != null) {
-            names.add(descriptorNames[2]);
-        }
-        if (edgeHistogram != null) {
-            names.add(descriptorNames[3]);
-        }
-        if (homogeneousTexture != null) {
-            names.add(descriptorNames[4]);
-        }
-        if (scalableColor != null) {
-            names.add(descriptorNames[5]);
-        }
-        if (keywords != null) {
-            names.add(descriptorNames[6]);
-        }
-        return names;
-    }
-
-
-    //************ Distance function implementation ************//
-
-    @Override
-    public float getMaxDistance() {
-        return maxDistance;
+    protected String getObjectName(int index) {
+        return descriptorNames[index];
     }
 
     /**
@@ -345,103 +163,13 @@ public class MetaObjectCophirKeywords extends MetaObject {
     }
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
-        MetaObjectCophirKeywords castObj = (MetaObjectCophirKeywords) obj;
-
-        float rtv = 0;
-
-        if (colorLayout != null && castObj.colorLayout != null) {
-            if (metaDistances != null) {
-                metaDistances[0] = colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) / 300.0f;
-                rtv += metaDistances[0] * weights[1];
-            } else {
-                rtv += colorLayout.getDistanceImpl(castObj.colorLayout, distThreshold) * weights[1] / 300.0;
-            }
-        }
-
-        if (colorStructure != null && castObj.colorStructure != null) {
-            if (metaDistances != null) {
-                metaDistances[1] = colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) / 40.0f / 255.0f;
-                rtv += metaDistances[1] * weights[2];
-            } else {
-                rtv += colorStructure.getDistanceImpl(castObj.colorStructure, distThreshold) * weights[2] / 40.0 / 255.0;
-            }
-        }
-
-        if (edgeHistogram != null && castObj.edgeHistogram != null) {
-            if (metaDistances != null) {
-                metaDistances[2] = edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold) / 68.0f;
-                rtv += metaDistances[2] * weights[3];
-            } else {
-                rtv += edgeHistogram.getDistanceImpl(castObj.edgeHistogram, distThreshold) * weights[3] / 68.0;
-            }
-        }
-
-        if (homogeneousTexture != null && castObj.homogeneousTexture != null) {
-            if (metaDistances != null) {
-                metaDistances[3] = homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold) / 25.0f;
-                rtv += metaDistances[3] * weights[4];
-            } else {
-                rtv += homogeneousTexture.getDistanceImpl(castObj.homogeneousTexture, distThreshold) * weights[4] / 25.0;
-            }
-        }
-
-        if (scalableColor != null && castObj.scalableColor != null) {
-            if (metaDistances != null) {
-                metaDistances[4] = scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) / 3000.0f;
-                rtv += metaDistances[4] * weights[5];
-            } else {
-                rtv += scalableColor.getDistanceImpl(castObj.scalableColor, distThreshold) * weights[5] / 3000.0;
-            }
-        }
-
-        return rtv;
-    }
-
-
-    //************ BinarySerializable interface ************//
-
-    /**
-     * Creates a new instance of MetaObjectCophirKeywords loaded from binary input buffer.
-     *
-     * @param input the buffer to read the MetaObjectCophirKeywords from
-     * @param serializator the serializator used to write objects
-     * @throws IOException if there was an I/O error reading from the buffer
-     */
-    protected MetaObjectCophirKeywords(BinaryInput input, BinarySerializator serializator) throws IOException {
-        super(input, serializator);
-        location = serializator.readObject(input, ObjectGPSCoordinate.class);
-        colorLayout = serializator.readObject(input, ObjectColorLayout.class);
-        colorStructure = serializator.readObject(input, ObjectShortVectorL1.class);
-        edgeHistogram = serializator.readObject(input, ObjectVectorEdgecomp.class);
-        homogeneousTexture = serializator.readObject(input, ObjectHomogeneousTexture.class);
-        scalableColor = serializator.readObject(input, ObjectIntVectorL1.class);
-        keywords = serializator.readObject(input, ObjectIntMultiVectorJaccard.class);
+    protected float getWeight(int index) {
+        return weights[index];
     }
 
     @Override
-    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-        int size = super.binarySerialize(output, serializator);
-        size += serializator.write(output, location);
-        size += serializator.write(output, colorLayout);
-        size += serializator.write(output, colorStructure);
-        size += serializator.write(output, edgeHistogram);
-        size += serializator.write(output, homogeneousTexture);
-        size += serializator.write(output, scalableColor);
-        size += serializator.write(output, keywords);
-        return size;
+    public float getMaxDistance() {
+        return maxDistance;
     }
 
-    @Override
-    public int getBinarySize(BinarySerializator serializator) {
-        int size = super.getBinarySize(serializator);
-        size += serializator.getBinarySize(location);
-        size += serializator.getBinarySize(colorLayout);
-        size += serializator.getBinarySize(colorStructure);
-        size += serializator.getBinarySize(edgeHistogram);
-        size += serializator.getBinarySize(homogeneousTexture);
-        size += serializator.getBinarySize(scalableColor);
-        size += serializator.getBinarySize(keywords);
-        return size;
-    }
 }

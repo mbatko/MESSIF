@@ -251,7 +251,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
     /**
      * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     * @return a map with symbolic names as keys and the respective encapsulated objects as values
      */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
@@ -272,15 +272,8 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
     }
 
 
-    /****************** Clonning ******************/
+    //****************** Cloning ******************//
 
-    /**
-     * Creates and returns a copy of this object. The precise meaning 
-     * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
-     * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
-     */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         MetaObjectSAPIR rtv = (MetaObjectSAPIR)super.clone(cloneFilterChain);
@@ -380,7 +373,7 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
         }
     }
 
-    /****************** XML parsing ******************/
+    //****************** XML parsing ******************//
 
     public String getObjectsXML() {
         StringBuffer rtv = new StringBuffer();
