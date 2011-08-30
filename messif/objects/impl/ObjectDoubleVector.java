@@ -31,36 +31,36 @@ import messif.objects.util.AbstractObjectIterator;
 
 
 /**
- * This object uses static array of floats as its data content.
- * No implementation of distance function is provided - see {@link ObjectFloatVectorL1}
- * or {@link ObjectFloatVectorL2}.
+ * This object uses static array of doubles as its data content.
+ * No implementation of distance function is provided - see {@link ObjectDoubleVectorL1}
+ * or {@link ObjectDoubleVectorL2}.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class ObjectFloatVector extends LocalAbstractObject implements BinarySerializable {
+public abstract class ObjectDoubleVector extends LocalAbstractObject implements BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Data ******************//
 
     /** Data array */
-    protected float[] data;
+    protected double[] data;
 
 
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ObjectFloatVector.
+     * Creates a new instance of ObjectDoubleVector.
      * @param data the data content of the new object
      */
-    public ObjectFloatVector(float[] data) {
+    public ObjectDoubleVector(double[] data) {
         this.data = data.clone();
     }
 
     /**
-     * Creates a new instance of ObjectFloatVector with randomly generated content data.
+     * Creates a new instance of ObjectDoubleVector with randomly generated content data.
      * Content will be generated using normal distribution of random numbers from interval
      * [min;max).
      *
@@ -68,60 +68,60 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      * @param min lower bound of the random generated values (inclusive)
      * @param max upper bound of the random generated values (exclusive)
      */
-    public ObjectFloatVector(int dimension, float min, float max) {
+    public ObjectDoubleVector(int dimension, double min, double max) {
         this.data = randomData(dimension, min, max);
     }
 
 
     /**
-     * Creates a new instance of ObjectFloatVector from text stream.
+     * Creates a new instance of ObjectDoubleVector from text stream.
      * @param stream the stream from which to read lines of text
      * @throws EOFException if the end-of-file of the given stream is reached
      * @throws IOException if there was an I/O error during reading from the stream
      * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
      */
-    public ObjectFloatVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+    public ObjectDoubleVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
-        this.data = parseFloatVector(line);
+        this.data = parseDoubleVector(line);
     }
 
 
     //****************** Text file store/retrieve methods ******************//
 
     /**
-     * Parses a vector of floats from the given line of text.
+     * Parses a vector of doubles from the given line of text.
      *
      * @param line the text from which to parse vector
-     * @return the parsed vector of floats
-     * @throws NumberFormatException if the given {@code line} does not have comma-separated or space-separated floats
+     * @return the parsed vector of doubles
+     * @throws NumberFormatException if the given {@code line} does not have comma-separated or space-separated doubles
      * @throws EOFException if a <tt>null</tt> {@code line} is given
      */
-    public static float[] parseFloatVector(String line) throws NumberFormatException, EOFException {
+    public static double[] parseDoubleVector(String line) throws NumberFormatException, EOFException {
         if (line == null)
             throw new EOFException();
         line = line.trim();
         if (line.length() == 0)
-            return new float[0];
+            return new double[0];
         String[] numbers = line.split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
 
-        float[] data = new float[numbers.length];
+        double[] data = new double[numbers.length];
         for (int i = 0; i < data.length; i++)
-            data[i] = Float.parseFloat(numbers[i]);
+            data[i] = Double.parseDouble(numbers[i]);
 
         return data;
     }
 
     /**
-     * Writes the given vector of floats to the given output stream as text.
+     * Writes the given vector of doubles to the given output stream as text.
      * 
-     * @param data the vector of floats to output
+     * @param data the vector of doubles to output
      * @param stream the output stream to write the text to
      * @param separator the char written between the vector numbers
      * @param finalSeparator the char written at the end of the vector
      * @throws IOException if there was an I/O error while writing to the stream
      */
-    public static void writeFloatVector(float[] data, OutputStream stream, char separator, char finalSeparator) throws IOException {
+    public static void writeDoubleVector(double[] data, OutputStream stream, char separator, char finalSeparator) throws IOException {
         for (int i = 0; i < data.length; i++) {
             if (i > 0)
                 stream.write(separator);
@@ -132,25 +132,25 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        writeFloatVector(data, stream, ',', '\n');
+        writeDoubleVector(data, stream, ',', '\n');
     }
 
 
     //****************** Random array generator ******************//
 
     /**
-     * Generate an array of random floats using normal distribution of numbers
+     * Generate an array of random doubles using normal distribution of numbers
      * from interval [min;max).
      *
      * @param dimension number of dimensions to generate
      * @param min lower bound of the random generated values (inclusive)
      * @param max upper bound of the random generated values (exclusive)
-     * @return a new array filled with random floats
+     * @return a new array filled with random doubles
      */
-    public static float[] randomData(int dimension, float min, float max) {
-        float[] data = new float[dimension];
+    public static double[] randomData(int dimension, double min, double max) {
+        double[] data = new double[dimension];
         for (; dimension > 0; dimension--)
-            data[dimension - 1] = (float)(min + getRandomNormal()*(max - min));
+            data[dimension - 1] = min + getRandomNormal()*(max - min);
         return data;
     }
 
@@ -159,10 +159,10 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
 
     @Override
     public boolean dataEquals(Object obj) {
-        if (!(obj instanceof ObjectFloatVector))
+        if (!(obj instanceof ObjectDoubleVector))
             return false;
 
-        return Arrays.equals(((ObjectFloatVector)obj).data, data);
+        return Arrays.equals(((ObjectDoubleVector)obj).data, data);
     }
 
     @Override
@@ -174,17 +174,17 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     //****************** Attribute access methods ******************//
 
     /**
-     * Returns the vector of float values, which represents the contents of this object.
+     * Returns the vector of double values, which represents the contents of this object.
      * A copy is returned, so any modifications to the returned array do not affect the original object.
      * @return the data contents of this object
      */
-    public float[] getVectorData() {
+    public double[] getVectorData() {
         return this.data.clone();
     }
 
     @Override
     public int getSize() {
-        return this.data.length * Float.SIZE / 8;
+        return this.data.length * Double.SIZE / 8;
     }
 
     /**
@@ -202,14 +202,14 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      *
      * @param bounds A 2-dimensional array of minimum and maximum values per coordinate. For details refer to getMinMaxForEveryCoord().
      *
-     * @return A new vector (array of floats) is returned which represents current
+     * @return A new vector (array of doubles) is returned which represents current
      *         vector transformed to the unit cube.
      */
-    public float[] translateToUnitCube(float[][] bounds) {
+    public double[] translateToUnitCube(double[][] bounds) {
         if (bounds.length != 2 || data.length != bounds[0].length || data.length != bounds[1].length)
             return null;
 
-        float[] outVec = new float[data.length];
+        double[] outVec = new double[data.length];
 
         for (int i = 0; i < data.length; i++) {
             if (bounds[0][i] == bounds[1][i]) {
@@ -229,14 +229,14 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      *
      * @param bounds Array consisting of two values for minimum and maximum value of all coordinates, respectively.
      *
-     * @return A new vector (array of floats) is returned which represents current
+     * @return A new vector (array of doubles) is returned which represents current
      *         vector transformed to the unit cube.
      */
-    public float[] translateToUnitCube(float[] bounds) {
+    public double[] translateToUnitCube(double[] bounds) {
         if (bounds.length != 2)
             return null;
 
-        float[] outVec = new float[data.length];
+        double[] outVec = new double[data.length];
 
         for (int i = 0; i < data.length; i++) {
             if (bounds[0] == bounds[1]) {
@@ -255,17 +255,17 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      * @param currRange An optional parameter containing current minimum and maximum values. If null is passed
      *                  a new range with minimum and maximum is created, otherwise the passed array is updated.
      *
-     * @return Returns an array of two float values for the minimum and the maximum, respectively.
+     * @return Returns an array of two double values for the minimum and the maximum, respectively.
      */
-    protected float[] getMinMaxOverCoords(float[] currRange) {
-        float[] range;
+    protected double[] getMinMaxOverCoords(double[] currRange) {
+        double[] range;
 
         if (currRange != null)
             range = currRange;
         else
-            range = new float[]{Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+            range = new double[]{Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY};
 
-        for (float val : data) {
+        for (double val : data) {
             if (val < range[0])         // Test the minimum
                 range[0] = val;
             if (val > range[1])         // Test the maximum
@@ -278,13 +278,13 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      * Computes minimum and maximum values over all coordinates of vectors in the collection's
      * iterator.
      * @param iterator Iterator of a collection containing vectors to process.
-     * @return Returns an array of two float values for the minimum and the maximum per all
+     * @return Returns an array of two double values for the minimum and the maximum per all
      *         coordinates, respectively.
      */
-    public static float[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
-        float[] range = {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+    public static double[] getMinMaxOverCoords(AbstractObjectIterator<? extends ObjectDoubleVector> iterator) {
+        double[] range = {Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY};
         while (iterator.hasNext()) {
-            ObjectFloatVector obj = iterator.next();
+            ObjectDoubleVector obj = iterator.next();
             range = obj.getMinMaxOverCoords(range);
         }
         return range;
@@ -296,30 +296,30 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      *
      * @param iterator Iterator of a collection containing vectors to process.
      *
-     * @return Returns a 2-dimensional array of float values. The first dimension distiguishes between
-     *         minimum and maximum values. Index [0] contains an array of floats which represent minimum
+     * @return Returns a 2-dimensional array of double values. The first dimension distinguishes between
+     *         minimum and maximum values. Index [0] contains an array of doubles which represent minimum
      *         values of individual coordinates over all vectors. Index [0] contains a respective array
      *         of maximum values. This return value can be directly passed to translateToUnitCube() method.
      */
-    public static float[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectFloatVector> iterator) {
-        float[][] range = null;
+    public static double[][] getMinMaxForEveryCoord(AbstractObjectIterator<? extends ObjectDoubleVector> iterator) {
+        double[][] range = null;
         int dims = -1;
 
         while (iterator.hasNext()) {
-            ObjectFloatVector obj = iterator.next();
+            ObjectDoubleVector obj = iterator.next();
 
             if (range == null) {
                 // Allocate result array
                 dims = obj.getDimensionality();
-                range = new float[2][dims];
+                range = new double[2][dims];
                 // Initialize it
                 for (int i = 0; i < dims; i++) {
-                    range[0][i] = Float.POSITIVE_INFINITY;
-                    range[1][i] = Float.NEGATIVE_INFINITY;
+                    range[0][i] = Double.POSITIVE_INFINITY;
+                    range[1][i] = Double.NEGATIVE_INFINITY;
                 }
             }
 
-            float[] vec = obj.data;
+            double[] vec = obj.data;
             for (int i = 0; i < dims; i++) {
                 if (vec[i] < range[0][i])         // Test the minimum
                     range[0][i] = vec[i];
@@ -344,19 +344,19 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      */
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-        ObjectFloatVector rtv = (ObjectFloatVector) this.clone();
+        ObjectDoubleVector rtv = (ObjectDoubleVector) this.clone();
         rtv.data = this.data.clone();
 
         try {
-            ObjectFloatVector minVector = (ObjectFloatVector) args[0];
-            ObjectFloatVector maxVector = (ObjectFloatVector) args[1];
+            ObjectDoubleVector minVector = (ObjectDoubleVector) args[0];
+            ObjectDoubleVector maxVector = (ObjectDoubleVector) args[1];
             Random random = new Random(System.currentTimeMillis());
 
             // pick a vector position in random
             int position = random.nextInt(Math.min(rtv.data.length, Math.min(minVector.data.length, maxVector.data.length)));
 
             // calculate 1/1000 of the possible range of this value and either add or substract it from the origival value
-            float smallStep = (maxVector.data[position] - minVector.data[position]) / 1000;
+            double smallStep = (maxVector.data[position] - minVector.data[position]) / 1000;
             if (rtv.data[position] + smallStep <= maxVector.data[position])
                 rtv.data[position] += smallStep;
             else rtv.data[position] -= smallStep;
@@ -391,15 +391,15 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectFloatVector loaded from binary input buffer.
+     * Creates a new instance of ObjectDoubleVector loaded from binary input buffer.
      *
-     * @param input the buffer to read the ObjectFloatVector from
+     * @param input the buffer to read the ObjectDoubleVector from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectFloatVector(BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected ObjectDoubleVector(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-        data = serializator.readFloatArray(input);
+        data = serializator.readDoubleArray(input);
     }
 
     @Override

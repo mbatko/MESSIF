@@ -66,7 +66,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @param objects collection of objects with their symbolic names
      * @param cloneObjects if <tt>true</tt> the provided <code>objects</code> will be cloned and the
      *        the locators of the provided <code>objects</code> will be replaced by the specified one
-     * @throws CloneNotSupportedException if the clonning of the <code>objects</code> was unsuccessful
+     * @throws CloneNotSupportedException if the cloning of the <code>objects</code> was unsuccessful
      */
     public MetaObjectMap(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         super(locatorURI);
@@ -125,14 +125,14 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     }    
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 
      * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
+     * @param cloneFilterChain  the flag whether the filter chain must be cloned as well.
      * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
@@ -151,9 +151,9 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * The modification depends on particular subclass implementation.
      *
      * @param args any parameters required by the subclass implementation - usually two objects with 
-     *        the miminal and the maximal possible values
+     *        the minimal and the maximal possible values
      * @return a randomly modified clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
@@ -175,11 +175,6 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
 
     //****************** MetaObject implementation ******************//
 
-    /**
-     * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * Note that the collection can contain <tt>null</tt> values.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
-     */
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
         return Collections.unmodifiableMap(objects);
@@ -209,12 +204,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * The actual implementation of the metric function.
      * The distance is a trivial metric on locator URIs of this object and {@code obj}.
      * The array <code>metaDistances</code> is ignored.
-     *
-     * @param obj the object to compute distance to
-     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
-     * @param distThreshold the threshold value on the distance
-     * @return the actual distance between obj and this if the distance is lower than distThreshold
-     * @see LocalAbstractObject#getDistance
+     * @see LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject, float) LocalAbstractObject.getDistance
      */
     @Override
     protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {

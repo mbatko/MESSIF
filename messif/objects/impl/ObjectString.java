@@ -186,7 +186,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
 
             // substitute it for any char
             int position = random.nextInt(text.length());
-            StringBuffer buffer = new StringBuffer(text.length());
+            StringBuilder buffer = new StringBuilder(text.length());
             buffer.append(text.substring(0,position)).append(randomChar).append(text.substring(position + 1));
             rtv.text = buffer.toString();
         } catch (ArrayIndexOutOfBoundsException ignore) {

@@ -17,6 +17,7 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -24,49 +25,61 @@ import messif.objects.nio.BinarySerializator;
 
 
 /**
- *
+ * Implementation of the {@link ObjectByteVector} with an L1 (city-block) metric distance.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectByteVectorL1 extends ObjectByteVector {
-
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of object */
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ObjectByteVectorL1.
+     * @param data the data content of the new object
+     */
     public ObjectByteVectorL1(byte[] data) {
         super(data);
     }
     
-    /** Creates a new instance of randomly generated object */
+    /**
+     * Creates a new instance of ObjectByteVectorL1 with randomly generated content data.
+     * Content will be generated using normal distribution of random byte integer numbers
+     * from interval [0;max byte int).
+     *
+     * @param dimension number of dimensions to generate
+     */
     public ObjectByteVectorL1(int dimension) {
         super(dimension);
     }
 
-    /** Creates a new instance of object from stream */
-    public ObjectByteVectorL1(BufferedReader stream) throws IOException, NumberFormatException {
+    /**
+     * Creates a new instance of ObjectByteVectorL1 from text stream.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
+     */
+    public ObjectByteVectorL1(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         super(stream);
     }
-    
-    
-    /** Metric function
-     *      Implements city-block distance measure (so-called L1 metric)
-     */
+
+
+    //****************** Distance function ******************//
+
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
         byte[] objdata = ((ObjectByteVector)obj).data;
-
-        // We must have the same number of dimensions
         if (objdata.length != data.length)
-            return MAX_DISTANCE;
+            throw new IllegalArgumentException("Cannot compute distance on different vector dimensions (" + data.length + ", " + objdata.length + ")");
         
         // Get sum of absolute difference on all dimensions
         float rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--)
+        for (int i = 0; i <= data.length; i++)
             rtv += Math.abs(data[i] - objdata[i]);
         
         return rtv;

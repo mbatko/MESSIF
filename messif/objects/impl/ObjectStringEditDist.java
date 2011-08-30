@@ -68,10 +68,10 @@ public class ObjectStringEditDist extends ObjectString {
     public ObjectStringEditDist() {
         super();
     }
-    
+
     /**
      * Creates a new instance of ObjectStringEditDist with randomly generated string content.
-     * The string content is genereated with at least {@code minLength} characters
+     * The string content is generated with at least {@code minLength} characters
      * and at most {@code maxLength} characters.
      *
      * @param minLength minimal length of the randomly generated string content
@@ -80,7 +80,7 @@ public class ObjectStringEditDist extends ObjectString {
     public ObjectStringEditDist(int minLength, int maxLength) {
         super(minLength, maxLength);
     }
-    
+
     /**
      * Creates a new instance of ObjectString from text stream.
      * @param stream the stream from which to read lines of text
@@ -99,7 +99,7 @@ public class ObjectStringEditDist extends ObjectString {
      * @param a first integer value
      * @param b second integer value
      * @param c third integer value
-     * @return a minumum of the tree values
+     * @return a minimum of the tree values
      */
     private static int min(int a, int b, int c) {
         int mi = a;
@@ -112,7 +112,7 @@ public class ObjectStringEditDist extends ObjectString {
     /**
      * Returns the weight of changing {@code char1} into {@code char2} during
      * the edit distance computation. The returned value must be greater than or
-     * equal to zero and must be symetric, that is {@code getChangeWeight(x,y) == getChangeWeight(y,x)}.
+     * equal to zero and must be symmetric, that is {@code getChangeWeight(x,y) == getChangeWeight(y,x)}.
      * @param chr1 the source character
      * @param chr2 the target character
      * @return the weight of changing {@code char1} into {@code char2}
@@ -194,11 +194,12 @@ public class ObjectStringEditDist extends ObjectString {
     protected float getDistanceLowerBoundImpl(LocalAbstractObject obj, int accuracy) {
         return Math.abs(this.text.length() - ((ObjectString)obj).text.length()) * getInsertDeleteWeight();
     }
-    
+
     @Override
     protected float getDistanceUpperBoundImpl(LocalAbstractObject obj, int accuracy) {
         return Math.abs(this.text.length() + ((ObjectString)obj).text.length()) * getInsertDeleteWeight();
     }
+
 
     //************ BinarySerializable interface ************//
 

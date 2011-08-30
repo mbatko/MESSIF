@@ -17,6 +17,7 @@
 package messif.objects.impl;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
@@ -24,44 +25,60 @@ import messif.objects.nio.BinarySerializator;
 
 
 /**
- *
+ * Implementation of the {@link ObjectFloatUnitVector} with an L2 (Euclidean) metric distance.
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class ObjectFloatUnitVectorL2 extends ObjectFloatUnitVector {
-
     /** Class serial version ID for serialization. */
     private static final long serialVersionUID = 23601L;
-    
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of object */
-    public ObjectFloatUnitVectorL2(float[] data) {
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of ObjectFloatUnitVectorL2.
+     * @param data the data content of the new object
+     * @throws IllegalArgumentException if the given array contains float that are not within [0,1] interval 
+     */
+    public ObjectFloatUnitVectorL2(float[] data) throws IllegalArgumentException {
         super(data);
     }
-    
-    /** Creates a new instance of randomly generated object */
+
+    /**
+     * Creates a new instance of ObjectFloatUnitVectorL2 with randomly generated content data.
+     * Content will be generated using normal distribution of random numbers from interval
+     * [0;1).
+     *
+     * @param dimension number of dimensions to generate
+     */
     public ObjectFloatUnitVectorL2(int dimension) {
         super(dimension);
     }
 
-    /** Creates a new instance of object from stream */
-    public ObjectFloatUnitVectorL2(BufferedReader stream) throws IOException, NumberFormatException {
+    /**
+     * Creates a new instance of ObjectFloatUnitVectorL2 from text stream.
+     * @param stream the stream from which to read lines of text
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
+     */
+    public ObjectFloatUnitVectorL2(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         super(stream);
     }
 
-    /** Metric function
-     *      Implements euclidean distance measure (so-called L2 metric)
-     */
+
+    //****************** Distance function ******************//
+
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        float[] objdata = ((ObjectFloatUnitVector)obj).data;
+        if (objdata.length != data.length)
+            throw new IllegalArgumentException("Cannot compute distance on different vector dimensions (" + data.length + ", " + objdata.length + ")");
+
         float powSum = 0;
-
-        float [] objData = ((ObjectFloatVector)obj).data;
-
         for (int i = data.length - 1; i >= 0; i--) {
-            float dif = (data[i] - objData[i]);
+            float dif = (data[i] - objdata[i]);
             powSum += dif * dif;
         }
         return (float)Math.sqrt(powSum);

@@ -23,40 +23,30 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
+
 /**
- * Implementation of the {@link ObjectIntVector} with an L2 (Euclidean) metric distance.
+ * Implementation of the {@link ObjectDoubleVector} with an L2 (Euclidean) metric distance.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectIntVectorL2 extends ObjectIntVector {
+public class ObjectDoubleVectorL2 extends ObjectDoubleVector {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ObjectIntVectorL2.
+     * Creates a new instance of ObjectDoubleVectorL2.
      * @param data the data content of the new object
      */
-    public ObjectIntVectorL2(int[] data) {
+    public ObjectDoubleVectorL2(double[] data) {
         super(data);
-    }
-    
-    /**
-     * Creates a new instance of ObjectIntVectorL2 with randomly generated content data.
-     * Content will be generated using normal distribution of random integer numbers
-     * from interval [0;maxint).
-     *
-     * @param dimension number of dimensions to generate
-     */
-    public ObjectIntVectorL2(int dimension) {
-        super(dimension);
     }
 
     /**
-     * Creates a new instance of ObjectIntVectorL2 with randomly generated content data.
+     * Creates a new instance of ObjectDoubleVectorL2 with randomly generated content data.
      * Content will be generated using normal distribution of random numbers from interval
      * [min;max).
      *
@@ -64,18 +54,18 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
      * @param min lower bound of the random generated values (inclusive)
      * @param max upper bound of the random generated values (exclusive)
      */
-    public ObjectIntVectorL2(int dimension, int min, int max) {
+    public ObjectDoubleVectorL2(int dimension, double min, double max) {
         super(dimension, min, max);
     }
 
     /**
-     * Creates a new instance of ObjectIntVectorL2 from text stream.
+     * Creates a new instance of ObjectDoubleVectorL2 from text stream.
      * @param stream the stream from which to read lines of text
      * @throws EOFException if the end-of-file of the given stream is reached
      * @throws IOException if there was an I/O error during reading from the stream
      * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
      */
-    public ObjectIntVectorL2(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+    public ObjectDoubleVectorL2(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         super(stream);
     }
 
@@ -85,32 +75,31 @@ public class ObjectIntVectorL2 extends ObjectIntVector {
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
-        int[] objdata = ((ObjectIntVector)obj).data;
+        double[] objdata = ((ObjectDoubleVector)obj).data;
         if (objdata.length != data.length)
             throw new IllegalArgumentException("Cannot compute distance on different vector dimensions (" + data.length + ", " + objdata.length + ")");
 
-        float powSum = 0;
+        double powSum = 0;
         for (int i = 0; i <= data.length; i++) {
-            float dif = (data[i] - objdata[i]);
+            double dif = (data[i] - objdata[i]);
             powSum += dif * dif;
         }
-        
-        return ((float)Math.sqrt(powSum));
+
+        return (float)Math.sqrt(powSum);
     }
 
 
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of ObjectIntVector loaded from binary input buffer.
-     * 
-     * @param input the buffer to read the ObjectIntVector from
+     * Creates a new instance of ObjectFloatVectorL1 loaded from binary input buffer.
+     *
+     * @param input the buffer to read the ObjectFloatVector from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectIntVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected ObjectDoubleVectorL2(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
-
 
 }
