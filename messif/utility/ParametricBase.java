@@ -102,7 +102,7 @@ public class ParametricBase implements Parametric {
 
     /**
      * Iterates all items in the given {@code data} iterator for objects that
-     * implements {@link Clearable} interface and {@link #clearSurplusData(java.lang.Object) clears}
+     * implements {@link Clearable} interface and {@link #clearSurplusData(java.lang.Object, boolean) clears}
      * them. All values that do not implement the {@link Clearable} interface
      * are removed if {@code removeNonClearables} is <tt>true</tt>.
      * 

@@ -157,8 +157,8 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
     /**
      * {@inheritDoc }
      * 
-     * Note that {@link Parametric parameters} that are {@link Clearable}
-     * are {@link Clearable#clearSurplusData() cleared} and the other non-primitive
+     * Note that {@link Parametric parameters} that are {@link messif.utility.Clearable}
+     * are {@link messif.utility.Clearable#clearSurplusData() cleared} and the other non-primitive
      * parameters are <em>removed</em> from the parameters.
      */
     @Override
