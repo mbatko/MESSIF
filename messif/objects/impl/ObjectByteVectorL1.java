@@ -79,7 +79,7 @@ public class ObjectByteVectorL1 extends ObjectByteVector {
         
         // Get sum of absolute difference on all dimensions
         float rtv = 0;
-        for (int i = 0; i <= data.length; i++)
+        for (int i = 0; i < data.length; i++)
             rtv += Math.abs(data[i] - objdata[i]);
         
         return rtv;

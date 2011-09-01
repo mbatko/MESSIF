@@ -79,7 +79,7 @@ public class ObjectFloatVectorL2 extends ObjectFloatVector {
             throw new IllegalArgumentException("Cannot compute distance on different vector dimensions (" + data.length + ", " + objdata.length + ")");
 
         float powSum = 0;
-        for (int i = 0; i <= data.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             float dif = (data[i] - objdata[i]);
             powSum += dif * dif;
         }

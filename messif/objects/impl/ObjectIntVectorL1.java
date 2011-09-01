@@ -92,7 +92,7 @@ public class ObjectIntVectorL1 extends ObjectIntVector {
         
         // Get sum of absolute difference on all dimensions
         float rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--)
+        for (int i = 0; i < data.length; i++)
             rtv += Math.abs(data[i] - objdata[i]);
         
         return rtv;
