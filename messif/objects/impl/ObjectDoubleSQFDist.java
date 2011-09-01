@@ -11,35 +11,35 @@ import messif.objects.nio.BinarySerializator;
  * First version, just VB code rewritten into JAVA
  * @author Andreas, nevelik@gmail.com
  */
-public class ObjectDoubleSQFDist extends ObjectDoubleVector {
+public class ObjectDoubleSQFDist extends ObjectFloatVector {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
     //****************** Distance function setup ******************//
 
-    private static double alpha = 0.1;
-    private static double[] weights = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; //to change impact of X, Y, L, a, b
+    private static float alpha = 0.1f;
+    private static float[] weights = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f}; //to change impact of X, Y, L, a, b
 
     public static double getAlpha() {
         return alpha;
     }
 
-    public static void setAlpha(double alpha) {
+    public static void setAlpha(float alpha) {
         ObjectDoubleSQFDist.alpha = alpha;
     }
 
-    public static double[] getWeights() {
+    public static float[] getWeights() {
         return weights.clone();
     }
 
-    public static void setWeights(double[] weights) {
+    public static void setWeights(float[] weights) {
         ObjectDoubleSQFDist.weights = weights.clone();
     }
 
 
     //****************** Constructors ******************//
 
-    public ObjectDoubleSQFDist(double[] data) {
+    public ObjectDoubleSQFDist(float[] data) {
         super(data);
     }
 
@@ -65,7 +65,9 @@ public class ObjectDoubleSQFDist extends ObjectDoubleVector {
 
     //****************** Distance function ******************//
 
-    private double SQFD(ObjectDoubleSQFDist fs1) {
+    @Override
+    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        ObjectDoubleSQFDist fs1 = (ObjectDoubleSQFDist)obj;
         // Id, number of points, dimension, w1, p1, ..., pdim, wdim, ...
         int length1 = fs1.getClusterCount();
         int dim1 = fs1.getClusterDimension();
@@ -76,7 +78,8 @@ public class ObjectDoubleSQFDist extends ObjectDoubleVector {
 
         // compute sum of weights
         int d = dim1 + 1;
-        double r, div = 0, div1 = 0, div2 = 0, result = 0;
+        double r;
+        float div = 0, div1 = 0, div2 = 0, result = 0;
         for (int i = 0; i < length1; i++) {
             div1 += fs1.data[2 + i * d];
         }
@@ -128,12 +131,6 @@ public class ObjectDoubleSQFDist extends ObjectDoubleVector {
         }
         
         if (result < 0.0000000000001) return 0; // for rounding mistakes
-        return Math.sqrt(result);
+        return (float)Math.sqrt(result);
     }
-
-    @Override
-    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        return (float) SQFD((ObjectDoubleSQFDist)obj);
-    }
-
 }
