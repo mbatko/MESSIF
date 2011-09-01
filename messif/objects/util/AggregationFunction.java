@@ -121,15 +121,14 @@ public abstract class AggregationFunction implements Serializable {
             );
             setFactoryClass(factoryClass);
         } catch (Throwable e) {
-            e.printStackTrace();
-            System.exit(1);
+            throw new IllegalStateException(e);
         }
     }
 
     /**
      * Factory method for creating threshold functions from strings.
      * 
-     * @param string the theshold function (using standard expression syntax)
+     * @param string the threshold function (using standard expression syntax)
      * @throws NoSuchMethodException if there is no threshold function class set by {@link #setFactoryClass} yet
      * @throws InvocationTargetException if the parsing of the threshold function has thrown an exception
      * @return a new instance of <code>AggregationFunction</code>

@@ -307,6 +307,8 @@ public abstract class Convert {
             return (Class<T>)Short.class; // This cast IS checked
         if (type == Character.TYPE)
             return (Class<T>)Character.class; // This cast IS checked
+        if (type == Void.TYPE)
+            return (Class<T>)Void.class;
         throw new InternalError("Unknown primitive type");
     }
 
