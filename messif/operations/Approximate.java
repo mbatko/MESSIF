@@ -37,9 +37,9 @@ public interface Approximate {
          * Stop after a specific number of I/O operations (page reads)..
          * The {@link #getLocalSearchParam() parameter} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
          */
-        PAGE_READS
+        BLOCK_READS
     }
-
+    
     /**
      * Returns the {@link LocalSearchType type of the local approximation} parameter used.
      * @return the {@link LocalSearchType type of the local approximation} parameter used

@@ -57,8 +57,6 @@ public class BulkInsertOperation extends AbstractOperation {
      */
     protected BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
         this.insertedObjects = insertedObjects;
-        if (this.insertedObjects.isEmpty())
-            throw new NoSuchElementException();
     }
 
     /**
