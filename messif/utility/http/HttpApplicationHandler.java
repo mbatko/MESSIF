@@ -21,6 +21,7 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -145,12 +146,12 @@ public class HttpApplicationHandler implements HttpHandler {
     public static <T> HttpApplicationProcessor<T> createProcessor(Class<? extends T> processorClass, Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
         if (isQuoted(args[offset], '"'))
             return new ParameterProcessor<T>(args[offset].substring(1, args[offset].length() - 1), processorClass, namedInstances);
-        else if (LocalAbstractObject.class.isAssignableFrom(processorClass))
-            return new ExtractionProcessor(args[offset], processorClass, namedInstances);
-        else if (AbstractObjectList.class.isAssignableFrom(processorClass))
-            return (HttpApplicationProcessor)new ExtractionListProcessor(args[offset], namedInstances);
         else if (AbstractOperation.class.isAssignableFrom(processorClass))
             return new OperationProcessor(algorithm, processorClass, args, offset, length, namedInstances);
+        else if (LocalAbstractObject.class.isAssignableFrom(processorClass))
+            return new ExtractionProcessor(args[offset], processorClass, namedInstances);
+        else if (Collection.class.isAssignableFrom(processorClass))
+            return (HttpApplicationProcessor)new ExtractionListProcessor(args[offset], namedInstances);
         else
             return new ValueProcessor<T>(args[offset], processorClass, namedInstances);
     }
