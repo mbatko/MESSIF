@@ -112,6 +112,25 @@ public class ApproxRangeQueryOperation extends RangeQueryOperation implements Ap
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
+    /**
+     * Creates a new instance of ApproxRangeQueryOperation for a given query object,
+     * radius and parameters that control the approximation.
+     * @param queryObject query object
+     * @param r query radius
+     * @param maxAnswerSize sets the maximal answer size
+     * @param answerType the type of objects this operation stores in its answer
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Maximal answer size", "Answer type", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)"})
+    public ApproxRangeQueryOperation(LocalAbstractObject queryObject, float r, int maxAnswerSize, AnswerType answerType, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed) {
+        super(queryObject, r, answerType, maxAnswerSize);
+        this.localSearchParam = localSearchParam;
+        this.localSearchType = localSearchType;
+        this.radiusGuaranteed = radiusGuaranteed;
+    }
+
     @Override
     public LocalSearchType getLocalSearchType() {
         return localSearchType;
