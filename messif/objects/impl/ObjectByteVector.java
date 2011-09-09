@@ -85,15 +85,30 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     /**
      * Creates a new instance of ObjectByteVector from text stream.
      * @param stream the stream from which to read lines of text
+     * @param asHexString if <tt>true</tt>, the data are read from a string of hexadecimal characters,
+     *          if <tt>false</tt>, the data should be comma (or space) separated integer numbers from 0 to 255
+     * @throws EOFException if the end-of-file of the given stream is reached
+     * @throws IOException if there was an I/O error during reading from the stream
+     * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
+     */
+    public ObjectByteVector(BufferedReader stream, boolean asHexString) throws EOFException, IOException, NumberFormatException {
+        // Keep reading the lines while they are comments, then read the first line of the object
+        String line = readObjectComments(stream);
+        this.data = asHexString ? parseByteHexString(line) : parseByteVector(line);
+    }
+
+    /**
+     * Creates a new instance of ObjectByteVector from text stream.
+     * The data are read from a single input line as comma (or space) separated integer numbers from 0 to 255.
+     * @param stream the stream from which to read lines of text
      * @throws EOFException if the end-of-file of the given stream is reached
      * @throws IOException if there was an I/O error during reading from the stream
      * @throws NumberFormatException if a line read from the stream does not consist of comma-separated or space-separated numbers
      */
     public ObjectByteVector(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-        this.data = parseByteVector(line);
+        this(stream, false);
     }
+
 
     //****************** Text file store/retrieve methods ******************//
 
@@ -121,6 +136,25 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
     }
 
     /**
+     * Parses a vector of bytes encoded using hexadecimal character encoding from the given line of text.
+     *
+     * @param line the text from which to parse vector
+     * @return the parsed vector of byte integers
+     * @throws NumberFormatException if the given {@code line} contains an invalid hexadecimal character
+     * @throws EOFException if a <tt>null</tt> {@code line} is given
+     */
+    public static byte[] parseByteHexString(String line) throws NumberFormatException, EOFException {
+        if (line == null)
+            throw new EOFException();
+        line = line.trim();
+        int len = line.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2)
+            data[i / 2] = (byte)((Character.digit(line.charAt(i), 16) << 4) + Character.digit(line.charAt(i + 1), 16));
+        return data;
+    }
+
+    /**
      * Writes the given vector of byte integers to the given output stream as text.
      * 
      * @param data the vector of byte integers to output
@@ -135,6 +169,22 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
                 stream.write(separator);
             stream.write(String.valueOf(data[i]).getBytes());
         }
+        stream.write(finalSeparator);
+    }
+
+    /**
+     * Writes the given vector of byte integers to the given output stream using hexadecimal character encoding.
+     * 
+     * @param data the vector of byte integers to output
+     * @param stream the output stream to write the text to
+     * @param finalSeparator the char written at the end of the vector
+     * @throws IOException if there was an I/O error while writing to the stream
+     */
+    public static void writeByteHexString(byte[] data, OutputStream stream, char finalSeparator) throws IOException {
+        for (int i = 0; i < data.length; i++) {
+            stream.write(Character.forDigit(data[i] >> 4 & 0xf, 16));
+            stream.write(Character.forDigit(data[i] & 0xf, 16));
+        }        
         stream.write(finalSeparator);
     }
 
