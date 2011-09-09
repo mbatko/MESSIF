@@ -33,17 +33,17 @@ import messif.objects.LocalAbstractObject;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFaceDescriptor extends ObjectIntVector {
+public class ObjectFaceMPEG7Descriptor extends ObjectIntVector {
     
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
     /**
-     * Creates a new instance of ObjectFaceDescriptor from provided data.
+     * Creates a new instance of ObjectFaceMPEG7Descriptor from provided data.
      * @param data the eigen features extracted from face
      * @throws IllegalArgumentException if the provided data is not valid
      */
-    public ObjectFaceDescriptor(int[] data) throws IllegalArgumentException {
+    public ObjectFaceMPEG7Descriptor(int[] data) throws IllegalArgumentException {
         super(data);
         if (data.length < 48)
             throw new IllegalArgumentException("Face descriptor must have 48 values");
@@ -52,14 +52,14 @@ public class ObjectFaceDescriptor extends ObjectIntVector {
     //****************** Text file store/retrieve methods ******************
     
     /**
-     * Creates a new instance of ObjectFaceDescriptor from stream.
+     * Creates a new instance of ObjectFaceMPEG7Descriptor from stream.
      * @param stream the stream to read object's data from
      * @throws IOException if there was an error during reading from the given stream
      * @throws EOFException when end-of-file of the given stream is reached
      * @throws NumberFormatException when the line read from given stream does not consist of comma-separated or space-separated numbers
      * @throws IllegalArgumentException if the read data is not valid
      */
-    public ObjectFaceDescriptor(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
+    public ObjectFaceMPEG7Descriptor(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
         super(stream);
         if (data.length < 48)
             throw new IllegalArgumentException("Face descriptor must have 48 values");
@@ -82,7 +82,7 @@ public class ObjectFaceDescriptor extends ObjectIntVector {
      */
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        ObjectFaceDescriptor castObj = (ObjectFaceDescriptor)obj;
+        ObjectFaceMPEG7Descriptor castObj = (ObjectFaceMPEG7Descriptor)obj;
         
         float dist = 0;
         for( int i=0; i < 48; i++)

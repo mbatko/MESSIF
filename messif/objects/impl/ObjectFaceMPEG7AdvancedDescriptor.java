@@ -40,7 +40,7 @@ import messif.objects.LocalAbstractObjectAutoImpl;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
+public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoImpl {
     /** Class id for serialization. */
     private static final long serialVersionUID = 2L;
         
@@ -58,7 +58,7 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
     protected int centralCompositeFeature[];
 
     /** List of fields for the automatic implementation */
-    private final static Field[] fields = getFieldsForNames(ObjectAdvancedFaceDescriptor.class,
+    private final static Field[] fields = getFieldsForNames(ObjectFaceMPEG7AdvancedDescriptor.class,
             "extensionFlag",
             "fourierFeature",
             "centralFourierFeature",
@@ -69,7 +69,7 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
     //****************** Attributes ******************//
 
     /**
-     * Creates a new instance of ObjectAdvancedFaceDescriptor with the given data.
+     * Creates a new instance of ObjectFaceMPEG7AdvancedDescriptor with the given data.
      * 
      * @param extensionFlag the flag whether the composite features extension is used
      * @param fourierFeature the face fourier feature vector
@@ -77,7 +77,7 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
      * @param compositeFeature the face composite feature vector
      * @param centralCompositeFeature the face central composite feature vector
      */
-    public ObjectAdvancedFaceDescriptor(int extensionFlag, int[] fourierFeature, int[] centralFourierFeature, int[] compositeFeature, int[] centralCompositeFeature) {
+    public ObjectFaceMPEG7AdvancedDescriptor(int extensionFlag, int[] fourierFeature, int[] centralFourierFeature, int[] compositeFeature, int[] centralCompositeFeature) {
         this.extensionFlag = extensionFlag;
         
         this.fourierFeature = fourierFeature.clone();
@@ -87,13 +87,13 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
     }
 
     /**
-     * Creates a new instance of ObjectAdvancedFaceDescriptor from stream.
+     * Creates a new instance of ObjectFaceMPEG7AdvancedDescriptor from stream.
      * @param stream the text stream to read one object from
      * @throws EOFException is thrown when the end-of-file is reached
      * @throws IOException if there is an error during reading from the given stream;
      * @throws IllegalArgumentException if the text stream contains invalid values for this object
      */
-    public ObjectAdvancedFaceDescriptor(BufferedReader stream) throws EOFException, IOException, IllegalArgumentException {
+    public ObjectFaceMPEG7AdvancedDescriptor(BufferedReader stream) throws EOFException, IOException, IllegalArgumentException {
         super(stream);
     }
 
@@ -119,7 +119,7 @@ public class ObjectAdvancedFaceDescriptor extends LocalAbstractObjectAutoImpl {
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        ObjectAdvancedFaceDescriptor castObj = (ObjectAdvancedFaceDescriptor) obj;
+        ObjectFaceMPEG7AdvancedDescriptor castObj = (ObjectFaceMPEG7AdvancedDescriptor) obj;
 
         float dist = 0;
 
