@@ -117,6 +117,19 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     public AbstractObjectKey getObjectKey() {
         return objectKey;
     }
+    
+    /**
+     * Returns the object key corresponding to the passed class.
+     * @param <E> class of object key to return
+     * @param objectKeyClass class of object key to return
+     * @return object key if it is an instance cof the required class or <code>null</code>
+     */
+    public <E extends AbstractObjectKey> E getObjectKey(Class<? extends E> objectKeyClass) {
+        if (objectKeyClass.isInstance(objectKey))
+            return objectKeyClass.cast(objectKey);
+        else
+            return null;
+    }
 
     /**
      * Set the object key
