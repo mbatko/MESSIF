@@ -67,12 +67,28 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         String line = readObjectComments(stream);
 
         // Read object data into specific fields
-        readAttributesFromStream(line, ';', ' ', this, getDataFields());
+        readAttributesFromStream(line, getAttributesSeparator(), getArrayItemsSeparator(), this, getDataFields());
     }       
+
+    /**
+     * Returns the character that separates attributes in a text stream.
+     * @return the character that separates attributes in a text stream
+     */
+    protected char getAttributesSeparator() {
+        return ';';
+    }
+
+    /**
+     * Returns the character that separates items of an array attribute.
+     * @return the character that separates items of an array attribute
+     */
+    protected char getArrayItemsSeparator() {
+        return ' ';
+    }
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        writeAttributesToStream(stream, ';', ' ', this, getDataFields());
+        writeAttributesToStream(stream, getAttributesSeparator(), getArrayItemsSeparator(), this, getDataFields());
     }
 
 
