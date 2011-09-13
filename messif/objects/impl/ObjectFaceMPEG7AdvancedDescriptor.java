@@ -105,6 +105,11 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
         return fields;
     }
 
+    @Override
+    protected char getArrayItemsSeparator() {
+        return ',';
+    }
+
 
     //****************** Distance function ******************//
 
