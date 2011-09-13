@@ -483,8 +483,9 @@ public abstract class FaceKey extends AbstractObjectKey {
      * @param newWidth the resulting image width
      * @param newHeight the resulting image height
      * @return the extracted face image
+     * @throws IllegalStateException if this face key has neither left nor right eye landmark detected 
      */
-    public BufferedImage extractTransformedFaceImageByPos(BufferedImage image, Point2D leftEye, int newWidth, int newHeight) {
+    public BufferedImage extractTransformedFaceImageByPos(BufferedImage image, Point2D leftEye, int newWidth, int newHeight) throws IllegalStateException {
         // Compute the rotation and scale based on the eyes position
         Point2D origPos = getLandmarkPosition(FaceLandmark.EYE_LEFT);
         Point2D newPos;
@@ -495,6 +496,8 @@ public abstract class FaceKey extends AbstractObjectKey {
             newPos = (Point2D)leftEye.clone();
             newPos.setLocation(newWidth - newPos.getX(), newPos.getY());
         }
+        if (origPos == null)
+            throw new IllegalStateException("Cannot extract face with neither left nor right eye");
         return extractTransformedFaceImage(image, (double)newWidth / (double)getWidth(), getRollAngle() * Math.PI / 180, origPos, newPos, newWidth, newHeight);
     }
 
