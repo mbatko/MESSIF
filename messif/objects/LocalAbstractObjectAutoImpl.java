@@ -67,7 +67,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         String line = readObjectComments(stream);
 
         // Read object data into specific fields
-        readAttributesFromStream(line, getAttributesSeparator(), getArrayItemsSeparator(), this, getDataFields());
+        readAttributesFromStream(line, getAttributesRegexp(), getArrayItemsRegexp(), this, getDataFields());
     }       
 
     /**
@@ -79,11 +79,29 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
     /**
+     * Returns the regular expression used to separate attributes in a text stream.
+     * Defaults to {@link #getAttributesSeparator()} plus any number of spaces.
+     * @return the regular expression used to separate attributes in a text stream
+     */
+    protected String getAttributesRegexp() {
+        return getAttributesSeparator() + "\\p{Space}*";
+    }
+
+    /**
      * Returns the character that separates items of an array attribute.
      * @return the character that separates items of an array attribute
      */
     protected char getArrayItemsSeparator() {
         return ' ';
+    }
+
+    /**
+     * Returns the regular expression used to separate items of an array attribute.
+     * Defaults to {@link #getArrayItemsSeparator()} plus any number of spaces.
+     * @return the regular expression used to separate items of an array attribute
+     */
+    protected String getArrayItemsRegexp() {
+        return getArrayItemsSeparator() + "\\p{Space}*";
     }
 
     @Override
@@ -296,16 +314,16 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
      * If the field is an array, a <code>arrayItemsSeparator</code>-separated list of items is read into respective attribute array.
      *
      * @param line a line of text representing the data
-     * @param attributesSeparator the character that separates attributes
-     * @param arrayItemsSeparator the character that separates items of arrays
+     * @param attributesRegexp the regular expression that is used to separate attributes
+     * @param arrayItemsRegexp the regular expression that is used to separate items of arrays
      * @param dataObject the object whose data are read
      * @param dataFields the list of <code>dataObject</code> attribute fields to read from the stream
      * @throws IOException if there was an error reading from the stream
      * @throws IllegalArgumentException if one of the specified fields is invalid or the value specified for a field can't be converted to correct type
      */
-    public static void readAttributesFromStream(String line, char attributesSeparator, char arrayItemsSeparator, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
+    public static void readAttributesFromStream(String line, String attributesRegexp, String arrayItemsRegexp, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
         // Split the line
-        String[] attributes = line.trim().split(attributesSeparator + "\\p{Space}*", dataFields.length);
+        String[] attributes = line.trim().split(attributesRegexp, dataFields.length);
         if (attributes.length != dataFields.length)
             throw new IllegalArgumentException("There was not enough attributes to create " + dataObject.getClass().getSimpleName());
 
@@ -318,7 +336,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
                     dataFields[i].set(dataObject, null);
                 } else if (fieldClass.isArray()) {
                     // The field is array, split the values and fill them into array
-                    String[] itemStrings = attributes[i].split(arrayItemsSeparator + "\\p{Space}*");
+                    String[] itemStrings = attributes[i].split(arrayItemsRegexp);
                     
                     // Shift to the class of the components
                     fieldClass = fieldClass.getComponentType();
