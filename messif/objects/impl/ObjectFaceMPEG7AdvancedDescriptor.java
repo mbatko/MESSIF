@@ -48,9 +48,9 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
 
     /** Flag whether the composite features extension is used */
     protected int extensionFlag;
-    /** Face fourier features */
+    /** Face Fourier features */
     protected int fourierFeature[];
-    /** Face central fourier features */
+    /** Face central Fourier features */
     protected int centralFourierFeature[];
     /** Face composite features */
     protected int compositeFeature[];
@@ -72,8 +72,8 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
      * Creates a new instance of ObjectFaceMPEG7AdvancedDescriptor with the given data.
      * 
      * @param extensionFlag the flag whether the composite features extension is used
-     * @param fourierFeature the face fourier feature vector
-     * @param centralFourierFeature the face central fourier feature vector
+     * @param fourierFeature the face Fourier feature vector
+     * @param centralFourierFeature the face central Fourier feature vector
      * @param compositeFeature the face composite feature vector
      * @param centralCompositeFeature the face central composite feature vector
      */
@@ -101,6 +101,7 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
     //****************** AutoImpl overrides ******************//
 
     @Override
+    @SuppressWarnings("ReturnOfCollectionOrArrayField")
     protected Field[] getDataFields() {
         return fields;
     }
@@ -110,12 +111,17 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
         return ',';
     }
 
+    @Override
+    protected String getArrayItemsRegexp() {
+        return "[,\\s]\\s*";
+    }
+
 
     //****************** Distance function ******************//
 
-    /** Weights for the fourier features used in the metric function */
+    /** Weights for the Fourier features used in the metric function */
     private static double fourierFeatureWeight[]={1.798081e+001, 6.795809e+000, 5.260557e+000, 3.571177e+000, 3.210394e+000, 2.620535e+000, 2.228538e+000, 2.245985e+000, 1.873352e+000, 1.752597e+000, 1.579577e+000, 1.535900e+000, 1.470712e+000, 1.357127e+000, 1.320019e+000, 1.199018e+000, 1.202859e+000, 1.110766e+000, 1.071195e+000, 1.118303e+000, 1.052979e+000, 1.039572e+000, 9.863494e-001, 9.816257e-001, 9.460065e-001, 9.096861e-001, 9.109148e-001, 8.869273e-001, 8.894892e-001, 8.541995e-001, 8.412409e-001, 7.966286e-001, 8.063573e-001, 7.892404e-001, 7.772063e-001, 7.542841e-001, 7.468508e-001, 7.433246e-001, 7.265750e-001, 7.042917e-001, 7.073574e-001, 6.868307e-001, 7.005851e-001, 6.784358e-001, 6.789272e-001, 6.728051e-001, 6.527822e-001, 6.503947e-001, 6.421589e-001, 6.359661e-001, 6.127091e-001, 6.251180e-001, 6.132433e-001, 6.099040e-001, 6.081947e-001, 5.901578e-001, 5.893763e-001, 5.794061e-001, 5.847705e-001, 5.779241e-001, 5.724861e-001, 5.634636e-001, 5.492996e-001, 5.504729e-001, 5.362453e-001, 5.449241e-001, 5.424120e-001, 5.362397e-001, 5.258737e-001, 5.190015e-001, 5.193156e-001, 5.308644e-001, 5.121491e-001, 5.026056e-001, 5.102172e-001, 4.975407e-001, 4.988692e-001, 5.082213e-001, 4.846210e-001, 4.769746e-001, 4.737751e-001, 4.752826e-001, 4.699635e-001, 4.659951e-001, 4.579795e-001, 4.584783e-001, 4.597742e-001, 4.488027e-001, 4.407231e-001, 4.473011e-001, 4.383086e-001, 4.298794e-001, 4.318727e-001, 4.280597e-001, 4.170053e-001, 4.107486e-001};
-    /** Weights for the central fourier features used in the metric function */
+    /** Weights for the central Fourier features used in the metric function */
     private static double centralFourierFeatureWeight[]={8.324790e+000, 5.539323e+000, 4.597177e+000, 2.626791e+000, 2.365626e+000, 1.980555e+000, 1.815129e+000, 1.617538e+000, 1.507013e+000, 1.395178e+000, 1.259098e+000, 1.232240e+000, 1.155442e+000, 1.087494e+000, 1.059872e+000, 1.024983e+000, 1.006763e+000, 9.428568e-001, 9.249697e-001, 8.752996e-001, 8.762097e-001, 8.300131e-001, 8.221489e-001, 7.912385e-001, 7.670310e-001, 7.467623e-001, 7.630908e-001, 7.285124e-001, 7.365235e-001, 7.226215e-001, 7.041821e-001, 6.960367e-001, 6.749651e-001, 6.760364e-001, 6.712101e-001, 6.582886e-001, 6.697725e-001, 6.330772e-001, 6.534700e-001, 6.211591e-001, 6.302857e-001, 6.338757e-001, 5.915847e-001, 6.177064e-001, 5.754482e-001, 5.901015e-001, 5.789449e-001, 5.666484e-001, 5.614080e-001, 5.775324e-001, 5.712751e-001, 5.541222e-001, 5.500063e-001, 5.468431e-001, 5.372846e-001, 5.350750e-001, 5.427137e-001, 5.075605e-001, 5.080101e-001, 5.166686e-001, 5.095477e-001, 4.911559e-001, 4.896533e-001, 4.889275e-001, 4.933548e-001, 4.860367e-001, 4.816273e-001, 4.880481e-001, 4.763366e-001, 4.721736e-001, 4.706686e-001, 4.713619e-001, 4.555874e-001, 4.517800e-001, 4.695715e-001, 4.391101e-001, 4.423742e-001, 4.406809e-001, 4.321210e-001, 4.413082e-001, 4.361082e-001, 4.341595e-001, 4.281849e-001, 4.152913e-001, 4.165745e-001, 4.203469e-001, 4.176656e-001, 4.087874e-001, 4.031964e-001, 4.057135e-001, 3.986217e-001, 3.925480e-001, 4.035966e-001, 3.896141e-001, 3.866248e-001, 3.961899e-001};
     /** Weights for the composite features used in the metric function */
     private static double compositeFeatureWeight[]={1.638624e+001, 6.362853e+000, 4.895604e+000, 3.484656e+000, 2.970820e+000, 2.424310e+000, 2.201797e+000, 2.073587e+000, 1.771210e+000, 1.629766e+000, 1.515658e+000, 1.435645e+000, 1.389437e+000, 1.335467e+000, 1.217928e+000, 1.173319e+000, 1.098414e+000, 1.056305e+000, 1.082416e+000, 9.982374e-001, 9.993173e-001, 9.663332e-001, 9.537141e-001, 9.290286e-001, 8.903819e-001, 8.735456e-001, 8.808295e-001, 8.344901e-001, 8.279413e-001, 8.091108e-001, 7.903409e-001, 7.856320e-001, 7.563362e-001, 7.354722e-001, 7.222769e-001, 7.217752e-001, 7.017208e-001, 6.955013e-001, 7.041555e-001, 6.594083e-001, 6.412487e-001, 6.454236e-001, 6.432750e-001, 6.510105e-001, 6.217284e-001, 6.119911e-001, 6.199305e-001, 6.079630e-001, 6.148269e-001, 5.890806e-001, 5.845104e-001, 5.705234e-001, 5.642221e-001, 5.620225e-001, 5.604115e-001, 5.531296e-001, 5.504536e-001, 5.353967e-001, 5.406133e-001, 5.369468e-001, 5.215623e-001, 5.215467e-001, 5.157368e-001, 5.143072e-001, 5.150430e-001, 4.880170e-001, 5.006529e-001, 4.935364e-001, 4.908333e-001, 4.745870e-001, 4.860849e-001, 4.693702e-001, 4.689148e-001, 4.658954e-001, 4.562150e-001, 4.573544e-001, 4.568536e-001, 4.505393e-001, 4.499820e-001, 4.515129e-001, 4.304222e-001, 4.381754e-001, 4.202020e-001, 4.270096e-001, 4.264353e-001, 4.156649e-001, 4.148092e-001, 4.179731e-001, 4.099771e-001, 4.004975e-001, 4.032202e-001, 4.071609e-001, 3.952590e-001, 3.812608e-001, 3.860889e-001, 3.780516e-001};
