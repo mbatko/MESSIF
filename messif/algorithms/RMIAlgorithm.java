@@ -185,7 +185,8 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * an {@link IllegalStateException} is thrown.
      * Note that the result returned might be an exception.
      * @param methodName the name of the method to execute on the remote algorithm
-     * @param reconnectRetries the number of 
+     * @param reconnectRetries the number of reconnection retries if there is an
+     *          {@link IOException} while establishing the RMI connection
      * @param methodArguments the arguments for the method
      * @return the method result or exception
      * @throws IllegalStateException if there was a problem communicating with the remote algorithm
@@ -357,5 +358,18 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
         } else {
             return rtv;
         }
+    }
+
+    /**
+     * Executes a given method on this algorithm and returns the result.
+     * @param methodName the name of the method to execute on the remote algorithm
+     * @param methodArguments the arguments for the method
+     * @return the method result or exception
+     * @throws InvocationTargetException if the executed method throws an exception
+     * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
+     * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
+     */
+    public Object methodExecute(String methodName, Object[] methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
+        return methodExecute(methodName, false, null, methodArguments);
     }
 }
