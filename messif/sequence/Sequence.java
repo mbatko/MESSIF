@@ -20,7 +20,7 @@ package messif.sequence;
  * Objects implementing this class provide generic access to their sequence data.
  * Sequences are usually static arrays of primitive types, however, this interface
  * can be used also with sets or other data types. The position of a particular
- * sequence value is references by non-negative intergers starting from zero.
+ * sequence value is references by non-negative integers starting from zero.
  *
  * @param <T> the type of the sequence data, usually a static array of a primitive type
  *          or {@link java.util.List}
@@ -46,7 +46,7 @@ public interface Sequence<T> {
     /**
      * Returns the class of the data in this sequence.
      * This is usually a static array of a primitive type or {@link java.util.List}.
-     * @return the number of elements of this sequence
+     * @return the class of elements of this sequence
      */
     public abstract Class<? extends T> getSequenceDataClass();
 
@@ -58,4 +58,23 @@ public interface Sequence<T> {
      * @return a subsequence data from this sequence
      */
     public abstract T getSubsequenceData(int from, int to);
+
+    /**
+     * Returns the original {@link Sequence} from which this subsequence was fetched.
+     * @return the original (parent) sequence
+     */
+    public abstract Sequence<? extends T> getOriginalSequence();
+
+    /**
+     * Returns the offset value representing the starting position of this subsequence
+     * within the original {@link Sequence}.
+     * @return the starting position of this subsequence
+     */
+    public abstract int getOffset();
+
+    /**
+     * Returns the locator string for the original sequence.
+     * @return the locator of the original sequence
+     */
+    public abstract String getOriginalSequenceLocator();
 }

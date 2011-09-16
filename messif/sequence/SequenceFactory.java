@@ -26,7 +26,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * Factory for creating sequences.
  * The created class must contain at least two constructors. One that
  * accepts a single argument of {@code T} type and another with three
- * arugments {@code T}, {@code Sequence<T>} and {@code int} representing
+ * arguments {@code T}, {@code Sequence<T>} and {@code int} representing
  * the subsequence data, the original sequence and the offset in the
  * original sequence.
  *
@@ -39,9 +39,9 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class SequenceFactory<T, O extends Sequence<T>> {
-    /** Instantiatiator for the sequences using only the data */
+    /** Instantiator for the sequences using only the data */
     private final ConstructorInstantiator<O> toplevelInstantiator;
-    /** Instantiatiator for the subsequences with parent sequence and offset */
+    /** Instantiator for the subsequences with parent sequence and offset */
     private final ConstructorInstantiator<O> sliceInstantiator;
 
     /**
@@ -83,6 +83,19 @@ public class SequenceFactory<T, O extends Sequence<T>> {
      */
     public O create(T sequenceData, Sequence<? extends T> originalSequence, int originalOffset) throws InvocationTargetException {
         return sliceInstantiator.instantiate(sequenceData, originalSequence, originalOffset);
+    }
+
+    /**
+     * 
+     * @param sequenceData the (sub)sequence data to use
+     * @param originalSequence the original sequence that the {@code sequenceData} comes from
+     * @param originalOffset the offset in the original sequence that the {@code sequenceData} comes from
+     * @param originalLocator the locator of the original sequence
+     * @return a new sequence instance
+     * @throws InvocationTargetException if there was an exception thrown while creating the instance
+     */
+    public O create(T sequenceData, Sequence<? extends T> originalSequence, int originalOffset, String originalLocator) throws InvocationTargetException {
+        return sliceInstantiator.instantiate(sequenceData, originalSequence, originalOffset, originalLocator);
     }
 
     /**
@@ -134,7 +147,7 @@ public class SequenceFactory<T, O extends Sequence<T>> {
         List<? extends SequenceSlice<T>> slices = slicer.slice(originalSequence);
         SequenceFactory<T, O> factory = new SequenceFactory<T, O>(createClass, originalSequence.getSequenceDataClass());
         List<O> ret = new ArrayList<O>(slices.size());
-        for (SequenceSlice<T> slice : slices)
+        for (SequenceSlice<? extends T> slice : slices)
             ret.add(factory.create(slice));
         return ret;
     }

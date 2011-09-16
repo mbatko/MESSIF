@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Provides a functionality of slicing a {@link Sequence} into several {@link SequenceSlice}s.
  * The particular implementation of this interface decides whether the slices
- * are disjoint, overlaping, etc.
+ * are disjoint, overlapping, etc.
  *
  * @param <T> the type of the sequence data, usually a static array of a primitive type
  *          or {@link java.util.List}

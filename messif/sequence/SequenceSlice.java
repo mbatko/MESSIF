@@ -34,6 +34,8 @@ public class SequenceSlice<T> {
     private final T sequenceData;
     /** The original sequence that the {@link #sequenceData} comes from */
     private final Sequence<? extends T> originalSequence;
+    /** The original sequence locator */
+    private String originalSequenceLocator;
     /** Offset in the {@link #originalSequence} that the {@link #sequenceData} comes from */
     private final int originalOffset;
 
@@ -73,4 +75,11 @@ public class SequenceSlice<T> {
         return originalOffset;
     }
 
+    /**
+     * Returns the locator string for the original sequence.
+     * @return the locator of the original sequence
+     */
+    public String getOriginalSequenceLocator() {
+        return originalSequenceLocator;
+    }
 }
