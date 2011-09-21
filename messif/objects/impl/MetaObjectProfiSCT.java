@@ -23,8 +23,6 @@ import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.Normalizer;
-import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,8 +41,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.LocalAbstractObjectOrder;
@@ -61,6 +57,8 @@ import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
 import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
 import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
+import messif.objects.text.Stemmer;
+import messif.objects.text.TextConversion;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -100,25 +98,6 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public static final String KEYWORD_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
     /** Regular expression used to split search string */
     public static final String SEARCH_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
-    /** Pattern used to search for normalized strings, each group corresponds to the replacement string in {@link #NORMALIZER_REPLACE_STRINGS} */
-    private static final Pattern NORMALIZER_REPLACE_PATTERN = Pattern.compile("(\\p{InCombiningDiacriticalMarks}+)|(ß)|(-)|(\\b[\\p{javaLowerCase}\\p{javaUpperCase}]\\b)|('[\\p{javaLowerCase}\\p{javaUpperCase}]{0,2})");
-    /** Replacement strings for the {@link #NORMALIZER_REPLACE_PATTERN} */
-    private static final String[] NORMALIZER_REPLACE_STRINGS = new String[] { "", "ss", "", "", "" };
-
-
-    //****************** Stemmer interface ******************//
-
-    /**
-     * Interface for stemmer instances.
-     */
-    public static interface Stemmer {
-        /**
-         * Provides a stem for the given word.
-         * @param word the word for which to provide the stem
-         * @return the stem for the given word
-         */
-        public abstract String stem(String word);
-    }
 
 
     //****************** Enumeration classes ******************//
@@ -374,7 +353,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchString) {
         this(object, (searchString == null || searchString.isEmpty()) ? null :
-            wordsToIdentifiers(normalizeString(searchString).split(SEARCH_SPLIT_REGEXP), null, stemmer, wordIndex, false));
+            TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, null, stemmer, wordIndex));
     }
 
     /**
@@ -461,69 +440,6 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     //****************** Conversion methods ******************//
 
     /**
-     * Returns the group that has matched in the given matcher.
-     * Note that the returned value is the number of the pattern group that
-     * are counted starting from 1.
-     * @param matcher the pattern matcher with a currently matched data
-     * @return the group that has matched in the given matcher or zero if no groups are matching
-     * @throws IllegalStateException if no match has yet been attempted, or if the previous match operation failed on the given matcher
-     */
-    private static int matcherGroupMatched(Matcher matcher) {
-        for (int i = 1; i <= matcher.groupCount(); i++)
-            if (matcher.start(i) != -1)
-                return i;
-        return 0;
-    }
-
-    /**
-     * Normalizes the given string by lower-casing, replacing the diacritics characters
-     * with their Latin counter-parts, and removing/replacing other unwanted character sequences.
-     * @param string the string to normalize
-     * @return the normalized string
-     * @see #NORMALIZER_REPLACE_PATTERN
-     * @see #NORMALIZER_REPLACE_STRINGS
-     */
-    private static String normalizeString(String string) {
-        Matcher matcher = NORMALIZER_REPLACE_PATTERN.matcher(Normalizer.normalize(string.toLowerCase(), Form.NFD));
-        StringBuffer str = new StringBuffer();
-        while (matcher.find())
-            matcher.appendReplacement(str, NORMALIZER_REPLACE_STRINGS[matcherGroupMatched(matcher) - 1]);
-        matcher.appendTail(str);
-        return str.toString();
-    }
-
-    /**
-     * Return a collection of stemmed, non-ignored words.
-     * Note that the ignore words are updated whenever a non-ignored word is found,
-     * thus if {@code ignoreWords} is not <tt>null</tt> the resulting collection
-     * does not contain duplicate words.
-     * @param keyWords the list of keywords to transform
-     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
-     *          if <tt>null</tt>, all keywords are added
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param normalize if <tt>true</tt>, each keyword is first {@link #normalizeString(java.lang.String) normalized}
-     * @return a set of stemmed, non-duplicate, non-ignored words
-     */
-    private static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) {
-        Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
-        for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = keyWords[i].trim();
-            if (normalize)
-                keyWord = normalizeString(keyWord);
-            if (keyWord.isEmpty())
-                continue;
-            // Perform stemming
-            if (stemmer != null)
-                keyWord = stemmer.stem(keyWord);
-            // Check if not ignored
-            if (ignoreWords != null && !ignoreWords.add(keyWord))
-                continue;
-            processedKeyWords.add(keyWord);
-        }
-        return processedKeyWords;
-    }
-
-    /**
      * Convert the given title, key and additional words to a int multi-vector
      * object with Jaccard distance function.
      *
@@ -536,110 +452,17 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         try {
-            return convertWordsToIdentifiersException(stemmer, wordIndex, titleString, keywordString, searchString);
+            int[][] data = new int[searchString != null ? 3 : 2][];
+            Set<String> ignoreWords = new HashSet<String>();
+            if (searchString != null)
+                data[2] = TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
+            data[0] = TextConversion.textToWordIdentifiers(titleString, TITLE_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
+            data[1] = TextConversion.textToWordIdentifiers(keywordString, KEYWORD_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
+            return new ObjectIntMultiVectorJaccard(data);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
             return new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
-    }
-
-    /**
-     * Convert the given title, key and additional words to a int multi-vector
-     * object with Jaccard distance function.
-     *
-     * @param stemmer the stemmer to use for stemming of the words
-     * @param wordIndex the index used to transform the words into integers
-     * @param titleString the title string to convert
-     * @param keywordString the keywords string to convert
-     * @param searchString the search string to convert
-     * @return a new instance of int multi-vector object with Jaccard distance function
-     */
-    private static ObjectIntMultiVectorJaccard convertWordsToIdentifiersException(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
-        int[][] data = new int[searchString != null ? 3 : 2][];
-        Set<String> ignoreWords = new HashSet<String>();
-        if (searchString != null)
-            data[2] = wordsToIdentifiers(normalizeString(searchString).split(SEARCH_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
-        data[0] = wordsToIdentifiers(normalizeString(titleString).split(TITLE_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
-        data[1] = wordsToIdentifiers(normalizeString(keywordString).split(KEYWORD_SPLIT_REGEXP), ignoreWords, stemmer, wordIndex, false);
-        return new ObjectIntMultiVectorJaccard(data);
-    }
-
-    /**
-     * Convert the given array of word identifiers to words using the given storage.
-     * @param wordIndex the index used to transform the integers to words
-     * @param ids the array of integers to convert
-     * @return an array of converted words
-     */
-    private String[] convertIdentifiersToWords(IntStorageIndexed<String> wordIndex, int[] ids) {
-        if (ids == null)
-            return null;
-        try {
-            String[] ret = new String[ids.length];
-            for (int i = 0; i < ids.length; i++)
-                ret[i] = wordIndex.read(ids[i]);
-            return ret;
-        } catch (Exception e) {
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot convert ids to strings in object ''{0}'': {1}", new Object[]{getLocatorURI(), e});
-            return new String[0];
-        }
-    }
-
-    /**
-     * Transforms a list of words into array of addresses.
-     * Note that unknown words are added to the index.
-     * All items from the list are removed during the process, so
-     * do not pass an unmodifiable list!
-     *
-     * @param words the list of words to transform
-     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
-     *          if <tt>null</tt>, all keywords are added
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param wordIndex the index for translating words to addresses
-     * @param normalize if <tt>true</tt>, each word is first {@link #normalizeString(java.lang.String) normalized}
-     * @return array of translated addresses
-     * @throws IllegalStateException if there was a problem reading the index
-     */
-    protected static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) {
-        if (words == null)
-            return new int[0];
-
-        // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
-        Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stemmer, normalize);
-
-        // If the keywords list is empty after ignored words, return
-        if (processedKeyWords.isEmpty())
-            return new int[0];
-
-        // Search the index
-        int[] ret = new int[processedKeyWords.size()];
-        IntStorageSearch<String> search = wordIndex.search(LocalAbstractObjectOrder.trivialObjectComparator, processedKeyWords);
-        int retIndex = 0;
-        while (search.next()) {
-            while (processedKeyWords.remove(search.getCurrentObject())) {
-                ret[retIndex++] = search.getCurrentObjectIntAddress();
-            }
-        }
-        search.close();
-
-        // Add all missing keywords
-        for (Iterator<String> it = processedKeyWords.iterator(); it.hasNext();) {
-            String keyWord = it.next();
-            try {
-                ret[retIndex] = wordIndex.store(keyWord).getAddress();
-                retIndex++;
-            } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'': {1}", new Object[]{keyWord, e.toString()});
-            }
-        }
-
-        // Resize the array if some keywords could not be added to the database
-        if (retIndex != ret.length) {
-            int[] saved = ret;
-            ret = new int[retIndex];
-            System.arraycopy(saved, 0, ret, 0, retIndex);
-        }
-
-        return ret;
     }
 
     /**
@@ -672,7 +495,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          */
         private static Set<Integer> getIgnoredIDs(String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
             HashSet<Integer> retVal = new HashSet<Integer>();
-            int[] keywordsToIdentifiers = MetaObjectProfiSCT.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex, true);
+            int[] keywordsToIdentifiers = TextConversion.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex, true);
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.INFO, "the following words will be ignored: ''{0}'' with the following IDs: {1}", new Object[]{Arrays.deepToString(ignoredKeywords), Arrays.toString(keywordsToIdentifiers)});
             for (int id : keywordsToIdentifiers) {
                 retVal.add(id);
@@ -707,12 +530,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * the {@code wordIndex} is used to transform it back.
      * @param wordIndex the index used to transform the integers to words
      * @return the title words of this object
+     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getTitleWords(IntStorageIndexed<String> wordIndex) {
+    public String[] getTitleWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
         if (titleString != null)
             return titleString.split(TITLE_SPLIT_REGEXP);
         else if (keyWords != null && wordIndex != null)
-            return convertIdentifiersToWords(wordIndex, keyWords.getVectorData(0));
+            return TextConversion.identifiersToWords(wordIndex, keyWords.getVectorData(0));
         else
             return null;
     }
@@ -732,12 +556,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * the {@code wordIndex} is used to transform them back.
      * @param wordIndex the index used to transform the integers to words
      * @return the key words of this object
+     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getKeywordWords(IntStorageIndexed<String> wordIndex) {
+    public String[] getKeywordWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
         if (keywordString != null)
             return keywordString.split(KEYWORD_SPLIT_REGEXP);
         else if (keyWords != null && wordIndex != null)
-            return convertIdentifiersToWords(wordIndex, keyWords.getVectorData(1));
+            return TextConversion.identifiersToWords(wordIndex, keyWords.getVectorData(1));
         else
             return null;
     }
@@ -746,10 +571,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * Returns the search words of this object.
      * @param wordIndex the index used to transform the integers to words
      * @return the search words of this object
+     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getSearchWords(IntStorageIndexed<String> wordIndex) {
+    public String[] getSearchWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
         if (keyWords != null && keyWords.getVectorDataCount() == 3 && wordIndex != null)
-            return convertIdentifiersToWords(wordIndex, keyWords.getVectorData(2));
+            return TextConversion.identifiersToWords(wordIndex, keyWords.getVectorData(2));
         else
             return null;
     }
@@ -1358,23 +1184,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws IllegalStateException if there was a problem reading the index
          */
         public int[] wordsToIdentifiers(String[] words) throws IllegalStateException {
-            return MetaObjectProfiSCT.wordsToIdentifiers(words, null, stemmer, wordIndex, true);
-        }
-
-        /**
-         * Transforms a list of words into array of identifiers.
-         * Note that unknown words are added to the index.
-         * All items from the list are removed during the process, so
-         * do not pass an unmodifiable list!
-         *
-         * @param words the list of keywords to transform
-         * @return array of translated addresses
-         * @throws IllegalStateException if there was a problem reading the index
-         * @deprecated use {@link #wordsToIdentifiers(java.lang.String[])} instead
-         */
-        @Deprecated
-        public int[] keywordsToIdentifiers(String[] words) throws IllegalStateException {
-            return wordsToIdentifiers(words);
+            return TextConversion.wordsToIdentifiers(words, null, stemmer, wordIndex, true);
         }
 
         /**
@@ -1498,7 +1308,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         public Collection<RankedAbstractObject> searchByText(String text, boolean useIdf, int count) throws IllegalArgumentException {
             if (text == null || text.isEmpty())
                 return null;
-            return searchByText(text.split(TITLE_SPLIT_REGEXP), useIdf, count);
+            return searchByText(text.split(SEARCH_SPLIT_REGEXP), useIdf, count);
         }
 
         /**
@@ -1515,7 +1325,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
         /**
          * Returns a collection of objects found by the text search.
-         * Note that the keywords are automatically {@link #unifyWords unified} using
+         * Note that the keywords are automatically {@link TextConversion#unifyWords unified} using
          * the stemmer and also duplicate keywords are removed.
          *
          * @param titleWords the title words to search for
@@ -1528,8 +1338,8 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @throws IllegalArgumentException if there was a problem executing the search on the database
          */
         public Collection<RankedAbstractObject> searchByText(String[] titleWords, String[] keywordWords, String[] searchWords, float[] weights, boolean useIdf, int count) throws IllegalArgumentException {
-            Collection<String> processedTitleWords = (titleWords != null ? unifyWords(titleWords, null, stemmer, true) : new ArrayList<String>());
-            Collection<String> processedSearchWords = (searchWords != null ? unifyWords(searchWords, null, stemmer, true) : new ArrayList<String>());
+            Collection<String> processedTitleWords = (titleWords != null ? TextConversion.unifyWords(titleWords, null, stemmer, true) : new ArrayList<String>());
+            Collection<String> processedSearchWords = (searchWords != null ? TextConversion.unifyWords(searchWords, null, stemmer, true) : new ArrayList<String>());
             if (processedTitleWords.isEmpty() && processedSearchWords.isEmpty())
                 return null;
 
