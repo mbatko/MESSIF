@@ -1344,6 +1344,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 return null;
 
             StringBuilder str = new StringBuilder();
+            String objectTable = "profimedia";
+            String keywordsTable = "profimedia_keywords";
+            String keywordLinkTable = "profimedia_keyword_links";
+            String keywordCountTable = "profimedia_kwcount";
+            String frequencyTable = "profimedia_keyword_frequency";
 
             if (useIdf) {
                 str.append("select locator, ");
@@ -1353,33 +1358,33 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 str.append("5*ifnull(qo_keyw_idfs, 0) + 3*ifnull(qo_titlew_idfs, 0)");
                 //end subquery
                 str.append(") ) * (sum( idf * CASE WHEN word_source = 'TITLE' THEN 3.0 ELSE 1.0 END ) + sum( idf * (qo_keyword_weight+qo_titleword_weight) ) ) AS distance ");
-                str.append("FROM ( SELECT profimedia_keywords_new.id, CASE WHEN keyword IN ('");
+                str.append("FROM ( SELECT ").append(keywordsTable).append(".id, CASE WHEN keyword IN ('");
                 str.append(Convert.iterableToString(processedTitleWords.iterator(), "','"));
                 str.append("') THEN 3 ELSE 0 END AS qo_titleword_weight, CASE WHEN keyword IN ('");
                 str.append(Convert.iterableToString(processedSearchWords.iterator(), "','"));
-                str.append("') THEN 5 ELSE 0 END AS qo_keyword_weight, log( (SELECT count( * ) FROM profimedia ) / keyword_frequency ) AS idf ");
-                str.append("FROM profimedia_keyword_frequency_new freq RIGHT OUTER JOIN profimedia_keywords_new ON ( profimedia_keywords_new.id = freq.keyword_id ) ");
-                str.append("WHERE profimedia_keywords_new.keyword IN ( '");
+                str.append("') THEN 5 ELSE 0 END AS qo_keyword_weight, log( (SELECT count( * ) FROM ").append(objectTable).append(" ) / keyword_frequency ) AS idf ");
+                str.append("FROM ").append(frequencyTable).append(" freq RIGHT OUTER JOIN ").append(keywordsTable).append(" ON ( ").append(keywordsTable).append(".id = freq.keyword_id ) ");
+                str.append("WHERE ").append(keywordsTable).append(".keyword IN ( '");
                 str.append(Convert.iterableToString(processedTitleWords.iterator(), "','"));
                 if (processedTitleWords.size() > 0 && processedSearchWords.size() > 0) {
                     str.append("','");
                 }
                 str.append(Convert.iterableToString(processedSearchWords.iterator(), "','"));
-                str.append("') )keywords INNER JOIN profimedia_keyword_links_extended AS keyword_links ON ( keywords.id = keyword_links.keyword_id ) ");
-                str.append("LEFT OUTER JOIN profimedia_kwcount ON ( keyword_links.object_id = profimedia_kwcount.object_id ), ");
-                str.append("(SELECT sum(log( (SELECT count( * ) FROM profimedia ) / keyword_frequency)) as qo_keyw_idfs ");
-                str.append("FROM profimedia_keywords_new INNER JOIN profimedia_keyword_frequency_new ON ( profimedia_keywords_new.id = profimedia_keyword_frequency_new.keyword_id ) ");
-                str.append("WHERE profimedia_keywords_new.keyword IN ( '");
+                str.append("') )keywords INNER JOIN ").append(keywordLinkTable).append(" AS keyword_links ON ( keywords.id = keyword_links.keyword_id ) ");
+                str.append("LEFT OUTER JOIN ").append(keywordCountTable).append(" ON ( keyword_links.object_id = ").append(keywordCountTable).append(".object_id ), ");
+                str.append("(SELECT sum(log( (SELECT count( * ) FROM ").append(objectTable).append(" ) / keyword_frequency)) as qo_keyw_idfs ");
+                str.append("FROM ").append(keywordsTable).append(" INNER JOIN ").append(frequencyTable).append(" ON ( ").append(keywordsTable).append(".id = ").append(frequencyTable).append(".keyword_id ) ");
+                str.append("WHERE ").append(keywordsTable).append(".keyword IN ( '");
                 str.append(Convert.iterableToString(processedSearchWords.iterator(), "','"));
                 str.append("')) A, "
-                        + "(SELECT sum(log( (SELECT count( * ) FROM profimedia ) / keyword_frequency)) as qo_titlew_idfs ");
-                str.append("FROM profimedia_keywords_new INNER JOIN profimedia_keyword_frequency_new ON ( profimedia_keywords_new.id = profimedia_keyword_frequency_new.keyword_id ) ");
-                str.append("WHERE profimedia_keywords_new.keyword IN ( '");
+                        + "(SELECT sum(log( (SELECT count( * ) FROM ").append(objectTable).append(" ) / keyword_frequency)) as qo_titlew_idfs ");
+                str.append("FROM ").append(keywordsTable).append(" INNER JOIN ").append(frequencyTable).append(" ON ( ").append(keywordsTable).append(".id = ").append(frequencyTable).append(".keyword_id ) ");
+                str.append("WHERE ").append(keywordsTable).append(".keyword IN ( '");
                 str.append(Convert.iterableToString(processedTitleWords.iterator(), "','"));
                 str.append("')) B ");
                 str.append("GROUP BY object_id ORDER BY distance DESC LIMIT ");
                 str.append(count);
-                str.append(") oids inner join profimedia on (oids.object_id = profimedia.id)");
+                str.append(") oids inner join ").append(objectTable).append(" on (oids.object_id = ").append(objectTable).append(".id)");
             } else {
                 str.append("select locator, ");
                 str.append(getTextStreamColumnName(true));
@@ -1388,23 +1393,23 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 str.append(" + 3*");
                 str.append(processedTitleWords.size());
                 str.append(") ) * (sum( CASE WHEN word_source = 'TITLE' THEN 3.0 ELSE 1.0 END ) + sum( (qo_keyword_weight+qo_titleword_weight) ) ) AS distance ");
-                str.append("FROM ( SELECT profimedia_keywords_new.id, CASE WHEN keyword IN ('");
+                str.append("FROM ( SELECT ").append(keywordsTable).append(".id, CASE WHEN keyword IN ('");
                 str.append(Convert.iterableToString(processedTitleWords.iterator(), "','"));
                 str.append("') THEN 3 ELSE 0 END AS qo_titleword_weight, CASE WHEN keyword IN ('");
                 str.append(Convert.iterableToString(processedSearchWords.iterator(), "','"));
                 str.append("') THEN 5 ELSE 0 END AS qo_keyword_weight ");
-                str.append("FROM profimedia_keywords_new ");
-                str.append("WHERE profimedia_keywords_new.keyword IN ( '");
+                str.append("FROM ").append(keywordsTable).append(" ");
+                str.append("WHERE ").append(keywordsTable).append(".keyword IN ( '");
                 str.append(Convert.iterableToString(processedTitleWords.iterator(), "','"));
                 if (processedTitleWords.size() > 0 && processedSearchWords.size() > 0) {
                     str.append("','");
                 }
                 str.append(Convert.iterableToString(processedSearchWords.iterator(), "','"));
-                str.append("') )keywords INNER JOIN profimedia_keyword_links_extended AS keyword_links ON ( keywords.id = keyword_links.keyword_id ) ");
-                str.append("LEFT OUTER JOIN profimedia_kwcount ON ( keyword_links.object_id = profimedia_kwcount.object_id ) ");
+                str.append("') )keywords INNER JOIN ").append(keywordLinkTable).append(" AS keyword_links ON ( keywords.id = keyword_links.keyword_id ) ");
+                str.append("LEFT OUTER JOIN ").append(keywordCountTable).append(" ON ( keyword_links.object_id = ").append(keywordCountTable).append(".object_id ) ");
                 str.append("GROUP BY object_id ORDER BY distance DESC LIMIT ");
                 str.append(count);
-                str.append(") oids inner join profimedia on (oids.object_id = profimedia.id)");
+                str.append(") oids inner join ").append(objectTable).append(" on (oids.object_id = ").append(objectTable).append(".id)");
             }
 
             Collection<RankedAbstractObject> ret = new ArrayList<RankedAbstractObject>(count);
