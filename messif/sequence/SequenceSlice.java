@@ -16,6 +16,8 @@
  */
 package messif.sequence;
 
+import messif.objects.LocalAbstractObject;
+
 /**
  * Part of a {@link Sequence} returned from the {@link SequenceSlicer#slice(messif.sequence.Sequence) slicing}.
  * The slice holds a subsequence data and the offset in the original sequence.
@@ -48,6 +50,7 @@ public class SequenceSlice<T> {
     public SequenceSlice(T sequenceData, Sequence<? extends T> originalSequence, int originalOffset) {
         this.sequenceData = sequenceData;
         this.originalSequence = originalSequence;
+        this.originalSequenceLocator = ((LocalAbstractObject) originalSequence).getLocatorURI();
         this.originalOffset = originalOffset;
     }
 
