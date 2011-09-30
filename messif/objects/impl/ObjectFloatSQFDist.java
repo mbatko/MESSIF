@@ -3,6 +3,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
@@ -15,29 +16,90 @@ import messif.objects.nio.BinarySerializator;
  * @author Andreas, nevelik@gmail.com
  */
 public class ObjectFloatSQFDist extends ObjectFloatVector {
+    
     /** Class id for serialization. */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1021002L;
 
     //****************** Constants ******************//
 
+    /** Vector of weights to be used for weighted L2 (distance between centroids) */
     private static final float[] defaultWeights = { 1f, 1f, 1f, 1f, 1f, 1f, 1f }; //to change impact of X, Y, L, a, b
-    private static final float defaultAlpha = 0.1f;
 
+    /** parameter of the Gaussian distance/similarity conversion */
+    private static final float defaultAlpha = 1f;
 
+    
+    //****************  Additional (precomputed) data  ***************//
+    
+    /**
+     * Sum of weights needed for every distance computation
+     */
+    private final float sumOfWeights;
+    
+    /**
+     * Partially precomputed distance function (FS1)
+     */
+    protected float precomputedDist = Float.MIN_VALUE;
+    
+    /**
+     * Alpha for which the distance was partially precomputed.
+     */
+    protected float precomputedAlpha = -1f;
+    
+    /**
+     * Weights for which the distance was partially precomputed.
+     */
+    protected float[] precomputedWeights = defaultWeights;
+
+    
     //****************** Constructors ******************//
 
     public ObjectFloatSQFDist(float[] data) {
         super(data);
+        this.sumOfWeights = calculateSumOfWeights();
+        precomputeSelfDistance(defaultWeights, defaultAlpha);;
+        
     }
 
     public ObjectFloatSQFDist(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         super(stream);
+        this.sumOfWeights = calculateSumOfWeights();
+        precomputeSelfDistance(defaultWeights, defaultAlpha);;
     }
 
     protected ObjectFloatSQFDist(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
+        this.sumOfWeights = calculateSumOfWeights();
+        precomputeSelfDistance(defaultWeights, defaultAlpha);;
     }
 
+    /**
+     * Compute and store self-distance (fog given alpha).
+     * 
+     * @param weights vector of weights to be used for weighted L2 (distance between centroids)
+     * @param alpha parameter of the Gaussian distance/similarity conversion
+     * @return partial result of multiplication of corresponding parts of the vectors and matrix
+     */
+    protected final float precomputeSelfDistance(float[] weights, float alpha) {
+        float retVal = computePartialResult(this, this, weights, alpha);
+        setPrecomputedAlpha(alpha);
+        setPrecomputedWeights(weights.clone());
+        setPrecomputedDist(retVal);
+        return retVal;
+    }
+
+    /**
+     * Pre-compute sum of all clusters weights (needed for normalization during distance computations).
+     * @return sum of cluster weights
+     */
+    private float calculateSumOfWeights() {
+        float retVal = 0f;
+        int d = getClusterDimension() + 1;
+        for (int i = 0; i < getClusterCount(); i++) {
+            retVal += data[2 + i * d];
+        }
+        return retVal;
+    }
 
     //****************** Attribute access methods ******************//
 
@@ -49,7 +111,35 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         return (int)data[1];
     }
 
+    public float getPrecomputedAlpha() {
+        return precomputedAlpha;
+    }
 
+    public void setPrecomputedAlpha(float precomputedAlpha) {
+        this.precomputedAlpha = precomputedAlpha;
+    }
+
+    public float getPrecomputedDist() {
+        return precomputedDist;
+    }
+
+    public void setPrecomputedDist(float precomputedDist) {
+        this.precomputedDist = precomputedDist;
+    }
+
+    public float[] getPrecomputedWeights() {
+        return precomputedWeights;
+    }
+
+    public void setPrecomputedWeights(float[] precomputedWeights) {
+        this.precomputedWeights = precomputedWeights;
+    }
+
+    protected float getSumOfWeights() {
+        return sumOfWeights;
+    }
+    
+    
     //****************** Distance function setup ******************//
 
     public float getAlpha() {
@@ -65,77 +155,75 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        ObjectFloatSQFDist fs1 = (ObjectFloatSQFDist)obj;
+        ObjectFloatSQFDist other = (ObjectFloatSQFDist)obj;
         float[] weights = getWeights();
         float alpha = getAlpha();
         
-        // Id, number of points, dimension, w1, p1, ..., pdim, wdim, ...
-        int length1 = fs1.getClusterCount();
-        int dim1 = fs1.getClusterDimension();
-
-        if (dim1 != this.getClusterDimension()) {
+        if (other.getClusterDimension() != this.getClusterDimension()) {
             throw new IllegalArgumentException("Dimension of all centroids has to be the same.");
-        }
-
-        // compute sum of weights
-        int d = dim1 + 1;
-        double r;
-        float div = 0, div1 = 0, div2 = 0, result = 0;
-        for (int i = 0; i < length1; i++) {
-            div1 += fs1.data[2 + i * d];
-        }
-        for (int i = 0; i < this.getClusterCount(); i++) {
-            div2 += this.data[2 + i * d];
         }
         
         // r - Gaussian function: f(ci,cj) = e^(-alpha*d^2(ci,cj))
+        // compute SQFD = FS1 + FS2 - 2 * FS1FS2
         
-        // compute SQFD - FS1 + FS2 - 2 * FS1FS2
-        div = div1 * div1;
-     
-        for (int i=0; i<length1; i++) {
-            for (int j=0; j<length1; j++) {
-                r = 0;
-                for (int k=0; k<(d-1); k++) {
-                    float diff = fs1.data[3 + i * d + k] - fs1.data[3 + j * d + k];
-                    r += weights[k] * diff * diff;
-                }
-                r = Math.exp((-alpha) * r);
-                result += fs1.data[2 + i * d] * fs1.data[2 + j * d] * r / div;
-            }
-        }
+        // FS1: either use precomputed or compute it
+        float result = other.getOrPrecomputeSelfDistance(weights, alpha);
         
-        div = div2 * div2;
-        for (int i=0; i<this.getClusterCount(); i++) {
-            for (int j=0; j<this.getClusterCount(); j++) {
-                r = 0;
-                for (int k=0; k< d - 1; k++) {
-                    float diff = this.data[3 + i * d + k] - this.data[3 + j * d + k];
-                    r += weights[k] * diff * diff;
-                }
-                r = Math.exp((-alpha) * r);
-                result += this.data[2 + i * d] * this.data[2 + j * d] * r / div;
-            }
-        }
+        // FS2: either use precomputed or compute it
+        result += this.getOrPrecomputeSelfDistance(weights, alpha);
         
         // from symmetry of the matrix use - 2 * wi * aij * wj
-        div = div1 * div2;
-        for (int i=0; i<length1; i++) {
-            for (int j=0; j<this.getClusterCount(); j++) {
-                r = 0;
-                for (int k=0; k<d-1; k++) {
-                    float diff = fs1.data[3 + i * d + k] - this.data[3 + j * d + k];
-                    r += weights[k] * diff * diff; 
-                }
-                r = Math.exp((-alpha) * r);
-                result -= 2 * fs1.data[2 + i * d] * this.data[2 + j * d] * r /div;
-            }
-        }
-        
-        if (result < 0.0000000000001) return 0; // for rounding mistakes
+        result -= 2 * computePartialResult(other, this, weights, alpha) ;
+                
+        if (result < 0.00000000001) 
+            return 0; // for rounding mistakes
         return (float)Math.sqrt(result);
     }
 
+    /**
+     * Either retrieve stored precomputed self-distance or compute it and store (fog given alpha).
+     * @param weights vector of weights to be used for weighted L2 (distance between centroids)
+     * @param alpha parameter of the Gaussian distance/similarity conversion
+     * @return partial result of multiplication of corresponding parts of the vectors and matrix
+     */
+    protected float getOrPrecomputeSelfDistance(float[] weights, float alpha) {
+        if (alpha == getPrecomputedAlpha() && Arrays.equals(weights, getPrecomputedWeights())) {
+            return getPrecomputedDist();
+        }
+        return precomputeSelfDistance(weights, alpha);
+    }
+    
+    /**
+     * Pre-compute partial distance between two signatures using the matrix based on centroid distances.
+     * @param obj1 first signature object
+     * @param obj2 second signature object
+     * @param weights vector of weights to be used for weighted L2 (distance between centroids)
+     * @param alpha parameter of the Gaussian distance/similarity conversion
+     * @return partial result of multiplication of corresponding parts of the vectors and matrix
+     */
+    protected static float computePartialResult(ObjectFloatSQFDist obj1, ObjectFloatSQFDist obj2, float[] weights, float alpha) {
+        float retVal = 0;
+        
+        int d = obj1.getClusterDimension() + 1;
+        float div = obj1.getSumOfWeights() * obj2.getSumOfWeights();
+        double r = 0;
+        for (int i=0; i < obj1.getClusterCount(); i++) {
+            for (int j=0; j < obj2.getClusterCount(); j++) {
+                r = 0;
+                for (int k=0; k < (d-1); k++) {
+                    float diff = obj1.data[3 + i * d + k] - obj2.data[3 + j * d + k];
+                    r += weights[k] * diff * diff;
+                }
+                r = Math.exp((-alpha) * r);
+                retVal += obj1.data[2 + i * d] * obj2.data[2 + j * d] * r / div;
+            }
+        }
+        return retVal;
+    }
+    
+    /**
+     * Object that allows to set weights and alpha for SQFD object.
+     */
     public static class ObjectFloatSQFDistWeights extends ObjectFloatSQFDist {
         private static final long serialVersionUID = 1L;
         private final float[] weights;
