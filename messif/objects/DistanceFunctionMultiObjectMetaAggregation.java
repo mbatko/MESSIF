@@ -16,6 +16,7 @@
  */
 package messif.objects;
 
+import java.io.Serializable;
 import messif.objects.util.AggregationFunction;
 
 /**
@@ -29,7 +30,10 @@ import messif.objects.util.AggregationFunction;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class DistanceFunctionMultiObjectMetaAggregation implements DistanceFunctionMultiObject<MetaObject> {
+public class DistanceFunctionMultiObjectMetaAggregation implements DistanceFunctionMultiObject<MetaObject>, Serializable {    
+    /** class id for serialization */
+    private static final long serialVersionUID = 874587001L;    
+    
     /** Distance aggregation for the distances to the respective query objects */
     private final DistanceFunctionMultiObjectAggregation multiObjectAggregation;
     /** Distance function to compute single distance between one query object and the given object */
