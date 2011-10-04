@@ -2576,7 +2576,7 @@ public class CoreApplication {
             String[] arguments = Convert.splitBySpaceWithQuotes(removeBackspaces(line.trim()));
 
             // Handle close command
-            if (arguments[0].equalsIgnoreCase("close") || Thread.currentThread().isInterrupted())
+            if ((arguments.length > 0 && arguments[0].equalsIgnoreCase("close")) || Thread.currentThread().isInterrupted())
                 break;
 
             // Handle normal method
