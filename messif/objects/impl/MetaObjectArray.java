@@ -28,6 +28,7 @@ import messif.objects.MetaObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
@@ -46,7 +47,7 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MetaObjectArray extends MetaObject {
+public class MetaObjectArray extends MetaObject implements BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
