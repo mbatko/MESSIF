@@ -95,22 +95,29 @@ public abstract class Extractors {
     /**
      * Creates an extractor that creates objects from text InputStream using the
      * constructor that takes {@link java.io.BufferedReader} as argument.
+     * Note that data are read either from a data source parameter {@code dataParameter}
+     * or the data source stream (if {@code dataParameter} is <tt>null</tt>).
      * @param <T> the class of object that is created by the extractor
      * @param objectClass the class of object that is created by the extractor
+     * @param dataParameter parameter of the data source that contains the object data
      * @param locatorParameter parameter of the data source used to set the extracted object's locator;
      *          if <tt>null</tt>, the object uses the default locator set by the factory
      * @param additionalArguments additional arguments for the constructor
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String dataParameter, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
         final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
             @Override
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
-                    T object = factory.create(dataSource.getBufferedReader());
+                    T object;
+                    if (dataParameter == null)
+                        object = factory.create(dataSource.getBufferedReader());
+                    else
+                        object = factory.create(dataSource.getRequiredParameter(dataParameter, String.class));
                     if (locatorParameter != null)
                         object.setObjectKey(new AbstractObjectKey(dataSource.getRequiredParameter(locatorParameter).toString()));
                     return object;
@@ -126,6 +133,21 @@ public abstract class Extractors {
                 return factory.getCreatedClass();
             }
         };
+    }
+
+    /**
+     * Creates an extractor that creates objects from text InputStream using the
+     * constructor that takes {@link java.io.BufferedReader} as argument.
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param locatorParameter parameter of the data source used to set the extracted object's locator;
+     *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @param additionalArguments additional arguments for the constructor
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
+        return createTextExtractor(objectClass, null, locatorParameter, additionalArguments);
     }
 
     /**

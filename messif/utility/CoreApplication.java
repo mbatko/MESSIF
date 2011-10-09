@@ -112,7 +112,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
  * <ul>
- * <li>&lt;actionName&gt; is a user specified name for the action which can be reffered from other
+ * <li>&lt;actionName&gt; is a user specified name for the action which can be referred from other
  *                    actions (&lt;otherActionName1&gt; &lt;otherActionName2&gt;) or command line parameter <i>[action]</i>.</li>
  * <li>&lt;methodName&gt; can be any {@link CoreApplication} method, which is to be executed if &lt;actionName&gt; is called.
  *                    If a space-separated list of other action names is provided, they will be executed one by one
@@ -134,7 +134,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                the action is repeated until an exception occurs.
  * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
- *  (previous contents are destroyed) and all succesive writes are appended to this file
+ *  (previous contents are destroyed) and all successive writes are appended to this file
  *  until this batch run finishes.</li>
  * <li><i>assign</i> parameter is optional and allows to redirect output of this block to a variable
  *  &lt;variable name&gt;. The previous contents of the variable are replaced by the new value and the
@@ -169,6 +169,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
+@SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class CoreApplication {
     /** Logger */
     protected static final Logger log = Logger.getLogger("application");
@@ -1911,6 +1912,7 @@ public class CoreApplication {
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "shedule full garbage collection", arguments = { "time to sleep (optional)" })
+    @SuppressWarnings("CallToThreadYield")
     public boolean collectGarbage(PrintStream out, String... args) {
         System.gc();
         if (args.length >= 2) {
@@ -1920,7 +1922,9 @@ public class CoreApplication {
                 out.println("Sleep was interrupted: " + e.toString());
                 return false;
             }
-        } else Thread.yield();
+        } else {
+            Thread.yield();
+        }
 
         return true;
     }
@@ -2566,33 +2570,45 @@ public class CoreApplication {
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.socket().getInputStream()));
         PrintStream out = new PrintStream(connection.socket().getOutputStream());
 
-        // Show prompt
-        out.print("MESSIF >>> ");
-        out.flush();
-
-        // Read lines from the socket
-        for (String line = in.readLine(); line != null; line = in.readLine()) {
-            // Execute method with the specified name and the provide the array of arguments
-            String[] arguments = Convert.splitBySpaceWithQuotes(removeBackspaces(line.trim()));
-
-            // Handle close command
-            if ((arguments.length > 0 && arguments[0].equalsIgnoreCase("close")) || Thread.currentThread().isInterrupted())
-                break;
-
-            // Handle normal method
-            try {
-                // Get appropriate method
-                methodExecutor.execute(out, arguments);
-            } catch (InvocationTargetException e) {
-                processException(e.getCause(), out, false);
-            } catch (NoSuchMethodException e) {
-                out.println("Unknown command: " + arguments[0]);
-                out.println("Use 'help' to see all available commands");
-            }
-
+        try {
             // Show prompt
             out.print("MESSIF >>> ");
             out.flush();
+
+            // Read lines from the socket
+            for (String line = in.readLine(); line != null; line = in.readLine()) {
+                // Execute method with the specified name and the provide the array of arguments
+                try {
+                    String[] arguments = Convert.splitBySpaceWithQuotes(removeBackspaces(line.trim()));
+
+                    // Handle close command
+                    if ((arguments.length > 0 && arguments[0].equalsIgnoreCase("close")) || Thread.currentThread().isInterrupted())
+                        break;
+
+                    // Handle normal method
+                    try {
+                        // Get appropriate method
+                        methodExecutor.execute(out, arguments);
+                    } catch (InvocationTargetException e) {
+                        processException(e.getCause(), out, false);
+                    } catch (NoSuchMethodException e) {
+                        out.println("Unknown command: " + line);
+                        out.println("Use 'help' to see all available commands");
+                    }
+                } catch (IllegalArgumentException e) {
+                    out.println(e.getMessage());
+                }
+
+                // Show prompt
+                out.print("MESSIF >>> ");
+                out.flush();
+            }
+        } finally {
+            try {
+                out.close();
+                in.close();
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -2684,11 +2700,12 @@ public class CoreApplication {
                     public void run() {
                         try {
                             processInteractiveSocket(connection);
-                            connection.close();
                         } catch (ClosedByInterruptException e) {
                             // Ignore this exception because it is a correct exit
                         } catch (IOException e) {
                             log.warning(e.toString());
+                        } finally {
+                            try { connection.close(); } catch (Exception ignore) {}
                         }
                     }
                 }.start();
