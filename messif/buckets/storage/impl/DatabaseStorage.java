@@ -832,6 +832,70 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      *
      * @param <T> the class of instances that are serialized into the database
      */
+    public static class FixedValueColumnConvertor<T> implements SearchableColumnConvertor<T, T> {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Attributes ******************//
+
+        /** Fixed value for the column */
+        private final T value;
+        /** Flag whether this column convertor is always used in searching as filter */
+        private final boolean filterSearch;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new fixed-value column convertor.
+         * @param value the fixed value for the column
+         * @param filterSearch flag whether this column convertor is always used in searching as filter
+         */
+        public FixedValueColumnConvertor(T value, boolean filterSearch) {
+            this.value = value;
+            this.filterSearch = filterSearch;
+        }
+
+
+        //****************** Overrides ******************//
+
+        @Override
+        public Object convertToColumnValue(T instance) throws BucketStorageException {
+            return value;
+        }
+
+        @Override
+        public boolean isConvertToColumnUsed() {
+            return true;
+        }
+
+        @Override
+        public T convertFromColumnValue(T value, Object column) throws BucketStorageException {
+            return value;
+        }
+
+        @Override
+        public boolean isConvertFromColumnUsed() {
+            return false;
+        }
+
+        @Override
+        public boolean isColumnCompatible(IndexComparator<?, ? super T> indexComparator) {
+            return filterSearch;
+        }
+
+        @Override
+        public Object convertKeyToColumnValue(T key) {
+            return value;
+        }
+    }
+
+    /**
+     * Column convertor that uses a database BLOB into which instances of {@code T} are
+     * {@link BinarySerializator binary serialized/deserialized}.
+     *
+     * @param <T> the class of instances that are serialized into the database
+     */
     public static class BinarySerializableColumnConvertor<T> implements ColumnConvertor<T> {
         /** class serial id for serialization */
         private static final long serialVersionUID = 1L;
