@@ -881,6 +881,30 @@ public abstract class Convert {
         return ret;
     }
 
+    /** Internal patter for {@link #trimAndUnquote} and {@link #splitBySpaceWithQuotes} methods */
+    private static final Pattern quoteMatchingPattern = Pattern.compile("\\G\\s*(?:([^\\s'\"]+)|'([^']*)'|\"([^\"]*)\")(\\s*)");
+
+    /**
+     * Removes quotes from the given string (double or single).
+     * Unquoted leading and trailing space will be removed as well.
+     * Note that if quotes are not closed, the original text is returned.
+     * @param text the text to unquote
+     * @return the unquoted (and trimmed) text
+     */
+    public static String trimAndUnquote(String text) {
+        if (text == null || text.isEmpty())
+            return text;
+        Matcher matcher = quoteMatchingPattern.matcher(text);
+        if (!matcher.matches())
+            return text;
+        String str = matcher.group(1);
+        if (str == null)
+            str = matcher.group(2);
+        if (str == null)
+            str = matcher.group(3);
+        return str;
+    }
+
     /**
      * Splits the given string by white space, but preserve the whitespace
      * enclosed in (single or double) quotes. The quotes are removed in
@@ -894,7 +918,7 @@ public abstract class Convert {
             return new String[0];
 
         // Parse string by regular expression
-        Matcher matcher = Pattern.compile("\\G\\s*(?:([^\\s'\"]+)|'([^']*)'|\"([^\"]*)\")(\\s*)").matcher(text);
+        Matcher matcher = quoteMatchingPattern.matcher(text);
         List<String> args = new ArrayList<String>();
         StringBuilder lastStr = new StringBuilder();
         int lastMatchPos = 0;

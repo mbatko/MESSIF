@@ -1716,7 +1716,7 @@ public class CoreApplication {
     //****************** Logging command functions ******************//
 
     /**
-     * Get or set global level of logging.
+     * Get or set the global level of logging.
      * If an argument is passed, the logging level is set.
      * Allowed argument values are names of {@link Level logging level} constants.
      * Otherwise the current logging level is printed out.
@@ -1776,7 +1776,7 @@ public class CoreApplication {
     }
 
     /**
-     * Adds a file for writing loging messages.
+     * Adds a file for writing logging messages.
      * The first required argument specifies the name of the file to open.
      * The second argument (defaults to global logging level) specifies the
      * logging level of messages that will be stored in the file.
@@ -1787,7 +1787,16 @@ public class CoreApplication {
      * The fifth optional argument specifies a regular expression that the message must satisfy
      * in order to be written in this file. 
      * The sixth argument specifies the message part that the regular expression
-     * is applied to - see {@link Logging.RegexpFilterAgainst} values for explanation.
+     * is applied to - see {@link Logging.RegexpFilterAgainst} for explanation of
+     * the various values.
+     * The seventh argument is the maximum number of bytes to write to a logging
+     * file before it is rotated (zero means unlimited).
+     * The ninth argument is the number of logging files for rotation. This only
+     * applies, if the maximal file size is given in previous argument.
+     * In that case, once the file reaches the size, it is renamed with a numbering
+     * prefix and all other logging file numbers are increased by one (log rotation).
+     * The files with a greater or equal number than this argument specifies are deleted.
+     * 
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the file's logging level.
      * 
@@ -1799,7 +1808,14 @@ public class CoreApplication {
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args the file name, logging level, append to file flag, simple/xml format selector, regular expression and which part of the message is matched
+     * @param args the file name,
+     *              logging level,
+     *              append to file flag,
+     *              simple/xml format selector,
+     *              regular expression,
+     *              which part of the message is matched by regular expression,
+     *              maximal log size, and
+     *              number of rotated logs
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "add logging file to write logs", arguments = { "file name", "logging level", "append to file", "use simple format (true), XML (false) or given formatter (named instance)", "regexp to filter", "match regexp agains MESSAGE, LOGGER_NAME, CLASS_NAME or METHOD_NAME", "maximal log size", "number of rotated logs" })
@@ -1811,7 +1827,7 @@ public class CoreApplication {
                     (args.length > 3)?Convert.stringToType(args[3], boolean.class):true,        // append
                     (args.length > 4)?args[4]:null,                                             // formatter
                     (args.length > 5)?args[5]:null,                                             // regexp
-                    (args.length > 6)?                                                          // regexp against
+                    (args.length > 6 && args[6] != null && !args[6].isEmpty())?                 // regexp against
                         Logging.RegexpFilterAgainst.valueOf(args[6].toUpperCase()):Logging.RegexpFilterAgainst.MESSAGE,
                     (args.length > 7)?Convert.stringToType(args[7], int.class):0,               // maxSize
                     (args.length > 8)?Convert.stringToType(args[8], int.class):10,              // maxCount
@@ -1831,7 +1847,7 @@ public class CoreApplication {
     }
 
     /**
-     * Removes loging file.
+     * Removes a logging file.
      * The file must be previously opened by {@link #loggingFileAdd}.
      * A required argument specifies the name of the opened logging file to close.
      * 
@@ -1857,9 +1873,8 @@ public class CoreApplication {
         }
     }
 
-
     /**
-     * Changes the loging level of an opened logging file.
+     * Changes the logging level of an opened logging file.
      * The file must be previously opened by {@link #loggingFileAdd}.
      * The first required argument specifies the name of the opened logging file to close
      * and the second one the new logging level to set.
@@ -2218,7 +2233,7 @@ public class CoreApplication {
         String arg = props.getProperty(actionName, actionName);
         do {
             // Add var-substituted arg to arguments list
-            arguments.add(substituteVariables(arg, variables));
+            arguments.add(Convert.trimAndUnquote(substituteVariables(arg, variables)));
 
             // Read next property with name <actionName>.param.{1,2,3,4,...}
             arg = props.getProperty(actionName + ".param." + Integer.toString(arguments.size()));
@@ -2228,12 +2243,12 @@ public class CoreApplication {
     }
 
     /**
-     * Pospone the current action according to the "postponeUntil" argument.
+     * Postpone the current action according to the "postponeUntil" argument.
      * @param out the stream to write the output to
      * @param props the properties with actions and their parameters
      * @param actionName the name of the postponed action (used in errors)
-     * @param variables the current variables' environment
-     * @return <tt>true</tt> if the posponing was successful
+     * @param variables the current variables environment
+     * @return <tt>true</tt> if the postponing was successful
      */
     protected boolean postponeCFAction(PrintStream out, Properties props, String actionName, Map<String,String> variables) {
         String postponeUntil = substituteVariables(props.getProperty(actionName + ".postponeUntil"), variables);
@@ -2356,15 +2371,15 @@ public class CoreApplication {
 
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).
-     * For a full explanation of the command sytax see {@link CoreApplication}.
+     * For a full explanation of the command syntax see {@link CoreApplication}.
      * 
      * @param out the stream to write the output to
      * @param props the properties with actions
      * @param actionName the name of the action to execute
-     * @param variables the current variables' environment
+     * @param variables the current variables environment
      * @param outputStreams currently opened output streams
      * @param throwException flag whether to throw the {@link InvocationTargetException} when an action encounters error instead of handling it
-     * @return <tt>true</tt> if the action was executed successfuly
+     * @return <tt>true</tt> if the action was executed successfully
      * @throws InvocationTargetException if there was an error executing the action while the {@code throwException} is <tt>true</tt>
      */
     protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {

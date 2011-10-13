@@ -311,12 +311,13 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * divided by {@link #getMaxDistance}. Note that unless an object overrides
      * the {@link #getMaxDistance} the resulting distance will be too small.
      * 
+     * <p>Note that the threshold distance is also normalized, i.e. {@code 0 <= distThreshold <= 1}.</p>
      * @param obj the object to compute distance to
      * @param distThreshold the threshold value on the distance (see {@link #getDistance} for explanation)
      * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
      */
     public final float getNormDistance(LocalAbstractObject obj, float distThreshold) {
-        return getDistance(obj, distThreshold) / getMaxDistance();
+        return getDistance(obj, distThreshold * getMaxDistance()) / getMaxDistance();
     }
 
     /**
