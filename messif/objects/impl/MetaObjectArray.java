@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
@@ -34,7 +34,7 @@ import messif.objects.nio.BinarySerializator;
 /**
  * Implementation of the {@link MetaObject} that stores a fixed array of encapsulated objects.
  * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes. For a more sophisticated distance function
+ * differences of locatorURI hash codes. For a more sophisticated distance function
  * use {@link MetaObjectArrayWeightedSum}.
  * 
  * <p>
@@ -95,6 +95,18 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
     }
 
     /**
+     * Creates a new instance of MetaObjectArray that takes the objects from the given collection.
+     * A new unique object ID is generated and a new {@link AbstractObjectKey} is
+     * generated for the specified <code>locatorURI</code>.
+     * @param locatorURI the locator URI for the new object
+     * @param objects the collection with objects to encapsulate
+     */
+    public MetaObjectArray(String locatorURI, Collection<? extends LocalAbstractObject> objects) {
+        super(locatorURI);
+        this.objects = objects.toArray(new LocalAbstractObject[objects.size()]);
+    }
+
+    /**
      * Creates a new instance of MetaObjectArray that takes the objects from the given map.
      * The array is initialized with objects from the map in the order they
      * appear in the {@code objectNames} array. Note that if the object of a given
@@ -133,6 +145,19 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      */
     public MetaObjectArray(BufferedReader stream, int objectCount, Class<? extends LocalAbstractObject> objectClass) throws IOException {
         this(stream, createClassArray(objectCount, objectClass));
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream with header.
+     * Note that a header must contain also the object names even though they are not
+     * stored and used by the array.
+     * @param stream the text stream to read the objects from
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     */
+    public MetaObjectArray(BufferedReader stream) throws IOException {
+        this.objects = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);
     }
 
 
@@ -190,7 +215,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
 
     @Override
     public Map<String, LocalAbstractObject> getObjectMap() {
-        Map<String, LocalAbstractObject> ret = new HashMap<String, LocalAbstractObject>(objects.length);
+        Map<String, LocalAbstractObject> ret = new LinkedHashMap<String, LocalAbstractObject>(objects.length);
         for (int i = 0; i < objects.length; i++) {
             if (objects[i] != null)
                 ret.put(getObjectName(i), objects[i]);
