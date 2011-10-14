@@ -39,7 +39,7 @@ public class DistanceRankedSortedCollection<T extends DistanceRankedObject<?>> e
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
      * @param initialCapacity the initial capacity of the collection
-     * @param maximalCapacity the maximal capatity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
@@ -51,11 +51,22 @@ public class DistanceRankedSortedCollection<T extends DistanceRankedObject<?>> e
      * Constructs an empty collection with the specified initial and maximal capacity.
      * The order is defined using the natural order of items.
      * @param initialCapacity the initial capacity of the collection
-     * @param maximalCapacity the maximal capatity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
     public DistanceRankedSortedCollection(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, null);
+    }
+
+    /**
+     * Constructs an empty collection.
+     * The initial capacity of the collection is set to 16 and maximal capacity
+     * is not limited.
+     * @param comparator the comparator that defines ordering
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
+     */
+    public DistanceRankedSortedCollection(Comparator<? super T> comparator) throws IllegalArgumentException {
+        super(comparator);
     }
 
     /**

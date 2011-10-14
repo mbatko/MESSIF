@@ -137,7 +137,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     //****************** Comparing methods ******************//
 
     /**
-     * Interanal comparator that compares {@link Comparable} objects.
+     * Internal comparator that compares {@link Comparable} objects.
      * @param <T> type of objects to compare
      */
     private static final class Comparable2IndexComparator<T> implements Comparator<T>, Serializable {
@@ -146,7 +146,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
         @SuppressWarnings("unchecked")
         @Override
-        public final int compare(T o1, T o2) {
+        public int compare(T o1, T o2) {
             return ((Comparable)o1).compareTo(o2); // This is unchecked but a responsibility of the constructor caller
         }
     }
@@ -194,8 +194,8 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     }
 
     /**
-     * Returns the maximal capatity of this collection.
-     * @return the maximal capatity of this collection
+     * Returns the maximal capacity of this collection.
+     * @return the maximal capacity of this collection
      */
     public int getMaximalCapacity() {
         return capacity;
@@ -294,7 +294,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Returns a shallow copy of this <tt>SortedCollection</tt> instance.
      * The elements themselves are copied as references only and the comparator is shared.
      * @return a clone of this <tt>SortedCollection</tt> instance
-     * @throws CloneNotSupportedException if there was a problem clonning this collection
+     * @throws CloneNotSupportedException if there was a problem cloning this collection
      */
     @Override
     public final SortedCollection<T> clone() throws CloneNotSupportedException {
@@ -312,7 +312,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      *      only the collection shell is copied but no data, i.e. this creates a new instance of
      *      an empty collection with the same settings as the original one
      * @return a clone of this <tt>SortedCollection</tt> instance
-     * @throws CloneNotSupportedException if there was a problem clonning this collection
+     * @throws CloneNotSupportedException if there was a problem cloning this collection
      */
     public SortedCollection<T> clone(boolean copyData) throws CloneNotSupportedException {
         @SuppressWarnings("unchecked")
@@ -700,7 +700,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
          * during iteration and throws ConcurrentModificationException.
          * @throws ConcurrentModificationException if the collection was modified while iterating
          */
-	private final void checkForComodification() throws ConcurrentModificationException {
+	private void checkForComodification() throws ConcurrentModificationException {
 	    if (modCount != expectedModCount)
 		throw new ConcurrentModificationException();
 	}

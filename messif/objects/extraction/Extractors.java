@@ -132,6 +132,10 @@ public abstract class Extractors {
             public Class<? extends T> getExtractedClass() {
                 return factory.getCreatedClass();
             }
+            @Override
+            public String toString() {
+                return "Extracts " + getExtractedClass() + " as text stream";
+            }
         };
     }
 
@@ -279,6 +283,10 @@ public abstract class Extractors {
             public Class<? extends T> getExtractedClass() {
                 return textExtractor.getExtractedClass();
             }
+            @Override
+            public String toString() {
+                return textExtractor + " from " + command;
+            }
         };
     }
 
@@ -313,6 +321,10 @@ public abstract class Extractors {
             @Override
             public Class<? extends T> getExtractedClass() {
                 return textExtractor.getExtractedClass();
+            }
+            @Override
+            public String toString() {
+                return textExtractor + " (multiple) from " + command;
             }
         };
     }
