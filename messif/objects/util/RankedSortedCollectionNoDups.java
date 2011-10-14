@@ -41,7 +41,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
      * @param initialCapacity the initial capacity of the collection
-     * @param maximalCapacity the maximal capatity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
@@ -53,7 +53,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * Constructs an empty collection with the specified initial and maximal capacity.
      * The order is defined using the natural order of items.
      * @param initialCapacity the initial capacity of the collection
-     * @param maximalCapacity the maximal capatity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
     public RankedSortedCollectionNoDups(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {

@@ -69,7 +69,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
      * @param initialCapacity the initial capacity of the collection (if zero, the {@link #DEFAULT_INITIAL_CAPACITY} is used)
-     * @param maximalCapacity the maximal capatity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
