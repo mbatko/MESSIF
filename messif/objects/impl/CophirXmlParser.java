@@ -227,7 +227,7 @@ public class CophirXmlParser extends DefaultHandler {
             try {
                 objects.put(descriptorName, createVisualDescriptor(descriptorName, descriptorData));
             } catch (InstantiationException e) {
-                throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack.toString(), (Exception)e.getCause());
+                throw new SAXException("Error parsing descriptor '" + descriptorName + "' at " + elementNamesStack + ": " + e.getMessage(), e);
             }
 
             descriptorName = null;
@@ -282,17 +282,17 @@ public class CophirXmlParser extends DefaultHandler {
      */
     private LocalAbstractObject createVisualDescriptor(String descriptorName, Map<String, StringBuilder> data) throws InstantiationException {
         if (descriptorName.equals("ScalableColorType")) {
-            return new ObjectIntVectorL1(Convert.stringToArray(data.get("Coeff"), splitBySpacePattern, int[].class, null));
+            return new ObjectIntVectorL1(Convert.stringToArray(data.get("Coeff"), splitBySpacePattern, 0, int[].class, null));
         } else if (descriptorName.equals("ColorStructureType")) {
-            return new ObjectShortVectorL1(Convert.stringToArray(data.get("Values"), splitBySpacePattern, short[].class, null));
+            return new ObjectShortVectorL1(Convert.stringToArray(data.get("Values"), splitBySpacePattern, 0, short[].class, null));
         } else if (descriptorName.equals("EdgeHistogramType")) {
-            return new ObjectVectorEdgecomp(Convert.stringToArray(data.get("BinCounts"), splitBySpacePattern, byte[].class, null));
+            return new ObjectVectorEdgecomp(Convert.stringToArray(data.get("BinCounts"), splitBySpacePattern, 0, byte[].class, null));
         } else if (descriptorName.equals("HomogeneousTextureType")) {
             return new ObjectHomogeneousTexture(
                     Short.parseShort(data.get("Average").toString()),
                     Short.parseShort(data.get("StandardDeviation").toString()),
-                    Convert.stringToArray(data.get("Energy"), splitBySpacePattern, short[].class, null),
-                    Convert.stringToArray(data.get("EnergyDeviation"), splitBySpacePattern, short[].class, null)
+                    Convert.stringToArray(data.get("Energy"), splitBySpacePattern, 0, short[].class, null),
+                    Convert.stringToArray(data.get("EnergyDeviation"), splitBySpacePattern, 0, short[].class, null)
             );
         } else if (descriptorName.equals("ColorLayoutType")) {
             return parseColorLayoutType(data);
