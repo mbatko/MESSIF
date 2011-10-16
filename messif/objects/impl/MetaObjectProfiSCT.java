@@ -1351,6 +1351,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             String frequencyTable = "profimedia_keyword_frequency";
 
             if (useIdf) {
+                /*
+                 * UPDATE `profimedia_kwcount` SET `weighted_idf_sum`=(SELECT sum(log( (SELECT count( * ) FROM profimedia ) / keyword_frequency )*CASE WHEN word_source = 'TITLE' THEN 3.0 ELSE 1.0 END )
+                 * FROM profimedia_keyword_links keyword_links INNER JOIN profimedia_keyword_frequency freq ON (keyword_links.keyword_id=freq.keyword_id)
+                 * WHERE  keyword_links.object_id=profimedia_kwcount.object_id);
+                 */
                 str.append("select locator, ");
                 str.append(getTextStreamColumnName(true));
                 str.append(" as metaobject, distance from (SELECT keyword_links.object_id, ( 1 / ( weighted_idf_sum +");
