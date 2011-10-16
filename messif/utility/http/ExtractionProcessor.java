@@ -55,7 +55,7 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
     }
 
     /**
-     * Create a new instace of extraction processor.
+     * Create a new instance of extraction processor.
      * Extractor is given as method signature that is parsed using {@link InstantiatorSignature#createInstanceWithStringArgs}.
      * Example: <pre>
      *      messif.objects.extraction.Extractors.createExternalExtractor(messif.objects.impl.MetaObjectMap, some_extractor_binary)
@@ -65,6 +65,7 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
      * @param extractedClass the class of instances created by the extractor
      * @param namedInstances collection of named instances that are used when converting string parameters
      * @throws IllegalArgumentException if there was an error creating the extractor instance
+     * @see messif.objects.extraction.Extractors
      */
     public ExtractionProcessor(String extractorSignature, Class<? extends T> extractedClass, Map<String, Object> namedInstances) throws IllegalArgumentException {
         try {
