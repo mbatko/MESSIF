@@ -119,7 +119,7 @@ public abstract class Convert {
 
         // Converting static arrays
         if (type.isArray()) {
-            return stringToArray(string, Pattern.compile("\\s*[|,]\\s*"), type, namedInstances);
+            return stringToArray(string, Pattern.compile("\\s*[|,]\\s*"), -1, type, namedInstances);
         }
 
         // Try string public constructor
@@ -251,12 +251,14 @@ public abstract class Convert {
      * @param <T> the class of the array to create
      * @param string the string to convert to array
      * @param splitPattern the pattern used to split the string into array elements
+     * @param splitLimit the number of times the splitPattern is applied and
+     *          therefore affects the length of the resulting array (see {@link Pattern#split(java.lang.CharSequence, int) split} method)
      * @param type the class of the array to create (note that this must be the class of the static array)
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return a new static array
      * @throws InstantiationException if there was a problem converting the array elements
      */
-    public static <T> T stringToArray(CharSequence string, Pattern splitPattern, Class<? extends T> type, Map<String, Object> namedInstances) throws InstantiationException {
+    public static <T> T stringToArray(CharSequence string, Pattern splitPattern, int splitLimit, Class<? extends T> type, Map<String, Object> namedInstances) throws InstantiationException {
         if (string == null)
             return null;
         Class<?> componentType = type.getComponentType();
@@ -264,7 +266,7 @@ public abstract class Convert {
             throw new InstantiationException("Class " + type.getName() + " is not static array class");
         if (string.length() == 0)
             return type.cast(Array.newInstance(componentType, 0));
-        String[] items = splitPattern.split(string, -1);
+        String[] items = splitPattern.split(string, splitLimit);
         Object array = Array.newInstance(componentType, items.length);
         for (int i = 0; i < items.length; i++)
             Array.set(array, i, stringToType(items[i], componentType, namedInstances));
