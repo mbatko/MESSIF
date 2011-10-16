@@ -149,6 +149,18 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
         return objectKey.getLocatorURI();
     }
 
+    /**
+     * Returns the locator URI of the given object if it is instance of {@link AbstractObject}.
+     * Otherwise, <tt>null</tt> is returned.
+     * @param object the object the locator URI of which to get
+     * @return the locator URI or <tt>null</tt>
+     */
+    public static String getObjectLocatorURI(Object object) {
+        if (object instanceof AbstractObject)
+            return ((AbstractObject)object).getLocatorURI();
+        return null;
+    }
+
 
     //****************** Supplemental data cleaning ******************//
 

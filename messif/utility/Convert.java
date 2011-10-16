@@ -119,14 +119,7 @@ public abstract class Convert {
 
         // Converting static arrays
         if (type.isArray()) {
-            Class<?> componentType = type.getComponentType();
-            if (string.isEmpty())
-                return type.cast(Array.newInstance(componentType, 0));
-            String[] items = string.split("\\p{Space}*[|,]\\p{Space}*", -1);
-            Object array = Array.newInstance(componentType, items.length);
-            for (int i = 0; i < items.length; i++)
-                Array.set(array, i, stringToType(items[i], componentType, namedInstances));
-            return type.cast(array);
+            return stringToArray(string, Pattern.compile("\\s*[|,]\\s*"), type, namedInstances);
         }
 
         // Try string public constructor
@@ -248,6 +241,34 @@ public abstract class Convert {
                 str.append(Array.get(array, i));
         }
         return str.toString();
+    }
+
+    /**
+     * Creates a static array from the given string.
+     * The string is split using the given regular expression split pattern
+     * and the respective elements converted using the {@link #stringToType(java.lang.String, java.lang.Class, java.util.Map) stringToType}
+     * method.
+     * @param <T> the class of the array to create
+     * @param string the string to convert to array
+     * @param splitPattern the pattern used to split the string into array elements
+     * @param type the class of the array to create (note that this must be the class of the static array)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @return a new static array
+     * @throws InstantiationException if there was a problem converting the array elements
+     */
+    public static <T> T stringToArray(CharSequence string, Pattern splitPattern, Class<? extends T> type, Map<String, Object> namedInstances) throws InstantiationException {
+        if (string == null)
+            return null;
+        Class<?> componentType = type.getComponentType();
+        if (componentType == null)
+            throw new InstantiationException("Class " + type.getName() + " is not static array class");
+        if (string.length() == 0)
+            return type.cast(Array.newInstance(componentType, 0));
+        String[] items = splitPattern.split(string, -1);
+        Object array = Array.newInstance(componentType, items.length);
+        for (int i = 0; i < items.length; i++)
+            Array.set(array, i, stringToType(items[i], componentType, namedInstances));
+        return type.cast(array);        
     }
 
     /**
