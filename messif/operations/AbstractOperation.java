@@ -94,7 +94,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     /**
      * Indicates whether another operation is equal to this operation.
      * Two operations are equal if their classes and IDs match.
-     * Note that the clonned operations are equal as well as the
+     * Note that the cloned operations are equal as well as the
      * serialized and then deserialized operations.
      *
      * @param obj the reference object with which to compare
@@ -384,7 +384,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     public abstract void endOperation();
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
     
     /**
      * Create a duplicate of this operation.

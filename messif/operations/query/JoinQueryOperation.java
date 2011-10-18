@@ -22,6 +22,7 @@ import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AbstractObjectList;
+import messif.objects.util.CollectionProviders;
 import messif.objects.util.DistanceRankedSortedCollection;
 import messif.objects.util.RankedJoinObject;
 import messif.operations.AbstractOperation;
@@ -66,7 +67,7 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
 
     /**
      * Creates a new instance of JoinQueryOperation for a given distance threshold.
-     * The pairs added to the answer are not checked for reoccurence, so even pairs of swapped objects are added.
+     * The pairs added to the answer are not checked for reoccurrence, so even pairs of swapped objects are added.
      * Objects in qualifying pairs added to answer are updated to {@link AnswerType#NODATA_OBJECTS no-data objects}.
      * @param mu the distance threshold
      */
@@ -211,11 +212,11 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
         return getAnswerCount() - beforeCount;
     }
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
     
     /**
      * Create a duplicate of this operation.
-     * The answer of the query is not clonned.
+     * The answer of the query is not cloned.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
@@ -320,6 +321,21 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
     @Override
     public Iterator<AbstractObject> getAnswerObjects() {
         throw new UnsupportedOperationException("Not supported for join queries.");
+    }
+
+    @Override
+    public int getSubAnswerCount() {
+        return CollectionProviders.getCollectionCount(answer);
+    }
+
+    @Override
+    public Iterator<? extends RankedJoinObject> getSubAnswer(int index) throws IndexOutOfBoundsException {
+        return CollectionProviders.getCollectionIterator(answer, index, getAnswerClass());
+    }
+
+    @Override
+    public Iterator<? extends RankedJoinObject> getSubAnswer(Object key) {
+        return CollectionProviders.getCollectionByKeyIterator(answer, key, getAnswerClass(), false);
     }
 
     /**

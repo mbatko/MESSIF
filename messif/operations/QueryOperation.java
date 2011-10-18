@@ -25,12 +25,12 @@ import messif.objects.util.AbstractObjectIterator;
 
 /**
  * The base class for all query operations.
- * Query operations retrive data from indexing structures according to their specification,
+ * Query operations retrieve data from indexing structures according to their specification,
  * but they do not modify the indexed data.
  * Once a query operation is executed on an index structure, its answer is updated.
  * 
  * <p>
- * There are three cathegories of query operations that return different types of answers:
+ * There are three categories of query operations that return different types of answers:
  * <ul>
  * <li>{@link SingletonQueryOperation} - returns a single {@link AbstractObject}</li>
  * <li>{@link ListingQueryOperation} - returns a collection of {@link AbstractObject}</li>
@@ -164,6 +164,31 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * All objects from the answer are deleted, {@link #getAnswerCount()} will return zero.
      */
     public abstract void resetAnswer();
+
+    /**
+     * Returns the number of answer sub-collections.
+     * @return the number of answer sub-collections
+     */
+    public abstract int getSubAnswerCount();
+
+    /**
+     * Returns an iterator over all objects in the answer sub-collection with the given index.
+     * Note that the returned collection (typically) cannot be modified.
+     * @param index the index of the answer sub-collection to return
+     * @return an iterator over all objects in the answer sub-collection
+     * @throws IndexOutOfBoundsException if the given index is negative or
+     *          greater or equal to {@link #getSubAnswerCount()}
+     */
+    public abstract Iterator<? extends TAnswer> getSubAnswer(int index) throws IndexOutOfBoundsException;
+
+    /**
+     * Returns an iterator over all objects in the answer sub-collection with the given key.
+     * If no collection is available for the given key, <tt>null</tt> is returned.
+     * Note that the returned collection (typically) cannot be modified.
+     * @param key the key of the answer sub-collection to return
+     * @return the answer sub-collection with the given key or <tt>null</tt>
+     */
+    public abstract Iterator<? extends TAnswer> getSubAnswer(Object key);
 
 
     //****************** Textual representation ******************//

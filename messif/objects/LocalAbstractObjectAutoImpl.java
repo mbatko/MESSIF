@@ -186,7 +186,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /** The clone method reflection accessor */
     private static final Method cloneMethod;
@@ -205,9 +205,9 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
      * One randomly selected field is modified. If the selected field is array, one randomly selected
      * item of the array is modified.
      *
-     * @param args two objects with the miminal and the maximal possible values and optional third integer parameter with index of the field to modify
+     * @param args two objects with the minimal and the maximal possible values and optional third integer parameter with index of the field to modify
      * @return a randomly modified clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
@@ -229,7 +229,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
                 // Get field type
                 Class<?> fieldClass = fields[i].getType();
                 
-                // Clone the data if it is not a primitive type (which doesn't need clonning)
+                // Clone the data if it is not a primitive type (which doesn't need cloning)
                 if (!fieldClass.isPrimitive())
                     fieldData = cloneMethod.invoke(fieldData);
 
@@ -245,7 +245,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
                     } else fieldData = Convert.getRandomValue(fields[i].get(args[0]), fields[i].get(args[1]));
                 }
 
-                // Set the field to clonned value
+                // Set the field to cloned value
                 fields[i].set(rtv, fieldData);
             }
 
@@ -255,7 +255,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
         } catch (InvocationTargetException e) {
             throw new CloneNotSupportedException("Can't clone data field: " + e.getCause());
         } catch (IndexOutOfBoundsException e) {
-            throw new CloneNotSupportedException("Invalid minimal/maximal data while data field clonning");
+            throw new CloneNotSupportedException("Invalid minimal/maximal data while data field cloning");
         }
     }
 

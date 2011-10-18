@@ -153,7 +153,7 @@ public abstract class Instantiators {
             if (convertStringArguments && (arguments[i] instanceof String)) {
                 // Try to convert string argument
                 try {
-                    // Clone argument array if not clonned yet
+                    // Clone argument array if not cloned yet
                     if (convertedArguments == null)
                         convertedArguments = arguments.clone();
                     convertedArguments[i] = Convert.stringToType((String)arguments[i], prototype[i], namedInstances);

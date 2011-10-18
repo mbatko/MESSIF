@@ -33,7 +33,7 @@ public enum AnswerType {
     /** Answer contains the original objects as is */
     ORIGINAL_OBJECTS,
     /** Answer contains clones of the original objects */
-    CLONNED_OBJECTS,
+    CLONED_OBJECTS,
     /** Answer contains clones of the original objects with {@link messif.objects.AbstractObject#clearSurplusData() cleared surplus data} */
     CLEARED_OBJECTS,
     /** Answer contains only {@link messif.objects.NoDataObject objects} */
@@ -50,16 +50,16 @@ public enum AnswerType {
 
     /**
      * Updates a {@link AbstractObject} so that it conforms to this answer type.
-     * That means, the object is clonned, cleared or transformed into a {@link NoDataObject}.
+     * That means, the object is cloned, cleared or transformed into a {@link NoDataObject}.
      * @param object the object to update
      * @return an updated object
-     * @throws CloneNotSupportedException if a clone was requested but the specified object cannot be clonned
+     * @throws CloneNotSupportedException if a clone was requested but the specified object cannot be cloned
      */
     public AbstractObject update(AbstractObject object) throws CloneNotSupportedException {
         switch (this) {
             case ORIGINAL_OBJECTS:
                 return object;
-            case CLONNED_OBJECTS:
+            case CLONED_OBJECTS:
                 return object.clone();
             case CLEARED_OBJECTS:
                 object = object.clone();

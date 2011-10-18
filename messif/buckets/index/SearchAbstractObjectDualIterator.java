@@ -44,7 +44,7 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
      * @param search the {@link Search} instance to wrap by this iterator
      * @param limit limit the number of iterations (zero means unlimited)
-     * @throws CloneNotSupportedException if there was an error clonning the search
+     * @throws CloneNotSupportedException if there was an error cloning the search
      */
     public SearchAbstractObjectDualIterator(Search<T> search, int limit) throws CloneNotSupportedException {
         super(search, limit);
@@ -56,7 +56,7 @@ public class SearchAbstractObjectDualIterator<T extends LocalAbstractObject> ext
      * Creates a new instance of SearchAbstractObjectIterator for the specified {@link Search} instance.
      * Number of iterations is not limited.
      * @param search the {@link Search} instance to wrap by this iterator
-     * @throws CloneNotSupportedException if there was an error clonning the search
+     * @throws CloneNotSupportedException if there was an error cloning the search
      */
     public SearchAbstractObjectDualIterator(Search<T> search) throws CloneNotSupportedException {
         this(search, Integer.MAX_VALUE);

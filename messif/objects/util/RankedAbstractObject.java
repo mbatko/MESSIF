@@ -78,7 +78,7 @@ public class RankedAbstractObject extends DistanceRankedObject<AbstractObject> i
 
     @Override
     public RankedAbstractObject clone(float newDistance) {
-        return (RankedAbstractObject)super.clone(newDistance); // This cast is valid because of the clonning
+        return (RankedAbstractObject)super.clone(newDistance); // This cast is valid because of the cloning
     }
 
 }

@@ -191,14 +191,14 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a shallow copy of this object. The precise meaning 
      * of "copy" may depend on the class of the object.
      *
      * @return a clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public AbstractObject clone() throws CloneNotSupportedException {
@@ -211,7 +211,7 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      *
      * @param objectKey new object key
      * @return a clone of this instance
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     public final AbstractObject clone(AbstractObjectKey objectKey) throws CloneNotSupportedException {
         AbstractObject rtv = clone();

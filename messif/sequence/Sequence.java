@@ -79,12 +79,12 @@ public interface Sequence<T> {
     public abstract String getOriginalSequenceLocator();
 
     /**
-     * Computes distance between two pieces of this sequence and the given sequence.
+     * Computes distance between a specified piece of this sequence and the given sequence.
      * It is supposed to be called from the implementation of a distance between two sequences.
      * @param thisPiece The offset of an item in this sequence
      * @param s The second sequence
      * @param sPiece The offset of an item in the second sequence
-     * @return
+     * @return the distance between a specified piece of this sequence and the given sequence
      */
     public abstract float getPiecewiseDist(int thisPiece, Sequence<T> s, int sPiece);
 

@@ -199,7 +199,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Create a duplicate of this operation.
@@ -211,10 +211,10 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     @Override
     public RankingMultiQueryOperation clone() throws CloneNotSupportedException {
         RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone();
-        LocalAbstractObject[] clonnedQueryObjects = new LocalAbstractObject[operation.queryObjects.length];
-        for (int i = 0; i < clonnedQueryObjects.length; i++)
-            clonnedQueryObjects[i] = operation.queryObjects[i].clone();
-        operation.queryObjects = clonnedQueryObjects;
+        LocalAbstractObject[] clonedQueryObjects = new LocalAbstractObject[operation.queryObjects.length];
+        for (int i = 0; i < clonedQueryObjects.length; i++)
+            clonedQueryObjects[i] = operation.queryObjects[i].clone();
+        operation.queryObjects = clonedQueryObjects;
         return operation;
     }
 

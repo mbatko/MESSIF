@@ -316,7 +316,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      */
     public SortedCollection<T> clone(boolean copyData) throws CloneNotSupportedException {
         @SuppressWarnings("unchecked")
-        SortedCollection<T> ret = (SortedCollection<T>)super.clone(); // This uncheck IS correct, since this is clonning
+        SortedCollection<T> ret = (SortedCollection<T>)super.clone(); // This uncheck IS correct, since this is cloning
         if (copyData) {
             ret.items = new Object[size];
             System.arraycopy(items, 0, ret.items, 0, size);

@@ -208,7 +208,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      *
      * @param objects the collection of objects on which to evaluate this query
      * @return number of objects satisfying the query
-     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be clonned
+     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be cloned
      */
     @Override
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects) {

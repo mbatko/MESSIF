@@ -16,9 +16,10 @@
  */
 package messif.operations;
 
+import java.util.Collections;
 import messif.objects.AbstractObject;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
+import messif.objects.util.CollectionProviders;
 
 
 /**
@@ -43,7 +44,7 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
 
     /**
      * Creates a new instance of SingletonQueryOperation.
-     * The object stored in answer is {@link AnswerType#CLEARED_OBJECTS cleared and clonned}.
+     * The object stored in answer is {@link AnswerType#CLEARED_OBJECTS cleared and cloned}.
      */
     protected SingletonQueryOperation() {
         this(AnswerType.CLEARED_OBJECTS);
@@ -58,11 +59,11 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
     
     /**
      * Create a duplicate of this operation.
-     * The answer of the query is not clonned.
+     * The answer of the query is not cloned.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
@@ -107,24 +108,7 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
 
     @Override
     public Iterator<AbstractObject> getAnswer(final int skip, int count) {
-        return new Iterator<AbstractObject>() {
-            private boolean hasNext = answer != null && skip == 0;
-            @Override
-            public boolean hasNext() {
-                return hasNext;
-            }
-            @Override
-            public AbstractObject next() {
-                if (!hasNext)
-                    throw new NoSuchElementException();
-                hasNext = false;
-                return answer;
-            }
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Not supported");
-            }
-        };
+        return Collections.singleton(answer).iterator();
     }
 
     @Override
@@ -140,6 +124,21 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
         return answer;
     }
 
+   @Override
+    public int getSubAnswerCount() {
+        return CollectionProviders.getCollectionCount(answer);
+    }
+
+    @Override
+    public Iterator<? extends AbstractObject> getSubAnswer(int index) throws IndexOutOfBoundsException {
+        return CollectionProviders.getCollectionIterator(answer, index, getAnswerClass());
+    }
+
+    @Override
+    public Iterator<? extends AbstractObject> getSubAnswer(Object key) {
+        return CollectionProviders.getCollectionByKeyIterator(answer, key, getAnswerClass(), false);
+    }
+
 
     //****************** Answer modification methods ******************//
 
@@ -148,7 +147,7 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
      * The object is updated according to {@link #answerType}.
      * @param object the object to add
      * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be clonned
+     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be cloned
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {

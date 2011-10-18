@@ -134,10 +134,10 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param name the name of the object to retrieve
      * @param objectClass the class of the object to retrieve
      * @param clone flag whether to clone the retrieved object (<tt>true</tt>) or not (<tt>false</tt>)
-     * @param cloneKey the object key to set for the clonned data
+     * @param cloneKey the object key to set for the cloned data
      * @return the object retrieved from the map or <tt>null</tt> if there was no such object
      * @throws ClassCastException if there was an object with the given name in the map, but it has a different class
-     * @throws CloneNotSupportedException if the clonning was not supported by the object
+     * @throws CloneNotSupportedException if the cloning was not supported by the object
      */
     protected static <T> T getObjectFromMap(Map<String, ? extends LocalAbstractObject> objects, String name, Class<? extends T> objectClass, boolean clone, AbstractObjectKey cloneKey) throws ClassCastException, CloneNotSupportedException {
         LocalAbstractObject object = objects.get(name);

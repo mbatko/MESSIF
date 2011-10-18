@@ -29,7 +29,7 @@ import java.util.Comparator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RankedSortedMultiCollection extends RankedSortedCollection {
+public class RankedSortedMultiCollection extends RankedSortedCollection implements CollectionProvider<RankedAbstractObject> {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -86,12 +86,18 @@ public class RankedSortedMultiCollection extends RankedSortedCollection {
             sublists[i].clear();
     }
 
-    /**
-     * Returns the additional collection.
-     * @param index the index of the additional collection to return
-     * @return the additional collection
-     */
-    public Collection<RankedAbstractObject> getSublist(int index) {
+    @Override
+    public int getCollectionCount() {
+        return sublists.length;
+    }
+
+    @Override
+    public Collection<RankedAbstractObject> getCollection(int index) throws IndexOutOfBoundsException {
         return Collections.unmodifiableCollection(sublists[index]);
+    }
+
+    @Override
+    public Class<? extends RankedAbstractObject> getCollectionValueClass() {
+        return RankedAbstractObject.class;
     }
 }

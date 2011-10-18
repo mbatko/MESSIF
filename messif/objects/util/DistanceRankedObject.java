@@ -100,7 +100,7 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
      * Note that the equality defined by this method is <b>inconsistent</b> with {@link #compareTo}.
      * </p>
      * @param obj the reference object with which to compare
-     * @return <code>true</code> if this object is the same as the obj argument; <code>false</code> otherwise
+     * @return <code>true</code> if this object is the same as the {@code obj} argument; <code>false</code> otherwise
      */
     @Override
     public boolean equals(Object obj) {
@@ -137,14 +137,14 @@ public class DistanceRankedObject<T> implements Cloneable, Serializable, Distanc
     }
 
     /**
-     * Clone this ranked object and change the distance of the clonned one
-     * @param newDistance distance to be set for the clonned object
+     * Clone this ranked object and change the distance of the cloned one
+     * @param newDistance distance to be set for the cloned object
      * @return the clone with new distance
      */
     public DistanceRankedObject<T> clone(float newDistance) {
         try {
             @SuppressWarnings("unchecked")
-            DistanceRankedObject<T> clone = (DistanceRankedObject<T>) super.clone(); // This IS checked (clonning)
+            DistanceRankedObject<T> clone = (DistanceRankedObject<T>) super.clone(); // This IS checked (cloning)
             clone.distance = newDistance;
             return clone;
         } catch (CloneNotSupportedException e) {

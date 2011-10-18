@@ -84,16 +84,16 @@ public interface Search<T> extends Cloneable {
 
     /**
      * Creates and returns a copy of this search.
-     * The new search instance retains the search state at the time of clonning,
+     * The new search instance retains the search state at the time of cloning,
      * thus continuing the search via calls to {@link #next} or {@link #previous}
      * will return the same values as for the original search.
      * 
      * <p>
-     * In practice, the clonned search is often used to do the search in both
+     * In practice, the cloned search is often used to do the search in both
      * directions from the same starting point.
      * </p>
      *
-     * @return a clonned instance of this search
+     * @return a cloned instance of this search
      * @throws CloneNotSupportedException if this search cannot be cloned
      */
     public Search<T> clone() throws CloneNotSupportedException;

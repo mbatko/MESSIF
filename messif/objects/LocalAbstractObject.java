@@ -838,7 +838,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 

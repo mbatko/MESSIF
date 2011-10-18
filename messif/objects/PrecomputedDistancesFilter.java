@@ -26,7 +26,7 @@ import messif.objects.nio.BinarySerializator;
 
 /**
  * This class provides a framework for metric-distance filtering techniques.
- * Using a triangle inequality prperty of the metric space, some distance calculations
+ * Using a triangle inequality property of the metric space, some distance calculations
  * can be avoided provided there is some additional information - the precomputed
  * distances.
  * 
@@ -166,7 +166,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
     protected abstract boolean isDataWritable();
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object.

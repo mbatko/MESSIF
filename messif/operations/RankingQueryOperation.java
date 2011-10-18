@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.CollectionProviders;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
@@ -108,7 +109,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
     
     /**
      * Create a duplicate of this operation.
@@ -140,7 +141,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         if (!collection.isEmpty())
             collection.clear();
         collection.addAll(answer);
-        this.answer = collection;
+        this.answer = collection; // This assignment IS intended
     }
 
     @Override
@@ -216,6 +217,21 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         return RankedAbstractObject.getObjectsIterator(getAnswer());
     }
 
+    @Override
+    public int getSubAnswerCount() {
+        return CollectionProviders.getCollectionCount(answer);
+    }
+
+    @Override
+    public Iterator<? extends RankedAbstractObject> getSubAnswer(int index) throws IndexOutOfBoundsException {
+        return CollectionProviders.getCollectionIterator(answer, index, getAnswerClass());
+    }
+
+    @Override
+    public Iterator<? extends RankedAbstractObject> getSubAnswer(Object key) {
+        return CollectionProviders.getCollectionByKeyIterator(answer, key, getAnswerClass(), false);
+    }
+
     /**
      * Returns the current last ranked object in the answer.
      * @return the current last ranked object in the answer
@@ -263,7 +279,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @param distance the distance of object
      * @param objectDistances the array of distances to the respective sub-objects (can be <tt>null</tt>)
      * @return the distance-ranked object object that was added to answer or <tt>null</tt> if the object was not added
-     * @throws IllegalArgumentException if the answer type of this operation requires clonning but the passed object cannot be cloned
+     * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
         if (object == null)

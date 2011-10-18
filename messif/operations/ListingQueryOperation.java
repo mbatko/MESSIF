@@ -19,8 +19,8 @@ package messif.operations;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import messif.objects.AbstractObject;
+import messif.objects.util.CollectionProviders;
 import messif.objects.util.RankedAbstractObject;
 
 
@@ -47,7 +47,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     /**
      * Creates a new instance of ListingQueryOperation.
      * An instance of {@link ArrayList} is used to store the answer.
-     * Objects added to answer are {@link AnswerType#CLEARED_OBJECTS cleared and clonned}.
+     * Objects added to answer are {@link AnswerType#CLEARED_OBJECTS cleared and cloned}.
      */
     protected ListingQueryOperation() {
         this(AnswerType.CLEARED_OBJECTS, new ArrayList<AbstractObject>());
@@ -73,11 +73,11 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
     
     /**
      * Create a duplicate of this operation.
-     * The answer of the query is not clonned.
+     * The answer of the query is not cloned.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
@@ -120,30 +120,28 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     }
 
     @Override
-    public Iterator<AbstractObject> getAnswer(int skip, final int count) {
-        final ListIterator<AbstractObject> listIterator = answer.listIterator(skip);
-        return new Iterator<AbstractObject>() {
-            private int returnedCount = 0;
-            @Override
-            public boolean hasNext() {
-                return returnedCount < count && listIterator.hasNext();
-            }
-            @Override
-            public AbstractObject next() {
-                AbstractObject ret = listIterator.next();
-                returnedCount++;
-                return ret;
-            }
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Not supported");
-            }
-        };
+    public Iterator<AbstractObject> getAnswer(int skip, int count) {
+        return answer.subList(skip, Math.min(skip + count, answer.size())).iterator();
     }
 
     @Override
     public Iterator<AbstractObject> getAnswerObjects() {
         return getAnswer();
+    }
+
+    @Override
+    public int getSubAnswerCount() {
+        return CollectionProviders.getCollectionCount(answer);
+    }
+
+    @Override
+    public Iterator<? extends AbstractObject> getSubAnswer(int index) throws IndexOutOfBoundsException {
+        return CollectionProviders.getCollectionIterator(answer, index, getAnswerClass());
+    }
+
+    @Override
+    public Iterator<? extends AbstractObject> getSubAnswer(Object key) {
+        return CollectionProviders.getCollectionByKeyIterator(answer, key, getAnswerClass(), false);
     }
 
 
@@ -154,7 +152,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      * The object is updated according to {@link #answerType}.
      * @param object the object to add
      * @return <code>true</code> if the <code>object</code> has been added to the answer. Otherwise <code>false</code>.
-     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be clonned
+     * @throws IllegalArgumentException if the object cannot be added to the answer, e.g. because it cannot be cloned
      */
     public boolean addToAnswer(AbstractObject object) throws IllegalArgumentException {
         try {

@@ -126,7 +126,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
     protected Object clone() throws CloneNotSupportedException {
         UniqueID rtv = (UniqueID)super.clone();
 
-        // Clonning defines a new ID for this object
+        // Cloning defines a new ID for this object
         UUID newID = UUID.randomUUID();
         rtv.mostSigBits = newID.getMostSignificantBits();
         rtv.leastSigBits = newID.getLeastSignificantBits();

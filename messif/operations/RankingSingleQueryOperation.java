@@ -148,7 +148,7 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Create a duplicate of this operation.

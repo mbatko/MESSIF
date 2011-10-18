@@ -107,7 +107,7 @@ public class ExtendedProperties extends Properties {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates a shallow copy of this properties with the given defaults.
@@ -125,7 +125,7 @@ public class ExtendedProperties extends Properties {
             ret.defaults = defaults;
             return ret;
         } catch (ClassCastException e) {
-            // This should never happen, since the clonned properties should be of this class
+            // This should never happen, since the cloned properties should be of this class
             throw new InternalError();
         }
     }
