@@ -47,19 +47,18 @@ import messif.operations.RankingSingleQueryOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class SequentialScan extends Algorithm {
-    
     /** class id for serialization */
-    static final long serialVersionUID = 1L;
-    
+    private static final long serialVersionUID = 1L;
+
     /** One instance of bucket where all objects are stored */
     protected final LocalBucket bucket;
-    
+
     /** A list of fixed pivots used for filtering */
     protected final AbstractObjectList<LocalAbstractObject> pivots;
-    
+
     /** Flag controlling the usage of PrecomputedDistancesFixedArrayFilter -- whether distances are set or appended (see the constructor below for details) */
     protected final boolean pivotDistsValidIfGiven;
-    
+
     /**
      * Creates a new instance of SequantialScan access structure with specific bucket class and filtering pivots.
      * Additional parameters for the bucket class constructor can be passed.
@@ -67,13 +66,13 @@ public class SequentialScan extends Algorithm {
      * @param bucketClass the class of the storage bucket
      * @param bucketClassParams additional parameters for the bucket class constructor in the name->value form
      * @param pivotIter the iterator from which the fixed pivots will be read
-     * @param pivotCount the nubmer of pivots to read from the iterator
+     * @param pivotCount the number of pivots to read from the iterator
      * @param pivotDistsValidIfGiven the flag which controls whether the already associated distances to pivots with new objects are valid or not; if so, they are used without computing and storing them again
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     *                                   <li>the correct constructor of storageClass is not accessible</li>
+     *                                   <li>the constructor of storageClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "bucket class params", "pivots", "pivot count", "pivotDistsValidIfGiven"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) throws CapacityFullException, InstantiationException {
@@ -93,25 +92,25 @@ public class SequentialScan extends Algorithm {
         // If there are no precomputed distances stored at new objects, they are computed, of course.
         this.pivotDistsValidIfGiven = pivotDistsValidIfGiven;
     }
-    
+
     /**
      * Creates a new instance of SequantialScan access structure with specific bucket class and filtering pivots.
      *
      * @param bucketClass The class of the storage bucket
      * @param pivotIter   The iterator from which the fixed pivots will be read
-     * @param pivotCount  The nubmer of pivots to read from the iterator
+     * @param pivotCount  The number of pivots to read from the iterator
      * @param pivotDistsValidIfGiven The flag which controls whether the already associated distances to pivots with new objects are valid or not. If so, they are used without computing and storing them again.
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     *                                   <li>the correct constructor of storageClass is not accessible</li>
+     *                                   <li>the constructor of storageClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "pivots", "pivot count", "pivotDistsValidIfGiven"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) throws CapacityFullException, InstantiationException {
         this(bucketClass, null, pivotIter, pivotCount, pivotDistsValidIfGiven);
     }
-    
+
     /**
      * Creates a new instance of SequantialScan access structure with specific bucket class.
      * Additional parameters for the bucket class constructor can be passed.
@@ -121,14 +120,14 @@ public class SequentialScan extends Algorithm {
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     *                                   <li>the correct constructor of storageClass is not accessible</li>
+     *                                   <li>the constructor of storageClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "bucket class params"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams) throws CapacityFullException, InstantiationException {
         this(bucketClass, bucketClassParams, null, 0, false);
     }
-    
+
     /**
      * Creates a new instance of SequantialScan access structure with specific bucket class.
      *
@@ -136,30 +135,31 @@ public class SequentialScan extends Algorithm {
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     *                                   <li>the correct constructor of storageClass is not accessible</li>
+     *                                   <li>the constructor of storageClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass) throws CapacityFullException, InstantiationException {
         this(bucketClass, null);
     }
-    
+
     /**
      * Creates a new instance of SequantialScan access structure with the default MemoryStorageBucket class.
      *
      * @throws CapacityFullException if the maximal number of buckets is already allocated
      * @throws InstantiationException if <ul><li>the provided storageClass is not a part of LocalBucket hierarchy</li>
      *                                   <li>the storageClass does not have a proper constructor (String,long,long)</li>
-     *                                   <li>the correct constructor of storageClass is not accesible</li>
-     *                                   <li>the constuctor of storageClass has failed</li></ul>
+     *                                   <li>the correct constructor of storageClass is not accessible</li>
+     *                                   <li>the constructor of storageClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {})
     public SequentialScan() throws CapacityFullException, InstantiationException {
         this(MemoryStorageBucket.class);
     }
-    
-    /******* PIVOT OPERATIONS *************************************/
-    
+
+
+    //******* PIVOT OPERATIONS *************************************//
+
     /**
      * Add precomputed distances to a given object.
      * Distance to all pivots is measured and stored into {@link PrecomputedDistancesFixedArrayFilter}.
@@ -175,7 +175,7 @@ public class SequentialScan extends Algorithm {
             precompDist.addPrecompDist(pivots, object);
         }
     }
-    
+
     @Override
     public void finalize() throws Throwable {
         bucket.finalize();
@@ -188,11 +188,9 @@ public class SequentialScan extends Algorithm {
         // Do not call super.destroy(), since algorithm needs to differentiate between finalizing and destroying
     }
 
-    
-    /**************************************************************/
-    /******* INSERT OPERATION *************************************/
-    /**************************************************************/
-    
+
+    //******* INSERT OPERATION *************************************//
+
     /**
      * Inserts a new object.
      * 
@@ -207,7 +205,7 @@ public class SequentialScan extends Algorithm {
         // Add the new object
         operation.endOperation(bucket.addObjectErrCode(operation.getInsertedObject()));
     }
-    
+
     /**
      * Bulk insertion. Inserts a list of new objects.
      * 
@@ -224,11 +222,10 @@ public class SequentialScan extends Algorithm {
         bucket.addObjects(operation.getInsertedObjects());
         operation.endOperation();
     }
-    
-    /**************************************************************/
-    /******* DELETE OPERATION *************************************/
-    /**************************************************************/
-    
+
+
+    //******* DELETE OPERATION *************************************//
+
     /**
      * Deletes an object.
      *
@@ -267,10 +264,9 @@ public class SequentialScan extends Algorithm {
         else
             operation.endOperation(BucketErrorCode.OBJECT_NOT_FOUND);
     }
-    
-    /**************************************************************/
-    /******* SEARCH ALGORITHMS ************************************/
-    /**************************************************************/
+
+
+    //******* SEARCH ALGORITHMS ************************************//
 
     /**
      * Evaluates a ranking single query object operation on this algorithm.

@@ -61,13 +61,13 @@ public class ParallelSequentialScan extends Algorithm {
      * Creates a new instance of ParallelSequentialScan access structure with specific bucket class.
      * Additional parameters for the bucket class constructor can be passed.
      *
-     * @param parallelization the number of paralllel buckets to create
+     * @param parallelization the number of parallel buckets to create
      * @param bucketClass the class of the storage bucket
      * @param bucketClassParams additional parameters for the bucket class constructor in the name->value form
      * @throws IllegalArgumentException if <ul><li>the provided bucketClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the bucketClass does not have a proper constructor (String,long,long)</li>
-     *                                         <li>the correct constructor of bucketClass is not accesible</li>
-     *                                         <li>the constuctor of bucketClass has failed</li></ul>
+     *                                         <li>the correct constructor of bucketClass is not accessible</li>
+     *                                         <li>the constructor of bucketClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "Parallel SequantialScan Access Structure", arguments = {"parallelization", "bucket class", "bucket class params"})
     public ParallelSequentialScan(int parallelization, Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams) throws IllegalArgumentException {
@@ -87,12 +87,12 @@ public class ParallelSequentialScan extends Algorithm {
     /**
      * Creates a new instance of ParallelSequentialScan access structure with specific bucket class.
      *
-     * @param parallelization the number of paralllel buckets to create
+     * @param parallelization the number of parallel buckets to create
      * @param bucketClass the class of the storage bucket
      * @throws IllegalArgumentException if <ul><li>the provided bucketClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the bucketClass does not have a proper constructor (String,long,long)</li>
-     *                                         <li>the correct constructor of bucketClass is not accesible</li>
-     *                                         <li>the constuctor of bucketClass has failed</li></ul>
+     *                                         <li>the correct constructor of bucketClass is not accessible</li>
+     *                                         <li>the constructor of bucketClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "Parallel SequantialScan Access Structure", arguments = {"parallelization", "bucket class"})
     public ParallelSequentialScan(int parallelization, Class<? extends LocalBucket> bucketClass) throws IllegalArgumentException {
@@ -102,11 +102,11 @@ public class ParallelSequentialScan extends Algorithm {
     /**
      * Creates a new instance of ParallelSequentialScan access structure with {@link MemoryStorageBucket} as the storage class.
      *
-     * @param parallelization the number of paralllel buckets to create
+     * @param parallelization the number of parallel buckets to create
      * @throws IllegalArgumentException if <ul><li>the provided bucketClass is not a part of LocalBucket hierarchy</li>
      *                                         <li>the bucketClass does not have a proper constructor (String,long,long)</li>
-     *                                         <li>the correct constructor of bucketClass is not accesible</li>
-     *                                         <li>the constuctor of bucketClass has failed</li></ul>
+     *                                         <li>the correct constructor of bucketClass is not accessible</li>
+     *                                         <li>the constructor of bucketClass has failed</li></ul>
      */
     @Algorithm.AlgorithmConstructor(description = "Parallel SequantialScan Access Structure", arguments = {"parallelization"})
     public ParallelSequentialScan(int parallelization) throws IllegalArgumentException {
