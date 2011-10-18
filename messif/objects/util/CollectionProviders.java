@@ -84,7 +84,7 @@ public abstract class CollectionProviders {
      *          given {@code object} cannot be cast to compatible {@link CollectionProvider}
      * @return the collection with the given index
      * @throws IndexOutOfBoundsException if the given index is negative or
-     *          greater or equal to {@link #getCollectionCount()}
+     *          greater or equal to {@link #getCollectionCount(java.lang.Object)}
      * @throws ClassCastException if the given object is not {@link CollectionProvider}
      *          or the class of objects stored in the collections is not {@code objectsType}
      */
