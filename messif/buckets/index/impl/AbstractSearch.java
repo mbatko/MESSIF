@@ -238,12 +238,12 @@ public abstract class AbstractSearch<C, T> implements Search<T>, Cloneable {
     protected abstract T readPrevious() throws BucketStorageException;
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     @Override
     @SuppressWarnings("unchecked")
     public AbstractSearch<C, T> clone() throws CloneNotSupportedException {
-        return (AbstractSearch<C, T>)super.clone(); // This cast is checked since this is clonning
+        return (AbstractSearch<C, T>)super.clone(); // This cast is checked since this is cloning
     }
 
 }

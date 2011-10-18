@@ -286,7 +286,7 @@ public class SequentialScan extends Algorithm {
      * Note that this method cannot provide precomputed distances.
      * 
      * @param operation the query operation which is to be executed and which will received the result list.
-     * @throws CloneNotSupportedException if the operation does not support clonning (and thus cannot be used in parallel)
+     * @throws CloneNotSupportedException if the operation does not support cloning (and thus cannot be used in parallel)
      * @throws InterruptedException if the processing thread was interrupted during processing
      */
     public void search(QueryOperation<?> operation) throws CloneNotSupportedException, InterruptedException {

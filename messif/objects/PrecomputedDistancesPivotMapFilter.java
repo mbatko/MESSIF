@@ -224,11 +224,11 @@ public class PrecomputedDistancesPivotMapFilter extends PrecomputedDistancesFilt
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     @Override
     public Object clone() throws CloneNotSupportedException {
-        throw new CloneNotSupportedException("PrecomputedDistancesPivotMapFilter can't be clonned");
+        throw new CloneNotSupportedException("PrecomputedDistancesPivotMapFilter can't be cloned");
     }
 
 

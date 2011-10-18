@@ -746,7 +746,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         @Override
         public AbstractSearch<C, T> clone() throws CloneNotSupportedException {
             try {
-                DatabaseStorageSearch<C> ret = (DatabaseStorageSearch<C>)super.clone(); // This cast IS checked, because it is clonning
+                DatabaseStorageSearch<C> ret = (DatabaseStorageSearch<C>)super.clone(); // This cast IS checked, because it is cloning
                 ret.resultSet = ret.executeQuery();
                 ret.resultSet.absolute(this.resultSet.getRow());
                 return ret;

@@ -335,7 +335,7 @@ public class PrecomputedDistancesFixedArrayFilter extends PrecomputedDistancesFi
         return retArr;
     }
     
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object.

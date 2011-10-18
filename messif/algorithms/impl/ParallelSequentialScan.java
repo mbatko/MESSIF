@@ -231,7 +231,7 @@ public class ParallelSequentialScan extends Algorithm {
          * @param operation the operation processed by this thread
          * @param bucket the bucket on which the operation is processed by this thread
          */
-        public QueryProcessingThread(String bucketName, QueryOperation<?> operation, LocalBucket bucket) {
+        private QueryProcessingThread(String bucketName, QueryOperation<?> operation, LocalBucket bucket) {
             super("Query processing thread - " + bucketName);
             this.operation = operation;
             this.bucket = bucket;
@@ -266,7 +266,7 @@ public class ParallelSequentialScan extends Algorithm {
     /**
      * Performs a query operation.
      * @param operation the query operation which is to be executed and which will received the result list.
-     * @throws CloneNotSupportedException if the operation does not support clonning (and thus cannot be used in parallel)
+     * @throws CloneNotSupportedException if the operation does not support cloning (and thus cannot be used in parallel)
          * @throws InterruptedException if a waiting for a processing thread was interrupted
      */
     public void search(QueryOperation<?> operation) throws CloneNotSupportedException, InterruptedException {
