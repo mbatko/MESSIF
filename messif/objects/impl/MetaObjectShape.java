@@ -86,7 +86,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
      * @param objects the map of encapsulated objects
      * @param cloneObjects flag whether to clone (<tt>true</tt>) the encapsulated objects or
      *      use the instances from the objects map directly (<tt>false</tt>)
-     * @throws CloneNotSupportedException if there was a problem clonning the objects from the map
+     * @throws CloneNotSupportedException if there was a problem cloning the objects from the map
      */
     public MetaObjectShape(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         super(locatorURI);
@@ -96,7 +96,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
 
     /**
      * Creates a new instance of MetaObjectShape from the given map of objects.
-     * Note that the encapsulated object are not clonned and will retain their keys.
+     * Note that the encapsulated object are not cloned and will retain their keys.
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
@@ -109,7 +109,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
 
     /**
      * Creates a new instance of MetaObjectShape by taking objects from another {@link MetaObject}.
-     * Note that the objects are not clonned.
+     * Note that the objects are not cloned.
      * @param object the meta object from which this one is created
      */
     public MetaObjectShape(MetaObject object) {
@@ -251,7 +251,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {

@@ -19,7 +19,6 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.io.StringReader;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
@@ -29,6 +28,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
@@ -36,8 +36,6 @@ import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
-import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -117,10 +115,10 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects map of objects with the {@link #descriptorNames} as keys
-     * @param cloneObjects if <tt>true</tt>, the {@link Object#clone() clonned} objects from the map will be stored in this metaobject
-     * @param attractiveness value of the atractiveness
+     * @param cloneObjects if <tt>true</tt>, the {@link Object#clone() cloned} objects from the map will be stored in this metaobject
+     * @param attractiveness value of the attractiveness
      * @param credits number of credits
-     * @throws CloneNotSupportedException if there was a problem clonning an object from the map
+     * @throws CloneNotSupportedException if there was a problem cloning an object from the map
      */
     public MetaObjectPixMacSCT(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects, short attractiveness, byte credits) throws CloneNotSupportedException {
         super(locatorURI);
@@ -139,7 +137,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects map of objects with the {@link #descriptorNames} as keys
-     * @param attractiveness value of the atractiveness
+     * @param attractiveness value of the attractiveness
      * @param credits number of credits
      */
     public MetaObjectPixMacSCT(String locatorURI, Map<String, LocalAbstractObject> objects, short attractiveness, byte credits) {
@@ -301,7 +299,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
             data[1] = keywordsToIdentifiers(kwLine2.split(";"), ignoreWords, keyWordIndex);
             keyWords = new ObjectIntMultiVectorJaccard(data);
         } catch (Exception e) {
-            Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
+            Logger.getLogger(MetaObjectPixMacSCT.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
             keyWords = new ObjectIntMultiVectorJaccard(new int[][] {{},{}}, false);
         }
     }
@@ -323,7 +321,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
+        return descriptorNames.clone();
     }
 
     /**
@@ -393,7 +391,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
                 ret[retIndex] = keyWordIndex.store(keyWord).getAddress();
                 retIndex++;
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectPixMacSCT.class.getName()).warning("Cannot insert '" + keyWord + "': " + e.toString());
+                Logger.getLogger(MetaObjectPixMacSCT.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'': {1}", new Object[]{keyWord, e.toString()});
             }
         }
 
@@ -408,7 +406,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     }
 
     /**
-     * Implementation of {@link WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     * Implementation of {@link messif.objects.impl.ObjectIntDualVectorJaccard.WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
      *  and it ignores a specified list of integers (created from a given list of keywords).
      */
     public static class MultiWeightIgnoreProviderPixMac extends ObjectIntMultiVectorJaccard.MultiWeightIgnoreProvider {
@@ -601,14 +599,14 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
 
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning
      * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
+     * @param cloneFilterChain  the flag whether the filter chain must be cloned as well.
      * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {

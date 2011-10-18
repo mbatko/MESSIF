@@ -88,7 +88,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
      * @param cloneObjects  flag whether to clone the objects from the map (<tt>true</tt>) or not (<tt>false</tt>)
-     * @throws CloneNotSupportedException if the clonning was not supported by any of the clonned objects
+     * @throws CloneNotSupportedException if the cloning was not supported by any of the cloned objects
      */
     public MetaObjectColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         super(locatorURI);
@@ -99,7 +99,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
 
     /**
      * Creates a new instance of MetaObjectColor from the given map of objects.
-     * Note that the encapsulated object are not clonned and will retain their keys.
+     * Note that the encapsulated object are not cloned and will retain their keys.
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
@@ -113,7 +113,7 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
 
     /**
      * Creates a new instance of MetaObjectColor by taking objects from another {@link MetaObject}.
-     * Note that the objects are not clonned.
+     * Note that the objects are not cloned.
      * @param object the meta object from which this one is created
      */
     public MetaObjectColor(MetaObject object) {
@@ -269,14 +269,14 @@ public class MetaObjectColor extends MetaObject implements BinarySerializable {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning 
      * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
+     * @param cloneFilterChain  the flag whether the filter chain must be cloned as well.
      * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {

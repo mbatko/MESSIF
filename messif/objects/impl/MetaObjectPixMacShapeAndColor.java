@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
@@ -105,8 +106,8 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects map of objects with the {@link #descriptorNames} as keys
-     * @param cloneObjects if <tt>true</tt>, the {@link Object#clone() clonned} objects from the map will be stored in this metaobject
-     * @throws CloneNotSupportedException if there was a problem clonning an object from the map
+     * @param cloneObjects if <tt>true</tt>, the {@link Object#clone() cloned} objects from the map will be stored in this metaobject
+     * @throws CloneNotSupportedException if there was a problem cloning an object from the map
      */
     public MetaObjectPixMacShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         this(locatorURI, objects);
@@ -214,7 +215,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         try {
             keyWords = new ObjectIntSortedVectorJaccard(keywordsToIdentifiers(stream.readLine(), ';', keyWordIndex));
         } catch (Exception e) {
-            Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).warning("Cannot create keywords for object '" + getLocatorURI() + "': " + e.toString());
+            Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
             keyWords = new ObjectIntSortedVectorJaccard(new int[0]);
         }
     }
@@ -224,11 +225,11 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @return list of supported visual descriptor types
      */
     public static String[] getSupportedVisualDescriptorTypes() {
-        return descriptorNames;
+        return descriptorNames.clone();
     }
 
     /**
-     * Transfors a line with keywords into array of addresses.
+     * Transforms a line with keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      *
      * @param keyWordsLine the line that contains the keywords
@@ -255,7 +256,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     }
 
     /**
-     * Transfors a list of keywords into array of addresses.
+     * Transforms a list of keywords into array of addresses.
      * Note that unknown keywords are added to the index.
      * All items from the list are removed during the process, so
      * do not pass an unmodifiable list!
@@ -279,7 +280,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
             try {
                 ret[i] = keyWordIndex.store(keyWord).getAddress();
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).warning("Cannot insert '" + keyWord + "' for object '" + getLocatorURI() + "': " + e.toString());
+                Logger.getLogger(MetaObjectPixMacShapeAndColor.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'' for object ''{1}'': {2}", new Object[]{keyWord, getLocatorURI(), e.toString()});
                 i--;
             }
         }
@@ -448,14 +449,14 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
 
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Creates and returns a copy of this object. The precise meaning
      * of "copy" may depend on the class of the object.
-     * @param cloneFilterChain  the flag wheter the filter chain must be cloned as well.
+     * @param cloneFilterChain  the flag whether the filter chain must be cloned as well.
      * @return a clone of this instance.
-     * @throws CloneNotSupportedException if the object's class does not support clonning or there was an error
+     * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {

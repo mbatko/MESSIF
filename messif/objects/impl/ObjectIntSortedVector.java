@@ -86,7 +86,7 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
      * Creates a new instance of Object from text stream - it expects that the data is already sorted!
      * @param stream text stream to read the data from
      * @throws IOException when an error appears during reading from given stream.
-     *  or  EOFException when eof of the given stream is reached.
+     *  or  EOFException when end-of-file of the given stream is reached.
      * @throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
@@ -130,7 +130,7 @@ public abstract class ObjectIntSortedVector extends ObjectIntVector {
      */
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
-        throw new CloneNotSupportedException("Clonning with random modification is not supported for " + ObjectIntSortedVector.class);
+        throw new CloneNotSupportedException("Cloning with random modification is not supported for " + ObjectIntSortedVector.class);
     }
 
 

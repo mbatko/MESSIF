@@ -29,7 +29,7 @@ import messif.objects.nio.BinarySerializator;
 
 
 /**
- * This is the MPEG-7 Countour Shape descriptor.
+ * This is the MPEG-7 Contour Shape descriptor.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -68,7 +68,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     /** Creates a new instance of ObjectContourShape from stream.
      * @param stream input stream to read the data from
      * @throws IOException when an error appears during reading from given stream.
-     * @throws EOFException when eof of the given stream is reached.
+     * @throws EOFException when end-of-file of the given stream is reached.
      * @throws NumberFormatException when the line read from given stream does not consist of 
      *   comma-separated or space-separated numbers.
      * @throws IndexOutOfBoundsException when the line is not of this format: <br/>
@@ -102,7 +102,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
     /** 
      * Write object to text stream. The format of the representation is:
      *   globalCurvatureVector; prototypeCurvatureVector; highhestPeakY; peaks vector
-     * @throws java.io.IOException when the output stream throws an expeption during the write operations
+     * @throws java.io.IOException when the output stream throws an exception during the write operations
      */
     @Override
     public void writeData(OutputStream stream) throws IOException {
@@ -502,7 +502,7 @@ public class ObjectContourShape extends LocalAbstractObject implements BinarySer
      *
      * @param  args  
      * @return a randomly modified clone of this instance.
-     * @throws java.lang.CloneNotSupportedException when random clonning not supported
+     * @throws java.lang.CloneNotSupportedException when random cloning not supported
      */
     @Override
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {

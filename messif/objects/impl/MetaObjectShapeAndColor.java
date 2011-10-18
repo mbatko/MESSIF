@@ -96,7 +96,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
      * @param cloneObjects  flag whether to clone the objects from the map (<tt>true</tt>) or not (<tt>false</tt>)
-     * @throws CloneNotSupportedException if the clonning was not supported by any of the clonned objects
+     * @throws CloneNotSupportedException if the cloning was not supported by any of the cloned objects
      */
     public MetaObjectShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects, boolean cloneObjects) throws CloneNotSupportedException {
         super(locatorURI);
@@ -109,7 +109,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
 
     /**
      * Creates a new instance of MetaObjectShapeAndColor from the given map of objects.
-     * Note that the encapsulated object are not clonned and will retain their keys.
+     * Note that the encapsulated object are not cloned and will retain their keys.
      *
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
@@ -125,7 +125,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
 
     /**
      * Creates a new instance of MetaObjectShapeAndColor by taking objects from another {@link MetaObject}.
-     * Note that the objects are not clonned.
+     * Note that the objects are not cloned.
      * @param object the meta object from which this one is created
      */
     public MetaObjectShapeAndColor(MetaObject object) {
@@ -305,7 +305,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     @Override
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {

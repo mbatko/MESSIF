@@ -381,7 +381,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
         @Override
         protected void beforeExecute(Thread t, Runnable r) {
             if (t instanceof MyThread && r instanceof MyTask) {
-                // Set the algorithm to an internal and clonned RMIAlgorithm
+                // Set the algorithm to an internal and cloned RMIAlgorithm
                 ((MyTask)r).setAlgorithm(((MyThread)t).getAlgorithm());
             }
         }

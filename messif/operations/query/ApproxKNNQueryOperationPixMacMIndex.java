@@ -105,11 +105,11 @@ public class ApproxKNNQueryOperationPixMacMIndex extends ApproxKNNQueryOperation
         }
     }
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Create a duplicate of this operation.
-     * The answer of the query is not clonned.
+     * The answer of the query is not cloned.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
