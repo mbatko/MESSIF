@@ -45,7 +45,7 @@ public class DistAlgRequestMessage extends Message {
     }
 
 
-    /****************** Clonning ******************/
+    /****************** Cloning ******************/
     
     @Override
     public Object clone() throws CloneNotSupportedException {

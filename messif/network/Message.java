@@ -103,12 +103,12 @@ public abstract class Message implements Serializable, Cloneable {
      * This can be useful when forwarding a sightly modified message to different nodes while waiting for the response.
      *
      * <p>
-     * This method <b>must</b> be overriden whenever not-immutable attributes are added to subclasses.
+     * This method <b>must</b> be overridden whenever not-immutable attributes are added to subclasses.
      * The <tt>CloneNotSupportedException</tt> is never thrown by this class, but might not be true for its subclasses.
      * </p>
      *
      * <p>
-     * WARNING: The navigation path of this message is not clonned,
+     * WARNING: The navigation path of this message is not cloned,
      *  it rather holds the same reference for all the clones!
      *  Therefore, adding a path element to one message adds it to all of them.
      *  This is a correct behavior (used by forwarding).

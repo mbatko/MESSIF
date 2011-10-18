@@ -19,7 +19,7 @@ package messif.network;
 
 /**
  * The ancestor of all reply messages that are returned back during communication with other network nodes.
- * The reply message is alwas a reply for some other message and it inherits the message ID and all
+ * The reply message is always a reply for some other message and it inherits the message ID and all
  * the navigation path from the original message. Specifically, the reply message is a continuation
  * of an existing message that can be sent back to a waiting node. Only ReplyMessage can be returned from
  * {@link ReplyReceiver}, thus whenever we want to inform the original node about our findings, we must transform
@@ -45,7 +45,7 @@ public abstract class ReplyMessage extends Message {
     }
 
 
-    //****************** Clonning ******************//
+    //****************** Cloning ******************//
 
     /**
      * Always throws CloneNotSupportedException exception, because conning is not supported for replies.
