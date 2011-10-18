@@ -172,9 +172,9 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
     }
 
     /**
-     * Returns a randomly choosen object from the objects remaining in this iterator.
+     * Returns a randomly chosen object from the objects remaining in this iterator.
      * Note that all the remaining objects in this iterator are read.
-     * @return a randomly choosen object
+     * @return a randomly chosen object
      * @throws NoSuchElementException if this iterator has no objects left
      */
     public E getRandomObject() throws NoSuchElementException {
@@ -182,7 +182,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
     }
 
     /**
-     * Returns a list containing randomly choosen objects from the objects remaining in this iterator.
+     * Returns a list containing randomly chosen objects from the objects remaining in this iterator.
      * Note that all the remaining objects in this iterator are read.
      *
      * @param count the number of objects to return
@@ -212,13 +212,13 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
 
     /**
      * Returns matching objects.
-     * Method returns all objects that satisfy the matching contraints specified by matcher,
+     * Method returns all objects that satisfy the matching constraints specified by matcher,
      * i.e. {@link ObjectMatcher#match} method in the matcher returns non-zero when applied on them.
      * 
      * @param matcher The matching condition implemented in the ObjectMatcher interface.
      * @return a list of objects which satisfy the matching condition
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
-     * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
+     * @throws FilterRejectException if deletion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
     public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher) throws NoSuchElementException, OccupationLowException, FilterRejectException {
@@ -227,7 +227,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
 
     /**
      * Returns matching objects.
-     * Method returns all objects that satisfy the matching contraints specified by matcher
+     * Method returns all objects that satisfy the matching constraints specified by matcher
      * (i.e. {@link ObjectMatcher#match} method in the matcher returns non-zero when applied on them)
      * and deletes matching objects from the bucket when required.
      * 
@@ -237,7 +237,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @return a list of objects which satisfy the matching condition
      *
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
-     * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
+     * @throws FilterRejectException if deletion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
     public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching) throws NoSuchElementException, OccupationLowException, FilterRejectException {
@@ -246,7 +246,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
 
     /**
      * Returns matching objects.
-     * Method returns all objects that satisfy the matching contraints specified by matcher and deletes matching
+     * Method returns all objects that satisfy the matching constraints specified by matcher and deletes matching
      * objects from the bucket when required. An object is considered as matching if and only if
      * {@link ObjectMatcher#match} returns value different from whoStays.
      * 
@@ -258,7 +258,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * to <code>whoStays</code> when applied on them)
      *
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
-     * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
+     * @throws FilterRejectException if deletion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
     public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching, int whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {
@@ -267,7 +267,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
     }
         
     /** Get matching objects
-     * Method returns all objects that satisfy the matching contraints specified by matcher and deletes matching
+     * Method returns all objects that satisfy the matching constraints specified by matcher and deletes matching
      * objects from the bucket when required. An object is considered as matching if and only if
      * ObjectMatcher.match() returns value different from all elements of whoStays.
      * 
@@ -280,7 +280,7 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * to whoStays when applied on them).
      *
      * @throws NoSuchElementException if deletion reported it or if this method is called after next was called.
-     * @throws FilterRejectException if delettion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
+     * @throws FilterRejectException if deletion of a matching object was rejected by a filter (in case this is an iterator of LocalFilteredBucket).
      * @throws OccupationLowException if deletion of matching objects caused too low an occupation of bucket than allowed.
      */
     public GenericMatchingObjectList<E> getMatchingObjects(ObjectMatcher<? super E> matcher, boolean removeMatching, int[] whoStays) throws NoSuchElementException, OccupationLowException, FilterRejectException {

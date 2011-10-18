@@ -112,7 +112,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     
     /**
      * Create a duplicate of this operation.
-     * The answer of the query is not clonned.
+     * The answer of the query is not cloned.
      *
      * @return a clone of this operation
      * @throws CloneNotSupportedException if the operation instance cannot be cloned
@@ -132,7 +132,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /**
      * Set a new collection that maintains the answer list of this ranking query.
-     * Note that this method should be used only for changing the reranking/filtering
+     * Note that this method should be used only for changing the re-ranking/filtering
      * of the results.
      * @param collection a new instance of answer collection
      */
@@ -147,7 +147,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     public Class<? extends RankedAbstractObject> getAnswerClass() {
         return RankedAbstractObject.class;
     }
-    
+
     /**
      * Class of the current answer assigned in the operation.
      * @return class of answer collection.

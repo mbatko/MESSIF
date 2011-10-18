@@ -213,7 +213,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param stream the text stream to read the object from
      * @param className the name of the class for the object
      * @return a new instance of the object
-     * @throws IOException if there was an error resolving the specified class or its constuctor or a problem
+     * @throws IOException if there was an error resolving the specified class or its constructor or a problem
      *         occurred while reading from the stream
      */
     protected static LocalAbstractObject readObject(BufferedReader stream, String className) throws IOException {
@@ -234,7 +234,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @param stream the text stream to read the object from
      * @param objectClass the class of the object that is read from the stream
      * @return a new instance of the object
-     * @throws IOException if there was an error resolving the specified class or its constuctor or a problem
+     * @throws IOException if there was an error resolving the specified class or its constructor or a problem
      *         occurred while reading from the stream
      */
     protected static <E> E readObject(BufferedReader stream, Class<E> objectClass) throws IOException {
