@@ -196,7 +196,7 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         Collection<Statistics> registeredStats = new ArrayList<Statistics>();
         registeredStats.add(msg.registerBoundStat("DistanceComputations"));
         registeredStats.add(msg.registerBoundStat("DistanceComputations.Savings"));
-        registeredStats.add(msg.registerBoundStat("BlockReads"));
+        //registeredStats.add(msg.registerBoundStat("BlockReads"));
 
         return registeredStats;
     }
