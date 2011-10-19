@@ -234,8 +234,8 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      *       created in the format of "disk_storage_XXXX.ds"</li>
      *   <li><em>cacheClasses</em> - comma-separated list of classes that will be cached for fast serialization</li>
      *   <li><em>bufferSize</em> - the size of the buffers used for I/O operations</li>
-     *   <li><em>directBuffer</em> - flag controlling wether to use faster direct buffers for I/O operations</li>
-     *   <li><em>memoryMap</em> - flag controlling wether to use memory-mapped I/O</li>
+     *   <li><em>directBuffer</em> - flag controlling whether to use faster direct buffers for I/O operations</li>
+     *   <li><em>memoryMap</em> - flag controlling whether to use memory-mapped I/O</li>
      *   <li><em>readOnly</em> - if <tt>true</tt>, the storage file must be a valid storage file and the storage will support only read operations</li>
      *   <li><em>startPosition</em> - the position (in bytes) of the first block of the data within the <em>file</em></li>
      *   <li><em>maximalLength</em> - the maximal length (in bytes) of the data written to <em>file</em> by this storage</li>
@@ -279,7 +279,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                 file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX);
             } else {
                 if (! dir.exists()) {
-                    log.info("Creating dir: " + dir.toString());
+                    log.log(Level.INFO, "Creating dir: {0}", dir.toString());
                     dir.mkdirs();
                 }
                 file = File.createTempFile(FILENAME_PREFIX, FILENAME_SUFFIX, dir);
@@ -309,13 +309,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     }
 
     /**
-     * Cast the provided object to {@link DiskStorage} with generics typing.
+     * Cast the provided object to {@link DiskStorage} with generic typing.
      * The objects stored in the storage must be of the same type as the <code>storageObjectsClass</code>.
      * 
      * @param <E> the class of objects stored in the storage
      * @param storageObjectsClass the class of objects stored in the storage
      * @param object the storage instance
-     * @return the generics-typed {@link DiskStorage} object
+     * @return the generic-typed {@link DiskStorage} object
      * @throws ClassCastException if passed <code>object</code> is not a {@link DiskStorage} or the storage objects are incompatible
      */
     public static <E> DiskStorage<E> castToDiskStorage(Class<E> storageObjectsClass, Object object) throws ClassCastException {
@@ -375,7 +375,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                         try {
                             DiskStorage.this.finalize();
                         } catch (Throwable e) {
-                            log.warning("Error during finalization: " + e);
+                            log.log(Level.WARNING, "Error during finalization: {0}", e);
                         }
                     }
                 };
@@ -451,7 +451,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected synchronized void reconstructHeader(FileChannel fileChannel, long position) throws IOException {
-        log.info("Rebuilding header of disk storage in file " + file.getAbsolutePath());
+        log.log(Level.INFO, "Rebuilding header of disk storage in file {0}", file.getAbsolutePath());
 
         // Reset header values
         objectCount = 0;
@@ -504,7 +504,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
             // Report time
             time = System.currentTimeMillis() - time;
-            log.fine("Disk storage " + ret.getClass().getName() + " opened with " + ret.bufferedSize() + " bytes buffered in " + time + "ms");
+            log.log(Level.FINE, "Disk storage {0} opened with {1} bytes buffered in {2}ms", new Object[]{ret.getClass().getName(), ret.bufferedSize(), time});
             return ret;
         } else {
             // Create the input stream (copied above!)
@@ -591,7 +591,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
          * Creates a new instance of DiskStorageLock.
          * @throws IOException if there was an error acquiring the buffered data
          */
-        public DiskStorageLock() throws IOException {
+        private DiskStorageLock() throws IOException {
             this.streamReference = getInputStream(startPosition + headerSize);
         }
 
