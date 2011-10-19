@@ -53,35 +53,42 @@ public class BulkInsertOperation extends AbstractOperation {
      * Creates a new instance of BulkInsertOperation.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
+     * @param permitEmpty flag whether the empty list of objects to insert is permitted
+     *          (<tt>true</tt>) or a {@link NoSuchElementException} is thrown (<tt>false</tt>)
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    protected BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
+    protected BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects, boolean permitEmpty) throws NoSuchElementException {
         this.insertedObjects = insertedObjects;
+        if (!permitEmpty && this.insertedObjects.isEmpty())
+            throw new NoSuchElementException();
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
+     * Empty collection is <em>not</em> permitted.
      *
      * @param insertedObjects a list of objects to be inserted by this operation
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
     @AbstractOperation.OperationConstructor({"Collection of objects to insert"})
     public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
-        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects));
+        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects), false);
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
+     * Empty collection is <em>not</em> permitted.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
-        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects));
+        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects), false);
     }
 
     /**
      * Creates a new instance of BulkInsertOperation.
+     * Empty collection <em>is</em> permitted.
      *
      * @param objectsIterator an iterator from which to get the list of objects to be inserted
      * @param count the number of objects to read from the iterator
@@ -89,7 +96,21 @@ public class BulkInsertOperation extends AbstractOperation {
      */
     @AbstractOperation.OperationConstructor({"Iterator (e.g. object stream) to read the objects to insert from", "Number of objects to read"})
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> objectsIterator, int count) throws NoSuchElementException {
-        this(new AbstractObjectList<LocalAbstractObject>(objectsIterator, count));
+        this(objectsIterator, count, true);
+    }
+
+    /**
+     * Creates a new instance of BulkInsertOperation.
+     *
+     * @param objectsIterator an iterator from which to get the list of objects to be inserted
+     * @param count the number of objects to read from the iterator
+     * @param permitEmpty flag whether the empty list of objects to insert is permitted
+     *          (<tt>true</tt>) or a {@link NoSuchElementException} is thrown (<tt>false</tt>)
+     * @throws NoSuchElementException if the inserted objects list is empty 
+     */
+    @AbstractOperation.OperationConstructor({"Iterator (e.g. object stream) to read the objects to insert from", "Number of objects to read", "Permit empty list"})
+    public BulkInsertOperation(Iterator<? extends LocalAbstractObject> objectsIterator, int count, boolean permitEmpty) throws NoSuchElementException {
+        this(new AbstractObjectList<LocalAbstractObject>(objectsIterator, count), permitEmpty);
     }
 
 
