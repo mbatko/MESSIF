@@ -34,6 +34,12 @@ public enum AnswerType {
     ORIGINAL_OBJECTS,
     /** Answer contains clones of the original objects */
     CLONED_OBJECTS,
+    /**
+     * Answer contains clones of the original objects
+     * @deprecated Use {@link #CLONED_OBJECTS} instead.
+     */
+    @Deprecated
+    CLONNED_OBJECTS,
     /** Answer contains clones of the original objects with {@link messif.objects.AbstractObject#clearSurplusData() cleared surplus data} */
     CLEARED_OBJECTS,
     /** Answer contains only {@link messif.objects.NoDataObject objects} */
@@ -60,6 +66,7 @@ public enum AnswerType {
             case ORIGINAL_OBJECTS:
                 return object;
             case CLONED_OBJECTS:
+            case CLONNED_OBJECTS:
                 return object.clone();
             case CLEARED_OBJECTS:
                 object = object.clone();
