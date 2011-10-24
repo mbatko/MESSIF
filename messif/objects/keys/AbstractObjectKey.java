@@ -19,6 +19,8 @@ package messif.objects.keys;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -75,6 +77,41 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
             throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": there is no constructor " + e.getMessage());
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Cannot create instance of " + keyClass + ": " + e.getCause(), e.getCause());
+        }
+    }
+
+    /**
+     * Auxiliary method for retrieving a part of a more complex abstract key string-representation value.
+     * @param keyString string of the string-representation
+     * @param delimiter delimiter used to separate the parts
+     * @param partIndex zero-based index of the part to return
+     * @return the part of the requested index
+     * @throws IndexOutOfBoundsException is thrown if the requested index is not present
+     */
+    public static String getKeyStringPart(String keyString, String delimiter, int partIndex) throws IndexOutOfBoundsException, IllegalArgumentException {
+        if (keyString == null)
+            throw new IllegalArgumentException("Key string must not be null!");
+        if (delimiter == null || delimiter.isEmpty())
+            throw new IllegalArgumentException("Delimiter must be a non-zero length string!");
+        if (partIndex < 0)
+            throw new IllegalArgumentException("Part index must not be negative!");
+        
+        Matcher m = Pattern.compile(delimiter).matcher(keyString);
+        int startIdx = 0;
+        
+        // Move to the requested token
+        while (partIndex > 0 && m.find()) {
+            --partIndex;
+            startIdx = m.end();
+        }
+        
+        if (partIndex > 0)      // The requested part has not been found
+            throw new IndexOutOfBoundsException("The requested part is not present in the key string: " + keyString);
+        
+        if (m.find()) {
+            return keyString.substring(startIdx, m.end() - delimiter.length());
+        } else {
+            return keyString.substring(startIdx);
         }
     }
 

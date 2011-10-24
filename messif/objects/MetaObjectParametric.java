@@ -95,7 +95,10 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
      */
     public MetaObjectParametric(String locatorURI, Map<String, ? extends Serializable> additionalParameters) {
         super(locatorURI);
-        this.additionalParameters = new HashMap<String, Serializable> (additionalParameters);
+        if (additionalParameters == null)
+            this.additionalParameters = new HashMap<String, Serializable>();
+        else
+            this.additionalParameters = new HashMap<String, Serializable> (additionalParameters);
     }
 
 

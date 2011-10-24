@@ -49,14 +49,50 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
         sublists = new RankedSortedCollection[sublistCount];
         for (int i = 0; i < sublistCount; i++) {
             final int index = i;
-            sublists[i] = new RankedSortedCollection(initialCapacity, maximalCapacity, new Comparator<RankedAbstractObject>() {
-                @Override
-                public int compare(RankedAbstractObject o1, RankedAbstractObject o2) {
-                    return Float.compare(((RankedAbstractMetaObject)o1).getSubDistances()[index], ((RankedAbstractMetaObject)o2).getSubDistances()[index]);
-                }
-            });
+            sublists[i] = new RankedSortedCollection(initialCapacity, maximalCapacity, new RankedSortedMultiCollectionComparator(index));
         }
     }
+
+    /**
+     * Returns the comparator used by the particular subcollection.
+     * @param sublistIndex index of the particular sublist
+     * @return the comparator used by the specific subcollection
+     */
+    public Comparator<? super RankedAbstractObject> getSublistComparator(int sublistIndex) {
+        return sublists[sublistIndex].getComparator();
+    }
+    
+    /**
+     * Comparator based on the subdistances assigned to {@link RankedAbstractMetaObject}.
+     * It used one of the subdistances to compare the objects.
+     */
+    public static class RankedSortedMultiCollectionComparator implements Comparator<RankedAbstractObject> {
+        /** Index to the subdistances array */
+        private final int distanceIndex;
+        
+        /**
+         * New comparator
+         * @param index index of the subdistance to use for comparisons
+         */
+        public RankedSortedMultiCollectionComparator(int index) {
+            distanceIndex = index;
+        }
+        
+        @Override
+        public int compare(RankedAbstractObject o1, RankedAbstractObject o2) {
+                return Float.compare(((RankedAbstractMetaObject) o1).getSubDistances()[distanceIndex], ((RankedAbstractMetaObject) o2).getSubDistances()[distanceIndex]);
+        }
+    }
+    
+//    public RankedSortedMultiCollection(int initialCapacity, int maximalCapacity, RankedSortedCollection[] sublists) throws IllegalArgumentException {
+//        super (initialCapacity, maximalCapacity);
+//        this.sublists = sublists;
+//        // Check the comparators of the collections passed in sublists
+//        for (int i = 0; i < sublists.length; i++) {
+//            if (sublists[i].getComparator() instanceof RankedSortedMultiCollectionComparator)
+//                throw new IllegalArgumentException("Collection at index " + i + " does not have a proper comparator assigned. See documentation.");
+//        }
+//    }
 
     @Override
     public boolean add(RankedAbstractObject e) throws IllegalArgumentException {
@@ -95,9 +131,17 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
     public Collection<RankedAbstractObject> getCollection(int index) throws IndexOutOfBoundsException {
         return Collections.unmodifiableCollection(sublists[index]);
     }
-
+    
     @Override
     public Class<? extends RankedAbstractObject> getCollectionValueClass() {
         return RankedAbstractObject.class;
+    }
+
+    /**
+     * Returns the number of additional collections.
+     * @return the number of additional collections
+     */
+    public int getSublistCount() {
+        return sublists.length;
     }
 }
