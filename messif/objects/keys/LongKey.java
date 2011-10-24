@@ -86,7 +86,7 @@ public class LongKey extends AbstractObjectKey {
      */
     private static String getLocatorURI(String keyString) throws IllegalArgumentException {
         try {
-            return keyString.substring(keyString.indexOf(" ") + 1);
+            return AbstractObjectKey.getKeyStringPart(keyString, " ", 1);
         } catch (IndexOutOfBoundsException e) {
             throw new IllegalArgumentException("string must be of format 'longKey locatorUri': "+keyString);
         }
