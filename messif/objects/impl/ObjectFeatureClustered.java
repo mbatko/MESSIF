@@ -20,52 +20,35 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Locale;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
-public abstract class ObjectFeatureByte extends ObjectFeature  implements BinarySerializable {
+public abstract class ObjectFeatureClustered extends ObjectFeature  implements BinarySerializable {
 
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
     //****************** Data ******************
 
-    protected short[] data;
+    protected double clusterid;
 
-    /** Returns the vector of integers, which represents the contents of this object.
-     *  A copy is returned, so any modifications to the returned array do not affect the original object.
-     */
-    public short[] getVectorData() {
-        return this.data.clone();
+    public double getClusterID() {
+        return this.clusterid;
     }
-
     //****************** Constructors ******************
 
-    /** Creates a new instance of object */
-    public ObjectFeatureByte(float x,  float y,  float ori,  float scl, short[] data) {
-        super(x, y, ori, scl);
-        this.data = new short[data.length];
-        for (int i = data.length - 1; i >= 0; i--) {
-            this.data[i] = (short) (data[i] - 127);
-        }
-        // System.arraycopy(data, 0, this.data, 0, data.length);
+    /** Creates a new instance of object with no position, orientation and scale info */
+    public ObjectFeatureClustered (double clusterid) {
+        this.clusterid = clusterid;
     }
-
-
+    
     /** Creates a new instance of object */
-    public ObjectFeatureByte(short[] data) {
-        this.data = new short[data.length];
-        System.arraycopy(data, 0, this.data, 0, data.length);
-    }
-
-    /** Creates a new instance of randomly generated object */
-    public ObjectFeatureByte(float x,  float y,  float ori,  float scl, int dimension) {
+    public ObjectFeatureClustered(float x,  float y,  float ori,  float scl, double clusterid) {
         super(x, y, ori, scl);
-        this.data = new short[dimension];
-        for (; dimension > 0; dimension--)
-            this.data[dimension - 1] = (short)((getRandomNormal()*256)-127);
+        this.clusterid = clusterid;
     }
 
     //****************** Text file store/retrieve methods ******************
@@ -76,32 +59,26 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
      * Throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectFeatureByte(BufferedReader stream) throws IOException, NumberFormatException {
+    public ObjectFeatureClustered(BufferedReader stream) throws IOException, NumberFormatException {
         // Keep reading the lines while they are comments, then read the first line of the object
         super(stream);
         String line = readObjectComments(stream);
-        // precti normalizovany vektor
-        String[] numbers = line.trim().split("[, ]+");
-
-        this.data = new short[numbers.length];
-
-        for (int i = 0; i < this.data.length; i++) {
-            this.data[i] = (short) (Short.parseShort(numbers[i])-127);
-        }
+        // precti ID clusteru
+        this.clusterid = new Double(line);
     }
 
     /** Write object to stream */
     @Override
     public void writeData(OutputStream stream) throws IOException {
         super.writeData(stream);
-        for (int i = 0; i < this.data.length; i++) {
-            if (i > 0)
-                stream.write(", ".getBytes());
-            stream.write(String.valueOf(((short) this.data[i])+127).getBytes());
-        }
-
+        // check if number of decimal places is zero (spare ".0" on the output)
+        if ((long) clusterid == clusterid)
+            stream.write (String.valueOf((long) clusterid).getBytes());
+        else
+            stream.write(String.valueOf(clusterid).getBytes());
         stream.write('\n');
     }
+
 
     /** toString
      * Converts the object to a string representation.
@@ -110,31 +87,29 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
-
-        for (int i = 0; i < this.data.length; i++) {
-            if (i > 0) rtv.append(", ");
-            rtv.append(((short) (data[i]))+127);
-        }
-        rtv.append("]");
-
+        StringBuffer rtv = new StringBuffer(super.toString());
+        rtv.append(" cluster: ").append(clusterid);
         return rtv.toString();
     }
+
 
     //****************** Equality comparing function ******************
     @Override
     public boolean dataEquals(Object obj) {
-        if (!(obj instanceof ObjectFeatureByte))
+        if (!(obj instanceof ObjectFeatureClustered))
             return false;
         if (!super.dataEquals(obj))
             return false;
-        return Arrays.equals(((ObjectFeatureByte)obj).data, data);
+        if (clusterid != ((ObjectFeatureClustered)obj).clusterid)
+            return false;
+        return true;
     }
 
     @Override
     public int dataHashCode() {
-        return Arrays.hashCode(data);
+        return 0;
     }
+
 
     //****************** Size function ******************
 
@@ -142,13 +117,13 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
      */
     @Override
     public int getSize() {
-        return super.getSize() + this.data.length * Short.SIZE / 8;
+        return super.getSize()  + Double.SIZE;
     }
 
     /** Returns number of dimensions of this vector.
      */
     public int getDimensionality() {
-        return this.data.length;
+        return 1;
     }
 
     //************ BinarySerializable interface ************//
@@ -160,23 +135,18 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectFeatureByte (BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected ObjectFeatureClustered (BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-        data = serializator.readShortArray(input);
-        /*data = new short[newdata.length];
-        for(int i = newdata.length - 1; i >= 0; i--) {
-            data[i] = (short) (newdata[i] - 127);
-        }*/
+        clusterid = serializator.readDouble(input);
     }
 
     @Override
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-        return super.binarySerialize(output, serializator) +
-               serializator.write(output, data);
+        return super.binarySerialize(output, serializator) + serializator.write(output, clusterid);
     }
 
     @Override
     public int getBinarySize(BinarySerializator serializator) {
-        return  super.getBinarySize(serializator) + serializator.getBinarySize(data);
+        return  super.getBinarySize(serializator) + serializator.getBinarySize(clusterid);
     }
 }

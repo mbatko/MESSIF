@@ -141,7 +141,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * @param k the number of nearest pairs to retrieve
      * @param skipSymmetricPairs flag whether symmetric pairs should be avoided in the answer
      * @param answerType the type of objects this operation stores in pairs in its answer
-     * @param alg algorithm to evaluateSerially range queries
+     * @param alg algorithm to evaluate range queries
      * @param parallelQueries number of range queries to run in parallel (pass <tt>1</tt> to execute queries serially)
      * @param queryCls name of class of {@link RankingQueryOperation} to execute on the algorithm at host:port;
      *                 so {@link RangeQueryOperation} or {@link KNNQueryOperation} can be passed
@@ -151,7 +151,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * @throws InvocationTargetException thrown during the construction of the passed class of {@link RankingQueryOperation}
      */
     @AbstractOperation.OperationConstructor({"Distance threshold", "Number of nearest pairs", "Skip symmetric pairs", "Answer type",
-                                             "Instance of algorithm to run range queries on", 
+                                             "Instance of algorithm to run range queries on", "number of parallel queries", 
                                              "Class name of query to execute on remote algorithm", "Parameters of the query class..."})
     public RangeJoinQueryOperation(float mu, int k, boolean skipSymmetricPairs, AnswerType answerType,
                                    Algorithm alg, int parallelQueries,
@@ -197,6 +197,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * The range query is instantiated from the parameters passed in the constructor.
      *
      * @param objects the collection of objects on which to evaluateSerially this query
+     * @param alg algorithm to evaluate range queries
      * @return number of objects satisfying the query
      */
     public int evaluate(AbstractObjectIterator<? extends LocalAbstractObject> objects, Algorithm alg) {

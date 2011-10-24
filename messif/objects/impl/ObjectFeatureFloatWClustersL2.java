@@ -22,29 +22,19 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
-public class ObjectFeatureByteL2 extends ObjectFeatureByte {
+public class ObjectFeatureFloatWClustersL2 extends ObjectFeatureFloatWClusters {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
     /****************** Constructors ******************/
-    
-    /**
-     * Creates a new instance of object
-     * @param data
-     */
-    public ObjectFeatureByteL2(short[] data) {
-        super(data);
-    }
-    /**
-     * Creates a new instance of object
-     * @param data
-     */
-    public ObjectFeatureByteL2(float x,  float y,  float ori,  float scl, short[] data) {
-        super(x, y, ori, scl, data);
+
+    /** Creates a new instance of object */
+    public ObjectFeatureFloatWClustersL2(float x,  float y,  float ori,  float scl, float[] data, double clusterid) {
+        super(x, y, ori, scl, data, clusterid);
     }
 
     /** Creates a new instance of object from stream */
-    public ObjectFeatureByteL2(BufferedReader stream) throws IOException, NumberFormatException {
+    public ObjectFeatureFloatWClustersL2(BufferedReader stream) throws IOException, NumberFormatException {
         super(stream);
     }
 
@@ -55,24 +45,28 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         // Get access to the other object's vector data
-        short [] objdata = ((ObjectFeatureByte)obj).data;
+        float [] objdata = ((ObjectFeatureFloatWClustersL2)obj).data;
 
         // We must have the same number of dimensions
         if (objdata.length != data.length)
             return MAX_DISTANCE;
-        double distTreshSq = distThreshold * distThreshold;
 
         // Get sum of absolute difference on all dimensions
-        double rtv = 0;
-        for (int i = data.length - 1; i >= 0; i--) {
-            rtv += (((short) data[i]) - ((short) objdata[i]))*(((short) data[i]) - ((short) objdata[i]));
-            if (rtv > distTreshSq)
-                return Float.MAX_VALUE;
-        }
+        float rtv = 0;
+        for (int i = data.length - 1; i >= 0; i--)
+            rtv += (data[i] - objdata[i])*(data[i] - objdata[i]);
+
         return ((float)Math.sqrt(rtv));
     }
 
-
+    public float getClustersDistance (LocalAbstractObject obj) {
+        double objclusterid = ((ObjectFeatureFloatWClusters)obj).clusterid;
+        if (objclusterid == clusterid)
+            return 0.0f;
+        else
+            return Float.MAX_VALUE;
+    }
+    
     //************ BinarySerializable interface ************//
 
     /**
@@ -82,8 +76,7 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected ObjectFeatureByteL2(BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected ObjectFeatureFloatWClustersL2(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
-
 }

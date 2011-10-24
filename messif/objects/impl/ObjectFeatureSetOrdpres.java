@@ -72,8 +72,8 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
          super(stream);
      }
     
-	 /**
-      * Creates a new instance of ObjectFeatureSetOrdpress from a text stream
+    /**
+     * Creates a new instance of ObjectFeatureSetOrdpress from a text stream
      * overriding default parameters
      * @param stream the text stream to read an object from
      * @param epsilon  queryFeatureSearchRadius parameter

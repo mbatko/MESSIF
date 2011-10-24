@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import messif.objects.LocalAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -44,7 +45,7 @@ import messif.utility.Convert;
  * @author Tomas Homola, Masaryk University, Brno, Czech Republic, xhomola@fi.muni.cz 
  */
 
-public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<LocalAbstractObject> {
+public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<ObjectFeature> {
     /** Class id for serialization. */
     private static final long serialVersionUID = 666L;
 
@@ -52,7 +53,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     //****************** Attributes ******************//
 
     /** List of encapsulated objects */
-    protected final List<LocalAbstractObject> objects;
+    protected final List<ObjectFeature> objects;
 
 
     //****************** Constructors ******************//
@@ -61,7 +62,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * Creates a new instance of ObjectFeatureSet with empty list of objects.
      */
     public ObjectFeatureSet () {
-        objects = new ArrayList<LocalAbstractObject>();
+        objects = new ArrayList<ObjectFeature>();
     }
 
     /**
@@ -69,9 +70,9 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @param locatorURI the locator URI for the new object
      * @param objects the list of objects to encapsulate in this object
      */
-    public ObjectFeatureSet(String locatorURI, Collection<? extends LocalAbstractObject> objects) {
+    public ObjectFeatureSet(String locatorURI, Collection<? extends ObjectFeature> objects) {
         super(locatorURI);
-        this.objects = new ArrayList<LocalAbstractObject>(objects);
+        this.objects = new ArrayList<ObjectFeature>(objects);
     }
 
     /**
@@ -81,7 +82,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      *         EOFException is returned if end of the given stream is reached.
      */
     public ObjectFeatureSet(BufferedReader stream) throws IOException {
-        this.objects = new ArrayList<LocalAbstractObject>();
+        this.objects = new ArrayList<ObjectFeature>();
         readObjects(stream);
     }
 
@@ -96,13 +97,19 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      */
     public ObjectFeatureSet (ObjectFeatureSet supSet, float minX, float maxX, float minY, float maxY) {
         super (supSet.getLocatorURI());
-        this.objects =  new ArrayList<LocalAbstractObject>();
+        this.objects =  new ArrayList<ObjectFeature>();
         for (int i = 0; i < supSet.getObjectCount(); i++) {
             ObjectFeature of = (ObjectFeature) supSet.getObject(i);
             if (of.getX() >= minX && of.getX() <= maxX && of.getY() >= minY && of.getY() <= maxY) {
-                objects.add(of);
+                addObject(of);
             }
         }
+    }
+
+    public ObjectFeatureSet (ObjectFeatureSet superSet) {
+        super (superSet.getLocatorURI());
+        this.objects = new ArrayList<ObjectFeature>();
+        this.objects.addAll(superSet.objects);
     }
 
     @Override
@@ -124,20 +131,20 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         return objects.get(index);
     }
 
-    /**
-     * Returns iterator over all features.
-     * @return iterator over all features
-     */
-    public Iterator<LocalAbstractObject> getObjects() {
-        return iterator();
-    }
+//    /**
+//     * Returns iterator over all features.
+//     * @return iterator over all features
+//     */
+//    public Iterator<LocalAbstractObject> getObjects() {
+//        return iterator();
+//    }
 
     /**
      * Returns iterator over all features.
      * @return iterator over all features
      */
     @Override
-    public Iterator<LocalAbstractObject> iterator() {
+    public Iterator<ObjectFeature> iterator() {
         return objects.iterator();
     }
 
@@ -162,8 +169,16 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * Adds the object to the internal list of objects (to the end of the list)
      * @param obj Object to be added
      */
-    public void addObject(LocalAbstractObject obj) {
+    public void addObject(ObjectFeature obj) {
         objects.add(obj);
+    }
+
+    public void SetOrderOfObjects () {
+        synchronized (objects) {
+            for (int i = objects.size() - 1; i >= 0; i--) {
+                (( ObjectFeature) objects.get(i)).OrderInSet = i;
+            }
+        }
     }
 
     //****************** Text stream I/O helper method ******************//
@@ -223,11 +238,11 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    protected void readObjects(BufferedReader stream) throws IOException {
+    private void readObjects(BufferedReader stream) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         String line = readObjectComments(stream);
 
-        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
+        // The line should have format "<class of features>:<feature count>"
         String[] objTypeAndLength = line.split("[: ]+");
         if (objTypeAndLength.length < 2) {
             throw new EOFException ("No object type or vector length defined while initializing ObjectFeatureSet");
@@ -238,7 +253,9 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         // Read objects and add them to the collection
         objects.clear();
         for (int i = 0; i < vectorCount; i++) {
-            objects.add(readObject(stream, objTypeAndLength[0]));
+            ObjectFeature o = (ObjectFeature)readObject(stream, objTypeAndLength[0]);
+            o.NumericKey = i;
+            objects.add(o);
         }
     }
 
@@ -250,11 +267,13 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @throws IOException if there was an error while writing to stream
      */
     @Override
-    protected void writeData(OutputStream stream) throws IOException {
+    public void writeData(OutputStream stream) throws IOException {
+        AbstractObjectKey key = getObjectKey();
         // Write a line for every object from the list (skip the comments)
+        stream.write(String.format("#objectKey %s %s\n", key.getClass().getCanonicalName(), key.toString()).getBytes());
         if (objects != null && !objects.isEmpty()) {
-            stream.write((objects.get(0).getClass().toString() + " : " + String.valueOf(objects.size()) + "\n").getBytes());
-            for (LocalAbstractObject object : objects) {
+            stream.write(String.format("%s:%d\n", objects.get(0).getClass().getCanonicalName(), objects.size()).getBytes());
+            for (ObjectFeature object : objects) {
                 object.write(stream, false);
             }
         }
@@ -299,7 +318,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public int dataHashCode() {
         int rtv = 0;
         for (LocalAbstractObject object : (LocalAbstractObject[]) objects.toArray())
-            rtv += object.dataHashCode();
+            rtv = rtv*47 + object.dataHashCode();
         return rtv;
     }
 
@@ -343,12 +362,12 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      */
     @Override
     public String toString() {
-        StringBuffer sb = new StringBuffer(super.toString());
-        if (!objects.isEmpty()) {
-            for (LocalAbstractObject object : objects) {
-                sb.append("\n" + object.toString());
-            }
-        }
+        if (objects.isEmpty())
+            return super.toString();
+        
+        StringBuilder sb = new StringBuilder(super.toString());
+        for (LocalAbstractObject object : objects)
+            sb.append("\n").append(object.toString());
         return sb.toString();
     }
 
@@ -365,30 +384,29 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     protected ObjectFeatureSet(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         int objcount = serializator.readInt(input);
-        this.objects = new ArrayList<LocalAbstractObject>(objcount);
+        this.objects = new ArrayList<ObjectFeature>(objcount);
         for (int i = 0; i < objcount; i++) {
-            objects.add(serializator.readObject(input, LocalAbstractObject.class));
+            objects.add(serializator.readObject(input, ObjectFeature.class));
         }
     }
 
     @Override
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-        int size = super.binarySerialize(output, serializator) ;
-        int objcount = getObjectCount();
-        size += serializator.write (output, objcount);
-        for (LocalAbstractObject obj : objects) {
+        int size = super.binarySerialize(output, serializator);
+        size += serializator.write(output, getObjectCount());
+        for (ObjectFeature obj : objects)
             size += serializator.write(output, obj);
-        }
         return size;
     }
 
     @Override
+    @SuppressWarnings("cast")
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator);        
-        size += 4; // print integer "objectCount"
-        for (LocalAbstractObject obj : objects) {
+        size += serializator.getBinarySize((int)0); // print integer "objectCount"
+        for (ObjectFeature obj : objects)
             size += serializator.getBinarySize(obj);
-        }
         return size;
     }
+
 }
