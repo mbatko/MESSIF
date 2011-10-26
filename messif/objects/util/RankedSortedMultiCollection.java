@@ -66,7 +66,7 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
      * Comparator based on the subdistances assigned to {@link RankedAbstractMetaObject}.
      * It used one of the subdistances to compare the objects.
      */
-    public static class RankedSortedMultiCollectionComparator implements Comparator<RankedAbstractObject> {
+    public static class RankedSortedMultiCollectionComparator implements Comparator<RankedAbstractObject>,java.io.Serializable {
         /** Index to the subdistances array */
         private final int distanceIndex;
         
