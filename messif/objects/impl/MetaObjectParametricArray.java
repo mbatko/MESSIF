@@ -19,12 +19,15 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.MetaObjectParametric;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -32,7 +35,8 @@ import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * Implementation of the {@link MetaObject} that stores a fixed array of encapsulated objects.
+ * Implementation of the {@link MetaObject} that stores a fixed array of encapsulated objects
+ * with additional {@link messif.utility.Parametric parameters}.
  * The metric distance function for this object is the absolute value of the
  * differences of locatorURI hash codes. For a more sophisticated distance function
  * use {@link MetaObjectArrayWeightedSum}.
@@ -47,7 +51,7 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MetaObjectArray extends MetaObject implements BinarySerializable {
+public class MetaObjectParametricArray extends MetaObjectParametric implements BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -63,9 +67,11 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * Creates a new instance of MetaObjectArray.
      * A new unique object ID is generated and the
      * object's key is set to <tt>null</tt>.
+     * @param additionalParameters additional parameters for this meta object
      * @param objects the encapsulated list of objects
      */
-    public MetaObjectArray(LocalAbstractObject... objects) {
+    public MetaObjectParametricArray(Map<String, ? extends Serializable> additionalParameters, LocalAbstractObject... objects) {
+        super(additionalParameters);
         this.objects = objects.clone();
     }
 
@@ -74,10 +80,11 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * A new unique object ID is generated and the 
      * object's key is set to the specified key.
      * @param objectKey the key to be associated with this object
+     * @param additionalParameters additional parameters for this meta object
      * @param objects the encapsulated list of objects
      */
-    public MetaObjectArray(AbstractObjectKey objectKey, LocalAbstractObject... objects) {
-        super(objectKey);
+    public MetaObjectParametricArray(AbstractObjectKey objectKey, Map<String, ? extends Serializable> additionalParameters, LocalAbstractObject... objects) {
+        super(objectKey, additionalParameters);
         this.objects = objects.clone();
     }
 
@@ -87,10 +94,11 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * new {@link AbstractObjectKey} is generated for
      * the specified <code>locatorURI</code>.
      * @param locatorURI the locator URI for the new object
+     * @param additionalParameters additional parameters for this meta object
      * @param objects the encapsulated list of objects
      */
-    public MetaObjectArray(String locatorURI, LocalAbstractObject... objects) {
-        super(locatorURI);
+    public MetaObjectParametricArray(String locatorURI, Map<String, ? extends Serializable> additionalParameters, LocalAbstractObject... objects) {
+        super(locatorURI, additionalParameters);
         this.objects = objects.clone();
     }
 
@@ -99,10 +107,11 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * A new unique object ID is generated and a new {@link AbstractObjectKey} is
      * generated for the specified <code>locatorURI</code>.
      * @param locatorURI the locator URI for the new object
+     * @param additionalParameters additional parameters for this meta object
      * @param objects the collection with objects to encapsulate
      */
-    public MetaObjectArray(String locatorURI, Collection<? extends LocalAbstractObject> objects) {
-        super(locatorURI);
+    public MetaObjectParametricArray(String locatorURI, Map<String, ? extends Serializable> additionalParameters, Collection<? extends LocalAbstractObject> objects) {
+        super(locatorURI, additionalParameters);
         this.objects = objects.toArray(new LocalAbstractObject[objects.size()]);
     }
 
@@ -114,13 +123,42 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * A new unique object ID is generated and a new {@link AbstractObjectKey} is
      * generated for the specified <code>locatorURI</code>.
      * @param locatorURI the locator URI for the new object
+     * @param additionalParameters additional parameters for this meta object
      * @param objects the map with named objects to encapsulate
      * @param objectNames the names of the objects to take from the given {@code objects} map
      */
-    public MetaObjectArray(String locatorURI, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
+    public MetaObjectParametricArray(String locatorURI, Map<String, ? extends Serializable> additionalParameters, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
+        super(locatorURI, additionalParameters);
         this.objects = new LocalAbstractObject[objectNames.length];
         for (int i = 0; i < objectNames.length; i++)
             this.objects[i] = objects.get(objectNames[i]);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream.
+     * @param stream the text stream to read the objects from
+     * @param additionalParameters additional parameters for this meta object
+     * @param classes the classes of the objects to read from the stream
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>... classes) throws IOException {
+        super(additionalParameters);
+        readObjectCommentsWithoutData(stream);
+        this.objects = MetaObjectArray.readObjects(stream, classes);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream.
+     * @param stream the text stream to read the objects from
+     * @param additionalParameters additional parameters for this meta object
+     * @param objectCount number of objects to read
+     * @param objectClass the class of objects to read from the stream
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, int objectCount, Class<? extends LocalAbstractObject> objectClass) throws IOException {
+        this(stream, additionalParameters, MetaObjectArray.createClassArray(objectCount, objectClass));
     }
 
     /**
@@ -130,21 +168,8 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectArray(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
-        readObjectCommentsWithoutData(stream);
-        this.objects = readObjects(stream, classes);
-    }
-
-    /**
-     * Creates a new instance of MetaObjectArray from the given text stream.
-     * @param stream the text stream to read the objects from
-     * @param objectCount number of objects to read
-     * @param objectClass the class of objects to read from the stream
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     */
-    public MetaObjectArray(BufferedReader stream, int objectCount, Class<? extends LocalAbstractObject> objectClass) throws IOException {
-        this(stream, createClassArray(objectCount, objectClass));
+    public MetaObjectParametricArray(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+        this(stream, new HashMap<String, Serializable>(), classes);
     }
 
     /**
@@ -156,7 +181,8 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      *         EOFException is returned if end of the given stream is reached.
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
-    public MetaObjectArray(BufferedReader stream) throws IOException {
+    public MetaObjectParametricArray(BufferedReader stream) throws IOException {
+        super(new HashMap<String, Serializable>());
         this.objects = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);
     }
 
@@ -226,57 +252,8 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
 
     //****************** Text stream I/O helper method ******************//
 
-    /**
-     * Creates an array of {@code count} {@code clazz} elements.
-     * @param count the number of array elements to create
-     * @param clazz the class to fill the array with
-     * @return an array filled with {@code count} {@code clazz} elements
-     */
-    protected static Class<? extends LocalAbstractObject>[] createClassArray(int count, Class<? extends LocalAbstractObject> clazz) {
-        @SuppressWarnings("unchecked")
-        Class<? extends LocalAbstractObject>[] classes = new Class[count];
-        for (int i = 0; i < classes.length; i++)
-            classes[i] = clazz;
-        return classes;
-    }
-
-    /**
-     * Utility method for reading objects from a text stream.
-     * This method is intended to be used in subclasses that have a fixed
-     * list of objects to implement the {@link BufferedReader} constructor.
-     * 
-     * <p>
-     * Note that for each <tt>null</tt> item of the {@code classes} array
-     * a <tt>null</tt> is stored in the returned array without reading anything
-     * from the {@code stream}.
-     * </p>
-     *
-     * @param stream the text stream to read the objects from
-     * @param classes the classes of the objects to read from the stream
-     * @return the array of objects read from the stream
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     */
-    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
-        if (classes == null || classes.length == 0)
-            throw new IllegalArgumentException("At least one object class must be specified for reading");
-        LocalAbstractObject[] ret = new LocalAbstractObject[classes.length];
-        for (int i = 0; i < classes.length; i++) {
-            if (classes[i] == null) {
-                ret[i] = null;
-            } else if (peekNextChar(stream) == '\n') {
-                if (!stream.readLine().isEmpty()) // Read the empty line and assertion check
-                    throw new InternalError("This should never happen - something is wrong with peekNextChar");
-                ret[i] = null;
-            } else {
-                ret[i] = readObject(stream, classes[i]);
-            }
-        }
-        return ret;
-    }
-
     @Override
-    protected void writeData(OutputStream stream) throws IOException {
+    protected void writeDataImpl(OutputStream stream) throws IOException {
         for (int i = 0; i < objects.length; i++) {
             if (objects[i] == null)
                 stream.write('\n');
@@ -311,7 +288,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected MetaObjectArray(BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected MetaObjectParametricArray(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.objects = new LocalAbstractObject[serializator.readInt(input)];
         for (int i = 0; i < this.objects.length; i++)

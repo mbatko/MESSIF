@@ -36,7 +36,7 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class ObjectString extends LocalAbstractObject implements BinarySerializable {
+public class ObjectString extends LocalAbstractObject implements BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -75,7 +75,7 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
 
     /**
      * Creates a new instance of ObjectString with randomly generated string content.
-     * The string content is genereated with at least {@code minLength} characters
+     * The string content is generated with at least {@code minLength} characters
      * and at most {@code maxLength} characters.
      *
      * @param minLength minimal length of the randomly generated string content
@@ -164,13 +164,25 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
     }
 
 
+    //****************************** Distance function *****************************//
+
+    /**
+     * {@inheritDoc }
+     * Implements a trivial distance, so that the ObjectString can be used directly.
+     */
+    @Override
+    protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
+        return text.equals(((ObjectString)obj).text) ? 0 : 1;
+    }
+
+
     //****************************** Cloning *****************************//
 
     /**
      * Creates and returns a randomly modified copy of this string.
      * Selects a string position in random and changes it - possible char values are in the passed argument.
      *
-     * @param  args  expected size of the args array is 1: ObjectString containing all possible chars
+     * @param  args  expected size of the {@code args} array is 1: ObjectString containing all possible chars
      * @return a randomly modified clone of this instance.
      */
     @Override
@@ -231,4 +243,5 @@ public abstract class ObjectString extends LocalAbstractObject implements Binary
     public int getBinarySize(BinarySerializator serializator) {
         return super.getBinarySize(serializator) + serializator.getBinarySize(text);
     }
+
 }
