@@ -35,6 +35,7 @@ import messif.buckets.storage.IntStorageIndexed;
 import messif.objects.LocalAbstractObject;
 import messif.objects.text.Stemmer;
 import messif.objects.text.TextConversion;
+import messif.objects.text.TextConversionException;
 import messif.utility.Convert;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -240,9 +241,13 @@ public class CophirXmlParser extends DefaultHandler {
 
     @Override
     public void endDocument() throws SAXException {
-        if (wordIndex != null)
-            objects.put(wordObjectName, parseKeyWordsType(stemmer, wordIndex));
-        wordData.clear();
+        try {
+            if (wordIndex != null)
+                objects.put(wordObjectName, parseKeyWordsType(stemmer, wordIndex));
+            wordData.clear();
+        } catch (TextConversionException e) {
+            throw new SAXException(e);
+        }
     }
 
     @Override
@@ -333,8 +338,9 @@ public class CophirXmlParser extends DefaultHandler {
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
      * @return a new instance of the {@link ObjectIntMultiVectorJaccard}
+     * @throws TextConversionException if there was an error stemming the word
      */
-    private ObjectIntMultiVectorJaccard parseKeyWordsType(Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+    private ObjectIntMultiVectorJaccard parseKeyWordsType(Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
         String[] texts = new String[wordTagNames.size()];
         for (int i = 0; i < texts.length; i++) {
             StringBuilder dataString = wordData.get(wordTagNames.get(i));

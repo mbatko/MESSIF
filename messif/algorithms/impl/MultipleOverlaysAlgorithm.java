@@ -17,14 +17,9 @@
 package messif.algorithms.impl;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.algorithms.Algorithm;
@@ -33,12 +28,8 @@ import messif.algorithms.RMIAlgorithm;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
-import messif.objects.util.RankedAbstractMetaObject;
-import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.query.ApproxKNNQueryOperationMIndex;
-import messif.operations.query.PartitionedKNNQueryOperation;
-import messif.utility.SortedCollection;
 
 /**
  * This is a centralized algorithm which connects itself to several remote algorithm (host + RMI port)
@@ -170,19 +161,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
                 rMIAlgorithm.backgroundExecuteOperation(operation);
             }
 
-            // merge PartitionedKNNQueryOperation in a special way
-            if (operation instanceof PartitionedKNNQueryOperation) {
-                List<PartitionedKNNQueryOperation> overlaysOperations = new ArrayList<PartitionedKNNQueryOperation>();
-                for (RMIAlgorithm rMIAlgorithm : overlays.values()) {
-                    List<AbstractOperation> returnedOperation = rMIAlgorithm.waitBackgroundExecuteOperation();
-                    for (AbstractOperation abstractOperation : returnedOperation) {
-                        overlaysOperations.add((PartitionedKNNQueryOperation) abstractOperation);
-                    }
-                }
-                mergePartitionedKNNOperation((PartitionedKNNQueryOperation) operation, overlaysOperations);
-                return;
-            }
-
             // wait for the results from all overlays and merge them
             for (RMIAlgorithm rMIAlgorithm : overlays.values()) {
                 List<AbstractOperation> returnedOperation = rMIAlgorithm.waitBackgroundExecuteOperation();
@@ -196,55 +174,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
         } catch (ClassCastException e) {
             log.log(Level.WARNING, e.getClass().toString(), e);
             throw new AlgorithmMethodException(e);
-        }
-    }
-
-    /**
-     * Merging of partitioned kNN queries from multiple overlays - merge the "best" partitions from
-     *   all overlays, merge the "second best" partitions from all overlays, etc.
-     * @param originalOperation
-     * @param overlaysOperations
-     * @throws AlgorithmMethodException
-     */
-    protected void mergePartitionedKNNOperation(PartitionedKNNQueryOperation originalOperation, List<PartitionedKNNQueryOperation> overlaysOperations) throws AlgorithmMethodException {
-        if (originalOperation.getAnswerCount() > 0) {
-            throw new AlgorithmMethodException("The orginal PartitionedKNNQueryOperation operation must be empty when merging partial answer from overlays");
-        }
-
-        // sort individual partitioned answer from all overlays
-        List<SortedSet<SortedCollection<RankedAbstractObject>>> sortedOverlayAnswers = new ArrayList<SortedSet<SortedCollection<RankedAbstractObject>>>();
-        for (PartitionedKNNQueryOperation partitionedKNNQueryOperation : overlaysOperations) {
-            SortedSet<SortedCollection<RankedAbstractObject>> sortedAnswer = new TreeSet<SortedCollection<RankedAbstractObject>>(
-                    new Comparator<SortedCollection<RankedAbstractObject>> () {
-                        @Override
-                        public int compare(SortedCollection<RankedAbstractObject> o1, SortedCollection<RankedAbstractObject> o2) {
-                            return ((Integer) o2.size()).compareTo(o1.size());
-                        }
-            });
-            for (SortedCollection<RankedAbstractObject> partition : partitionedKNNQueryOperation.getAllPartitionsAnswer().values()) {
-                sortedAnswer.add(partition);
-            }
-            sortedOverlayAnswers.add(sortedAnswer);
-        }
-
-        // merge corresponding part-answers from all the overlays
-        int mergedPartitionNumber = 1; // this counter identifies the global partition created by merging the N-th partitions from all overlays
-        while (! sortedOverlayAnswers.isEmpty()) {
-            String mergedPartitionId = "answer_from_buckets_" + mergedPartitionNumber;
-            originalOperation.setCurrentPartition(mergedPartitionId);
-            for (Iterator<SortedSet<SortedCollection<RankedAbstractObject>>> it = sortedOverlayAnswers.iterator(); it.hasNext(); ) {
-                SortedSet<SortedCollection<RankedAbstractObject>> overlaysPartitions = it.next();
-                SortedCollection<RankedAbstractObject> partition = overlaysPartitions.first();
-                for (RankedAbstractObject rankedAbstractObject : partition) {
-                    float [] subdistances = (rankedAbstractObject instanceof RankedAbstractMetaObject) ? (((RankedAbstractMetaObject) rankedAbstractObject).getSubDistances()) : null;
-                    originalOperation.addToAnswer(rankedAbstractObject.getObject(), rankedAbstractObject.getDistance(), subdistances);
-                }
-                overlaysPartitions.remove(partition);
-                if (overlaysOperations.isEmpty()) {
-                    it.remove();
-                }
-            }
-            mergedPartitionNumber ++;
         }
     }
 

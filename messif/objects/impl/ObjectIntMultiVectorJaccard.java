@@ -27,7 +27,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * Implements the Jaccard coeficient distance function.
+ * Implements the Jaccard coefficient distance function.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -116,9 +116,9 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     //****************** Distance function ******************//
 
     /**
-     * Implements the Jaccard coeficient distance function. The data is
-     *  expected to be sorted and without duplicites!
-     * @return 0, if both sets are emtpy; 1, if only one set is empty; Jaccard distance otherwise
+     * Implements the Jaccard coefficient distance function.
+     * The data is expected to be sorted and without duplicates!
+     * @return 0, if both sets are empty; 1, if only one set is empty; Jaccard distance otherwise
      */
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
@@ -160,7 +160,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
 
     /**
      * Computes a distance between two {@link ObjectIntMultiVector}s using
-     * a non-metric weighted Jaccard coeficient.
+     * a non-metric weighted Jaccard coefficient.
      * @param o1 the object to compute distance from
      * @param weightProviderO1 the weight provider for object {@code o1}
      * @param o2 the object to compute distance to
@@ -190,7 +190,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     }
 
     /**
-     * Implements a non-metric weighted Jaccard coeficient distance function.
+     * Implements a non-metric weighted Jaccard coefficient distance function.
      * If either {@code weightProviderThis} or {@code weightProviderObj} is <tt>null</tt>,
      * the normal Jaccard {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) distance} is returned.
      * @param obj the object to compute distance to
@@ -207,16 +207,19 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
 
     /**
      * Class for distance functions that compute distances between two
-     * {@link ObjectIntMultiVector}s using a non-metric weighted Jaccard coeficient.
+     * {@link ObjectIntMultiVector}s using a non-metric weighted Jaccard coefficient.
      */
-    public static class WeightedJaccardDistanceFunction implements DistanceFunction<ObjectIntMultiVector> {
+    public static class WeightedJaccardDistanceFunction implements DistanceFunction<ObjectIntMultiVector>, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
         /** Weight provider for the first object */
         private final WeightProvider weightProviderO1;
         /** Weight provider for the second object */
         private final WeightProvider weightProviderO2;
 
         /**
-         * Creates a new instance of weighted jaccard distance function.
+         * Creates a new instance of weighted Jaccard distance function.
          * @param weightProviderO1 the weight provider for the first object
          * @param weightProviderO2 the weight provider for the second object
          * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
@@ -247,6 +250,11 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         @Override
         public float getDistance(ObjectIntMultiVector o1, ObjectIntMultiVector o2) {
             return getWeightedDistance(o1, weightProviderO1, o2, weightProviderO2);
+        }
+
+        @Override
+        public Class<? extends ObjectIntMultiVector> getDistanceObjectClass() {
+            return ObjectIntMultiVector.class;
         }
     }
 

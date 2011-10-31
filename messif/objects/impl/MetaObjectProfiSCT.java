@@ -65,6 +65,8 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
+import messif.objects.text.WordExpander;
+import messif.objects.text.TextConversionException;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
@@ -243,7 +245,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param territories the list of territories associated with this object
      * @param added the date this object was added to the collection
      * @param archiveID the ID of the archive from which this object was added
-     * @param attractiveness value of the atractiveness
+     * @param attractiveness value of the attractiveness
      */
     public MetaObjectProfiSCT(String locatorURI, Map<String, LocalAbstractObject> objects,
             Rights rights, EnumSet<Territory> territories, int added, int archiveID, int[] attractiveness) {
@@ -292,16 +294,32 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param wordIndex the index for translating words to addresses
      * @param titleString the title to set for the new object
      * @param keywordString the keywords to set for the new object
      * @param searchString the searched string to set for the new object
+     * @param expander instance for expanding the list of title, key, and search words
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, String titleString, String keywordString, String searchString, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
         this(object, false);
         if (titleString != null || keywordString != null || searchString != null)
-            this.keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleString, keywordString, searchString);
+            this.keyWords = convertWordsToIdentifiers(expander, stemmer, wordIndex, titleString, keywordString, searchString);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
+     * and given set of keywords. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param titleString the title words to set for the new object
+     * @param keywordString the keyword words to set for the new object
+     * @param expander instance for expanding the list of title and key words
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
+     */
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, String titleString, String keywordString, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+        this(object, titleString, keywordString, (String)null, expander, stemmer, wordIndex);
     }
 
     /**
@@ -333,27 +351,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param wordIndex the index for translating words to addresses
-     * @param titleString the title words to set for the new object
-     * @param keywordString the keyword words to set for the new object
-     */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString) {
-        this(object, stemmer, wordIndex, titleString, keywordString, (String)null);
-    }
-
-    /**
-     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
-     * and given set of keywords. The locator and the encapsulated objects from the source
-     * {@code object} are taken.
-     * @param object the source metaobject from which to get the data
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param wordIndex the index for translating words to addresses
      * @param searchString the searched string to set for the new object
+     * @param expander instance for expanding the list of search words
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
+     * @throws TextConversionException if there was an error stemming the word
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchString) {
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, String searchString, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
         this(object, (searchString == null || searchString.isEmpty()) ? null :
-            TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, null, stemmer, wordIndex));
+            TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, null, expander, stemmer, wordIndex));
     }
 
     /**
@@ -420,7 +426,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     public MetaObjectProfiSCT(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String searchString) throws IOException {
         this(stream, true, false);
         // Note that the additional words are added AS THE LAST LINE OF THE OBJECT!
-        keyWords = convertWordsToIdentifiers(stemmer, wordIndex, titleString, keywordString, searchString);
+        keyWords = convertWordsToIdentifiers(null, stemmer, wordIndex, titleString, keywordString, searchString);
     }
 
     /**
@@ -448,16 +454,17 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param titleString the title string to convert
      * @param keywordString the keywords string to convert
      * @param searchString the search string to convert
+     * @param expander instance for expanding the list of title, key, and search words
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+    private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         try {
             int[][] data = new int[searchString != null ? 3 : 2][];
             Set<String> ignoreWords = new HashSet<String>();
             if (searchString != null)
-                data[2] = TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
-            data[0] = TextConversion.textToWordIdentifiers(titleString, TITLE_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
-            data[1] = TextConversion.textToWordIdentifiers(keywordString, KEYWORD_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
+                data[2] = TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
+            data[0] = TextConversion.textToWordIdentifiers(titleString, TITLE_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
+            data[1] = TextConversion.textToWordIdentifiers(keywordString, KEYWORD_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
             return new ObjectIntMultiVectorJaccard(data);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
@@ -481,22 +488,24 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
          * @param stemmer a {@link Stemmer} for word transformation
          * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
+         * @throws TextConversionException if there was an error stemming the word
          */
-        public MultiWeightIgnoreProviderProfi(float[] weights, float ignoreWeight, String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+        public MultiWeightIgnoreProviderProfi(float[] weights, float ignoreWeight, String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws TextConversionException {
             super(weights, ignoreWeight, getIgnoredIDs(ignoredKeywords, stemmer, keyWordIndex));
         }
 
         /**
          * Internal method to create a set of integer IDs for specified keywords given a PixMac keyword -> ID index.
-         * @param ignoredKeywords array of keywords to be ignored (before stemming and other corrections)
+         * @param keywords array of keywords to be ignored (before stemming and other corrections)
          * @param stemmer a {@link Stemmer} for word transformation
          * @param keyWordIndex typically database storage to convert keywords to IDs and other parameters
-         * @return
+         * @return the set of integer IDs for the keywords
+         * @throws TextConversionException if there was an error stemming the word
          */
-        private static Set<Integer> getIgnoredIDs(String[] ignoredKeywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) {
+        private static Set<Integer> getIgnoredIDs(String[] keywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws TextConversionException {
             HashSet<Integer> retVal = new HashSet<Integer>();
-            int[] keywordsToIdentifiers = TextConversion.wordsToIdentifiers(ignoredKeywords, new HashSet<String>(), stemmer, keyWordIndex, true);
-            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.INFO, "the following words will be ignored: ''{0}'' with the following IDs: {1}", new Object[]{Arrays.deepToString(ignoredKeywords), Arrays.toString(keywordsToIdentifiers)});
+            int[] keywordsToIdentifiers = TextConversion.wordsToIdentifiers(keywords, new HashSet<String>(), stemmer, keyWordIndex, true);
+            Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.INFO, "the following words will be ignored: ''{0}'' with the following IDs: {1}", new Object[]{Arrays.deepToString(keywords), Arrays.toString(keywordsToIdentifiers)});
             for (int id : keywordsToIdentifiers) {
                 retVal.add(id);
             }
@@ -530,9 +539,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * the {@code wordIndex} is used to transform it back.
      * @param wordIndex the index used to transform the integers to words
      * @return the title words of this object
-     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
+     * @throws TextConversionException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getTitleWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
+    public String[] getTitleWords(IntStorageIndexed<String> wordIndex) throws TextConversionException {
         if (titleString != null)
             return titleString.split(TITLE_SPLIT_REGEXP);
         else if (keyWords != null && wordIndex != null)
@@ -556,9 +565,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * the {@code wordIndex} is used to transform them back.
      * @param wordIndex the index used to transform the integers to words
      * @return the key words of this object
-     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
+     * @throws TextConversionException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getKeywordWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
+    public String[] getKeywordWords(IntStorageIndexed<String> wordIndex) throws TextConversionException {
         if (keywordString != null)
             return keywordString.split(KEYWORD_SPLIT_REGEXP);
         else if (keyWords != null && wordIndex != null)
@@ -571,9 +580,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * Returns the search words of this object.
      * @param wordIndex the index used to transform the integers to words
      * @return the search words of this object
-     * @throws IllegalArgumentException if there was an error reading a word with a given identifier from the index
+     * @throws TextConversionException if there was an error reading a word with a given identifier from the index
      */
-    public String[] getSearchWords(IntStorageIndexed<String> wordIndex) throws IllegalArgumentException {
+    public String[] getSearchWords(IntStorageIndexed<String> wordIndex) throws TextConversionException {
         if (keyWords != null && keyWords.getVectorDataCount() == 3 && wordIndex != null)
             return TextConversion.identifiersToWords(wordIndex, keyWords.getVectorData(2));
         else
@@ -1117,9 +1126,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          *      (it should have a keyword_id integer column and category string column)
          * @param categories the list of categories for which to retrieve the stop words
          * @return the stopword list
-         * @throws IllegalArgumentException if there was a database problem loading the stopwords
+         * @throws SQLException if there was a database problem loading the stopwords
          */
-        public final List<Integer> loadStopWords(String tableName, String[] categories) throws IllegalArgumentException {
+        public final List<Integer> loadStopWords(String tableName, String[] categories) throws SQLException {
             // Prepare SQL string
             StringBuilder sql = new StringBuilder("SELECT keyword_id FROM ").append(tableName);
             if (categories != null && categories.length > 0) {
@@ -1133,19 +1142,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             }
 
             // Execute SQL and retrieve the data
-            try {
-                PreparedStatement objectsCursor = prepareAndExecute(null, sql.toString(), false, (Object[])null);
-                ResultSet rs = objectsCursor.getResultSet();
-                List<Integer> sw = new ArrayList<Integer>();
-                while (rs.next()) {
-                    sw.add(rs.getInt(1));
-                }
-                rs.close();
-                objectsCursor.close();
-                return sw;
-            } catch (SQLException e) {
-                throw new IllegalArgumentException("Error reading the data: " + e, e);
+            PreparedStatement objectsCursor = prepareAndExecute(null, sql.toString(), false, (Object[])null);
+            ResultSet rs = objectsCursor.getResultSet();
+            List<Integer> sw = new ArrayList<Integer>();
+            while (rs.next()) {
+                sw.add(rs.getInt(1));
             }
+            rs.close();
+            objectsCursor.close();
+            return sw;
         }
 
         /**
@@ -1181,9 +1186,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          *
          * @param words the list of keywords to transform
          * @return array of translated addresses
-         * @throws IllegalStateException if there was a problem reading the index
+         * @throws TextConversionException if there was an error stemming the word or reading the index
          */
-        public int[] wordsToIdentifiers(String[] words) throws IllegalStateException {
+        public int[] wordsToIdentifiers(String[] words) throws TextConversionException {
             return TextConversion.wordsToIdentifiers(words, null, stemmer, wordIndex, true);
         }
 
@@ -1219,24 +1224,13 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * Returns the object with given {@code locator}.
          * The object is retrieved from the database.
          * @param locator the locator of the object to return
-         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
-         * @return the created instance of the object
-         * @throws ExtractorException if there was a problem retrieving or instantiating the data
-         */
-        public MetaObjectProfiSCT locatorToObject(String locator, String searchWords) throws ExtractorException {
-            return locatorToObject(locator, searchWords, false);
-        }
-        
-        /**
-         * Returns the object with given {@code locator}.
-         * The object is retrieved from the database.
-         * @param locator the locator of the object to return
-         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
          * @param remove if <tt>true</tt>, the object is removed from the database after it is retrieved
+         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
+         * @param expander instance for expanding the list of search words
          * @return the created instance of the object
          * @throws ExtractorException if there was a problem retrieving or instantiating the data
          */
-        public MetaObjectProfiSCT locatorToObject(String locator, String searchWords, boolean remove) throws ExtractorException {
+        public MetaObjectProfiSCT locatorToObject(String locator, boolean remove, String searchWords, WordExpander expander) throws ExtractorException {
             Exception causeException = null;
             try {
                 IntStorageSearch<MetaObjectProfiSCT> search = databaseStorage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locator);
@@ -1245,13 +1239,37 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                     if (remove)
                         search.remove();
                     if (searchWords != null)
-                        object = new MetaObjectProfiSCT(object, stemmer, wordIndex, searchWords);
+                        object = new MetaObjectProfiSCT(object, searchWords, expander, stemmer, wordIndex);
                     return object;
                 }
             } catch (Exception e) {
                 causeException = e;
             }
             throw new ExtractorException("Cannot read object '" + locator + "' from database", causeException);
+        }
+
+        /**
+         * Returns the object with given {@code locator}.
+         * The object is retrieved from the database.
+         * @param locator the locator of the object to return
+         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
+         * @param expander instance for expanding the list of search words
+         * @return the created instance of the object
+         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         */
+        public MetaObjectProfiSCT locatorToObject(String locator, String searchWords, WordExpander expander) throws ExtractorException {
+            return locatorToObject(locator, false, searchWords, expander);
+        }
+        
+        /**
+         * Returns the object with given {@code locator}.
+         * The object is retrieved from the database.
+         * @param locator the locator of the object to return
+         * @return the created instance of the object
+         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         */
+        public MetaObjectProfiSCT locatorToObject(String locator) throws ExtractorException {
+            return locatorToObject(locator, null, null);
         }
 
         /**
@@ -1274,26 +1292,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
 
         /**
-         * Returns the object with given {@code locator}.
-         * The object is retrieved from the database.
-         * @param locator the locator of the object to return
-         * @return the created instance of the object
-         * @throws ExtractorException if there was a problem retrieving or instantiating the data
-         */
-        public MetaObjectProfiSCT locatorToObject(String locator) throws ExtractorException {
-            return locatorToObject(locator, null);
-        }
-
-        /**
          * Returns a collection of objects found by the text search.
          * @param object the query object which provides the text
-         * @param weights the weigths to use for title, keyword, and search words
+         * @param weights the weights to use for title, keyword, and search words
          * @param useIdf flag whether to use inverse-document-frequencies of the words (<tt>true</tt>) or a simpler weighted sum search (<tt>false</tt>)
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
-         * @throws SQLException if there was a problem executing the search on the database
+         * @throws TextConversionException if there was a problem executing the search on the database
          */
-        public Collection<RankedAbstractObject> searchByText(MetaObjectProfiSCT object, float[] weights, boolean useIdf, int count) throws SQLException {
+        public Collection<RankedAbstractObject> searchByText(MetaObjectProfiSCT object, float[] weights, boolean useIdf, int count) throws TextConversionException {
             return searchByText(object.getTitleWords(wordIndex), object.getKeywordWords(wordIndex), object.getSearchWords(wordIndex), weights, useIdf, count);
         }
 
@@ -1303,9 +1310,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param useIdf flag whether to use inverse-document-frequencies of the words (<tt>true</tt>) or a simpler weighted sum search (<tt>false</tt>)
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
-         * @throws IllegalArgumentException if there was a problem executing the search on the database
+         * @throws TextConversionException if there was a problem executing the search on the database
          */
-        public Collection<RankedAbstractObject> searchByText(String text, boolean useIdf, int count) throws IllegalArgumentException {
+        public Collection<RankedAbstractObject> searchByText(String text, boolean useIdf, int count) throws TextConversionException {
             if (text == null || text.isEmpty())
                 return null;
             return searchByText(text.split(SEARCH_SPLIT_REGEXP), useIdf, count);
@@ -1317,9 +1324,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param useIdf flag whether to use inverse-document-frequencies of the words (<tt>true</tt>) or a simpler weighted sum search (<tt>false</tt>)
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
-         * @throws IllegalArgumentException if there was a problem executing the search on the database
+         * @throws TextConversionException if there was a problem executing the search on the database
          */
-        public Collection<RankedAbstractObject> searchByText(String[] searchKeywords, boolean useIdf, int count) throws IllegalArgumentException {
+        public Collection<RankedAbstractObject> searchByText(String[] searchKeywords, boolean useIdf, int count) throws TextConversionException {
             return searchByText(null, null, searchKeywords, new float[]{0f, 0f, 1f}, useIdf, count);
         }
 
@@ -1335,9 +1342,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param useIdf flag whether to use inverse-document-frequencies of the words (<tt>true</tt>) or a simpler weighted sum search (<tt>false</tt>)
          * @param count the number of objects to retrieve
          * @return an iterator over objects found by the text search
-         * @throws IllegalArgumentException if there was a problem executing the search on the database
+         * @throws TextConversionException if there was a problem executing the search on the database
          */
-        public Collection<RankedAbstractObject> searchByText(String[] titleWords, String[] keywordWords, String[] searchWords, float[] weights, boolean useIdf, int count) throws IllegalArgumentException {
+        public Collection<RankedAbstractObject> searchByText(String[] titleWords, String[] keywordWords, String[] searchWords, float[] weights, boolean useIdf, int count) throws TextConversionException {
             Collection<String> processedTitleWords = (titleWords != null ? TextConversion.unifyWords(titleWords, null, stemmer, true) : new ArrayList<String>());
             Collection<String> processedSearchWords = (searchWords != null ? TextConversion.unifyWords(searchWords, null, stemmer, true) : new ArrayList<String>());
             if (processedTitleWords.isEmpty() && processedSearchWords.isEmpty())
@@ -1429,9 +1436,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 }
                 objectsCursor.close();
             } catch (BucketStorageException e) {
-                throw new IllegalArgumentException("Error reading the data: " + e.getMessage(), e);
+                throw new TextConversionException("Error reading the data: " + e.getMessage(), e);
             } catch (SQLException e) {
-                throw new IllegalArgumentException("Error reading the data: " + e, e);
+                throw new TextConversionException("Error reading the data: " + e, e);
             }
             return ret;
         }
@@ -1445,9 +1452,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param o2 the first keyword object to compare
          * @param keyWordWeights the weights for different layers of keywords (title, etc.)
          * @return the keywords distance
-         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         * @throws TextConversionException if there was a problem retrieving keyword frequencies from the database
          */
-        private float keywordDistanceTfIdf(ObjectIntMultiVector o1, ObjectIntMultiVector o2, float[] keyWordWeights) throws SQLException {
+        private float keywordDistanceTfIdf(ObjectIntMultiVector o1, ObjectIntMultiVector o2, float[] keyWordWeights) throws TextConversionException {
             return ObjectIntMultiVectorJaccard.getWeightedDistance(o1, getKeywordWeightProvider(o1, keyWordWeights), o2, getKeywordWeightProvider(o2, keyWordWeights));
         }
 
@@ -1461,9 +1468,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param originalRankWeight weight of the original object distance rank (if zero, only the new ranking based on tf-idf is used)
          * @param iterator the iterator that provides the objects to rank
          * @return a collection of ranked objects
-         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         * @throws TextConversionException if there was a problem retrieving keyword frequencies from the database
          */
-        public Collection<RankedAbstractObject> rerankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, float originalRankWeight, Iterator<? extends RankedAbstractObject> iterator) throws SQLException {
+        public Collection<RankedAbstractObject> rerankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, float originalRankWeight, Iterator<? extends RankedAbstractObject> iterator) throws TextConversionException {
             RankedSortedCollection ret = new RankedSortedCollection();
             while (iterator.hasNext()) {
                 RankedAbstractObject rankedObj = iterator.next();
@@ -1481,9 +1488,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param keyWordWeights the weights for different layers of keywords (title, etc.)
          * @param iterator the iterator that provides the objects to rank
          * @return a collection of ranked objects
-         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         * @throws TextConversionException if there was a problem retrieving keyword frequencies from the database
          */
-        public Collection<RankedAbstractObject> rankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws SQLException {
+        public Collection<RankedAbstractObject> rankByKeywords(MetaObjectProfiSCT queryObject, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws TextConversionException {
             RankedSortedCollection ret = new RankedSortedCollection();
             while (iterator.hasNext()) {
                 MetaObjectProfiSCT obj = iterator.next();
@@ -1497,16 +1504,16 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * the distances provided by the weighted Jaccard keyword distance
          * with word-frequency weights.
          * The given reference keywords are provided in different layers (title, etc.)
-         * in the respective subarrays. Note that the size of the outer array should
+         * in the respective sub-arrays. Note that the size of the outer array should
          * not be bigger than the size of the {@code keyWordWeights}.
          *
          * @param referenceKeywords the reference keywords using which the objects in the collection are ranked
          * @param keyWordWeights the weights for different layers of keywords (title, etc.)
          * @param iterator the iterator that provides the objects to rank
          * @return a collection of newly ranked objects
-         * @throws SQLException if there was a problem retrieving keyword frequencies from the database
+         * @throws TextConversionException if there was a problem retrieving keyword frequencies from the database
          */
-        public Collection<RankedAbstractObject> rankByKeywords(String[][] referenceKeywords, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws SQLException {
+        public Collection<RankedAbstractObject> rankByKeywords(String[][] referenceKeywords, float[] keyWordWeights, Iterator<? extends MetaObjectProfiSCT> iterator) throws TextConversionException {
             int[][] keywordIds = new int[referenceKeywords.length][];
             for (int i = 0; i < referenceKeywords.length; i++)
                 keywordIds[i] = wordsToIdentifiers(referenceKeywords[i]);
@@ -1682,8 +1689,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             public MetaObjectProfiSCT extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 return locatorToObject(
                         dataSource.getRequiredParameter(locatorParamName).toString(),
+                        removeObjects,
                         dataSource.getParameter(additionalKeyWordsParamName, String.class),
-                        removeObjects
+                        null
                 );
             }
 
@@ -1780,11 +1788,11 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * Returns weights for keywords based on tf-idf.
          * @param keywords the keywords to read the weights for
          * @return the weight provider for keywords
-         * @throws SQLException if there was an error reading the keyword weights from the database
+         * @throws TextConversionException if there was an error reading the keyword weights from the database
          */
-        public Map<Integer, Float> getKeywordWeights(ObjectIntMultiVector keywords) throws SQLException {
+        public Map<Integer, Float> getKeywordWeights(ObjectIntMultiVector keywords) throws TextConversionException {
             if (keywordWeightSQL == null)
-                throw new SQLException("Keyword links table was not set for this database support");
+                throw new TextConversionException("Keyword links table was not set for this database support");
             if (keywords.getDimensionality() == 0)
                 return null;
 
@@ -1800,11 +1808,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             sql.append(" group by keyword_id");
 
             // Execute SQL and get weight for the keywords
-            PreparedStatement crs = prepareAndExecute(null, sql.toString(), false, (Object[])null);
             try {
-                return rsToMap(crs.getResultSet());
-            } finally {
-                crs.close();
+                PreparedStatement crs = prepareAndExecute(null, sql.toString(), false, (Object[])null);
+                try {
+                    return rsToMap(crs.getResultSet());
+                } finally {
+                    crs.close();
+                }
+            } catch (SQLException e) {
+                throw new TextConversionException(e);
             }
         }
 
@@ -1816,9 +1828,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param keywords the keywords to read the weights for
          * @param weights the weights for different layers of keywords (title, etc.)
          * @return the weight provider for keywords
-         * @throws SQLException if there was an error reading the keyword weights from the database
+         * @throws TextConversionException if there was an error reading the keyword weights from the database
          */
-        public WeightProvider getKeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws SQLException {
+        public WeightProvider getKeywordWeightProvider(ObjectIntMultiVector keywords, float[] weights) throws TextConversionException {
             return new KeywordWeightProvider(getKeywordWeights(keywords), weights);
         }
 
@@ -1832,9 +1844,9 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          *
          * @param weights the weights for different layers of keywords (title, etc.)
          * @return the weight provider for keywords
-         * @throws SQLException if there was an error reading the keyword weights from the database
+         * @throws TextConversionException if there was an error reading the keyword weights from the database
          */
-        public static WeightProvider getStaticKeywordWeightProvider(float[] weights) throws SQLException {
+        public static WeightProvider getStaticKeywordWeightProvider(float[] weights) throws TextConversionException {
             return new KeywordWeightProvider(null, weights);
         }
 

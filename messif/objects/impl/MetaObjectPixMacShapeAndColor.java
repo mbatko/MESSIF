@@ -31,14 +31,12 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.objects.util.DoubleSortedCollection;
 
 /**
  * Special meta object that stores only the objects required for the PixMac search.
@@ -579,127 +577,4 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
         size += serializator.getBinarySize(keyWords);
         return size;
     }
-
-
-    /**
-     * This collection sorts the MetaObjectPixMacShapeAndColor data according to
-     *  their   distance + (keywords's jaccard coeficient * weight)
-     */
-    public static class KeywordsJaccardSortedCollection extends DoubleSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 1L;
-
-        /**
-         * Collection of keywords of the query object
-         */
-        protected final ObjectIntSortedVectorJaccard queryKeywords;
-
-        /**
-         * Words' Jaccard coefficient weight
-         */
-        protected final float keywordsWeight;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + weighted keywords distance
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @param keywordsWeight weight for the words jaccard coefficient
-         * @throws IllegalArgumentException
-         */
-        public KeywordsJaccardSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntSortedVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity);
-            this.keywordsWeight = keywordsWeight;
-            this.queryKeywords = querykeyWords;
-        }
-
-        /** 
-         * Return weight for the keywords.
-         * @return weight for the keywords
-         */
-        public float getKeywordsWeight() {
-            return keywordsWeight;
-        }
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            return origDistance + keywordsWeight *
-                    queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords);
-        }
-    }
-
-    /**
-     * This collection sorts the MetaObjectPixMacShapeAndColor data according to
-     *  their   distance + ((keywords's jaccard coeficient^2) * weight)
-     */
-    public static class KeywordsJaccardPowerSortedCollection extends KeywordsJaccardSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 31001L;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + ((keywords's jaccard coeficient^2) weighted)
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @param keywordsWeight weight for the words jaccard coefficient
-         * @throws IllegalArgumentException
-         */
-        public KeywordsJaccardPowerSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntSortedVectorJaccard querykeyWords, float keywordsWeight) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity, querykeyWords, keywordsWeight);
-        }
-
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            float keywordsDistance = queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords);
-            return origDistance + keywordsWeight * (keywordsDistance * keywordsDistance);
-        }
-    }
-
-    /**
-     * This collection sorts the ranked objects in such a way that all objects
-     *  without any keywords common with the query keywords are put to the end of the collection.
-     * In fact, some fixed large value is added to the original distances.
-     */
-    public static class KeywordsIntersectionSortedCollection extends DoubleSortedCollection {
-        /** Class id for serialization. */
-        private static final long serialVersionUID = 1L;
-
-        /** Value to be added to object with empty intersection */
-        protected static final float VALUE_TO_ADD = 1000f;
-
-        /**
-         * Collection of keywords of the query object
-         */
-        private final ObjectIntSortedVectorJaccard queryKeywords;
-
-        /**
-         * Creates new sorted collection sorted according to pixmac shape+color distance + weighted keywords distance
-         *
-         * @param initialCapacity capacity of the collection to allocate initially
-         * @param maximalCapacity max capacity of the collection
-         * @param querykeyWords collection of keywords of the query object
-         * @throws IllegalArgumentException
-         */
-        public KeywordsIntersectionSortedCollection(int initialCapacity, int maximalCapacity, ObjectIntSortedVectorJaccard querykeyWords) throws IllegalArgumentException {
-            super(initialCapacity, maximalCapacity);
-            this.queryKeywords = querykeyWords;
-        }
-
-        @Override
-        public float getNewDistance(AbstractObject origObject, float origDistance) {
-            // if the set of query keywords are empty then return the original distance
-            if (queryKeywords.getSize() <= 0) {
-                return origDistance;
-            }
-            // if there is a word in the intersection
-            if (queryKeywords.getDistance(((MetaObjectPixMacShapeAndColor) origObject).keyWords) < 1) {
-                return origDistance;
-            }
-            return origDistance + VALUE_TO_ADD;
-        }
-    }
-
 }
