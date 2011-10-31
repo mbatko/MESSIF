@@ -162,22 +162,59 @@ public class MetaObjectParametricArrayTotalMin extends MetaObjectParametricArray
         return 1;
     }
 
+    /**
+     * The actual implementation of the metric function.
+     * Minimal distance between all objects with a matching class from this array
+     * and the given {@code obj} is returned as the resulting distance. If the
+     * {@code obj} is also {@link MetaObjectParametricArray}, the distance
+     * is computed to all compatible encapsulated objects.
+     * 
+     * @param obj the object to compute distance to
+     * @param metaDistances the array that is filled with the distances of the respective encapsulated objects, if it is not <tt>null</tt>
+     * @param distThreshold the threshold value on the distance
+     * @return the actual distance between this and {@code obj} if the distance is lower than {@code distThreshold}
+     * @see LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject, float) LocalAbstractObject.getDistance
+     */
     @Override
     protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
-        float rtv = getMaxDistance();
-        MetaObjectArray castObj = (MetaObjectArray)obj;
-
         for (int i = 0; i < objects.length; i++) {
-            for (int j = 0; j < castObj.objects.length; j++) {
-                if (objects[i].getClass().equals(castObj.objects[j].getClass())) {
-                    float dist = objects[i].getNormDistance(castObj.objects[j], distThreshold);
-                    if (dist < rtv)
-                        rtv = dist;
-                }
+            float dist = getMinNormDistanceToArray(this.objects[i], obj, distThreshold);
+            if (metaDistances != null)
+                metaDistances[i] = dist;
+            if (dist < distThreshold)
+                distThreshold = dist; // Note that this is intentional, sice we do not report distances higher than distThreshold
+        }
+
+        return distThreshold;
+    }
+
+    /**
+     * Returns the normalized distance between object {@code o1} and {@code o2}.
+     * If object {@code o2} is instance of {@link MetaObjectParametricArray},
+     * the minimal distance between o1 and all non-null,
+     * {@link LocalAbstractObject#isDistanceCompatible(messif.objects.LocalAbstractObject) distance compatible}
+     * objects in {@code o2} array is returned.
+     * 
+     * @param o1 the object from which to compute the distance
+     * @param o2 the object to which to compute the distance (special if o2 is {@link MetaObjectParametricArray})
+     * @param distThreshold the threshold value on the distance (should be normalized, i.e. {@code 0 <= distThreshold <= 1})
+     * @return the minimal normalized distance between {@code o1} and (all) {@code o2};
+     *          if all encapsulated objects in {@code o2} are <tt>null<tt> or not
+     *          compatible with the {@code o1}, the {@link #MAX_DISTANCE} is returned
+     */
+    protected static float getMinNormDistanceToArray(LocalAbstractObject o1, LocalAbstractObject o2, float distThreshold) {
+        if (!(o2 instanceof MetaObjectParametricArray))
+            return o1.getNormDistance(o2, distThreshold);
+        MetaObjectParametricArray castO2 = (MetaObjectParametricArray)o2;
+
+        for (int j = 0; j < castO2.objects.length; j++) {
+            if (o1.isDistanceCompatible(castO2.objects[j])) {
+                float dist = o1.getNormDistance(castO2.objects[j], distThreshold);
+                if (dist < distThreshold)
+                    distThreshold = dist; // Note that this is intentional, sice we do not report distances higher than distThreshold
             }
         }
 
-        return rtv;
+        return distThreshold;
     }
-
 }
