@@ -22,17 +22,17 @@ import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
-import messif.operations.AnswerType;
 import messif.operations.RankingQueryOperation;
-import messif.utility.SortedCollection;
 
 /**
- * Specialization of {@link SortedCollection} that is specific for distance-ranked objects.
+ * Extension of {@link RankedSortedCollection} that always returns the threshold
+ * {@link LocalAbstractObject#MAX_DISTANCE}.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RankedSortedCollection extends DistanceRankedSortedCollection<RankedAbstractObject>  {
+public class RankedSortedNoThresholdCollection extends RankedSortedCollection {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -45,7 +45,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
+    public RankedSortedNoThresholdCollection(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, comparator);
     }
 
@@ -56,17 +56,18 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
+    public RankedSortedNoThresholdCollection(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, null);
     }
 
     /**
      * Constructs an empty collection.
      * The order is defined using the natural order of items.
-     * The initial capacity of the collection is set to {@link #DEFAULT_INITIAL_CAPACITY}
-     * and maximal capacity is not limited.
+     * The initial capacity of the collection is set to 16 and maximal capacity
+     * is not limited.
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollection() {
+    public RankedSortedNoThresholdCollection() throws IllegalArgumentException {
         super();
     }
 
@@ -79,7 +80,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
+    public <T extends AbstractObject> RankedSortedNoThresholdCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
         while (iterator.hasNext())
             add(new RankedAbstractObject(iterator.next(), distanceFunction, referenceObject));
     }
@@ -93,7 +94,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
+    public <T extends AbstractObject> RankedSortedNoThresholdCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
         this(distanceFunction, referenceObject, (Iterator<? extends T>)objectProvider.provideObjects());
     }
 
@@ -103,7 +104,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public RankedSortedCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
+    public RankedSortedNoThresholdCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
         this(referenceObject, referenceObject, iterator);
     }
 
@@ -113,7 +114,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public RankedSortedCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
+    public RankedSortedNoThresholdCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
         this(referenceObject, referenceObject, objectProvider);
     }
 
@@ -121,42 +122,16 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * Constructor from an existing operation - all parameters are copied from the operation answer.
      * @param operation operation with collection to copy all parameters from
      */
-    public RankedSortedCollection(RankingQueryOperation operation) {
+    public RankedSortedNoThresholdCollection(RankingQueryOperation operation) {
         super(operation.getAnswerCount(), operation.getAnswerMaximalCapacity(), operation.getAnswerComparator());
     }
 
 
-    //****************** Distance ranked add ******************//
+    //****************** Overrides ******************//
 
-    /**
-     * Add a distance-ranked object to this collection.
-     * Preserve the information about distances of the respective sub-objects.
-     * @param answerType the type of the objects added to this collection
-     * @param object the object to add
-     * @param distance the distance of object
-     * @param objectDistances the array of distances to the respective sub-objects (can be <tt>null</tt>)
-     * @return the distance-ranked object that was added to this collection or <tt>null</tt> if the object was not added
-     * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
-     */
-    public RankedAbstractObject add(AnswerType answerType, AbstractObject object, float distance, float[] objectDistances) {
-        if (object == null)
-            return null;
-
-        RankedAbstractObject rankedObject;
-        try {
-            // Create the ranked object encapsulation
-            if (objectDistances == null)
-                rankedObject = new RankedAbstractObject(answerType.update(object), distance);
-            else
-                rankedObject = new RankedAbstractMetaObject(answerType.update(object), distance, objectDistances);
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalArgumentException(e);
-        }
-
-        // Add the encapsulated object to this collection
-        if (add(rankedObject))
-            return rankedObject;
-        else
-            return null;        
+    @Override
+    public float getThresholdDistance() {
+        return LocalAbstractObject.MAX_DISTANCE;
     }
+
 }

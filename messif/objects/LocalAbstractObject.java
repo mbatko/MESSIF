@@ -488,6 +488,23 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
         return o1.getDistance(o2);
     }
 
+    @Override
+    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
+        return LocalAbstractObject.class;
+    }
+
+    /**
+     * Returns whether the given object is distance compatible with the
+     * distance function of this object. If object {@code o} is <tt>null</tt>,
+     * <tt>false</tt> is returned.
+     * @param o the object to check
+     * @return <tt>true</tt> if the distance between this object and the given object
+     *      can be computed
+     */
+    public boolean isDistanceCompatible(LocalAbstractObject o) {
+        return getDistanceObjectClass().isInstance(o);
+    }
+
 
     //****************** Distance filter manipulation ******************//
 

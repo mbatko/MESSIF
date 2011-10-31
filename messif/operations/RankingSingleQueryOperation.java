@@ -16,7 +16,6 @@
  */
 package messif.operations;
 
-import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.RankedAbstractMetaObject;
@@ -25,8 +24,8 @@ import messif.objects.util.RankedSortedCollection;
 
 
 /**
- * The base class for query operations that return {@link AbstractObject objects}
- * ranked by a distance to a single object.
+ * The base class for query operations that return objects ranked by a distance
+ * to a single object.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -160,7 +159,8 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     @Override
     public RankingSingleQueryOperation clone() throws CloneNotSupportedException {
         RankingSingleQueryOperation operation = (RankingSingleQueryOperation)super.clone();
-        operation.queryObject = operation.queryObject.clone();
+        if (operation.queryObject != null)
+            operation.queryObject = operation.queryObject.clone();
         return operation;
     }
 
@@ -194,7 +194,7 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
         if (object == null)
             return null;
         if (queryObject == null)
-            return addToAnswer(object);
+            return super.addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
         float[] metaDistances = storeMetaDistances ? queryObject.createMetaDistancesHolder() : null;
         float distance = queryObject.getDistance(object, metaDistances, distThreshold);
         if (distance > distThreshold)

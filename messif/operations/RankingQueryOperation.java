@@ -22,7 +22,6 @@ import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.CollectionProviders;
-import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.ErrorCode;
@@ -282,24 +281,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        if (object == null)
-            return null;
-        RankedAbstractObject rankedObject;
-        try {
-            // Create the ranked object encapsulation
-            if (objectDistances == null)
-                rankedObject = new RankedAbstractObject(answerType.update(object), distance);
-            else
-                rankedObject = new RankedAbstractMetaObject(answerType.update(object), distance, objectDistances);
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalArgumentException(e);
-        }
-
-        // Add the encapsulated object to the answer
-        if (answer.add(rankedObject))
-            return rankedObject;
-        else
-            return null;
+        return answer.add(answerType, object, distance, objectDistances);
     }
 
     /**

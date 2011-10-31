@@ -14,32 +14,21 @@
  *  You should have received a copy of the GNU General Public License
  *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
  */
-package messif.objects;
+package messif.objects.text;
 
 /**
- * Interface for external distance functions.
- * The distance function takes two parameters of type {@code T} and returns
- * their distance as a float number.
- *
- * @param <T> the type of the distance function arguments
- *
+ * Interface for stemmer instances.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public interface DistanceFunction<T> {
+public interface Stemmer {
     /**
-     * Returns the distance between object {@code o1} and object {@code o2}.
-     *
-     * @param o1 the object for which to measure the distance
-     * @param o2 the object for which to measure the distance
-     * @return the distance between object {@code o1} and object {@code o2}
+     * Provides a stem for the given word.
+     * @param word the word for which to provide the stem
+     * @return the stem for the given word
+     * @throws TextConversionException if there was an error stemming the word
      */
-    public float getDistance(T o1, T o2);
-
-    /**
-     * Returns the type of objects that this distance function accepts as arguments.
-     * @return the type of objects for this distance function
-     */
-    public Class<? extends T> getDistanceObjectClass();
+    public String stem(String word) throws TextConversionException;
 }

@@ -24,7 +24,7 @@ package messif.objects.util;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RadiusRankedSortedCollection extends RankedSortedCollection {
+public class RankedSortedRadiusRestrictCollection extends RankedSortedCollection {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -39,7 +39,7 @@ public class RadiusRankedSortedCollection extends RankedSortedCollection {
      * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RadiusRankedSortedCollection(float radius, int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
+    public RankedSortedRadiusRestrictCollection(float radius, int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity);
         this.radius = radius;
     }
@@ -49,7 +49,7 @@ public class RadiusRankedSortedCollection extends RankedSortedCollection {
      * @param radius maximal distance of the objects to be stored in this location
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RadiusRankedSortedCollection(float radius) throws IllegalArgumentException {
+    public RankedSortedRadiusRestrictCollection(float radius) throws IllegalArgumentException {
         super();
         this.radius = radius;
     }

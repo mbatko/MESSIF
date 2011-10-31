@@ -47,7 +47,7 @@ public class AlgorithmMethodException extends Exception {
     }
     
     /**
-     * Constructs an instance of <code>AlgorithmMethodException</code> with the specified detail message.
+     * Constructs an instance of <code>AlgorithmMethodException</code> with the specified cause.
      * @param  cause the cause (which is saved for later retrieval by the
      *         {@link #getCause()} method). (A <tt>null</tt> value is
      *         permitted, and indicates that the cause is nonexistent or
@@ -55,5 +55,18 @@ public class AlgorithmMethodException extends Exception {
      */
     public AlgorithmMethodException(Throwable cause) {
         super(cause);
+    }
+
+    /**
+     * Constructs an instance of <code>AlgorithmMethodException</code> with
+     * the specified detail message and cause.
+     * @param msg the detail message.
+     * @param  cause the cause (which is saved for later retrieval by the
+     *         {@link #getCause()} method). (A <tt>null</tt> value is
+     *         permitted, and indicates that the cause is nonexistent or
+     *         unknown.)
+     */
+    public AlgorithmMethodException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

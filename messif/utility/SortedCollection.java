@@ -45,6 +45,9 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     /** Default initial capacity of the internal array */
     protected static final int DEFAULT_INITIAL_CAPACITY = 16;
 
+    /** Default initial capacity of the internal array */
+    protected static final int UNLIMITED_CAPACITY = Integer.MAX_VALUE;
+
 
     //****************** Attributes ******************//
 
@@ -97,7 +100,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
     public SortedCollection(int initialCapacity, Comparator<? super T> comparator) throws IllegalArgumentException {
-        this(initialCapacity, Integer.MAX_VALUE, comparator);
+        this(initialCapacity, UNLIMITED_CAPACITY, comparator);
     }
 
     /**
@@ -105,9 +108,8 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * The initial capacity of the collection is set to 16 and maximal capacity
      * is not limited.
      * @param comparator the comparator that defines ordering
-     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public SortedCollection(Comparator<? super T> comparator) throws IllegalArgumentException {
+    public SortedCollection(Comparator<? super T> comparator) {
         this(DEFAULT_INITIAL_CAPACITY, comparator);
     }
 
@@ -125,11 +127,10 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     /**
      * Constructs an empty collection.
      * The order is defined using the natural order of items.
-     * The initial capacity of the collection is set to 16 and maximal capacity
-     * is not limited.
-     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
+     * The initial capacity of the collection is set to {@link #DEFAULT_INITIAL_CAPACITY}
+     * and maximal capacity is not limited.
      */
-    public SortedCollection() throws IllegalArgumentException {
+    public SortedCollection() {
         this(null);
     }
 
@@ -392,7 +393,8 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Adds the specified element to this list.
      * The element is added according the to order defined by the comparator.
      * @param e element to be appended to this list
-     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     * @return <tt>true</tt> if the object was added to the collection or
+     *          <tt>false</tt> if not (e.g. because of the limited capacity of the collection)
      */
     @Override
     public boolean add(T e) {
@@ -403,10 +405,11 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      * Adds the specified element to this list given an index on which the object should be stored.
      * Use carefully - this method does not check, if the order of the objects is preserved.
      * @param e element to be appended to this list
-     * @param i index on which the object should be stored
-     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     * @param index index on which the object should be stored
+     * @return <tt>true</tt> if the object was added to the collection or
+     *          <tt>false</tt> if not (e.g. because of the limited capacity of the collection)
      */
-    protected boolean add(T e, int i) {
+    protected boolean add(T e, int index) {
         modCount++;
 
         // If array is too small to hold new item
@@ -420,34 +423,34 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
 
                 // Create new array
                 Object[] newItems = new Object[newSize];
-                System.arraycopy(items, 0, newItems, 0, i);
+                System.arraycopy(items, 0, newItems, 0, index);
 
                 // Add object
-                if (i < size)
-                    System.arraycopy(items, i, newItems, i + 1, size - i);
-                newItems[i] = e;
+                if (index < size)
+                    System.arraycopy(items, index, newItems, index + 1, size - index);
+                newItems[index] = e;
                 items = newItems;
                 size++;
             } else { // No capacity left for storing object
                 // If insertion point is after last object
-                if (i >= size)
+                if (index >= size)
                     return false;
 
                 // Insert in the middle (effectively destroying the last object)
-                System.arraycopy(items, i, items, i + 1, size - i - 1);
-                items[i] = e;
+                System.arraycopy(items, index, items, index + 1, size - index - 1);
+                items[index] = e;
             }
         } else {
             // There is enough space
-            if (i < size)
-                System.arraycopy(items, i, items, i + 1, size - i);
-            items[i] = e;
+            if (index < size)
+                System.arraycopy(items, index, items, index + 1, size - index);
+            items[index] = e;
             size++;
         }
 
         return true;
     }
-    
+
     /**
      * Removes the first occurrence of the specified element from this list,
      * if it is present.  If the list does not contain the element, it is

@@ -23,20 +23,19 @@ import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.operations.RankingQueryOperation;
-import messif.utility.SortedCollection;
 
 /**
- * Specialization of {@link SortedCollection} that is specific for distance-ranked objects.
+ * Extension of {@link RankedSortedCollection} that ignores duplicates.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
-    
+public class RankedSortedNoDupsCollection extends RankedSortedCollection  {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    //****************** Constructor ******************//
+    //****************** Constructors ******************//
 
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
@@ -45,7 +44,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param comparator the comparator that defines ordering
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollectionNoDups(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
+    public RankedSortedNoDupsCollection(int initialCapacity, int maximalCapacity, Comparator<? super RankedAbstractObject> comparator) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, comparator);
     }
 
@@ -56,7 +55,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollectionNoDups(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
+    public RankedSortedNoDupsCollection(int initialCapacity, int maximalCapacity) throws IllegalArgumentException {
         super(initialCapacity, maximalCapacity, null);
     }
 
@@ -67,7 +66,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * is not limited.
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      */
-    public RankedSortedCollectionNoDups() throws IllegalArgumentException {
+    public RankedSortedNoDupsCollection() throws IllegalArgumentException {
         super();
     }
 
@@ -80,7 +79,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollectionNoDups(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
+    public <T extends AbstractObject> RankedSortedNoDupsCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, Iterator<? extends T> iterator) {
         while (iterator.hasNext())
             add(new RankedAbstractObject(iterator.next(), distanceFunction, referenceObject));
     }
@@ -94,7 +93,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public <T extends AbstractObject> RankedSortedCollectionNoDups(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
+    public <T extends AbstractObject> RankedSortedNoDupsCollection(DistanceFunction<? super T> distanceFunction, T referenceObject, ObjectProvider<? extends T> objectProvider) {
         this(distanceFunction, referenceObject, (Iterator<? extends T>)objectProvider.provideObjects());
     }
 
@@ -104,7 +103,7 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param referenceObject the reference object from which the distance is measured
      * @param iterator the iterator on objects to add to the collection
      */
-    public RankedSortedCollectionNoDups(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
+    public RankedSortedNoDupsCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
         this(referenceObject, referenceObject, iterator);
     }
 
@@ -114,31 +113,29 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
      * @param referenceObject the reference object from which the distance is measured
      * @param objectProvider the provider of objects to add to the collection
      */
-    public RankedSortedCollectionNoDups(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
+    public RankedSortedNoDupsCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
         this(referenceObject, referenceObject, objectProvider);
     }
-    
+
     /**
      * Constructor from an existing operation - all parameters are copied from the operation answer.
      * @param operation operation with collection to copy all parameters from
      */
-    public RankedSortedCollectionNoDups(RankingQueryOperation operation) {
+    public RankedSortedNoDupsCollection(RankingQueryOperation operation) {
         super(operation);
     }
-    
+
+
+    //****************** Overrides ******************//
+
     @Override
-    public boolean add(RankedAbstractObject e) {
-        if (isEmpty()) {
-            return super.add(e, 0);
-        }        
-        int index = binarySearch(e, 0, size() - 1, false);
-        if (index < size() && areEqual(e.getObject(), get(index).getObject()) || (index > 0 && areEqual(e.getObject(), get(index - 1).getObject()))) {
-            return false;
-        }
-        
+    protected boolean add(RankedAbstractObject e, int index) {
+        if (!isEmpty())
+            if (index < size() && areEqual(e.getObject(), get(index).getObject()) || (index > 0 && areEqual(e.getObject(), get(index - 1).getObject())))
+                return false;
         return super.add(e, index);
     }
-    
+
     /**
      * Given two objects, this method compares them according to locator (if not null) and, if both locators null,
      *  then according to {@link LocalAbstractObject#dataEquals(java.lang.Object)}.
@@ -155,6 +152,5 @@ public class RankedSortedCollectionNoDups extends RankedSortedCollection  {
         }
         return false;
     }
-    
 
 }

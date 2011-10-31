@@ -16,6 +16,7 @@
  */
 package messif.objects.util;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -33,8 +34,13 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    //************ Attributes ************//
+
     /** Internal list of additional collections */
     private final RankedSortedCollection[] sublists;
+
+
+    //************ Constructor ************//
 
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
@@ -53,26 +59,23 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
         }
     }
 
+
+    //************ Special comparator for the internal sub-lists ************//
+
     /**
-     * Returns the comparator used by the particular subcollection.
-     * @param sublistIndex index of the particular sublist
-     * @return the comparator used by the specific subcollection
+     * Comparator based on the sub-distances assigned to {@link RankedAbstractMetaObject}.
+     * It used one of the sub-distances to compare the objects.
      */
-    public Comparator<? super RankedAbstractObject> getSublistComparator(int sublistIndex) {
-        return sublists[sublistIndex].getComparator();
-    }
-    
-    /**
-     * Comparator based on the subdistances assigned to {@link RankedAbstractMetaObject}.
-     * It used one of the subdistances to compare the objects.
-     */
-    public static class RankedSortedMultiCollectionComparator implements Comparator<RankedAbstractObject>,java.io.Serializable {
-        /** Index to the subdistances array */
+    public static class RankedSortedMultiCollectionComparator implements Comparator<RankedAbstractObject>, Serializable {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        /** Index to the sub-distances array */
         private final int distanceIndex;
         
         /**
          * New comparator
-         * @param index index of the subdistance to use for comparisons
+         * @param index index of the sub-distance to use for comparisons
          */
         public RankedSortedMultiCollectionComparator(int index) {
             distanceIndex = index;
@@ -80,19 +83,21 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
         
         @Override
         public int compare(RankedAbstractObject o1, RankedAbstractObject o2) {
-                return Float.compare(((RankedAbstractMetaObject) o1).getSubDistances()[distanceIndex], ((RankedAbstractMetaObject) o2).getSubDistances()[distanceIndex]);
+            return Float.compare(((RankedAbstractMetaObject) o1).getSubDistances()[distanceIndex], ((RankedAbstractMetaObject) o2).getSubDistances()[distanceIndex]);
         }
     }
-    
-//    public RankedSortedMultiCollection(int initialCapacity, int maximalCapacity, RankedSortedCollection[] sublists) throws IllegalArgumentException {
-//        super (initialCapacity, maximalCapacity);
-//        this.sublists = sublists;
-//        // Check the comparators of the collections passed in sublists
-//        for (int i = 0; i < sublists.length; i++) {
-//            if (sublists[i].getComparator() instanceof RankedSortedMultiCollectionComparator)
-//                throw new IllegalArgumentException("Collection at index " + i + " does not have a proper comparator assigned. See documentation.");
-//        }
-//    }
+
+    /**
+     * Returns the comparator used by the particular sub-collection.
+     * @param sublistIndex index of the particular sublist
+     * @return the comparator used by the specific sub-collection
+     */
+    public Comparator<? super RankedAbstractObject> getSublistComparator(int sublistIndex) {
+        return sublists[sublistIndex].getComparator();
+    }
+
+
+    //************ Overrides ************//
 
     @Override
     public boolean add(RankedAbstractObject e) throws IllegalArgumentException {

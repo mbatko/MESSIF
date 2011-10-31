@@ -215,11 +215,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
         int count = 0;
         try {
             while (!locators.isEmpty()) {
-                LocalAbstractObject object = objects.getObjectByAnyLocator(locators, true);
-                if (getQueryObject() != null)
-                    addToAnswer(object);
-                else
-                    addToAnswer(object, LocalAbstractObject.UNKNOWN_DISTANCE, null);
+                addToAnswer(objects.getObjectByAnyLocator(locators, true));
                 count++;
             }
         } catch (NoSuchElementException e) { // Search ended, there are no more objects in the bucket

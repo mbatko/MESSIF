@@ -18,7 +18,6 @@ package messif.operations;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import messif.objects.AbstractObject;
 import messif.objects.DistanceFunctionMultiObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractMetaObject;
@@ -28,7 +27,7 @@ import messif.utility.Convert;
 
 
 /**
- * The base class for query operations that return {@link AbstractObject objects}
+ * The base class for query operations that return objects
  * ranked by a distance to multiple objects.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
