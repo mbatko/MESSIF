@@ -222,6 +222,10 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
                 public float getSecondaryMax() {
                     return maxY;
                 }
+                @Override
+                public String toString() {
+                    return String.format("Window: [%f;%f-%f;%f]", minX, minY, maxX, maxY);
+                }
             };
         }
     };
@@ -265,6 +269,10 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
                 @Override
                 public float getSecondaryMax() {
                     return maxX;
+                }
+                @Override
+                public String toString() {
+                    return String.format("Window: [%f;%f-%f;%f]", minX, minY, maxX, maxY);
                 }
             };
         }
@@ -399,15 +407,15 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
                         curY = Math.max(1f - winHeight, 0);
                     }
                     w = sortDim.getWindow(curX, maxX, curY, maxY);
-                    curX += winWidth + deltaX;
-                    if (curX > 1f) {
-                        // Move in Y
-                        curY += winHeight + deltaY;
-                        if (curY > 1f) {
+                    curX += deltaX;
+                    if (maxX >= 1f) {
+                        if (maxY >= 1f) {
                             // Stop condition
                             isNext = false;
                         } else {
-                            curX = 0;       // Next row
+                            // Move in Y -- next row
+                            curY += deltaY;
+                            curX = 0;
                         }
                     }
                 }
