@@ -78,22 +78,11 @@ public abstract class Convert {
         if (string == null || string.equals("null"))
             return null;
 
-        // Converting string types
-        if (type == String.class)
-            return type.cast(string);
-
-        // Converting class types
-        if (type == Class.class) try {
-            return type.cast(Class.forName(string));
-        } catch (ClassNotFoundException e) {
-            throw new InstantiationException(e.toString());
-        }
-
         // Wrap primitive types, so that a named-instance object or the 'valueOf' method can be used
         if (type.isPrimitive())
             type = wrapPrimitiveType(type);
 
-        // Named instances of objects
+        // Named instances of objects (this needs to be before the other type conversions are tries so that the named instances work)
         if (namedInstances != null) {
             Object instance = namedInstances.get(string);
             if (instance != null) {
@@ -106,6 +95,17 @@ public abstract class Convert {
                     throw new InstantiationException("Named instance '" + string + "' exists, but cannot be converted to '" + type.getName() + "'");
             }
         }
+
+        // Converting class types
+        if (type == Class.class) try {
+            return type.cast(Class.forName(string));
+        } catch (ClassNotFoundException e) {
+            throw new InstantiationException(e.toString());
+        }
+
+        // Converting string types
+        if (type == String.class)
+            return type.cast(string);
 
         // Converting map types
         if (type == Map.class) {
@@ -820,26 +820,29 @@ public abstract class Convert {
 
     /**
      * Copies the specified array, truncating or padding with nulls (if necessary)
-     * so the copy has the specified length.  For all indices that are
-     * valid in both the original array and the copy, the two arrays will
-     * contain identical values.  For any indices that are valid in the
-     * copy but not the original, the copy will contain <tt>null</tt>.
-     * Such indices will exist if and only if the specified length
-     * is greater than that of the original array.
-     * The resulting array is of the class <tt>newType</tt>.
+     * so the copy has the specified length. If the original array is not <tt>null</tt>,
+     * the data are copied starting from the index {@code offset} up the the
+     * length of the original or the new array (whichever is smaller). Thus
+     * the zeroth index of the new array will have the value of {@code offset} index
+     * of the original array, and so on. All elements of the new array that does
+     * not have the corresponding value in the original array (i.e. the elements
+     * of the new array with indices {@code i >= original.length - offset}) will
+     * be filled with <tt>null</tt>.
+     * The resulting array is of the class {@code componentType}.
      *
-     * @param <T> the type of objects in the array
+     * @param <T> the type of objects in the new array
+     * @param <U> the type of objects in the old array (must be assignable to T)
      * @param original the array to be copied
-     * @param newLength the length of the copy to be returned
-     * @param componentType the class of array components
-     * @return a copy of the original array, truncated or padded with nulls
-     *     to obtain the specified length
+     * @param offset the index of the element from the original array from which to start copying the data
+     * @param length the length of the new copied array to be returned
+     * @param componentType the class of array components in the new array
+     * @return a copy of the original array, truncated or padded with <tt>null</tt>
      * @throws NegativeArraySizeException if <tt>newLength</tt> is negative
      */
-    public static <T> T[] resizeArray(T[] original, int newLength, Class<T> componentType) throws NegativeArraySizeException {
-        T[] copy = createGenericArray(componentType, newLength);
+    public static <T, U extends T> T[] copyGenericArray(U[] original, int offset, int length, Class<T> componentType) throws NegativeArraySizeException {
+        T[] copy = createGenericArray(componentType, length);
         if (original != null)
-            System.arraycopy(original, 0, copy, 0, Math.min(original.length, newLength));
+            System.arraycopy(original, 0, copy, offset, Math.min(original.length - offset, length));
         return copy;
     }
 
@@ -852,7 +855,7 @@ public abstract class Convert {
      * @return a copy of the original array with added item
      */
     public static <T> T[] addToArray(T[] original, Class<T> componentType, T item) {
-        T[] ret = resizeArray(original, (original == null)?1:(original.length + 1), componentType);
+        T[] ret = copyGenericArray(original, 0, (original == null)?1:(original.length + 1), componentType);
         ret[ret.length - 1] = item;
         return ret;
     }

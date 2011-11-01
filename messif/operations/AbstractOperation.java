@@ -606,7 +606,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
 
     /**
      * Returns constructor argument descriptions for the provided operation class.
-     * This is used by auto-generated clients to show descriptiron during operation creation.
+     * This is used by auto-generated clients to show description during operation creation.
      * @param operationClass class to get the descriptions for
      * @return constructor argument descriptions
      * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
@@ -617,7 +617,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
 
     /**
      * Returns constructor argument descriptions for the provided operation class with given number of arguments.
-     * This is used by auto-generated clients to show descriptiron during operation creation.
+     * This is used by auto-generated clients to show description during operation creation.
      * @param operationClass class to get the descriptions for
      * @param nArguments the number of arguments of the constructor
      * @return constructor argument descriptions

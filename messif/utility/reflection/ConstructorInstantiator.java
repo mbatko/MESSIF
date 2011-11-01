@@ -28,7 +28,7 @@ import messif.utility.Convert;
  *
  * <p>
  * This class provides a convenient way of repeatable creation of instances
- * of a given class without the need of repetable constructor retrieval and checking all
+ * of a given class without the need of repeatable constructor retrieval and checking all
  * the exceptions.
  * </p>
  *
@@ -115,7 +115,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * Retrieves a public constructor with the given prototype from the given class.
      * @param <T> the class in which to search for the constructor
      * @param constructorClass the class in which to search for the constructor
-     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param publicOnlyConstructors flag whether to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
      * @param prototype the constructor prototype
      * @return the constructor found
      * @throws NoSuchInstantiatorException if the there is no constructor for the given prototype
@@ -149,7 +149,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * Retrieves a public constructor with the given number of arguments from the given class.
      * @param <T> the class in which to search for the constructor
      * @param constructorClass the class in which to search for the constructor
-     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param publicOnlyConstructors flag whether to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
      * @param argumentCount the number of arguments that the method should have
      * @return the constructor found
      * @throws NoSuchInstantiatorException if the there is no constructor for the given prototype
@@ -198,7 +198,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @param <T> the class in which to search for the constructor
      * @param constructorClass the class for which to get the constructor
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
-     * @param publicOnlyConstructors flag wheter to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param publicOnlyConstructors flag whether to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @param arguments the arguments for the constructor
      * @return a constructor for the specified class

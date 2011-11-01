@@ -23,7 +23,7 @@ import java.lang.reflect.InvocationTargetException;
  *
  * <p>
  * This class provides a convenient way of repeatable creation of instances
- * without the need of repetable inspection of the target class.
+ * without the need of repeatable inspection of the target class.
  * </p>
  *
  * @param <T> the class the instances of which will be created by this Instantiator
@@ -34,7 +34,7 @@ import java.lang.reflect.InvocationTargetException;
 public interface Instantiator<T> {
     /**
      * Creates an instance for the given arguments.
-     * @param arguments the arguments for the intstance
+     * @param arguments the arguments for the instance
      * @return a new instance
      * @throws IllegalArgumentException if the arguments are not compatible
      * @throws InvocationTargetException if there was an exception thrown when the instance was created
@@ -49,7 +49,7 @@ public interface Instantiator<T> {
 
     /**
      * Returns the classes of arguments for the {@link #instantiate(java.lang.Object[])} method.
-     * @return the prototype of instantiatior arguments
+     * @return the prototype of instantiator arguments
      */
     public Class<?>[] getInstantiatorPrototype();
 }
