@@ -31,19 +31,19 @@ public class OperationErrorCode extends ErrorCode {
     private static final long serialVersionUID = 1L;
     
     /** Response to a query has been returned, i.e. the query finished successfully. */
-    public static OperationErrorCode RESPONSE_RETURNED = new OperationErrorCode("response returned");
+    public static final OperationErrorCode RESPONSE_RETURNED = new OperationErrorCode("response returned");
 
     /** Empty answer returned. */
-    public static OperationErrorCode EMPTY_ANSWER = new OperationErrorCode("empty answer returned");  
+    public static final OperationErrorCode EMPTY_ANSWER = new OperationErrorCode("empty answer returned");  
     
     /** Response to a query has not been returned completely, i.e. the same operation should be called again. */
-    public static OperationErrorCode HAS_NEXT = new OperationErrorCode("having more objects to return");
+    public static final OperationErrorCode HAS_NEXT = new OperationErrorCode("having more objects to return");
 
     /** The processing was aborted by the user. */
-    public static OperationErrorCode ABORTED_BY_USER = new OperationErrorCode("operation processing aborted by user");
+    public static final OperationErrorCode ABORTED_BY_USER = new OperationErrorCode("operation processing aborted by user");
 
     /** The processing of the operation was aborted by unknown error. */
-    public static OperationErrorCode ABORTED_BY_ERROR = new OperationErrorCode("operation processing aborted by error");
+    public static final OperationErrorCode ABORTED_BY_ERROR = new OperationErrorCode("operation processing aborted by error");
     
     /** Creates a new instance of OperationErrorCode
      * 
