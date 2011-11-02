@@ -26,6 +26,7 @@ import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.operations.AlgorithmInfoOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.data.DeleteOperation;
@@ -125,6 +126,20 @@ public class ParallelSequentialScan extends Algorithm {
         for (LocalBucket localBucket : buckets)
             localBucket.finalize();
         // Do not call super.destroy(), since algorithm needs to differentiate between finalizing and destroying
+    }
+
+
+    //****************** Algorithm info ******************//
+
+    /**
+     * Method for processing {@link AlgorithmInfoOperation}.
+     * The processing will fill the algorithm info with this
+     * algorithm {@link #toString() toString()} value.
+     * @param operation the operation to process
+     */
+    public void algorithmInfo(AlgorithmInfoOperation operation) {
+        operation.addToAnswer(toString());
+        operation.endOperation();
     }
 
 
