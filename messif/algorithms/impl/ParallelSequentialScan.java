@@ -26,12 +26,13 @@ import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
-import messif.operations.AlgorithmInfoOperation;
+import messif.operations.query.GetAlgorithmInfoOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.data.DeleteOperation;
 import messif.operations.data.InsertOperation;
 import messif.operations.QueryOperation;
+import messif.operations.query.GetObjectCountOperation;
 
 /**
  * Parallel implementation of the naive sequential scan algorithm.
@@ -132,13 +133,30 @@ public class ParallelSequentialScan extends Algorithm {
     //****************** Algorithm info ******************//
 
     /**
-     * Method for processing {@link AlgorithmInfoOperation}.
+     * Method for processing {@link GetAlgorithmInfoOperation}.
      * The processing will fill the algorithm info with this
      * algorithm {@link #toString() toString()} value.
      * @param operation the operation to process
      */
-    public void algorithmInfo(AlgorithmInfoOperation operation) {
+    public void algorithmInfo(GetAlgorithmInfoOperation operation) {
         operation.addToAnswer(toString());
+        operation.endOperation();
+    }
+
+
+    //****************** Object count ******************//
+
+    /**
+     * Method for processing {@link GetObjectCountOperation}.
+     * The processing will fill the operation with the number of objects
+     * stored in this algorithm.
+     * @param operation the operation to process
+     */
+    public void objectCount(GetObjectCountOperation operation) {
+        int objectCount = 0;
+        for (LocalBucket bucket : buckets)
+            objectCount += bucket.getObjectCount();
+        operation.addToAnswer(objectCount);
         operation.endOperation();
     }
 

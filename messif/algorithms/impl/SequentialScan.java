@@ -29,13 +29,14 @@ import messif.objects.util.AbstractObjectList;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.objects.PrecomputedDistancesFixedArrayFilter;
-import messif.operations.AlgorithmInfoOperation;
+import messif.operations.query.GetAlgorithmInfoOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.data.DeleteOperation;
 import messif.operations.data.InsertOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingSingleQueryOperation;
+import messif.operations.query.GetObjectCountOperation;
 
 /**
  * Implementation of the naive sequential scan algorithm.
@@ -193,13 +194,26 @@ public class SequentialScan extends Algorithm {
     //******* ALGORITHM INFO OPERATION *************************************//
 
     /**
-     * Method for processing {@link AlgorithmInfoOperation}.
+     * Method for processing {@link GetAlgorithmInfoOperation}.
      * The processing will fill the algorithm info with this
      * algorithm {@link #toString() toString()} value.
      * @param operation the operation to process
      */
-    public void algorithmInfo(AlgorithmInfoOperation operation) {
+    public void algorithmInfo(GetAlgorithmInfoOperation operation) {
         operation.addToAnswer(toString());
+        operation.endOperation();
+    }
+
+    //******* OBJECT COUNT OPERATION *************************************//
+
+    /**
+     * Method for processing {@link GetObjectCountOperation}.
+     * The processing will fill the operation with the number of objects
+     * stored in this algorithm.
+     * @param operation the operation to process
+     */
+    public void objectCount(GetObjectCountOperation operation) {
+        operation.addToAnswer(bucket.getObjectCount());
         operation.endOperation();
     }
 
