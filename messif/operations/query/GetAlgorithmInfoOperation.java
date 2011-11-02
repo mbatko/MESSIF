@@ -14,7 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package messif.operations;
+package messif.operations.query;
+
+import messif.operations.AbstractOperation;
+import messif.operations.OperationErrorCode;
 
 /**
  * Special operation that returns the algorithm info (i.e. the algorithm toString() value).
@@ -24,7 +27,7 @@ package messif.operations;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Algorithm info")
-public class AlgorithmInfoOperation extends AbstractOperation {
+public class GetAlgorithmInfoOperation extends AbstractOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -40,7 +43,7 @@ public class AlgorithmInfoOperation extends AbstractOperation {
      * Creates a new algorithm info operation.
      */
     @AbstractOperation.OperationConstructor({})
-    public AlgorithmInfoOperation() {
+    public GetAlgorithmInfoOperation() {
     }
 
 
@@ -74,9 +77,9 @@ public class AlgorithmInfoOperation extends AbstractOperation {
 
     @Override
     protected boolean dataEqualsImpl(AbstractOperation operation) {
-        if (!(operation instanceof AlgorithmInfoOperation))
+        if (!(operation instanceof GetAlgorithmInfoOperation))
             return false;
-        AlgorithmInfoOperation castOperation = (AlgorithmInfoOperation)operation;
+        GetAlgorithmInfoOperation castOperation = (GetAlgorithmInfoOperation)operation;
         if (answer == null)
             return castOperation.answer == null;
         if (castOperation.answer == null)
@@ -91,10 +94,10 @@ public class AlgorithmInfoOperation extends AbstractOperation {
 
     @Override
     public void updateFrom(AbstractOperation operation) throws ClassCastException {
-        if (!(operation instanceof AlgorithmInfoOperation))
+        if (!(operation instanceof GetAlgorithmInfoOperation))
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());
         if (answer == null)
-            addToAnswer(((AlgorithmInfoOperation)operation).answer);
+            addToAnswer(((GetAlgorithmInfoOperation)operation).answer);
         super.updateFrom(operation);
     }
 
