@@ -139,6 +139,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     public void setAnswerCollection(RankedSortedCollection collection) {
         if (!collection.isEmpty())
             collection.clear();
+        collection.setMaximalCapacity(answer.getMaximalCapacity()); // Preserve maximal capacity (note that the collection can ignore it silently)
         collection.addAll(answer);
         this.answer = collection; // This assignment IS intended
     }

@@ -18,6 +18,7 @@ package messif.operations.query;
 
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.RankingSingleQueryOperation;
@@ -132,6 +133,23 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
     public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances) {
         super(queryObject, answerType, maxAnswerSize, storeMetaDistances);
         this.radius = radius;
+    }
+
+    /**
+     * Creates a new instance of RangeQueryOperation for a given query object, radius and maximal number of objects to return.
+     * @param queryObject the query object
+     * @param radius the query radius
+     * @param answerType the type of objects this operation stores in its answer
+     * @param maxAnswerSize sets the maximal answer size
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     * @param answerCollection collection to be used as answer (it must be empty, otherwise it will be cleared)
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Query radius", "Answer type", "Maximal answer size", "Store the meta-object subdistances?", "Answer collection"})
+    public RangeQueryOperation(LocalAbstractObject queryObject, float radius, AnswerType answerType, int maxAnswerSize, boolean storeMetaDistances, RankedSortedCollection answerCollection) {
+        super(queryObject, answerType, answerCollection, storeMetaDistances);
+        this.radius = radius;
+        answerCollection.setMaximalCapacity(maxAnswerSize);
     }
 
 

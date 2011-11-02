@@ -61,7 +61,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
     private int size;
 
     /** Maximal capacity of the collection */
-    private final int capacity;
+    private int capacity;
 
     /** Modifications counter, used for detecting iterator concurrent modification */
     private transient int modCount;
@@ -200,6 +200,19 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Collec
      */
     public int getMaximalCapacity() {
         return capacity;
+    }
+
+    /**
+     * Set the maximal capacity of this collection.
+     * @param capacity the new collection maximal capacity (zero or negative value means unlimited capacity)
+     */
+    protected void setMaximalCapacity(int capacity) {
+        if (!isEmpty())
+            throw new IllegalStateException("Maximal collection capacity can be set only on empty collection");
+        if (capacity <= 0)
+            this.capacity = UNLIMITED_CAPACITY;
+        else
+            this.capacity = capacity;
     }
 
     /**

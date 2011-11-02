@@ -18,6 +18,7 @@ package messif.operations.query;
 
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.RankingSingleQueryOperation;
@@ -80,6 +81,22 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
     public KNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType) {
         super(queryObject, answerType, k, storeMetaDistances);
         this.k = k;
+    }
+
+    /**
+     * Creates a new instance of kNNQueryOperation for a given query object and maximal number of objects to return.
+     * @param queryObject the object to which the nearest neighbors are searched
+     * @param k the number of nearest neighbors to retrieve
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     * @param answerType the type of objects this operation stores in its answer
+     * @param answerCollection collection to be used as answer (it must be empty, otherwise it will be cleared)
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type", "Answer collection"})
+    public KNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType, RankedSortedCollection answerCollection) {
+        super(queryObject, answerType, answerCollection, storeMetaDistances);
+        this.k = k;
+        answerCollection.setMaximalCapacity(k);
     }
 
 

@@ -126,6 +126,14 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
     }
 
 
+    //****************** Attribute access methods ******************//
+
+    @Override
+    public void setMaximalCapacity(int capacity) {
+        super.setMaximalCapacity(capacity);
+    }
+
+
     //****************** Distance ranked add ******************//
 
     /**

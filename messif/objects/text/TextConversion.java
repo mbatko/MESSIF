@@ -30,7 +30,6 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
-import messif.objects.impl.MetaObjectProfiSCT;
 
 /**
  * Various utility methods for text conversion.
@@ -209,7 +208,7 @@ public abstract class TextConversion {
                 ret[retIndex] = wordIndex.store(keyWord).getAddress();
                 retIndex++;
             } catch (BucketStorageException e) {
-                Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'': {1}", new Object[]{keyWord, e.toString()});
+                Logger.getLogger(TextConversion.class.getName()).log(Level.WARNING, "Cannot insert ''{0}'': {1}", new Object[]{keyWord, e.toString()});
             }
         }
 

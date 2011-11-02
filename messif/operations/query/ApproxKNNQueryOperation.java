@@ -17,6 +17,7 @@
 package messif.operations.query;
 
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.Approximate;
@@ -135,7 +136,28 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation implements Approx
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
-    
+    /**
+     * Creates a new instance of ApproxKNNQueryOperation for a given query object,
+     * maximal number of objects to return and parameters that control the approximation.
+     * @param queryObject query object
+     * @param k number of objects to be returned
+     * @param storeMetaDistances if <tt>true</tt>, all processed {@link messif.objects.MetaObject meta objects} will
+     *          store their {@link messif.objects.util.RankedAbstractMetaObject sub-distances} in the answer
+     * @param answerType the type of objects this operation stores in its answer
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
+     * @param answerCollection collection to be used as answer (it must be empty, otherwise it will be cleared)
+     */
+    @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Store the meta-object subdistances?", "Answer type", "Local search param", "Type of <br/>local search param", "guaranteed radius <br/>(-1 to switch off)", "Answer collection"})
+    public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k, boolean storeMetaDistances, AnswerType answerType, int localSearchParam, LocalSearchType localSearchType, float radiusGuaranteed, RankedSortedCollection answerCollection) {
+        super(queryObject, k, storeMetaDistances, answerType, answerCollection);
+        this.localSearchParam = localSearchParam;
+        this.localSearchType = localSearchType;
+        this.radiusGuaranteed = radiusGuaranteed;
+    }
+
+
     //****************** Attribute access ******************//
 
     @Override
