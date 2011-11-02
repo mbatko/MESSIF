@@ -145,10 +145,10 @@ public class HttpApplicationHandler implements HttpHandler {
      */
     @SuppressWarnings("unchecked")
     public static <T> HttpApplicationProcessor<T> createProcessor(Class<? extends T> processorClass, Algorithm algorithm, String args[], int offset, int length, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, IllegalArgumentException {
-        if (isQuoted(args[offset], '?'))
-            return new ParameterProcessor<T>(args[offset].substring(1, args[offset].length() - 1), processorClass, namedInstances);
-        else if (AbstractOperation.class.isAssignableFrom(processorClass))
+        if (AbstractOperation.class.isAssignableFrom(processorClass))
             return new OperationProcessor(algorithm, processorClass, args, offset, length, namedInstances);
+        else if (isQuoted(args[offset], '?'))
+            return new ParameterProcessor<T>(args[offset].substring(1, args[offset].length() - 1), processorClass, namedInstances);
         else if (LocalAbstractObject.class.isAssignableFrom(processorClass))
             return new ExtractionProcessor(args[offset], processorClass, namedInstances);
         else if (RankedSortedCollection.class.isAssignableFrom(processorClass))
