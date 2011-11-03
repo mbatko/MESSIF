@@ -31,7 +31,7 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
-import messif.utility.Parametric;
+import messif.utility.ModifiableParametric;
 import messif.utility.ParametricBase;
 
 /**
@@ -45,7 +45,7 @@ import messif.utility.ParametricBase;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class MetaObjectParametric extends MetaObject implements Parametric {
+public abstract class MetaObjectParametric extends MetaObject implements ModifiableParametric<Serializable> {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -58,7 +58,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
     //****************** Attributes ******************//
 
     /** Additional parameters for this meta object */
-    private final Map<String, ? extends Serializable> additionalParameters;
+    private Map<String, Serializable> additionalParameters;
 
 
     //****************** Constructors ******************//
@@ -119,13 +119,13 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
     }
 
     @Override
-    public Object getParameter(String name) {
+    public Serializable getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }
 
     @Override
-    public Object getRequiredParameter(String name) throws IllegalArgumentException {
-        Object parameter = getParameter(name);
+    public Serializable getRequiredParameter(String name) throws IllegalArgumentException {
+        Serializable parameter = getParameter(name);
         if (parameter == null)
             throw new IllegalArgumentException("The parameter '" + name + "' is not set");
         return parameter;
@@ -152,6 +152,20 @@ public abstract class MetaObjectParametric extends MetaObject implements Paramet
         if (additionalParameters == null)
             return Collections.emptyMap();
         return Collections.unmodifiableMap(additionalParameters);
+    }
+
+    @Override
+    public void setParameter(String name, Serializable value) {
+        if (additionalParameters == null)
+            additionalParameters = new HashMap<String, Serializable>();
+        additionalParameters.put(name, value);
+    }
+
+    @Override
+    public Serializable removeParameter(String name) {
+        if (additionalParameters == null)
+            return null;
+        return additionalParameters.remove(name);
     }
 
     /**

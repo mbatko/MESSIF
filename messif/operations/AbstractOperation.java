@@ -33,7 +33,7 @@ import java.util.Map;
 import messif.buckets.index.IndexComparator;
 import messif.utility.Clearable;
 import messif.utility.Convert;
-import messif.utility.Parametric;
+import messif.utility.ModifiableParametric;
 import messif.utility.ParametricBase;
 
 
@@ -56,7 +56,7 @@ import messif.utility.ParametricBase;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class AbstractOperation implements Serializable, Cloneable, Clearable, Parametric {
+public abstract class AbstractOperation implements Serializable, Cloneable, Clearable, ModifiableParametric<Serializable> {
     /** class id for serialization */
     private static final long serialVersionUID = 2L;
 
@@ -131,13 +131,13 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     }
 
     @Override
-    public Object getParameter(String name) {
+    public Serializable getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }
 
     @Override
-    public Object getRequiredParameter(String name) throws IllegalArgumentException {
-        Object parameter = getParameter(name);
+    public Serializable getRequiredParameter(String name) throws IllegalArgumentException {
+        Serializable parameter = getParameter(name);
         if (parameter == null)
             throw new IllegalArgumentException("The parameter '" + name + "' is not set");
         return parameter;
@@ -166,17 +166,11 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         return Collections.unmodifiableMap(additionalParameters);
     }
 
-    /**
-     * Set additional {@code name} parameter of this operation to {@code value}.
-     * @param name the name of the additional parameter to set
-     * @param value the value of the additional parameter to set
-     * @return this operation to allow chaining
-     */
-    public AbstractOperation setParameter(String name, Serializable value) {
+    @Override
+    public void setParameter(String name, Serializable value) {
         if (additionalParameters == null)
             additionalParameters = new HashMap<String, Serializable>();
         additionalParameters.put(name, value);
-        return this;
     }
 
     /**
@@ -184,11 +178,13 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
      * @param name the name of the additional parameter to remove
      * @return the value of the parameter {@code name} that was removed or <tt>null</tt> if it was not set
      */
+    @Override
     public Serializable removeParameter(String name) {
         if (additionalParameters == null)
             return null;
         return additionalParameters.remove(name);
     }
+
 
     //*****************   Operation-UUID comparator   **************************//
 
