@@ -261,7 +261,12 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
     }
 
     @Override
-    public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
+    public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setConstructorParameterFromString(int index, String paramValue, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, InstantiationException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
