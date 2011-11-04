@@ -923,7 +923,7 @@ public class CoreApplication {
     }
 
     /**
-     * Changes the answer collection of the last executed operation.
+     * Changes the answer collection of the prepared or last executed operation.
      * This method is valid only if the last executed operation was
      * a descendant of {@link RankingQueryOperation}.
      * Example of usage:
@@ -972,6 +972,46 @@ public class CoreApplication {
             out.println(e.getCause());
             return false;
         }
+    }
+
+    /**
+     * Changes the answer collection of the prepared or last executed operation.
+     * This method is valid only if the last executed operation was
+     * a descendant of {@link RankingQueryOperation}. The collection must be
+     * prepared as a named instance first. Note that the collection will be cleared
+     * and its contents replaced by the current operation answer.
+     * 
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationChangeAnswerNamedInstance collection_named_instance
+     * </pre>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args answer collection named instance name
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "change the answer collection of the last executed operation", arguments = {"collection instance"})
+    public boolean operationChangeAnswerNamedInstance(PrintStream out, String... args) {
+        AbstractOperation operation = lastOperation;
+        if (operation == null) {
+            out.println("No operation has been executed yet");
+            return false;
+        }
+        if (!(operation instanceof RankingQueryOperation)) {
+            out.println("Answer collection can be changed only for ranked results");
+            return false;
+        }
+        if (args.length < 2) {
+            out.println("operationChangeAnswerNamedInstance requires a named instance (see 'help operationChangeAnswerNamedInstance')");
+            return false;
+        }
+        Object newAnswerCollection = namedInstances.get(args[1]);
+        if (newAnswerCollection == null || !(newAnswerCollection instanceof RankedSortedCollection)) {
+            out.println("Named instance '" + args[1] + "' is not collection for the ranking query");
+            return false;
+        }
+        ((RankingQueryOperation)operation).setAnswerCollection((RankedSortedCollection)newAnswerCollection);
+        return true;
     }
 
     /**
@@ -1469,7 +1509,7 @@ public class CoreApplication {
         if (objectStream != null) 
             try {
                 // Set parameter
-                objectStream.setConstructorParameter((args.length > 3)?Integer.parseInt(args[3]):0, args[2]);
+                objectStream.setConstructorParameterFromString((args.length > 3)?Integer.parseInt(args[3]):0, args[2], namedInstances);
                 return true;
             } catch (IndexOutOfBoundsException e) {
                 out.println(e.toString());

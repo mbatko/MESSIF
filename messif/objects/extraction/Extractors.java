@@ -24,7 +24,9 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.utility.ExtendedProperties;
@@ -102,11 +104,22 @@ public abstract class Extractors {
      * @param dataParameter parameter of the data source that contains the object data
      * @param locatorParameter parameter of the data source used to set the extracted object's locator;
      *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @param parameterMapArgument index of a additional parameter that will get the
+     *          {@link ExtractorDataSource#getParameterMap() data source parameter map}
      * @param additionalArguments additional arguments for the constructor
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String dataParameter, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String dataParameter, final String locatorParameter, final int parameterMapArgument, Object[] additionalArguments) throws IllegalArgumentException {
+        if (parameterMapArgument >= 0) {
+            if (additionalArguments == null && parameterMapArgument == 0) // If the parameter map argument is the only additional argument
+                additionalArguments = new Object[] { new HashMap<String, Object>(0) };
+            if (additionalArguments == null || parameterMapArgument >= additionalArguments.length)
+                throw new IllegalArgumentException("Parameter map argument " + parameterMapArgument + " was specified, but not enough additional arguments were specified");
+            if (!(additionalArguments[parameterMapArgument] instanceof Map))
+                throw new IllegalArgumentException("Parameter map argument " + parameterMapArgument + " was specified, but additional arguments does not have Map in that argument");
+        }
+        
         final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
@@ -114,10 +127,16 @@ public abstract class Extractors {
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
                 try {
                     T object;
+                    LocalAbstractObject.TextStreamFactory<? extends T> localFactory = factory;
+                    if (parameterMapArgument >= 0) {
+                        localFactory = new LocalAbstractObject.TextStreamFactory<T>(factory);
+                        localFactory.setConstructorParameter(parameterMapArgument, dataSource.getParameterMap());
+                    }
+
                     if (dataParameter == null)
-                        object = factory.create(dataSource.getBufferedReader());
+                        object = localFactory.create(dataSource.getBufferedReader());
                     else
-                        object = factory.create(dataSource.getRequiredParameter(dataParameter, String.class));
+                        object = localFactory.create(dataSource.getRequiredParameter(dataParameter, String.class));
                     if (locatorParameter != null)
                         object.setObjectKey(new AbstractObjectKey(dataSource.getRequiredParameter(locatorParameter).toString()));
                     return object;
@@ -150,8 +169,8 @@ public abstract class Extractors {
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
-        return createTextExtractor(objectClass, null, locatorParameter, additionalArguments);
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String locatorParameter, Object[] additionalArguments) throws IllegalArgumentException {
+        return createTextExtractor(objectClass, null, locatorParameter, -1, additionalArguments);
     }
 
     /**
@@ -163,7 +182,7 @@ public abstract class Extractors {
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object... additionalArguments) throws IllegalArgumentException {
+    public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, Object[] additionalArguments) throws IllegalArgumentException {
         return createTextExtractor(objectClass, null, additionalArguments);
     }
 
@@ -210,7 +229,7 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, String command) throws IllegalArgumentException {
-        return createExternalExtractor(objectClass, command, false);
+        return createExternalExtractor(objectClass, command, null);
     }
 
     /**
@@ -228,7 +247,7 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, String command, String locatorParameter) throws IllegalArgumentException {
-        return createExternalExtractor(objectClass, command, false, locatorParameter);
+        return createExternalExtractor(objectClass, command, false, locatorParameter, -1, null);
     }
 
     /**
@@ -247,8 +266,8 @@ public abstract class Extractors {
      * @return object created by the extractor
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, Object... additionalArguments) throws IllegalArgumentException {
-        return createExternalExtractor(objectClass, command, false, (String)null);
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, Object[] additionalArguments) throws IllegalArgumentException {
+        return createExternalExtractor(objectClass, command, fileAsArgument, null, -1, additionalArguments);
     }
 
     /**
@@ -265,12 +284,14 @@ public abstract class Extractors {
      * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
      * @param locatorParameter parameter of the data source used to set the extracted object's locator;
      *          if <tt>null</tt>, the object uses the default locator set by the factory
+     * @param parameterMapArgument index of a additional parameter that will get the
+     *          {@link ExtractorDataSource#getParameterMap() data source parameter map}
      * @param additionalArguments additional arguments for the constructor
      * @return extractor for creating objects from binary data by external command
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
-        final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
+    public static <T extends LocalAbstractObject> Extractor<T> createExternalExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, int parameterMapArgument, Object[] additionalArguments) throws IllegalArgumentException {
+        final Extractor<T> textExtractor = createTextExtractor(objectClass, null, locatorParameter, parameterMapArgument, additionalArguments);
         return new Extractor<T>() {
             @Override
             public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
@@ -308,8 +329,8 @@ public abstract class Extractors {
      * @return extractor for creating multiple objects from single binary data by external command
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      */
-    public static <T extends LocalAbstractObject> MultiExtractor<T> createExternalMultiExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object... additionalArguments) throws IllegalArgumentException {
-        final Extractor<T> textExtractor = createTextExtractor(objectClass, locatorParameter, additionalArguments);
+    public static <T extends LocalAbstractObject> MultiExtractor<T> createExternalMultiExtractor(Class<? extends T> objectClass, final String command, final boolean fileAsArgument, String locatorParameter, Object[] additionalArguments) throws IllegalArgumentException {
+        final Extractor<T> textExtractor = createTextExtractor(objectClass, null, locatorParameter, -1, additionalArguments);
         return new MultiExtractor<T>() {
             @Override
             public Iterator<T> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
@@ -342,7 +363,7 @@ public abstract class Extractors {
     @SuppressWarnings("unchecked")
     public static Extractor<?> createExtractor(Class<?> usingClass) {
         if (LocalAbstractObject.class.isAssignableFrom(usingClass)) {
-            return createTextExtractor((Class<? extends LocalAbstractObject>)usingClass);
+            return createTextExtractor((Class<? extends LocalAbstractObject>)usingClass, null);
         } else if (Extractor.class.isAssignableFrom(usingClass)) {
             try {
                 return (Extractor<?>)usingClass.newInstance();
@@ -360,13 +381,13 @@ public abstract class Extractors {
      * <p>
      * If type is "external", additional property {@code <key>.command} is required
      * to contain the external command to execute. Optionally, {@code <key>.fileAsArgument},
-     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
+     * {@code <key>.locatorParameter}, {@code <key>.parameterArg}, and {@code <key>.additionalArg1...n} can be specified
      * - see {@link #createExternalExtractor(java.lang.Class, java.lang.String, boolean, java.lang.String, java.lang.Object[]) createExternalExtractor}.
      * </p>
      * <p>
      * If type is "text", no additional parameters are required. Optionally,
-     * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
-     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.Object[]) createTextExtractor}.
+     * {@code <key>.locatorParameter}, {@code <key>.parameterArg}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
      * </p>
      *
      * @param <T> the class of objects that will be created by the extractor
@@ -385,11 +406,14 @@ public abstract class Extractors {
                     properties.getRequiredProperty(key + ".command"),
                     properties.getBoolProperty(key + ".fileAsArgument", false),
                     properties.getProperty(key + ".locatorParameter"),
+                    properties.getIntProperty(key + ".parameterArg", -1),
                     (Object[])properties.getMultiProperty(key + ".additionalArg")
             );
         } else if (extractorType.equals("text")) {
             return createTextExtractor(objectClass,
+                    properties.getProperty(key + ".dataParameter"),
                     properties.getProperty(key + ".locatorParameter"),
+                    properties.getIntProperty(key + ".parameterArg", -1),
                     (Object[])properties.getMultiProperty(key + ".additionalArg")
             );
         } else if (extractorType.equals("constructor")) {
@@ -397,7 +421,7 @@ public abstract class Extractors {
                 Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
                 return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key)), objectClass);
             } catch (InvocationTargetException e) {
-                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e, e);
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
             } catch (Exception e) {
                 throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
             }
@@ -407,7 +431,7 @@ public abstract class Extractors {
                 Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
                 return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key)), objectClass);
             } catch (InvocationTargetException e) {
-                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e, e);
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
             } catch (Exception e) {
                 throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
             }
@@ -429,7 +453,7 @@ public abstract class Extractors {
      * <p>
      * If type is "text", no additional parameters are required. Optionally,
      * {@code <key>.locatorParameter}, and {@code <key>.additionalArg1...n} can be specified
-     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.Object[]) createTextExtractor}.
+     * - see {@link #createTextExtractor(java.lang.Class, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
      * </p>
      *
      * @param properties the properties with values

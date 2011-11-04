@@ -18,7 +18,9 @@ package messif.objects.util;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 import messif.objects.LocalAbstractObject;
+import messif.utility.Convert;
 
 /**
  * This class represents an iterator on {@link LocalAbstractObject}s that are read from a file.
@@ -43,10 +45,20 @@ public abstract class AbstractStreamObjectIterator<E extends LocalAbstractObject
      * @param paramValue the changed value to pass to the constructor
      * @throws IllegalArgumentException when the passed object is incompatible with the constructor's parameter
      * @throws IndexOutOfBoundsException if the index parameter is out of bounds (zero parameter cannot be changed)
+     */
+    public abstract void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException;
+
+    /**
+     * Sets the value of this stream's object constructor argument from a string value.
+     * This method can be used to change object passed to <code>constructorArgs</code>.
+     *
+     * @param index the parameter index to change (zero-based)
+     * @param paramValue the changed value to pass to the constructor
+     * @param namedInstances map of named instances for the {@link Convert#stringToType} conversion
+     * @throws IndexOutOfBoundsException if the index parameter is out of bounds
      * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
      */
-    public abstract void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException;
-
+    public abstract void setConstructorParameterFromString(int index, String paramValue, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, InstantiationException;
 
     /**
      * Reset the associated stream and restarts the iteration from beginning.

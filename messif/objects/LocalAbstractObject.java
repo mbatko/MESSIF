@@ -757,6 +757,16 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
         }
 
         /**
+         * Creates a new factory from another text stream factory.
+         * Note that the constructor and additional arguments are copied.
+         * @param sourceFactory the text stream factory to copy from
+         */
+        public TextStreamFactory(TextStreamFactory<? extends T> sourceFactory) {
+            this.constructor = sourceFactory.constructor;
+            this.arguments = sourceFactory.arguments.clone();
+        }
+
+        /**
          * Sets the value of this factory's constructor argument.
          * This method can be used to change object passed to <code>additionalArguments</code>.
          *
@@ -764,19 +774,38 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
          * @param paramValue the changed value to pass to the constructor
          * @throws IllegalArgumentException when the passed object is incompatible with the constructor's parameter
          * @throws IndexOutOfBoundsException if the index parameter is out of bounds
+         */
+        public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException {
+            Class<?> constructorParameterClass = getConstructorParameterClass(index);
+            if (!constructorParameterClass.isInstance(paramValue))
+                throw new IllegalArgumentException("Supplied object must be instance of " + constructorParameterClass.getName());
+            arguments[index + 1] = paramValue;
+        }
+
+        /**
+         * Sets the value of this factory's constructor argument from a string value.
+         * This method can be used to change object passed to <code>additionalArguments</code>.
+         *
+         * @param index the parameter index to change (zero-based)
+         * @param paramValue the changed value to pass to the constructor
+         * @param namedInstances map of named instances for the {@link Convert#stringToType} conversion
+         * @throws IndexOutOfBoundsException if the index parameter is out of bounds
          * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
          */
-        public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
-            if (arguments == null || index++ < 0 || index >= arguments.length) // index is incremented because the first argument is always the stream
+        public void setConstructorParameterFromString(int index, String paramValue, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, InstantiationException {
+            arguments[index + 1] = Convert.stringToType(paramValue, getConstructorParameterClass(index));
+        }
+
+        /**
+         * Returns the class of the {@code index}th additional argument of this factory constructor.
+         * @param index the argument index the class of which to get (zero-based)
+         * @return the class of the {@code index}th additional argument
+         * @throws IndexOutOfBoundsException 
+         */
+        public Class<?> getConstructorParameterClass(int index) throws IndexOutOfBoundsException {
+            if (arguments == null || index < 0 || index > arguments.length)
                 throw new IndexOutOfBoundsException("Invalid index (" + index + ") for " + constructor.toString());
-            Class<?>[] argTypes = constructor.getParameterTypes();
-            if (!argTypes[index].isInstance(paramValue)) {
-                if (paramValue instanceof String)
-                    paramValue = Convert.stringToType((String)paramValue, argTypes[index]);
-                else
-                    throw new IllegalArgumentException("Supplied object must be instance of " + argTypes[index].getName());
-            }
-            arguments[index] = paramValue;
+            return constructor.getParameterTypes()[index + 1]; // index is incremented because the first argument is always the stream
         }
 
         /**

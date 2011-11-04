@@ -169,19 +169,14 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
 
     //****************** Attribute access methods ******************//
 
-    /**
-     * Sets the value of this stream's object constructor argument.
-     * This method can be used to change object passed to <code>constructorArgs</code>.
-     * 
-     * @param index the parameter index to change (zero-based)
-     * @param paramValue the changed value to pass to the constructor
-     * @throws IllegalArgumentException when the passed object is incompatible with the constructor's parameter
-     * @throws IndexOutOfBoundsException if the index parameter is out of bounds (zero parameter cannot be changed)
-     * @throws InstantiationException if the value passed is string that is not convertible to the constructor class
-     */
     @Override
-    public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException, InstantiationException {
+    public void setConstructorParameter(int index, Object paramValue) throws IndexOutOfBoundsException, IllegalArgumentException {
         factory.setConstructorParameter(index, paramValue);
+    }
+
+    @Override
+    public void setConstructorParameterFromString(int index, String paramValue, Map<String, Object> namedInstances) throws IndexOutOfBoundsException, InstantiationException {
+        factory.setConstructorParameterFromString(index, paramValue, namedInstances);
     }
 
     /**
