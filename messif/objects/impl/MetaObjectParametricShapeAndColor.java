@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObjectParametric;
@@ -98,9 +99,22 @@ public class MetaObjectParametricShapeAndColor extends MetaObjectParametricArray
      *         {@link java.io.EOFException} is thrown when end-of-file of the given stream is reached
      * @throws NumberFormatException when the line with the descriptor is not valid
      */
-    @SuppressWarnings("unchecked")
     public MetaObjectParametricShapeAndColor(BufferedReader stream) throws IOException, NumberFormatException {
-        super(stream, ObjectColorLayout.class, ObjectShortVectorL1.class, ObjectIntVectorL1.class, ObjectVectorEdgecomp.class, ObjectXMRegionShape.class);
+        this(stream, new HashMap<String, Serializable>());
+    }
+
+    /**
+     * Creates a new instance of MetaObjectParametricShapeAndColor from a stream.
+     * 
+     * @param stream text stream to read the data from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws IOException when an error appears during reading from given stream;
+     *         {@link java.io.EOFException} is thrown when end-of-file of the given stream is reached
+     * @throws NumberFormatException when the line with the descriptor is not valid
+     */
+    @SuppressWarnings("unchecked")
+    public MetaObjectParametricShapeAndColor(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException, NumberFormatException {
+        super(stream, additionalParameters, ObjectColorLayout.class, ObjectShortVectorL1.class, ObjectIntVectorL1.class, ObjectVectorEdgecomp.class, ObjectXMRegionShape.class);
     }
 
     /**
