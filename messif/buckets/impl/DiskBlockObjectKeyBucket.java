@@ -79,7 +79,7 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      * @throws IOException if there was a problem opening or creating the bucket file
      */
     public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file) throws IOException {
-        this(capacity, softCapacity, lowOccupation, file, 16*1024, true, false, new MultiClassSerializator<LocalAbstractObject>(LocalAbstractObject.class));
+        this(capacity, softCapacity, lowOccupation, file, 16*1024, false, false, new MultiClassSerializator<LocalAbstractObject>(LocalAbstractObject.class));
     }
 
     /**

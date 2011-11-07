@@ -266,7 +266,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         File file = Convert.getParameterValue(parameters, "file", File.class, null);
         Class[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
         int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, 16384);
-        boolean directBuffer = Convert.getParameterValue(parameters, "directBuffer", Boolean.class, true);
+        boolean directBuffer = Convert.getParameterValue(parameters, "directBuffer", Boolean.class, false);
         boolean memoryMap = Convert.getParameterValue(parameters, "memoryMap", Boolean.class, false);
         boolean readOnly = Convert.getParameterValue(parameters, "readOnly", Boolean.class, false);
         long startPosition = Convert.getParameterValue(parameters, "startPosition", Long.class, 0L);
