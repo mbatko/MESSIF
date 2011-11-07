@@ -203,7 +203,7 @@ public class MetaObjectParametricArrayTotalMin extends MetaObjectParametricArray
      *          compatible with the {@code o1}, the {@link #MAX_DISTANCE} is returned
      */
     protected static float getMinNormDistanceToArray(LocalAbstractObject o1, LocalAbstractObject o2, float distThreshold) {
-        if (!(o2 instanceof MetaObjectParametricArray))
+        if (o1.isDistanceCompatible(o2))
             return o1.getNormDistance(o2, distThreshold);
         MetaObjectParametricArray castO2 = (MetaObjectParametricArray)o2;
 

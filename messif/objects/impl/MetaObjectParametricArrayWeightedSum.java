@@ -180,7 +180,7 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
     @Override
     protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
         float rtv = 0;
-        MetaObjectArray castObj = (MetaObjectArray)obj;
+        MetaObjectParametricArray castObj = (MetaObjectParametricArray)obj;
 
         for (int i = 0; i < objects.length; i++) {
             float weight = getWeight(i);
