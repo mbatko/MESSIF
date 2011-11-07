@@ -112,7 +112,7 @@ public abstract class Extractors {
      */
     public static <T extends LocalAbstractObject> Extractor<T> createTextExtractor(Class<? extends T> objectClass, final String dataParameter, final String locatorParameter, final int parameterMapArgument, Object[] additionalArguments) throws IllegalArgumentException {
         if (parameterMapArgument >= 0) {
-            if (additionalArguments == null && parameterMapArgument == 0) // If the parameter map argument is the only additional argument
+            if (parameterMapArgument == 0 && (additionalArguments == null || additionalArguments.length == 0)) // If the parameter map argument is the only additional argument
                 additionalArguments = new Object[] { new HashMap<String, Object>(0) };
             if (additionalArguments == null || parameterMapArgument >= additionalArguments.length)
                 throw new IllegalArgumentException("Parameter map argument " + parameterMapArgument + " was specified, but not enough additional arguments were specified");

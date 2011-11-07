@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.HashMap;
 import java.util.Map;
 import messif.utility.ParametricBase;
 
@@ -180,6 +181,29 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
      */
     public ExtractorDataSource(File file) throws IOException {
         this(file, null);
+    }
+
+
+    //****************** Content parameter factory method *************//
+
+    /**
+     * Returns a data source that has a parameter containing the binary content of the original data source.
+     * Note that if the {@code contentParameterName} is <tt>null</tt> or the 
+     * given data source already contains the parameter of that name, the original
+     * data source is returned.
+     * 
+     * @param dataSource the data source the binary content of which to get
+     * @param contentParameterName the name of the parameter that holds the binary content
+     * @return a new data source created from the binary data of the original data source and its parameter map
+     * @throws IOException if there was a problem reading the binary data
+     */
+    public static ExtractorDataSource addContentParameter(ExtractorDataSource dataSource, String contentParameterName) throws IOException {
+        if (contentParameterName == null || dataSource.containsParameter(contentParameterName))
+            return dataSource;
+        Map<String, Object> parameters = new HashMap<String, Object>(dataSource.getParameterMap());
+        byte[] binaryData = dataSource.getBinaryData();
+        parameters.put(contentParameterName, binaryData);
+        return new ExtractorDataSource(binaryData, parameters);
     }
 
 
