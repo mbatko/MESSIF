@@ -16,6 +16,7 @@
  */
 package messif.objects.util;
 
+import java.util.Collection;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
@@ -49,28 +50,51 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
     private final float originalDistanceWeight;
     /** Ranking object used as the first argument for the {@link #rankingDistanceFunction} */
     private final T rankingObject;
+    /** Flag whether the {@link #addAll} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)*/
+    private final boolean rankInAddAll;
 
 
     //****************** Constructors ******************//
 
     /**
      * Constructs an empty collection with the specified initial and maximal capacity.
+     * If this collection is used during a query processing, the {@code rankInAddAll}
+     * should be set to <tt>false</tt>. If the collection is used as post-ranking,
+     * the {@code rankInAddAll} probably needs to be set to <tt>true</tt>, however
+     * the correct type of objects must be present in the operation (i.e. the {@link AnswerType}
+     * should be set to something above {@link AnswerType#CLEARED_OBJECTS}.
      * 
      * @param rankingDistanceFunction the distance function used for the ranking
      * @param rankingObject the object used for ranking
      * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
+     * @param rankInAddAll flag whether the {@link #addAll} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)
      * @param initialCapacity the initial capacity of the collection
      * @param maximalCapacity the maximal capacity of the collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      * @throws NullPointerException if the ranking distance function is <tt>null</tt>
      */
-    public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
+    public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, boolean rankInAddAll, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
         super(initialCapacity, maximalCapacity);
         if (rankingDistanceFunction == null)
             throw new NullPointerException();
         this.rankingDistanceFunction = rankingDistanceFunction;
         this.originalDistanceWeight = originalDistanceWeight;
         this.rankingObject = rankingObject;
+        this.rankInAddAll = rankInAddAll;
+    }
+
+    /**
+     * Constructs an empty collection.
+     * The initial capacity of the collection is set to 16 and maximal capacity
+     * is not limited.
+     * 
+     * @param rankingDistanceFunction the distance function used for the ranking
+     * @param rankingObject the object used for ranking
+     * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
+     * @param rankInAddAll flag whether the {@link #addAll} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)
+     */
+    public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, boolean rankInAddAll) {
+        this(rankingDistanceFunction, rankingObject, originalDistanceWeight, rankInAddAll, DEFAULT_INITIAL_CAPACITY, UNLIMITED_CAPACITY);
     }
 
     /**
@@ -83,7 +107,7 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
      */
     public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight) {
-        this(rankingDistanceFunction, rankingObject, originalDistanceWeight, DEFAULT_INITIAL_CAPACITY, UNLIMITED_CAPACITY);
+        this(rankingDistanceFunction, rankingObject, originalDistanceWeight, false);
     }
 
     /**
@@ -93,14 +117,15 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * 
      * @param rankingObject the object used for ranking
      * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
+     * @param rankInAddAll flag whether the {@link #addAll} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)
      * @param initialCapacity the initial capacity of the collection
      * @param maximalCapacity the maximal capacity of the collection
      * @return an empty collection
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      * @throws NullPointerException if the ranking object is <tt>null</tt> 
      */
-    public static RankedSortedDistFunctionCollection<LocalAbstractObject> create(LocalAbstractObject rankingObject, float originalDistanceWeight, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
-        return new RankedSortedDistFunctionCollection<LocalAbstractObject>(rankingObject, rankingObject, originalDistanceWeight, initialCapacity, maximalCapacity);
+    public static RankedSortedDistFunctionCollection<LocalAbstractObject> create(LocalAbstractObject rankingObject, float originalDistanceWeight, boolean rankInAddAll, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
+        return new RankedSortedDistFunctionCollection<LocalAbstractObject>(rankingObject, rankingObject, originalDistanceWeight, rankInAddAll, initialCapacity, maximalCapacity);
     }
 
 
@@ -117,6 +142,17 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
             throw new IllegalArgumentException("Distance function requires " + rankingDistanceFunction.getDistanceObjectClass() + " but " + object.getClass() + " was given (using AnswerType.NODATA_OBJECTS?)");
         // This cast is sufficiently checked on the previous line - we only require object compatible with the distance function
         return super.add(answerType, object, distance * originalDistanceWeight + rankingDistanceFunction.getDistance(rankingObject, (T)object), objectDistances);
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends RankedAbstractObject> collection) {
+        if (!rankInAddAll)
+            return super.addAll(collection);
+        for (RankedAbstractObject obj : collection) {
+            add(AnswerType.ORIGINAL_OBJECTS, obj.getObject(), obj.getDistance(),
+                    obj instanceof RankedAbstractMetaObject ? ((RankedAbstractMetaObject)obj).getSubDistances() : null);
+        }
+        return true;
     }
 
 }
