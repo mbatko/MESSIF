@@ -138,7 +138,9 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
 
     /**
      * Add a distance-ranked object to this collection.
-     * Preserve the information about distances of the respective sub-objects.
+     * The information about distances of the respective sub-objects is preserved
+     * using {@link RankedAbstractMetaObject} if the given {@code objectDistances}
+     * array is not <tt>null</tt>.
      * @param answerType the type of the objects added to this collection
      * @param object the object to add
      * @param distance the distance of object
@@ -147,6 +149,29 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
      * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject add(AnswerType answerType, AbstractObject object, float distance, float[] objectDistances) {
+        return add(answerType, object, distance, objectDistances, false);
+    }
+
+    /**
+     * Internal method that adds a distance-ranked object to this collection.
+     * The information about distances of the respective sub-objects is preserved
+     * using {@link RankedAbstractMetaObject} if the given {@code objectDistances}
+     * array is not <tt>null</tt>.
+     * <p>
+     * This should only be used if the {@link #add(java.lang.Object) add} method is overridden
+     * to call {@link #add(messif.operations.AnswerType, messif.objects.AbstractObject, float, float[])}
+     * to avoid infinite calling loop when adding object.
+     * </p>
+     * @param answerType the type of the objects added to this collection
+     * @param object the object to add
+     * @param distance the distance of object
+     * @param objectDistances the array of distances to the respective sub-objects (can be <tt>null</tt>)
+     * @param useSuperAdd flag whether to call the super {@link #add(java.lang.Object) add} method (<tt>true</tt>)
+     *          or the actual {@link #add(java.lang.Object) add} method that can be overridden in the descendants (<tt>false</tt>)
+     * @return the distance-ranked object that was added to this collection or <tt>null</tt> if the object was not added
+     * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
+     */
+    protected final RankedAbstractObject add(AnswerType answerType, AbstractObject object, float distance, float[] objectDistances, boolean useSuperAdd) {
         if (object == null)
             return null;
 
@@ -162,9 +187,7 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
         }
 
         // Add the encapsulated object to this collection
-        if (add(rankedObject))
-            return rankedObject;
-        else
-            return null;        
+        boolean added = useSuperAdd ? super.add(rankedObject) : add(rankedObject);
+        return added ? rankedObject : null;
     }
 }
