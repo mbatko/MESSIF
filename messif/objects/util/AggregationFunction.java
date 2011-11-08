@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.utility.Convert;
@@ -31,7 +32,7 @@ import messif.utility.Convert;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class AggregationFunction implements Serializable {
+public abstract class AggregationFunction implements DistanceFunction<MetaObject>, Serializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -104,8 +105,14 @@ public abstract class AggregationFunction implements Serializable {
      * @param object2 the other meta object to compute distance for
      * @return the distance between object1 and object1 using this combination function
      */
+    @Override
     public float getDistance(MetaObject object1, MetaObject object2) {
         return getDistance(object1, object2, null);
+    }
+
+    @Override
+    public Class<? extends MetaObject> getDistanceObjectClass() {
+        return MetaObject.class;
     }
 
 
