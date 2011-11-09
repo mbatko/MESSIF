@@ -107,11 +107,18 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
             if (getCollectionCount() != col.getCollectionCount())       // Number of sublists must be the same.
                 return false;
             
-            boolean res = super.addAll(c);
+            boolean res = false;
+            
+            // Add the collection to the main list
+            for (RankedAbstractObject o : c) {
+                if (super.add(o))
+                    res = true;
+            }
+            
             // Add to the sublists too
             for (int i = 0; i < getCollectionCount(); i++) {
                 boolean subRes = getCollection(i).addAll(col.getCollection(i));
-                res = res && subRes;
+                res = res || subRes;
             }
             return res;
         } else {
