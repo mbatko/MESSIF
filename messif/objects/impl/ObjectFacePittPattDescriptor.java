@@ -31,7 +31,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Parametric;
+import messif.utility.ModifiableParametric;
 
 /**
  * This class encapsulates a PittPatt recognition descriptor.
@@ -40,7 +40,7 @@ import messif.utility.Parametric;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Parametric {
+public class ObjectFacePittPattDescriptor extends ObjectByteVector implements ModifiableParametric<Serializable> {
     /** class id for serialization */
     private static final long serialVersionUID = 2L;
 
@@ -81,7 +81,7 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Pa
     //****************** Attributes ******************//
 
     /** Encapsulated {@link Map} that provides the parameter values */
-    private final Map<String, ? extends Serializable> additionalParameters;
+    private final Map<String, Serializable> additionalParameters;
 
 
     //****************** Constructors ******************//
@@ -163,13 +163,13 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Pa
     }
 
     @Override
-    public Object getParameter(String name) {
+    public Serializable getParameter(String name) {
         return additionalParameters != null ? additionalParameters.get(name) : null;
     }
 
     @Override
-    public Object getRequiredParameter(String name) throws IllegalArgumentException {
-        Object parameter = getParameter(name);
+    public Serializable getRequiredParameter(String name) throws IllegalArgumentException {
+        Serializable parameter = getParameter(name);
         if (parameter == null)
             throw new IllegalArgumentException("The parameter '" + name + "' is not set");
         return parameter;
@@ -192,10 +192,20 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Pa
     }
 
     @Override
-    public Map<String, ? extends Object> getParameterMap() {
+    public Map<String, ? extends Serializable> getParameterMap() {
         if (additionalParameters == null)
             return Collections.emptyMap();
         return Collections.unmodifiableMap(additionalParameters);
+    }
+
+    @Override
+    public Serializable removeParameter(String name) {
+        return additionalParameters.remove(name);
+    }
+
+    @Override
+    public void setParameter(String name, Serializable value) {
+        additionalParameters.put(name, value);
     }
 
 
