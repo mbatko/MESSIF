@@ -119,7 +119,7 @@ public abstract class Extractors {
             if (!(additionalArguments[parameterMapArgument] instanceof Map))
                 throw new IllegalArgumentException("Parameter map argument " + parameterMapArgument + " was specified, but additional arguments does not have Map in that argument");
         }
-        
+
         final LocalAbstractObject.TextStreamFactory<? extends T> factory = new LocalAbstractObject.TextStreamFactory<T>(objectClass, additionalArguments);
 
         return new Extractor<T>() {
@@ -192,7 +192,7 @@ public abstract class Extractors {
      * represent a valid file, which is passed in place of %s parameter in the {@code command}.
      * Otherwise, the external extractor receives the data from the {@code dataSource}
      * on its standard input.
-     * 
+     *
      * @param command the external command (including all necessary arguments)
      * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
      * @param dataSource the source of binary data for the extraction
@@ -419,7 +419,7 @@ public abstract class Extractors {
         } else if (extractorType.equals("constructor")) {
             try {
                 Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
-                return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key)), objectClass);
+                return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
             } catch (InvocationTargetException e) {
                 throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
             } catch (Exception e) {
@@ -429,7 +429,7 @@ public abstract class Extractors {
             try {
                 Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".methodClass", true, Extractor.class);
                 Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
-                return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key)), objectClass);
+                return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
             } catch (InvocationTargetException e) {
                 throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
             } catch (Exception e) {
