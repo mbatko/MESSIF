@@ -149,5 +149,9 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
         return (float)Math.sqrt(dist);
     }
 
+    @Override
+    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
+        return ObjectFaceMPEG7AdvancedDescriptor.class;
+    }
 
 }

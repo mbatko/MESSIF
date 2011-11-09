@@ -78,7 +78,7 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
     public ObjectFacePittPattDescriptor(byte[] data) {
         super(data);
     }
-    
+
     /**
      * Creates a new instance of ObjectFacePittPattDescriptor from stream.
      * @param stream the stream to read object's data from
@@ -89,6 +89,18 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
      */
     public ObjectFacePittPattDescriptor(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
         super(stream, true);
+    }
+
+
+    //****************** Attribute access method ******************//
+
+    /**
+     * Returns whether this object has a PittPatt face template for recognition.
+     * If <tt>false</tt> is returned, this object cannot be used to compute distance.
+     * @return <tt>true</tt> if this object has a PittPatt face template for recognition
+     */
+    public boolean hasFace() {
+        return data != null && data.length > 0;
     }
 
 
@@ -117,7 +129,27 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) throws IllegalStateException {
         if (!isLibraryLoaded)
             throw new IllegalStateException("Cannot compute distance - the PittPatt library was not loaded");
-        return 1f - getSimilarityImpl(data, ((ObjectFacePittPattDescriptor)obj).data);
+        ObjectFacePittPattDescriptor castObj = (ObjectFacePittPattDescriptor)obj;
+        if (!hasFace())
+            throw new IllegalStateException("No face present in " + this);
+        if (!castObj.hasFace())
+            throw new IllegalStateException("No face present in " + obj);
+        float score = getSimilarityImpl(data, castObj.data);
+        if (score < 0) // Zero is 1% false acceptance rate, one is 0.1% false acceptance rate
+            return 1f;
+        if (score < 1)
+            return 1f - score * 0.5f;
+        return (1f -  score / 20.0f) * 0.5f;
+    }
+
+    @Override
+    public float getMaxDistance() {
+        return 1f;
+    }
+
+    @Override
+    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
+        return ObjectFacePittPattDescriptor.class;
     }
 
 
