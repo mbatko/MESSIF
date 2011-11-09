@@ -100,6 +100,26 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
     //************ Overrides ************//
 
     @Override
+    public boolean addAll(Collection<? extends RankedAbstractObject> c) {
+        if (c instanceof CollectionProvider) {
+            @SuppressWarnings("unchecked")
+            CollectionProvider<? extends RankedAbstractObject> col = (CollectionProvider<RankedAbstractObject>)c;
+            if (getCollectionCount() != col.getCollectionCount())       // Number of sublists must be the same.
+                return false;
+            
+            boolean res = super.addAll(c);
+            // Add to the sublists too
+            for (int i = 0; i < getCollectionCount(); i++) {
+                boolean subRes = getCollection(i).addAll(col.getCollection(i));
+                res = res && subRes;
+            }
+            return res;
+        } else {
+            return super.addAll(c);
+        }
+    }
+    
+    @Override
     public boolean add(RankedAbstractObject e) throws IllegalArgumentException {
         if (!(e instanceof RankedAbstractMetaObject) || ((RankedAbstractMetaObject)e).getSubDistances().length != sublists.length)
             throw new IllegalArgumentException("Multi collection can only process RankedAbstractMetaObject with " + sublists.length + " meta distances");
