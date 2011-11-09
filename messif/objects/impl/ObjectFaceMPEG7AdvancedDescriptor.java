@@ -19,9 +19,15 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.LocalAbstractObjectAutoImpl;
+import messif.utility.Parametric;
 
 /**
  * This class holds an advanced descriptor of face identity robust to variations in pose and illumination conditions.
@@ -31,7 +37,7 @@ import messif.objects.LocalAbstractObjectAutoImpl;
  * The face images should be normalized before feature extraction.
  * The positions of two eyes should be at (24,16) and (24,31) in the scaled image(56 pixels in height and 46 pixels in width).
  *
- * This descriptor supports scalable represenation of facial feature vector. If you wish to change the dimensionality of
+ * This descriptor supports scalable representation of facial feature vector. If you wish to change the dimensionality of
  * the vector, set extraction parameters and matching parameters. The allowed range of the extraction parameters is from
  * 24 to 63 for FourierFeature, and from 0 to 63 for CompositeFeature. The dimensions of the feature vectors in matching
  * must not exceed those of the extracted feature vectors.
@@ -40,7 +46,7 @@ import messif.objects.LocalAbstractObjectAutoImpl;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoImpl {
+public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoImpl implements Parametric {
     /** Class id for serialization. */
     private static final long serialVersionUID = 2L;
         
@@ -65,21 +71,25 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
             "compositeFeature",
             "centralCompositeFeature");
 
+    /** Encapsulated {@link Map} that provides the parameter values */
+    private final Map<String, ? extends Serializable> additionalParameters;
+
 
     //****************** Attributes ******************//
 
     /**
      * Creates a new instance of ObjectFaceMPEG7AdvancedDescriptor with the given data.
      * 
+     * @param additionalParameters additional parameters for this meta object
      * @param extensionFlag the flag whether the composite features extension is used
      * @param fourierFeature the face Fourier feature vector
      * @param centralFourierFeature the face central Fourier feature vector
      * @param compositeFeature the face composite feature vector
      * @param centralCompositeFeature the face central composite feature vector
      */
-    public ObjectFaceMPEG7AdvancedDescriptor(int extensionFlag, int[] fourierFeature, int[] centralFourierFeature, int[] compositeFeature, int[] centralCompositeFeature) {
-        this.extensionFlag = extensionFlag;
-        
+    public ObjectFaceMPEG7AdvancedDescriptor(Map<String, ? extends Serializable> additionalParameters, int extensionFlag, int[] fourierFeature, int[] centralFourierFeature, int[] compositeFeature, int[] centralCompositeFeature) {
+        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
+        this.extensionFlag = extensionFlag;        
         this.fourierFeature = fourierFeature.clone();
         this.centralFourierFeature = centralFourierFeature.clone();
         this.compositeFeature = compositeFeature.clone();
@@ -94,7 +104,20 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
      * @throws IllegalArgumentException if the text stream contains invalid values for this object
      */
     public ObjectFaceMPEG7AdvancedDescriptor(BufferedReader stream) throws EOFException, IOException, IllegalArgumentException {
+        this(stream, null);
+    }
+
+    /**
+     * Creates a new instance of ObjectFaceMPEG7AdvancedDescriptor from stream.
+     * @param stream the text stream to read one object from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws EOFException is thrown when the end-of-file is reached
+     * @throws IOException if there is an error during reading from the given stream;
+     * @throws IllegalArgumentException if the text stream contains invalid values for this object
+     */
+    public ObjectFaceMPEG7AdvancedDescriptor(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws EOFException, IOException, IllegalArgumentException {
         super(stream);
+        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
     }
 
 
@@ -114,6 +137,62 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
     @Override
     protected String getArrayItemsRegexp() {
         return "[,\\s]\\s*";
+    }
+
+
+    //****************** Parametric interface implementation ******************//
+
+    @Override
+    public int getParameterCount() {
+        return additionalParameters != null ? additionalParameters.size() : 0;
+    }
+
+    @Override
+    public Collection<String> getParameterNames() {
+        if (additionalParameters == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(additionalParameters.keySet());
+    }
+
+    @Override
+    public boolean containsParameter(String name) {
+        return additionalParameters != null && additionalParameters.containsKey(name);
+    }
+
+    @Override
+    public Object getParameter(String name) {
+        return additionalParameters != null ? additionalParameters.get(name) : null;
+    }
+
+    @Override
+    public Object getRequiredParameter(String name) throws IllegalArgumentException {
+        Object parameter = getParameter(name);
+        if (parameter == null)
+            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
+        return parameter;
+    }
+
+    @Override
+    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException {
+        return parameterClass.cast(getRequiredParameter(name));
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
+        Object value = getParameter(name);
+        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
+        return getParameter(name, parameterClass, null);
+    }
+
+    @Override
+    public Map<String, ? extends Object> getParameterMap() {
+        if (additionalParameters == null)
+            return Collections.emptyMap();
+        return Collections.unmodifiableMap(additionalParameters);
     }
 
 

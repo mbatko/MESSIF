@@ -20,9 +20,18 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
+import messif.objects.nio.BinarySerializator;
+import messif.utility.Parametric;
 
 /**
  * This class encapsulates a PittPatt recognition descriptor.
@@ -31,9 +40,9 @@ import messif.objects.LocalAbstractObject;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFacePittPattDescriptor extends ObjectByteVector {
+public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Parametric {
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     //****************** External library initialization ******************//
 
@@ -69,6 +78,12 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
     }
 
 
+    //****************** Attributes ******************//
+
+    /** Encapsulated {@link Map} that provides the parameter values */
+    private final Map<String, ? extends Serializable> additionalParameters;
+
+
     //****************** Constructors ******************//
 
     /**
@@ -76,7 +91,17 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
      * @param data the PittPatt data for recognition
      */
     public ObjectFacePittPattDescriptor(byte[] data) {
+        this(null, data);
+    }
+
+    /**
+     * Creates a new instance of ObjectFacePittPattDescriptor from provided data.
+     * @param additionalParameters additional parameters for this meta object
+     * @param data the PittPatt data for recognition
+     */
+    public ObjectFacePittPattDescriptor(Map<String, ? extends Serializable> additionalParameters, byte[] data) {
         super(data);
+        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
     }
 
     /**
@@ -88,7 +113,21 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
      * @throws IllegalArgumentException if the read data is not valid
      */
     public ObjectFacePittPattDescriptor(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
+        this(stream, null);
+    }
+
+    /**
+     * Creates a new instance of ObjectFacePittPattDescriptor from stream.
+     * @param stream the stream to read object's data from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws IOException if there was an error during reading from the given stream
+     * @throws EOFException when end-of-file of the given stream is reached
+     * @throws NumberFormatException when the line read from given stream does not consist of comma-separated or space-separated numbers
+     * @throws IllegalArgumentException if the read data is not valid
+     */
+    public ObjectFacePittPattDescriptor(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
         super(stream, true);
+        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
     }
 
 
@@ -101,6 +140,62 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
      */
     public boolean hasFace() {
         return data != null && data.length > 0;
+    }
+
+
+    //****************** Parametric interface implementation ******************//
+
+    @Override
+    public int getParameterCount() {
+        return additionalParameters != null ? additionalParameters.size() : 0;
+    }
+
+    @Override
+    public Collection<String> getParameterNames() {
+        if (additionalParameters == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(additionalParameters.keySet());
+    }
+
+    @Override
+    public boolean containsParameter(String name) {
+        return additionalParameters != null && additionalParameters.containsKey(name);
+    }
+
+    @Override
+    public Object getParameter(String name) {
+        return additionalParameters != null ? additionalParameters.get(name) : null;
+    }
+
+    @Override
+    public Object getRequiredParameter(String name) throws IllegalArgumentException {
+        Object parameter = getParameter(name);
+        if (parameter == null)
+            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
+        return parameter;
+    }
+
+    @Override
+    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException {
+        return parameterClass.cast(getRequiredParameter(name));
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
+        Object value = getParameter(name);
+        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
+        return getParameter(name, parameterClass, null);
+    }
+
+    @Override
+    public Map<String, ? extends Object> getParameterMap() {
+        if (additionalParameters == null)
+            return Collections.emptyMap();
+        return Collections.unmodifiableMap(additionalParameters);
     }
 
 
@@ -171,4 +266,60 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector {
      * @return zero if the activation was successful, a PittPatt error code is returned otherwise
      */
     private static native int activateLibrary(String licenseId, int[] licenseKey);
+
+
+    //************ BinarySerializable interface ************//
+
+    /**
+     * Creates a new instance of ObjectFacePittPattDescriptor loaded from binary input.
+     *
+     * @param input the input to read the ObjectFacePittPattDescriptor from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    public ObjectFacePittPattDescriptor(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        int additionaParametersCount = serializator.readInt(input);
+        if (additionaParametersCount == -1) {
+            this.additionalParameters = null;
+        } else {
+            Map<String, Serializable> internalMap = new HashMap<String, Serializable>(additionaParametersCount);
+            for (; additionaParametersCount > 0; additionaParametersCount--)
+                internalMap.put(serializator.readString(input), serializator.readObject(input, Serializable.class));
+            this.additionalParameters = internalMap;
+        }
+    }
+
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        int size = super.binarySerialize(output, serializator);
+        if (additionalParameters == null) {
+            size += serializator.write(output, -1);
+        } else {
+            size += serializator.write(output, additionalParameters.size());
+            for (Map.Entry<String, ? extends Serializable> entry : additionalParameters.entrySet()) {
+                size += serializator.write(output, entry.getKey());
+                size += serializator.write(output, entry.getValue());
+            }
+        }
+
+        return size;
+    }
+
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        int size = super.getBinarySize(serializator);
+        if (additionalParameters == null) {
+            size += serializator.getBinarySize(-1);
+        } else {
+            size += serializator.getBinarySize(additionalParameters.size());
+            for (Map.Entry<String, ? extends Serializable> entry : additionalParameters.entrySet()) {
+                size += serializator.getBinarySize(entry.getKey());
+                size += serializator.getBinarySize(entry.getValue());
+            }
+        }
+
+        return size;
+    }
+
 }

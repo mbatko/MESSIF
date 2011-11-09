@@ -20,11 +20,15 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
@@ -32,6 +36,7 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
+import messif.utility.Parametric;
 
 /**
  * Represents a list of LocalAbstractObjects
@@ -45,15 +50,17 @@ import messif.utility.Convert;
  * @author Tomas Homola, Masaryk University, Brno, Czech Republic, xhomola@fi.muni.cz 
  */
 
-public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<ObjectFeature> {
+public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<ObjectFeature>, Parametric {
     /** Class id for serialization. */
-    private static final long serialVersionUID = 666L;
+    private static final long serialVersionUID = 667L;
 
 
     //****************** Attributes ******************//
 
     /** List of encapsulated objects */
     protected final List<ObjectFeature> objects;
+    /** Additional parameters for this meta object */
+    private final Map<String, Serializable> additionalParameters;
 
 
     //****************** Constructors ******************//
@@ -63,6 +70,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      */
     public ObjectFeatureSet () {
         objects = new ArrayList<ObjectFeature>();
+        this.additionalParameters = null;
     }
 
     /**
@@ -73,6 +81,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public ObjectFeatureSet(String locatorURI, Collection<? extends ObjectFeature> objects) {
         super(locatorURI);
         this.objects = new ArrayList<ObjectFeature>(objects);
+        this.additionalParameters = null;
     }
 
     /**
@@ -82,7 +91,19 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      *         EOFException is returned if end of the given stream is reached.
      */
     public ObjectFeatureSet(BufferedReader stream) throws IOException {
+        this(stream, null);
+    }
+
+    /**
+     * Creates a new instance of ObjectFeatureSet from a text stream.
+     * @param stream the text stream to read an object from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public ObjectFeatureSet(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException {
         this.objects = new ArrayList<ObjectFeature>();
+        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
         readObjects(stream);
     }
 
@@ -104,12 +125,14 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
                 addObject(of);
             }
         }
+        this.additionalParameters = null;
     }
 
     public ObjectFeatureSet (ObjectFeatureSet superSet) {
         super (superSet.getLocatorURI());
         this.objects = new ArrayList<ObjectFeature>();
         this.objects.addAll(superSet.objects);
+        this.additionalParameters = superSet.additionalParameters == null ? null : new HashMap<String, Serializable>(superSet.additionalParameters);
     }
 
     @Override
@@ -180,6 +203,63 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
             }
         }
     }
+
+
+    //****************** Parametric interface implementation ******************//
+
+    @Override
+    public int getParameterCount() {
+        return additionalParameters != null ? additionalParameters.size() : 0;
+    }
+
+    @Override
+    public Collection<String> getParameterNames() {
+        if (additionalParameters == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(additionalParameters.keySet());
+    }
+
+    @Override
+    public boolean containsParameter(String name) {
+        return additionalParameters != null && additionalParameters.containsKey(name);
+    }
+
+    @Override
+    public Object getParameter(String name) {
+        return additionalParameters != null ? additionalParameters.get(name) : null;
+    }
+
+    @Override
+    public Object getRequiredParameter(String name) throws IllegalArgumentException {
+        Object parameter = getParameter(name);
+        if (parameter == null)
+            throw new IllegalArgumentException("The parameter '" + name + "' is not set");
+        return parameter;
+    }
+
+    @Override
+    public <T> T getRequiredParameter(String name, Class<? extends T> parameterClass) throws IllegalArgumentException, ClassCastException {
+        return parameterClass.cast(getRequiredParameter(name));
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass, T defaultValue) {
+        Object value = getParameter(name);
+        return value != null && parameterClass.isInstance(value) ? parameterClass.cast(value) : defaultValue; // This cast IS checked by isInstance
+    }
+
+    @Override
+    public <T> T getParameter(String name, Class<? extends T> parameterClass) {
+        return getParameter(name, parameterClass, null);
+    }
+
+    @Override
+    public Map<String, ? extends Object> getParameterMap() {
+        if (additionalParameters == null)
+            return Collections.emptyMap();
+        return Collections.unmodifiableMap(additionalParameters);
+    }
+
 
     //****************** Text stream I/O helper method ******************//
 
@@ -388,6 +468,15 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         for (int i = 0; i < objcount; i++) {
             objects.add(serializator.readObject(input, ObjectFeature.class));
         }
+        int additionaParametersCount = serializator.readInt(input);
+        if (additionaParametersCount == -1) {
+            this.additionalParameters = null;
+        } else {
+            Map<String, Serializable> internalMap = new HashMap<String, Serializable>(additionaParametersCount);
+            for (; additionaParametersCount > 0; additionaParametersCount--)
+                internalMap.put(serializator.readString(input), serializator.readObject(input, Serializable.class));
+            this.additionalParameters = internalMap;
+        }
     }
 
     @Override
@@ -396,6 +485,15 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         size += serializator.write(output, getObjectCount());
         for (ObjectFeature obj : objects)
             size += serializator.write(output, obj);
+        if (additionalParameters == null) {
+            size += serializator.write(output, -1);
+        } else {
+            size += serializator.write(output, additionalParameters.size());
+            for (Map.Entry<String, ? extends Serializable> entry : additionalParameters.entrySet()) {
+                size += serializator.write(output, entry.getKey());
+                size += serializator.write(output, entry.getValue());
+            }
+        }
         return size;
     }
 
@@ -406,6 +504,15 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         size += serializator.getBinarySize((int)0); // print integer "objectCount"
         for (ObjectFeature obj : objects)
             size += serializator.getBinarySize(obj);
+        if (additionalParameters == null) {
+            size += serializator.getBinarySize(-1);
+        } else {
+            size += serializator.getBinarySize(additionalParameters.size());
+            for (Map.Entry<String, ? extends Serializable> entry : additionalParameters.entrySet()) {
+                size += serializator.getBinarySize(entry.getKey());
+                size += serializator.getBinarySize(entry.getValue());
+            }
+        }
         return size;
     }
 
