@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import messif.utility.SortedCollection;
 
 /**
  * Implementation of a sorted collection that stores additional collections.
@@ -37,7 +38,7 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
     //************ Attributes ************//
 
     /** Internal list of additional collections */
-    private final RankedSortedCollection[] sublists;
+    private RankedSortedCollection[] sublists;
 
 
     //************ Constructor ************//
@@ -117,7 +118,7 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
             
             // Add to the sublists too
             for (int i = 0; i < getCollectionCount(); i++) {
-                boolean subRes = getCollection(i).addAll(col.getCollection(i));
+                boolean subRes = sublists[i].addAll(col.getCollection(i));
                 res = res || subRes;
             }
             return res;
@@ -152,6 +153,17 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
         super.clear();
         for (int i = 0; i < sublists.length; i++)
             sublists[i].clear();
+    }
+
+    @Override
+    public SortedCollection<RankedAbstractObject> clone(boolean copyData) throws CloneNotSupportedException {
+        RankedSortedMultiCollection col = (RankedSortedMultiCollection)super.clone(copyData);
+        
+        col.sublists = new RankedSortedCollection[this.sublists.length];
+        for (int i = 0; i < this.sublists.length; i++) {
+            col.sublists[i] = (RankedSortedCollection)this.sublists[i].clone(copyData);
+        }
+        return col;
     }
 
     @Override
