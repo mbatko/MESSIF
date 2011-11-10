@@ -172,12 +172,12 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         public int getSecondaryDimension();
         
         /**
-         * Create a {@link ObjectFeatureOrderedSet#Window} object that represents the passed rectangular area.
+         * Create a {@link ObjectFeatureOrderedSet.Window} object that represents the passed rectangular area.
          * @param minX minimum in x-axis (relative value within the interval [0,1))
          * @param maxX maximum in x-axis (relative value within the interval [0,1))
          * @param minY minimum in y-axis (relative value within the interval [0,1))
          * @param maxY maximum in y-axis (relative value within the interval [0,1))
-         * @return 
+         * @return the passed rectangular area
          */
         public Window getWindow(float minX, float maxX, float minY, float maxY);
     }

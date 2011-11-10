@@ -30,14 +30,12 @@ public class ObjectFeatureClusteredMatch extends ObjectFeatureClustered {
     
     /**
      * Creates a new instance of object
-     * @param data
      */
     public ObjectFeatureClusteredMatch(double clusterid) {
         super(clusterid);
     }
     /**
      * Creates a new instance of object
-     * @param data
      */
     public ObjectFeatureClusteredMatch(float x,  float y,  float ori,  float scl, double clusterid) {
         super(x, y, ori, scl, clusterid);

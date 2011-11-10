@@ -86,9 +86,6 @@ public abstract class ObjectFeatureSetStringWindow extends ObjectFeatureSet {
     }
 
     /**
-     * Foo...
-     * @param Distance
-     * @return
      * @deprecated Use new class {@link SequenceMatchingCost} and its descendants
      */
     @Deprecated
@@ -120,10 +117,6 @@ public abstract class ObjectFeatureSetStringWindow extends ObjectFeatureSet {
     }
 
     /**
-     * Foo...
-     * @param obj1
-     * @param obj2
-     * @return
      * @deprecated Use new class {@link SequenceMatchingCost} and its descendants
      */
     @Deprecated
