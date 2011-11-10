@@ -171,7 +171,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
     /**
      * {@inheritDoc }
      * 
-     * Note that {@link Parametric parameters} that are {@link messif.utility.Clearable}
+     * Note that {@link messif.utility.Parametric parameters} that are {@link messif.utility.Clearable clearable}
      * are {@link messif.utility.Clearable#clearSurplusData() cleared} and the other non-primitive
      * parameters are <em>removed</em> from the parameters.
      */
