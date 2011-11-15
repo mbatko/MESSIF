@@ -457,7 +457,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param expander instance for expanding the list of title, key, and search words
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    private ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+    protected ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         try {
             int[][] data = new int[searchString != null ? 3 : 2][];
             Set<String> ignoreWords = new HashSet<String>();

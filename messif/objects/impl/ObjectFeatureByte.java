@@ -97,7 +97,7 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0)
                 stream.write(", ".getBytes());
-            stream.write(String.valueOf(((short) this.data[i])+127).getBytes());
+            stream.write(String.valueOf(this.data[i]+127).getBytes());
         }
 
         stream.write('\n');
@@ -114,7 +114,7 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
 
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0) rtv.append(", ");
-            rtv.append(((short) (data[i]))+127);
+            rtv.append(data[i]+127);
         }
         rtv.append("]");
 

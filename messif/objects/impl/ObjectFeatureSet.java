@@ -199,7 +199,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     public void SetOrderOfObjects () {
         synchronized (objects) {
             for (int i = objects.size() - 1; i >= 0; i--) {
-                (( ObjectFeature) objects.get(i)).OrderInSet = i;
+                objects.get(i).OrderInSet = i;
             }
         }
     }

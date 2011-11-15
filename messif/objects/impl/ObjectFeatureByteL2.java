@@ -65,7 +65,7 @@ public class ObjectFeatureByteL2 extends ObjectFeatureByte {
         // Get sum of absolute difference on all dimensions
         double rtv = 0;
         for (int i = data.length - 1; i >= 0; i--) {
-            rtv += (((short) data[i]) - ((short) objdata[i]))*(((short) data[i]) - ((short) objdata[i]));
+            rtv += (data[i] - objdata[i])*(data[i] - objdata[i]);
             if (rtv > distTreshSq)
                 return Float.MAX_VALUE;
         }

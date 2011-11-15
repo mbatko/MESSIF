@@ -61,7 +61,7 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Mo
                 Logger.getLogger(ObjectFacePittPattDescriptor.class.getName()).log(Level.WARNING, "Cannot activate PittPatt library: err code {0}", err);
             }
         } catch (UnsatisfiedLinkError e) {
-            Logger.getLogger(ObjectFacePittPattDescriptor.class.getName()).log(Level.WARNING, "Cannot load PittPatt library: {0}", e);
+            Logger.getLogger(ObjectFacePittPattDescriptor.class.getName()).log(Level.WARNING, "Cannot load PittPatt library: {0}", (Object)e);
             libraryLoaded = false;
         }
         isLibraryLoaded = libraryLoaded;
@@ -81,7 +81,7 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Mo
     //****************** Attributes ******************//
 
     /** Encapsulated {@link Map} that provides the parameter values */
-    private final Map<String, Serializable> additionalParameters;
+    private Map<String, Serializable> additionalParameters;
 
 
     //****************** Constructors ******************//
@@ -200,11 +200,15 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Mo
 
     @Override
     public Serializable removeParameter(String name) {
+        if (additionalParameters == null)
+            return null;
         return additionalParameters.remove(name);
     }
 
     @Override
     public void setParameter(String name, Serializable value) {
+        if (additionalParameters == null)
+            additionalParameters = new HashMap<String, Serializable>();
         additionalParameters.put(name, value);
     }
 
