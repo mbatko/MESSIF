@@ -18,11 +18,13 @@ package messif.objects.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.keys.DimensionObjectKey;
 import messif.objects.nio.BinaryInput;
@@ -67,7 +69,18 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
      *         EOFException is returned if end of the given stream is reached.
      */
     public ObjectFeatureOrderedSet(BufferedReader stream) throws IOException {
-        super(stream);
+        this(stream, null);
+    }
+
+    /**
+     * Creates a new instance of ObjectFeatureSet from a text stream.
+     * @param stream the text stream to read an object from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public ObjectFeatureOrderedSet(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException {
+        super(stream, additionalParameters);
         AbstractObjectKey key = getObjectKey();
         if (key != null && !(key instanceof DimensionObjectKey))
             throw new IllegalArgumentException("Incorrect object key class: " + key.getClass().getCanonicalName() + " Required: " + DimensionObjectKey.class.getCanonicalName());
