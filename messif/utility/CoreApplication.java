@@ -246,6 +246,27 @@ public class CoreApplication {
         }
     }
 
+    /**
+     * Returns the given argument converted to integer.
+     * @param args the list of arguments
+     * @param index the index of the argument to convert
+     * @param defaultValue the default value if the argument index is out of range, <tt>null</tt> or empty string
+     * @param minValue the minimal value for the returned value
+     * @param maxValue the maximal value for the returned value
+     * @return the given argument converted to integer
+     * @throws NumberFormatException if the value cannot be converted or is out of range
+     */
+    protected int retrieveIntArgument(String[] args, int index, int defaultValue, int minValue, int maxValue) throws NumberFormatException {
+        if (index >= args.length || args[index] == null || args[index].isEmpty())
+            return defaultValue;
+        int ret = Integer.parseInt(args[index]);
+        if (ret < minValue)
+            throw new NumberFormatException("Number '" + ret + "' is not greater than or equal to " + minValue);
+        if (ret > maxValue)
+            throw new NumberFormatException("Number '" + ret + "' is not less than or equal to " + maxValue);
+        return ret;
+    }
+
 
     //****************** Algorithm command functions ******************//
 
@@ -1085,6 +1106,8 @@ public class CoreApplication {
      *     <li>result type - can be 'All' = display everything,
      *            'Objects' = displays just objects, 'Locators' = display just locators,
      *             or 'DistanceLocators' = display format 'distance: locator'</li>
+     *     <li>number of results to display (defaults to all)</li>
+     *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
      * </p>
      * 
@@ -1099,7 +1122,7 @@ public class CoreApplication {
      * @param args display separator for the list of objects and type of the display
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */  
-    @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Object/Locator (defaults to All)"})
+    @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Objects/Locators/DistanceLocators (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationAnswer(PrintStream out, String... args) {
         AbstractOperation operation = lastOperation;
         if (operation == null || !(operation instanceof QueryOperation)) {
@@ -1109,39 +1132,67 @@ public class CoreApplication {
 
         // Separator is second argument (get newline if not specified)
         String separator = (args.length > 1)?args[1]:System.getProperty("line.separator");
+
+        // Fourth (optional) argument is the maximal number of results to display
+        int maxCount;
+        try {
+            maxCount = retrieveIntArgument(args, 3, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
+        } catch (NumberFormatException e) {
+            out.println("Invalid number of objects to display: " + args[3]);
+            return false;
+        }
+
+        // Fifth (optional) argument is the number results to skip before the actual answer is displayed
+        int skipCount;
+        try {
+            skipCount = retrieveIntArgument(args, 4, 0, 0, Integer.MAX_VALUE);
+        } catch (NumberFormatException e) {
+            out.println("Invalid number of objects to skip: " + args[4]);
+            return false;
+        }
+
+        // Type of output is third argument (defaults to All)
         switch ((args.length > 2 && args[2].length() > 0) ? Character.toUpperCase(args[2].charAt(0)) : 'A') {
             case 'A':
                 Iterator<?> itAll = ((QueryOperation<?>)operation).getAnswer();
-                while (itAll.hasNext()) {
+                while (skipCount-- > 0 && itAll.hasNext())
+                    itAll.next();
+                while (itAll.hasNext() && maxCount-- > 0) {
                     out.print(itAll.next());
-                    if (itAll.hasNext())
+                    if (itAll.hasNext() && maxCount > 0)
                         out.print(separator);
                 }
                 break;
             case 'O':
                 Iterator<AbstractObject> itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
-                while (itObjects.hasNext()) {
+                while (skipCount-- > 0 && itObjects.hasNext())
+                    itObjects.next();
+                while (itObjects.hasNext() && maxCount-- > 0) {
                     out.print(itObjects.next());
-                    if (itObjects.hasNext())
+                    if (itObjects.hasNext() && maxCount > 0)
                         out.print(separator);
                 }
                 break;
             case 'L':
                 itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
-                while (itObjects.hasNext()) {
+                while (skipCount-- > 0 && itObjects.hasNext())
+                    itObjects.next();
+                while (itObjects.hasNext() && maxCount-- > 0) {
                     out.print(itObjects.next().getLocatorURI());
-                    if (itObjects.hasNext())
+                    if (itObjects.hasNext() && maxCount > 0)
                         out.print(separator);
                 }
                 break;
             case 'D':
                 Iterator<RankedAbstractObject> answer = ((RankingQueryOperation)operation).getAnswer();
-                while (answer.hasNext()) {
+                while (skipCount-- > 0 && answer.hasNext())
+                    answer.next();
+                while (answer.hasNext() && maxCount-- > 0) {
                     RankedAbstractObject next = answer.next();
                     out.print(next.getDistance());
                     out.print(": ");
                     out.print(next.getObject().getLocatorURI());
-                    if (answer.hasNext())
+                    if (answer.hasNext() && maxCount > 0)
                         out.print(separator);
                 }
                 break;
@@ -1653,6 +1704,10 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "creates a new named instance", arguments = { "instance constructor, factory method or static field signature", "name to register"})
     public boolean namedInstanceAdd(PrintStream out, String... args) {
+        if (args.length <= 2) {
+            out.println("Two arguments (signature and instance name) are required for namedInstanceAdd");
+            return false;
+        }
         if (namedInstances.containsKey(args[2])) {
             out.println("Named instance '" + args[2] + "' already exists");
             return false;
@@ -1681,6 +1736,11 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "creates a new named instance or replaces old one", arguments = { "instance constructor, factory method or static field signature", "name to register"})
     public boolean namedInstanceReplace(PrintStream out, String... args) {
+        if (args.length <= 2) {
+            out.println("Two arguments (signature and instance name) are required for namedInstanceReplace");
+            return false;
+        }
+            
         try {
             Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
             namedInstances.put(args[2], instance);
@@ -2428,7 +2488,7 @@ public class CoreApplication {
         String methodName = arguments.get(0);
 
         // SPECIAL! For objectStreamOpen/namedInstanceAdd method a third/second parameter is automatically added from action name
-        if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || (methodName.equals("namedInstanceAdd") && arguments.size() == 2))
+        if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || ((methodName.equals("namedInstanceAdd") || methodName.equals("namedInstanceReplace")) && arguments.size() == 2))
             arguments.add(actionName);
 
         // Read description (variable substition in description is done during the repeat)

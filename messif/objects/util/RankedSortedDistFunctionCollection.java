@@ -16,7 +16,6 @@
  */
 package messif.objects.util;
 
-import java.util.Collection;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;

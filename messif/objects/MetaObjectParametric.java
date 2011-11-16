@@ -196,7 +196,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
         try {
             if (additionalParameters != null) {
                 // This put is not safe, but the additional parameters in this case should be created in constructor
-                ((Map<String, Serializable>)additionalParameters).put(matcher.group(1),
+                additionalParameters.put(matcher.group(1),
                         Convert.stringToType(matcher.group(3), Convert.getClassForName(matcher.group(2), Serializable.class)));
             }
         } catch (ClassNotFoundException e) {

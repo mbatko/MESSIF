@@ -81,8 +81,8 @@ public abstract class MetaObject extends LocalAbstractObject {
     //****************** Factory method ******************//
 
     /**
-     * Create a new instance of a simple MetaObject wihout any
-     * encapsulated objects. This is meant primarilly for the
+     * Create a new instance of a simple MetaObject without any
+     * encapsulated objects. This is meant primarily for the
      * locatorURI distance-based searching.
      * @param locatorURI the locator URI for the new object
      * @return a new instance of MetaObject without encapsulated objects
@@ -99,7 +99,7 @@ public abstract class MetaObject extends LocalAbstractObject {
             }
 
             @Override
-            protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+            protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
                 return Math.abs(getLocatorURI().hashCode() - obj.getLocatorURI().hashCode());
             }
 
@@ -193,7 +193,7 @@ public abstract class MetaObject extends LocalAbstractObject {
 
     /**
      * Returns a collection of all the encapsulated objects associated with their symbolic names.
-     * @return a map with symbolic names as keyas and the respective encapsulated objects as values
+     * @return a map with symbolic names as keys and the respective encapsulated objects as values
      */
     public Map<String, LocalAbstractObject> getObjectMap() {
         Map<String, LocalAbstractObject> ret = new HashMap<String, LocalAbstractObject>(getObjectCount());
@@ -425,7 +425,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      */
     @Override
     protected final float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        return getDistanceImpl((MetaObject)obj, null, distThreshold);
+        return getDistanceImpl(obj, null, distThreshold);
     }
 
     /**
@@ -441,7 +441,8 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance
      */
-    protected abstract float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold);
+    @Override
+    protected abstract float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold);
 
     /**
      * Returns the array that can hold distances to the respective encapsulated objects.
