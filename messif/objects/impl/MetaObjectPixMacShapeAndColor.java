@@ -377,7 +377,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
     //***************************  Distance computation  *******************************//
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectPixMacShapeAndColor castObj = (MetaObjectPixMacShapeAndColor)obj;
 
         float rtv = 0;

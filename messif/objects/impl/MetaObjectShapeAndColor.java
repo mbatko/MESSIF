@@ -243,7 +243,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
     //***************************  Distance computation  *******************************//
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectShapeAndColor castObj = (MetaObjectShapeAndColor)obj;
 
         float rtv = 0;

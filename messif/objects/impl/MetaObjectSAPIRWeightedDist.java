@@ -24,7 +24,6 @@ import java.util.Map;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.impl.MetaObjectSAPIR.XMLHandlerSAPIR;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
@@ -89,7 +88,7 @@ public class MetaObjectSAPIRWeightedDist extends MetaObjectSAPIR {
     }
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectSAPIR castObj = (MetaObjectSAPIR)obj;
         
         float rtv = 0;

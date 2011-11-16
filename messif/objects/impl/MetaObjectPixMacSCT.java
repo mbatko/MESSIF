@@ -529,7 +529,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     //***************************  Distance computation  *******************************//
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectPixMacSCT castObj = (MetaObjectPixMacSCT)obj;
 
         float rtv = 0;

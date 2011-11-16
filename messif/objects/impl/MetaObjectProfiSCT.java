@@ -457,7 +457,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param expander instance for expanding the list of title, key, and search words
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    protected ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+    protected final ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
         try {
             int[][] data = new int[searchString != null ? 3 : 2][];
             Set<String> ignoreWords = new HashSet<String>();
@@ -745,7 +745,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     //***************************  Distance computation  *******************************//
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         MetaObjectProfiSCT castObj = (MetaObjectProfiSCT)obj;
 
         float rtv = 0;
@@ -1903,7 +1903,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
                 else if (staticKeywordWeights != null)
                     kwWeight = staticKeywordWeights.get(keywordId);
                 else
-                    kwWeight = null;
+                    return weights != null ? weights[dataVectorIndex] : 1f; // Behave like a simple array weight provider if no keyword weights are loaded
 
                 if (kwWeight == null)
                     return 0; // Ignore unknown keywords
@@ -2017,7 +2017,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         //****************** Distance function ******************//
 
         @Override
-        protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+        protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
             try {
                 float distance = keyWords.getWeightedDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
                 if (keywordsWeight != null)
