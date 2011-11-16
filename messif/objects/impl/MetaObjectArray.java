@@ -306,7 +306,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @see LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject, float) LocalAbstractObject.getDistance
      */
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         String thisLocator = getLocatorURI();
         String otherLocator = obj.getLocatorURI();
         return (thisLocator == null ? otherLocator == null : thisLocator.equals(otherLocator)) ? 0 : 1;

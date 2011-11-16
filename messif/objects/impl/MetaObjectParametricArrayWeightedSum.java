@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
@@ -178,7 +177,7 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
     }
 
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         float rtv = 0;
         MetaObjectParametricArray castObj = (MetaObjectParametricArray)obj;
 

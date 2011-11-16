@@ -30,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.MetaObjectParametric;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -256,7 +255,7 @@ public class MetaObjectParametricMap extends MetaObjectParametric implements Bin
      * @see LocalAbstractObject#getDistance
      */
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         String thisLocator = getLocatorURI();
         String otherLocator = obj.getLocatorURI();
         return (thisLocator == null ? otherLocator == null : thisLocator.equals(otherLocator)) ? 0 : 1;

@@ -38,7 +38,7 @@ import messif.objects.nio.BinarySerializator;
  * Implementation of {@link MetaObject} that stores encapsulated objects
  * in a hash table.
  * The metric distance function for this object is the absolute value of the
- * differences of locatorURI hashcodes.
+ * differences of locatorURI hash codes.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
@@ -207,7 +207,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @see LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject, float) LocalAbstractObject.getDistance
      */
     @Override
-    protected float getDistanceImpl(MetaObject obj, float[] metaDistances, float distThreshold) {
+    protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
         String thisLocator = getLocatorURI();
         String otherLocator = obj.getLocatorURI();
         return (thisLocator == null ? otherLocator == null : thisLocator.equals(otherLocator)) ? 0 : 1;
