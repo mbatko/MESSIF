@@ -220,6 +220,17 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
         return null;
     }
 
+    /**
+     * Returns the encapsulated object for given index.
+     *
+     * @param index the index of the object to return
+     * @return encapsulated object for given name or <tt>null</tt> if the key is unknown
+     * @throws IndexOutOfBoundsException if the given index is not within [0;{@link #getObjectCount() count}) interval
+     */
+    public LocalAbstractObject getObject(int index) {
+        return objects[index];
+    }
+
     @Override
     public Collection<String> getObjectNames() {
         Collection<String> names = new ArrayList<String>(objects.length);
