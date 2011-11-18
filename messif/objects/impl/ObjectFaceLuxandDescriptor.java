@@ -52,7 +52,7 @@ public class ObjectFaceLuxandDescriptor extends ObjectByteVector {
                 Logger.getLogger(ObjectFaceLuxandDescriptor.class.getName()).log(Level.WARNING, "Cannot activate Luxand FaceSDK library: err code {0}", err);
             }
         } catch (UnsatisfiedLinkError e) {
-            Logger.getLogger(ObjectFaceLuxandDescriptor.class.getName()).log(Level.WARNING, "Cannot load Luxand FaceSDK library: {0}", e);
+            Logger.getLogger(ObjectFaceLuxandDescriptor.class.getName()).log(Level.WARNING, "Cannot load Luxand FaceSDK library: {0}", (Object)e);
             libraryLoaded = false;
         }
         isLibraryLoaded = libraryLoaded;

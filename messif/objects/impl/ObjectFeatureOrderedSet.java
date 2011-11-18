@@ -159,7 +159,7 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
     /**
      * Sorting dimension
      */
-    public static interface SortDimension {
+    public static interface SortDimension extends Serializable {
         /**
          * Returns value of the primary sorting dimension.
          * @param f object whose primary sort dimension value is returned
@@ -197,6 +197,8 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
     
     /** Implementation of SortDimension that sorts the features by x-axis and then by y-axis. */
     public static final SortDimension sortDimensionX = new SortDimension() {
+        private static final long serialVersionUID = 1L;
+
         @Override
         public float getPrimary(DimensionObjectKey.Point f) {
             return f.getX();
@@ -245,6 +247,8 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
     
     /** Implementation of SortDimension that sorts the features by y-axis and then by x-axis. */
     public static final SortDimension sortDimensionY = new SortDimension() {
+        private static final long serialVersionUID = 1L;
+
         @Override
         public float getPrimary(DimensionObjectKey.Point f) {
             return f.getY();
