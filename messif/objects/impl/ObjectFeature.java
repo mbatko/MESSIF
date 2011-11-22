@@ -171,13 +171,21 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     @Override
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         return super.binarySerialize(output, serializator) +
-               serializator.write(output, this.x) + serializator.write(output, this.y) +
-               + serializator.write(output, this.ori) + serializator.write(output, this.scl) + serializator.write(output, this.NumericKey);
+               serializator.write(output, this.x) +
+               serializator.write(output, this.y) +
+               serializator.write(output, this.ori) +
+               serializator.write(output, this.scl) +
+               serializator.write(output, this.NumericKey);
     }
 
     @Override
     public int getBinarySize(BinarySerializator serializator) {
-        return super.getBinarySize(serializator) + 16;
+        return super.getBinarySize(serializator) + 
+               serializator.getBinarySize(this.x) +
+               serializator.getBinarySize(this.y) +
+               serializator.getBinarySize( this.ori) +
+               serializator.getBinarySize(this.scl) +
+               serializator.getBinarySize(this.NumericKey);
     }
 
     @Override
