@@ -49,7 +49,7 @@ public class MetaObjectParametricShapeAndColor extends MetaObjectParametricArray
     };
 
     /** Descriptor weights used to compute the overall distance */
-    private static final float[] weights = { 2.0f, 2.0f, 2.0f, 5.0f, 4.0f };
+    private static final float[] weights = { 2.0f / 300.0f, 2.0f / 40.0f / 255.0f, 2.0f / 3000.0f, 5.0f / 68.0f, 4.0f / 8.0f };
 
     /** Maximal distance */
     private static final float maxDistance = 16;
