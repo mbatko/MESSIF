@@ -317,7 +317,10 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * @return the actual normalized distance between obj and this if the distance is lower than distThreshold
      */
     public final float getNormDistance(LocalAbstractObject obj, float distThreshold) {
-        return getDistance(obj, distThreshold * getMaxDistance()) / getMaxDistance();
+        float maxDistance = getMaxDistance();
+        if (maxDistance >= MAX_DISTANCE)
+            throw new IllegalArgumentException("Cannot compute normalized distance on objects with unknown maximal distance");
+        return getDistance(obj, distThreshold >= MAX_DISTANCE ? MAX_DISTANCE : distThreshold * maxDistance) / maxDistance;
     }
 
     /**
