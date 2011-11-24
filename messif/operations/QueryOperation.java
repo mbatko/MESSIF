@@ -17,6 +17,8 @@
 package messif.operations;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
@@ -173,7 +175,7 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
 
     /**
      * Returns an iterator over all objects in the answer sub-collection with the given index.
-     * Note that the returned collection (typically) cannot be modified.
+     * Note that the returned iterator (typically) does not support removal.
      * @param index the index of the answer sub-collection to return
      * @return an iterator over all objects in the answer sub-collection
      * @throws IndexOutOfBoundsException if the given index is negative or
@@ -184,11 +186,23 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
     /**
      * Returns an iterator over all objects in the answer sub-collection with the given key.
      * If no collection is available for the given key, <tt>null</tt> is returned.
-     * Note that the returned collection (typically) cannot be modified.
+     * Note that the returned iterator (typically) does not support removal.
      * @param key the key of the answer sub-collection to return
      * @return the answer sub-collection with the given key or <tt>null</tt>
      */
     public abstract Iterator<? extends TAnswer> getSubAnswer(Object key);
+
+    /**
+     * Returns a collection of iterators over all objects in all answer sub-collections.
+     * If there are no answer sub-collections, empty collection is returned.
+     * @return a collection of iterators over all objects in all answer sub-collections
+     */
+    public Collection<Iterator<? extends TAnswer>> getAllSubAnswers() {
+        Collection<Iterator<? extends TAnswer>> ret = new ArrayList<Iterator<? extends TAnswer>>(getSubAnswerCount());
+        for (int i = 0; i < getSubAnswerCount(); i++)
+            ret.add(getSubAnswer(i));
+        return ret;
+    }
 
 
     //****************** Textual representation ******************//
