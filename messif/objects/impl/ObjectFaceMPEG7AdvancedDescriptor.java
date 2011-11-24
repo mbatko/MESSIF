@@ -233,4 +233,9 @@ public class ObjectFaceMPEG7AdvancedDescriptor extends LocalAbstractObjectAutoIm
         return ObjectFaceMPEG7AdvancedDescriptor.class;
     }
 
+    @Override
+    public float getMaxDistance() {
+        return 1000f;
+    }
+
 }
