@@ -60,6 +60,16 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
     }
 
     /**
+     * Creates a new instance of ObjectFloatVector.
+     * @param locatorURI the locator URI for the new object
+     * @param data the data content of the new object
+     */
+    public ObjectFloatVector(String locatorURI, float[] data) {
+        super(locatorURI);
+        this.data = data.clone();
+    }
+
+    /**
      * Creates a new instance of ObjectFloatVector with randomly generated content data.
      * Content will be generated using normal distribution of random numbers from interval
      * [min;max).
@@ -104,11 +114,23 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
         if (line.length() == 0)
             return new float[0];
         String[] numbers = line.split(line.indexOf(',') != -1 ? "\\s*,\\s*" : "\\s+");
+        return convertFloatVector(numbers, 0, numbers.length);
+    }
 
-        float[] data = new float[numbers.length];
-        for (int i = 0; i < data.length; i++)
-            data[i] = Float.parseFloat(numbers[i]);
-
+    /**
+     * Converts the given array of float strings to a vector of floats.
+     *
+     * @param numbers the array of float strings to convert
+     * @param offset the starting index in the {@code numbers array}
+     * @param length the number of {@code numbers} to convert starting from {@code offset}
+     * @return the converted vector of floats
+     * @throws NumberFormatException if the given {@code numbers} contained a value that cannot be converted to float
+     * @throws IndexOutOfBoundsException if the given offset or length is not valid for the {@code numbers} array
+     */
+    public static float[] convertFloatVector(String[] numbers, int offset, int length) throws NumberFormatException, IndexOutOfBoundsException {
+        float[] data = new float[length];
+        for (int i = 0; i < length; i++)
+            data[i] = Float.parseFloat(numbers[i + offset]);
         return data;
     }
 
