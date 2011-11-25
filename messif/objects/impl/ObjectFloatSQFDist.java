@@ -57,20 +57,33 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     public ObjectFloatSQFDist(float[] data) {
         super(data);
         this.sumOfWeights = calculateSumOfWeights();
-        precomputeSelfDistance(defaultWeights, defaultAlpha);;
-        
+        precomputeSelfDistance();   
+    }
+
+    public ObjectFloatSQFDist(String locatorURI, float[] data) {
+        super(locatorURI, data);
+        this.sumOfWeights = calculateSumOfWeights();
+        precomputeSelfDistance();   
     }
 
     public ObjectFloatSQFDist(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         super(stream);
         this.sumOfWeights = calculateSumOfWeights();
-        precomputeSelfDistance(defaultWeights, defaultAlpha);;
+        precomputeSelfDistance();
     }
 
     protected ObjectFloatSQFDist(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.sumOfWeights = calculateSumOfWeights();
-        precomputeSelfDistance(defaultWeights, defaultAlpha);;
+        precomputeSelfDistance();
+    }
+
+    /**
+     * Compute and store self-distance (for default alpha and weights).
+     * @return partial result of multiplication of corresponding parts of the vectors and matrix
+     */
+    protected final float precomputeSelfDistance() {
+        return precomputeSelfDistance(getWeights(), getAlpha());
     }
 
     /**
@@ -259,5 +272,48 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         if (weights == null || weights.isEmpty() || alpha == 0)
             return object;
         return replaceSQFDistObject(object, objectName, parseFloatVector(weights), alpha);
+    }
+
+    /**
+     * Special extension of the {@link ObjectFloatSQFDist} that reads the original CSV data format.
+     * It also allows to set the alpha and weights in a static manner, but this MUST be set prior to indexing!
+     */
+    public static class ObjectFloatSQFDistOrigData extends ObjectFloatSQFDist {
+        private static final long serialVersionUID = 1L;
+        private static float[] weights = defaultWeights;
+        private static float alpha = defaultAlpha;
+
+        public ObjectFloatSQFDistOrigData(BufferedReader stream) throws IOException {
+            this(parseStreamLine(stream));
+        }
+
+        private ObjectFloatSQFDistOrigData(String[] stringData) {
+            super(stringData[0], convertFloatVector(stringData, 1, stringData.length - 1));
+        }
+
+        private static String[] parseStreamLine(BufferedReader stream) throws IOException {
+            String line = stream.readLine();
+            if (line == null)
+                throw new EOFException();
+            return line.replaceAll(",(?=\\d)", ".").split(", ");
+        }
+
+        @Override
+        public float getAlpha() {
+            return alpha;
+        }
+
+        public static void setAlpha(float alpha) {
+            ObjectFloatSQFDistOrigData.alpha = alpha;
+        }
+
+        @Override
+        public float[] getWeights() {
+            return weights.clone();
+        }
+
+        public static void setWeights(float[] weights) {
+            ObjectFloatSQFDistOrigData.weights = weights.clone();
+        }
     }
 }
