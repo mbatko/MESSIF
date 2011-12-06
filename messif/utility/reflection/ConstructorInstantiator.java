@@ -178,12 +178,13 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
     public static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         if (constructors.length == 0)
             throw new NoSuchInstantiatorException("There are no constructors available");
+        String error = null;
         for (Constructor<T> constructor : constructors) {
-            if (Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances))
+            if ((error = Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances)) == null)
                 return constructor;
         }
 
-        throw new NoSuchInstantiatorException(constructors[0].getDeclaringClass(), null, convertStringArguments, arguments);
+        throw new NoSuchInstantiatorException(constructors[0].getDeclaringClass(), null, convertStringArguments, arguments, error);
     }
 
     /**

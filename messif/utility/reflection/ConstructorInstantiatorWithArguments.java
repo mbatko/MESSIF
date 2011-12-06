@@ -58,8 +58,9 @@ public class ConstructorInstantiatorWithArguments<T> extends ConstructorInstanti
      */
     public ConstructorInstantiatorWithArguments(Constructor<? extends T> constructor, Object... arguments) throws NoSuchInstantiatorException {
         super(constructor);
-        if (!Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, false, null))
-            throw new NoSuchInstantiatorException("Given arguments " + Arrays.toString(arguments) + " are not compatible with " + constructor);
+        String error = Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, false, null);
+        if (error != null)
+            throw new NoSuchInstantiatorException("Given arguments " + Arrays.toString(arguments) + " are not compatible with " + constructor + ": " + error);
         this.arguments = arguments.clone();
     }
 

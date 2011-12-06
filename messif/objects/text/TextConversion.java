@@ -30,6 +30,8 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.buckets.storage.IntStorageSearch;
+import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 
 /**
  * Various utility methods for text conversion.
@@ -271,4 +273,65 @@ public abstract class TextConversion {
         return wordsToIdentifiers(words, ignoreWords, stemmer, wordIndex, false);
     }
 
+    /**
+     * Creates a text from all fields of the {@link StringFieldDataProvider}.
+     * @param textFieldDataProvider the text field data provider the text of which to combine
+     * @param fieldSeparatorString the separator inserted between the text of the respective fields
+     * @param addNullFields if <tt>true</tt> an empty string is added for <tt>null</tt> textual fields,
+     *          otherwise the <tt>null</tt> fields are skipped
+     * @return text from all fields
+     */
+    public static String getAllFieldsData(StringFieldDataProvider textFieldDataProvider, String fieldSeparatorString, boolean addNullFields) {
+        StringBuilder ret = new StringBuilder();
+        Iterator<String> fieldNames = textFieldDataProvider.getStringDataFields().iterator();
+        boolean isFirst = true;
+        while (fieldNames.hasNext()) {
+            String fieldData = textFieldDataProvider.getStringData(fieldNames.next());
+            if (fieldData == null && !addNullFields)
+                continue;
+            // Add separator before the field data except for the first
+            if (isFirst)
+                isFirst = false;
+            else
+                ret.append(fieldSeparatorString);
+            ret.append(fieldData == null ? "" : fieldData);
+        }
+        return ret.toString();
+    }
+
+    /**
+     * Converts the given {@link MetaObject} to a {@link StringFieldDataProvider}
+     * using the encapsulated objects that implement the {@link StringDataProvider}.
+     * Every encapsulated object represents a separate textual field, however,
+     * <tt>null</tt> is returned for the encapsulated objects that do not implement
+     * the {@link StringDataProvider} interface. The combined text from all fields
+     * uses newline as a concatenation separator and the <tt>null</tt> fields
+     * are skipped.
+     * 
+     * @param metaObject the metaobject to convert
+     * @return a text field data provider with fields from the encapsulated objects of the given metaobject
+     */
+    public static StringFieldDataProvider metaobjectToTextProvider(final MetaObject metaObject) {
+        if (metaObject instanceof StringFieldDataProvider)
+            return (StringFieldDataProvider)metaObject;
+        return new StringFieldDataProvider() {
+            @Override
+            public Collection<String> getStringDataFields() {
+                return metaObject.getObjectNames();
+            }
+
+            @Override
+            public String getStringData(String fieldName) throws IllegalArgumentException {
+                LocalAbstractObject fieldObject = metaObject.getObject(fieldName);
+                if (fieldObject == null)
+                    throw new IllegalArgumentException("Uknown text field: '" + fieldName + "'");
+                return fieldObject instanceof StringDataProvider ? ((StringDataProvider)fieldObject).getStringData() : null;
+            }
+
+            @Override
+            public String getStringData() {
+                return getAllFieldsData(this, "\n", false);
+            }
+        };
+    }
 }

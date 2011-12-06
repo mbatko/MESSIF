@@ -134,12 +134,12 @@ public abstract class Instantiators {
      * @param arguments the tested arguments
      * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
-     * @return <tt>true</tt> if the arguments are compatible with the prototype
+     * @return <tt>null</tt> if the arguments are compatible with the prototype or a textual error why the match was not found
      */
-    public static boolean isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments, Map<String, Object> namedInstances) {
+    public static String isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments, Map<String, Object> namedInstances) {
         // Not enough arguments
         if (prototype.length != arguments.length)
-            return false;
+            return "Wrong number of arguments";
 
         // Array for the converted values (since they must not be modified if the method return false)
         Object[] convertedArguments = null;
@@ -157,12 +157,12 @@ public abstract class Instantiators {
                     if (convertedArguments == null)
                         convertedArguments = arguments.clone();
                     convertedArguments[i] = Convert.stringToType((String)arguments[i], prototype[i], namedInstances);
-                } catch (InstantiationException ignore) {
-                    return false;
+                } catch (InstantiationException e) {
+                    return e.getMessage();
                 }
             } else if (!Convert.wrapPrimitiveType(prototype[i]).isInstance(arguments[i])) {
                 // The argument of the method must be the same as or a superclass of the provided prototype class
-                return false;
+                return "Instance of " + prototype[i] + " expected, but " + arguments[i] + " was given";
             }
         }
 
@@ -170,6 +170,6 @@ public abstract class Instantiators {
         if (convertedArguments != null)
             System.arraycopy(convertedArguments, 0, arguments, 0, arguments.length);
 
-        return true;
+        return null;
     }
 }

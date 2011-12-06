@@ -233,14 +233,15 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      */
     public static Method getMethod(Class<?> methodClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         Class<?> currentClass = methodClass;
+        String error = null;
         do {
             Method[] methods = publicOnlyMethods ? currentClass.getMethods() : currentClass.getDeclaredMethods();
             for (int i = 0; i < methods.length; i++)
-                if (name.equals(methods[i].getName()) && Instantiators.isPrototypeMatching(methods[i].getParameterTypes(), arguments, convertStringArguments, namedInstances))
+                if (name.equals(methods[i].getName()) && (error = Instantiators.isPrototypeMatching(methods[i].getParameterTypes(), arguments, convertStringArguments, namedInstances)) == null)
                     return methods[i];
             currentClass = currentClass.getSuperclass();
         } while (!publicOnlyMethods && currentClass != null);
-        throw new NoSuchInstantiatorException(methodClass, name, convertStringArguments, arguments);
+        throw new NoSuchInstantiatorException(methodClass, name, convertStringArguments, arguments, error);
     }
 
     /**

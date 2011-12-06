@@ -75,12 +75,13 @@ public class NoSuchInstantiatorException extends Exception {
      * @param name the name of the method/constructor that was not found
      * @param convertStringArguments flag whether the argument conversion from string was used
      * @param arguments the method/constructor arguments
+     * @param lastError the last error received when trying to instantiate 
      */
-    protected NoSuchInstantiatorException(Class<?> clazz, String name, boolean convertStringArguments, Object[] arguments) {
+    protected NoSuchInstantiatorException(Class<?> clazz, String name, boolean convertStringArguments, Object[] arguments, String lastError) {
         super(appendArguments(
                 appendType(new StringBuilder("There is no "), clazz, name, true),
                 convertStringArguments, false, arguments
-            ).toString());
+            ).append(": ").append(lastError).toString());
     }
 
     /**

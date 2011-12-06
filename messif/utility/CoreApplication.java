@@ -34,7 +34,9 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -2070,22 +2072,31 @@ public class CoreApplication {
     }
 
     /**
-     * Returns current time in miliseconds.
+     * Returns current time in miliseconds or the specified date format.
      * 
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; currentTime
+     * MESSIF &gt;&gt;&gt; currentTime "d M yyyy HH:mm"
      * </pre>
      * </p>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args this method has no arguments
+     * @param args an optional argument specifying the date/time format according to {@link SimpleDateFormat}
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "returns current time in milis", arguments = { })
     public boolean currentTime(PrintStream out, String... args) {
-        out.print(System.currentTimeMillis());
+        if (args.length > 1) {
+            try {
+                out.print(new SimpleDateFormat(args[1]).format(new Date()));
+            } catch (IllegalArgumentException e) {
+                out.println("Wrong date format '" + args[1] + "': " + e.getMessage());
+                return false;
+            }
+        } else {
+            out.print(System.currentTimeMillis());
+        }
         return true;
     }
     
