@@ -136,7 +136,7 @@ public class AlgorithmRMIServer extends Thread {
                         } catch (EOFException e) {
                             // Connection closed, exiting
                         } catch (IOException e) {
-                            log.log(Level.WARNING, "Error communicating with RMI client: {0}", e);
+                            log.log(Level.WARNING, "Error communicating with RMI client: {0}", (Object)e);
                         } finally {
                             // ignore exceptions when closing
                             try {
