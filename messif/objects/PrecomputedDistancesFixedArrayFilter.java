@@ -26,7 +26,7 @@ import messif.objects.nio.BinarySerializator;
 /**
  * Precomputed distance filter that has a fixed array of distances.
  * While filtering, this filter uses one stored distance after the other
- * and matches it agains the opposite object's distance.
+ * and matches it against the opposite object's distance.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz

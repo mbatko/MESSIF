@@ -26,6 +26,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.text.StringDataProvider;
 
 
 /**
@@ -36,7 +37,7 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectString extends LocalAbstractObject implements BinarySerializable {
+public class ObjectString extends LocalAbstractObject implements StringDataProvider, BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -146,8 +147,9 @@ public class ObjectString extends LocalAbstractObject implements BinarySerializa
      * Returns the string that represents the contents of this object.
      * @return the string that represents the contents of this object
      */
+    @Override
     public String getStringData() {
-        return this.text;           // Strings are immutable, so this is safe.
+        return text; // Strings are immutable, so this is safe.
     }
 
     /**
