@@ -1124,7 +1124,7 @@ public class CoreApplication {
      * @param args display separator for the list of objects and type of the display
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */  
-    @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Objects/Locators/DistanceLocators (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
+    @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationAnswer(PrintStream out, String... args) {
         AbstractOperation operation = lastOperation;
         if (operation == null || !(operation instanceof QueryOperation)) {
@@ -1198,6 +1198,19 @@ public class CoreApplication {
                         out.print(separator);
                 }
                 break;
+            case 'S':
+                answer = ((RankingQueryOperation)operation).getAnswer();
+                while (skipCount-- > 0 && answer.hasNext())
+                    answer.next();
+                while (answer.hasNext() && maxCount-- > 0) {
+                    RankedAbstractObject next = answer.next();
+                    out.print(next.getObject().getLocatorURI());
+                    out.print(": ");
+                    out.print(next.getDistance());
+                    if (answer.hasNext() && maxCount > 0)
+                        out.print(separator);
+                }
+                break;                
         }
         out.println();
 
@@ -1703,9 +1716,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args the instance constructor, factory method or static field signature and the name to register
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating a named instance
      */
     @ExecutableMethod(description = "creates a new named instance", arguments = { "instance constructor, factory method or static field signature", "name to register"})
-    public boolean namedInstanceAdd(PrintStream out, String... args) {
+    public boolean namedInstanceAdd(PrintStream out, String... args) throws InvocationTargetException {
         if (args.length <= 2) {
             out.println("Two arguments (signature and instance name) are required for namedInstanceAdd");
             return false;
@@ -1735,9 +1749,10 @@ public class CoreApplication {
      * @param out a stream where the application writes information for the user
      * @param args the instance constructor, factory method or static field signature and the name to register
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating a named instance
      */
     @ExecutableMethod(description = "creates a new named instance or replaces old one", arguments = { "instance constructor, factory method or static field signature", "name to register"})
-    public boolean namedInstanceReplace(PrintStream out, String... args) {
+    public boolean namedInstanceReplace(PrintStream out, String... args) throws InvocationTargetException {
         if (args.length <= 2) {
             out.println("Two arguments (signature and instance name) are required for namedInstanceReplace");
             return false;
@@ -1749,9 +1764,6 @@ public class CoreApplication {
             return true;
         } catch (NoSuchInstantiatorException e) {
             out.println("Error creating named instance for " + args[1] + ": " + e);
-            return false;
-        } catch (InvocationTargetException e) {
-            out.println("Error creating named instance for " + args[1] + ": " + e.getCause());
             return false;
         }
     }
@@ -1791,7 +1803,7 @@ public class CoreApplication {
      * @param args the name of the instance to remove
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "close a stream of LocalAbstractObjects", arguments = { "name of the stream" })
+    @ExecutableMethod(description = "removes a named instance", arguments = { "name of the instance" })
     public boolean namedInstanceRemove(PrintStream out, String... args) {
         Object instance = namedInstances.remove(args[1]);
         if (instance != null) {
@@ -1812,6 +1824,45 @@ public class CoreApplication {
             out.print("There is no instance with name '" + args[1] + "'");
         }
         return true;
+    }
+
+    /**
+     * Prints the value of a named instance.
+     * An argument specifying the name of the instance to print is required.
+     * Note that the argument also accepts a named instance invocation using the same
+     * syntax as for {@link #namedInstanceReplace(java.io.PrintStream, java.lang.String[])}.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceEcho my_object
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name of the instance to print
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while printing a named instance
+     */
+    @ExecutableMethod(description = "prints the value of a named instance", arguments = { "name of the instance" })
+    public boolean namedInstanceEcho(PrintStream out, String... args) throws InvocationTargetException {
+        if (args.length <= 1) {
+            out.println("The method invocation argument is required for namedInstanceReplace");
+            return false;
+        }
+
+        try {
+            Object value;
+            value = namedInstances.get(args[1]);
+            if (value == null) // Named instance not accessed directly, try instantiation
+                value = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+            out.println(value);
+            return true;
+        } catch (NoSuchInstantiatorException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e);
+            return false;
+        }
+        
     }
 
 
