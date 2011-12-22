@@ -599,6 +599,8 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      * @throws IllegalArgumentException if the provided chain has set nextFilter attribute
      */
     public final PrecomputedDistancesFilter chainFilter(PrecomputedDistancesFilter filter, boolean replaceIfExists) throws IllegalArgumentException {
+        if (filter == null) 
+            return null;
         if (filter.nextFilter != null)
             throw new IllegalArgumentException("This filter is a part of another chain");
 
