@@ -21,15 +21,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.RMIAlgorithm;
 import messif.network.NetworkNode;
-import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.operations.AbstractOperation;
-import messif.operations.query.ApproxKNNQueryOperationMIndex;
 
 /**
  * This is a centralized algorithm which connects itself to several remote algorithm (host + RMI port)
@@ -152,9 +148,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
      */
     public void processOperation(AbstractOperation operation) throws AlgorithmMethodException, InterruptedException {
         try {
-            if ((operation.suppData != null) && (processOperationSingleLayer(operation))) {
-                return;
-            }
             
             // execute operation at all remote algorithms (background)
             for (RMIAlgorithm rMIAlgorithm : overlays.values()) {
@@ -168,6 +161,13 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
                     operation.updateFrom(abstractOperation);
                 }
             }
+            
+            // merge the statistics
+//            for (OperationStatistics operationStatistics : returnedStatistics) {
+//                operationStatistics.removeStatistic("OperationTime");
+//                OperationStatistics.getLocalThreadStatistics().updateFrom(operationStatistics);
+//            }
+            
         } catch (NoSuchMethodException e) {
             log.log(Level.WARNING, e.getClass().toString(), e);
             throw new AlgorithmMethodException(e);
@@ -175,39 +175,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm {
             log.log(Level.WARNING, e.getClass().toString(), e);
             throw new AlgorithmMethodException(e);
         }
-    }
-
-    /**
-     * Process operation on a single layer.
-     * This is a HACK method...
-     * @param operation the operation to process
-     * @return <tt>true</tt> only if the operation is approximated KNN on MIndex and the returned value is something...
-     */
-    private boolean processOperationSingleLayer(AbstractOperation operation) {
-        if (! (operation instanceof ApproxKNNQueryOperationMIndex)) {
-            return false;
-        }
-        ApproxKNNQueryOperationMIndex approxOperation = (ApproxKNNQueryOperationMIndex) operation;
-        for (Map.Entry<Object, RMIAlgorithm> pair : this.overlays.entrySet()) {
-            if (pair.getKey().equals(operation.suppData)) {
-                try {
-                    Class<? extends LocalAbstractObject> objectClass = pair.getValue().getObjectClass();
-                    LocalAbstractObject queryObject = objectClass.getConstructor(MetaObject.class).newInstance((MetaObject) approxOperation.getQueryObject());
-
-                    ApproxKNNQueryOperationMIndex newOperation = new ApproxKNNQueryOperationMIndex(queryObject, approxOperation);
-                    log.log(Level.INFO, "processing operation: {0}", newOperation.toString());
-                    newOperation = pair.getValue().executeOperation(newOperation);
-                    operation.updateFrom(newOperation);
-
-                    log.log(Level.INFO, "stats: {0}", pair.getValue().getOperationStatistics().printStatistics());
-
-                    return true;
-                } catch (Exception ex) {
-                    Logger.getLogger(MultipleOverlaysAlgorithm.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        }
-        return false;
     }
 
 }
