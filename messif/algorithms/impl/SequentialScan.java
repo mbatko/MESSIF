@@ -62,6 +62,41 @@ public class SequentialScan extends Algorithm {
     protected final boolean pivotDistsValidIfGiven;
 
     /**
+     * Creates a new instance of SequantialScan access structure with the given bucket and filtering pivots.
+     *
+     * @param bucket the bucket used for the sequential scan
+     * @param pivotIter the iterator from which the fixed pivots will be read
+     * @param pivotCount the number of pivots to read from the iterator
+     * @param pivotDistsValidIfGiven the flag which controls whether the already associated distances to pivots with new objects are valid or not; if so, they are used without computing and storing them again
+     */
+    public SequentialScan(LocalBucket bucket, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) {
+        super("SequentialScan");
+        
+        // Create an empty bucket (using the provided bucket class and parameters)
+        this.bucket = bucket;
+        
+        // Get the fixed pivots
+        if (pivotCount > 0 && pivotIter != null) {
+            pivots = new AbstractObjectList<LocalAbstractObject>();
+            for (int i = 0; i < pivotCount; i++)
+                pivots.add(pivotIter.next());
+        } else pivots = null;
+        
+        // Precomputed distances already associated with newly inserted objects are valid or not.
+        // If there are no precomputed distances stored at new objects, they are computed, of course.
+        this.pivotDistsValidIfGiven = pivotDistsValidIfGiven;
+    }
+
+    /**
+     * Creates a new instance of SequantialScan access structure with the given bucket.
+     *
+     * @param bucket the bucket used for the sequential scan
+     */
+    public SequentialScan(LocalBucket bucket) {
+        this(bucket, null, 0, true);
+    }
+
+    /**
      * Creates a new instance of SequantialScan access structure with specific bucket class and filtering pivots.
      * Additional parameters for the bucket class constructor can be passed.
      *
@@ -78,21 +113,7 @@ public class SequentialScan extends Algorithm {
      */
     @Algorithm.AlgorithmConstructor(description = "SequentialScan Access Structure", arguments = {"bucket class", "bucket class params", "pivots", "pivot count", "pivotDistsValidIfGiven"})
     public SequentialScan(Class<? extends LocalBucket> bucketClass, Map<String, Object> bucketClassParams, AbstractObjectIterator<LocalAbstractObject> pivotIter, int pivotCount, boolean pivotDistsValidIfGiven) throws CapacityFullException, InstantiationException {
-        super("SequentialScan");
-        
-        // Create an empty bucket (using the provided bucket class and parameters)
-        bucket = BucketDispatcher.createBucket(bucketClass, Long.MAX_VALUE, Long.MAX_VALUE, 0, true, bucketClassParams);
-        
-        // Get the fixed pivots
-        if (pivotCount > 0 && pivotIter != null) {
-            pivots = new AbstractObjectList<LocalAbstractObject>();
-            for (int i = 0; i < pivotCount; i++)
-                pivots.add(pivotIter.next());
-        } else pivots = null;
-        
-        // Precomputed distances already associated with newly inserted objects are valid or not.
-        // If there are no precomputed distances stored at new objects, they are computed, of course.
-        this.pivotDistsValidIfGiven = pivotDistsValidIfGiven;
+        this(BucketDispatcher.createBucket(bucketClass, Long.MAX_VALUE, Long.MAX_VALUE, 0, true, bucketClassParams), pivotIter, pivotCount, pivotDistsValidIfGiven);
     }
 
     /**

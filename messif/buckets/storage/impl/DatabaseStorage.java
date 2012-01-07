@@ -827,8 +827,9 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     //****************** Implementations of common column convertors ******************//
 
     /**
-     * Column convertor that uses a database BLOB into which instances of {@code T} are
-     * {@link BinarySerializator binary serialized/deserialized}.
+     * Column convertor that uses a given fixed value for the respective database attribute.
+     * Note that the value is typically used to insert a fixed value to a database
+     * or to limit objects returned by a search.
      *
      * @param <T> the class of instances that are serialized into the database
      */
