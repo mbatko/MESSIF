@@ -30,6 +30,19 @@ package messif.sequence;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public interface Sequence<T> {
+    
+    /**
+     * Parameter string for sequence offset 
+     * that should be used within operations used by subsequence matching framework 
+     */
+    public static String PARAM_SEQ_OFFSET = "seq_offset";
+
+    /**
+     * Parameter string for sequence length
+     * that should be used within operations used by subsequence matching framework 
+     */
+    public static String PARAM_SEQ_LENGTH = "seq_length";
+    
     /**
      * Returns the data of this sequence.
      * Note that a copy of the stored data is returned.
