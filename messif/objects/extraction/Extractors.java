@@ -21,14 +21,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
+import messif.objects.impl.MetaObjectParametricMap;
 import messif.objects.keys.AbstractObjectKey;
+import messif.utility.Convert;
 import messif.utility.ExtendedProperties;
 import messif.utility.ExtendedPropertiesException;
 import messif.utility.ExternalProcessInputStream;
@@ -532,4 +537,59 @@ public abstract class Extractors {
         return createExtractorFromProperties(properties.getClassProperty(key + ".class", true, LocalAbstractObject.class), properties, key);
     }
 
+    /**
+     * Creates extractor that combines multiple extractors defined in properties
+     * into one {@link MetaObjectParametricMap} object.
+     * 
+     * @param properties the properties where the extractors are defined
+     * @param extractorPropertyKeys the properties key (prefix) that defines the respective extractors
+     *          (see {@link #createExtractorFromProperties(messif.utility.ExtendedProperties, java.lang.String)})
+     * @param contentParameter the name of the parameter where the original
+     *          binary data source (e.g. the image) is stored; nothing is stored if <tt>null</tt>
+     * @param expandMetaObjects flag whether the {@link MetaObject} instances created by the respective
+     *          extractors are put into the created object as multiple separated {@link LocalAbstractObject}s (<tt>true</tt>),
+     *          or without expansion directly as the extracted {@link MetaObject}s (<tt>false</tt>)
+     * @return the new extractor instance that combines multiple extractors
+     * @throws ExtendedPropertiesException if there some of the required properties were missing or invalid
+     * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
+     */
+    public static Extractor<MetaObjectParametricMap> createCombinedExtractorFromProperties(ExtendedProperties properties, final String[] extractorPropertyKeys, final String contentParameter, final boolean expandMetaObjects) throws ExtendedPropertiesException, IllegalArgumentException {
+        final Extractor<?>[] extractors = new Extractor<?>[extractorPropertyKeys.length];
+        for (int i = 0; i < extractorPropertyKeys.length; i++)
+            extractors[i] = Extractors.createExtractorFromProperties(properties, extractorPropertyKeys[i]);
+        return new Extractor<MetaObjectParametricMap>() {
+            @Override
+            public MetaObjectParametricMap extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                // Read the binary data from the data source
+                byte[] data = dataSource.getBinaryData();
+                dataSource.close();
+
+                // Extract the descriptors by their respective extractors
+                Map<String, LocalAbstractObject> objects = new LinkedHashMap<String, LocalAbstractObject>(extractorPropertyKeys.length);
+                for (int i = 0; i < extractorPropertyKeys.length; i++) {
+                    LocalAbstractObject extractedObject = extractors[i].extract(new ExtractorDataSource(data, dataSource.getParameterMap())); // Data source from the binary data
+                    if (expandMetaObjects && extractedObject instanceof MetaObject) {
+                        MetaObject castExtractedObject = (MetaObject)extractedObject;
+                        for (String name : castExtractedObject.getObjectNames()) {
+                            objects.put(extractorPropertyKeys[i] + "." + name, castExtractedObject.getObject(name));
+                        }
+                    } else {
+                        objects.put(extractorPropertyKeys[i], extractedObject);
+                    }
+                }
+
+                // Copy the requested keys from the parameters and add object binary content
+                Map<String, Serializable> parameters = Convert.copyAllMapValues(dataSource.getParameterMap(), null, Serializable.class);
+                if (contentParameter != null)
+                    parameters.put(contentParameter, data);
+
+                // Create the final object
+                return new MetaObjectParametricMap(dataSource.getLocator(), parameters, objects);
+            }
+            @Override
+            public Class<? extends MetaObjectParametricMap> getExtractedClass() {
+                return MetaObjectParametricMap.class;
+            }
+        };
+    }
 }
