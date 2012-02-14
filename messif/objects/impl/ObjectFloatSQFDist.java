@@ -67,11 +67,17 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     }
 
     public ObjectFloatSQFDist(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
-        super(stream);
-        this.sumOfWeights = calculateSumOfWeights();
-        precomputeSelfDistance();
+        this(stream, true);
     }
 
+    public ObjectFloatSQFDist(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
+        super(stream);
+        this.sumOfWeights = calculateSumOfWeights();
+        if (precomputeSelfDistance) {
+            precomputeSelfDistance();
+        }
+    }
+    
     protected ObjectFloatSQFDist(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.sumOfWeights = calculateSumOfWeights();
@@ -239,9 +245,15 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
      */
     public static class ObjectFloatSQFDistWeights extends ObjectFloatSQFDist {
         private static final long serialVersionUID = 1L;
-        private final float[] weights;
+        private final float[] weights ;
         private final float alpha;
 
+        public ObjectFloatSQFDistWeights(BufferedReader stream, float[] weights, float alpha) throws EOFException, IOException {
+            super(stream, false);
+            this.weights = weights.clone();
+            this.alpha = alpha;
+        }
+        
         public ObjectFloatSQFDistWeights(ObjectFloatVector object, float[] weights, float alpha) {
             super(object.data);
             this.weights = weights.clone();
