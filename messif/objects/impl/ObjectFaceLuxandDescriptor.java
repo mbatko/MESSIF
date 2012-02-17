@@ -23,6 +23,8 @@ import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
+import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializator;
 
 /**
  * This class encapsulates a Luxand FaceSDK recognition descriptor.
@@ -89,6 +91,17 @@ public class ObjectFaceLuxandDescriptor extends ObjectByteVector {
      */
     public ObjectFaceLuxandDescriptor(BufferedReader stream) throws IOException, EOFException, NumberFormatException, IllegalArgumentException {
         super(stream, true);
+    }
+
+    /**
+     * Creates a new instance of ObjectFaceLuxandDescriptor loaded from binary input buffer.
+     * 
+     * @param input the buffer to read the ObjectFaceLuxandDescriptor from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
+    public ObjectFaceLuxandDescriptor(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
 

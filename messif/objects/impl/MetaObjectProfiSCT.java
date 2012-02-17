@@ -67,6 +67,7 @@ import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
 import messif.objects.text.WordExpander;
 import messif.objects.text.TextConversionException;
+import messif.objects.text.StringFieldDataProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
@@ -79,7 +80,7 @@ import messif.utility.ExtendedDatabaseConnection;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable {
+public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataProvider, BinarySerializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -262,31 +263,30 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
     /**
      * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}.
      * The locator, the attributes and the encapsulated objects from the source {@code object} are
-     * taken.
+     * copied. The key word identifiers object as well as the title and keyword strings are replaced by the given ones.
      *
      * @param object the source metaobject from which to get the data
-     * @param copyIntKeyWords if <tt>true</tt>, the {@link #keyWords} object is copied
-     *          otherwise the keyWords are <tt>null</tt>
+     * @param titleString the title of this object as string
+     * @param keywordString the keywords of this object as string
+     * @param keyWords new value for the {@link #keyWords} object
      */
-    public MetaObjectProfiSCT(MetaObjectProfiSCT object, boolean copyIntKeyWords) {
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, String titleString, String keywordString, ObjectIntMultiVectorJaccard keyWords) {
         this(object.getLocatorURI(), object.colorLayout, object.colorStructure, object.edgeHistogram,
-                object.scalableColor, object.regionShape, object.keyWords, object.rights,
+                object.scalableColor, object.regionShape, keyWords, object.rights,
                 object.territories, object.added, object.archiveID, object.attractiveness);
-        this.titleString = object.titleString;
-        this.keywordString = object.keywordString;
-        if (copyIntKeyWords)
-            this.keyWords = object.keyWords;
+        this.titleString = titleString;
+        this.keywordString = keywordString;
     }
 
     /**
      * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}.
      * The locator, the attributes and the encapsulated objects from the source {@code object} are
-     * taken. Keyword object is not copied and will be <tt>null</tt>.
+     * taken.
      *
      * @param object the source metaobject from which to get the data
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object) {
-        this(object, false);
+        this(object, object.titleString, object.keywordString, object.keyWords);
     }
 
     /**
@@ -302,7 +302,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param wordIndex the index for translating words to addresses
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, String titleString, String keywordString, String searchString, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
-        this(object, false);
+        this(object, titleString, keywordString, null);
         if (titleString != null || keywordString != null || searchString != null)
             this.keyWords = convertWordsToIdentifiers(expander, stemmer, wordIndex, titleString, keywordString, searchString);
     }
@@ -329,7 +329,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      * @param searchWordIds the identifiers of the searched words to set for the new object (in addition to the copied keyword and title words)
      */
     public MetaObjectProfiSCT(MetaObjectProfiSCT object, int[] searchWordIds) {
-        this(object, false);
+        this(object, null, null, null);
         if (searchWordIds == null)
             searchWordIds = new int[0];
         if (object.keyWords != null && object.keyWords.getVectorDataCount() >= 2)
@@ -376,15 +376,15 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
      */
     public MetaObjectProfiSCT(BufferedReader stream, boolean haveWords, boolean wordsConverted) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-        colorLayout = new ObjectColorLayout(new BufferedReader(new StringReader(line)));
+        readObjectCommentsWithoutData(stream);
+        colorLayout = new ObjectColorLayout(stream);
         colorStructure = new ObjectShortVectorL1(stream);
         edgeHistogram = new ObjectVectorEdgecomp(stream);
         scalableColor = new ObjectIntVectorL1(stream);
         regionShape = new ObjectXMRegionShape(stream);
         rights = Rights.valueOfWithEmpty(stream.readLine());
         territories = Territory.stringToTerritories(stream.readLine());
-        line = stream.readLine();
+        String line = stream.readLine();
         added = (line == null || line.isEmpty()) ? 0 : Integer.parseInt(line);
         line = stream.readLine();
         archiveID = (line == null || line.isEmpty()) ? 0 : Integer.parseInt(line);
@@ -587,6 +587,29 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
             return TextConversion.identifiersToWords(wordIndex, keyWords.getVectorData(2));
         else
             return null;
+    }
+
+    @Override
+    public Collection<String> getStringDataFields() {
+        return Collections.unmodifiableCollection(Arrays.asList("title", "keywords"));
+    }
+
+    @Override
+    public String getStringData(String fieldName) throws IllegalArgumentException {
+        if (fieldName.equalsIgnoreCase("title"))
+            return titleString;
+        else if (fieldName.equalsIgnoreCase("keywords"))
+            return keywordString;
+        throw new IllegalArgumentException("Unknown field name: '" + fieldName + "'");
+    }
+
+    @Override
+    public String getStringData() {
+        if (titleString == null)
+            return keywordString == null ? "" : keywordString;
+        if (keywordString == null)
+            return titleString;
+        return titleString + "\n" + keywordString;
     }
 
     /**
@@ -1934,7 +1957,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
 
     /**
      * Object that holds only keywords and measures the distance as the
-     * weighted jaccard with weights based on tf-idf algorithm. Note
+     * weighted Jaccard with weights based on tf-idf algorithm. Note
      * that the other object for the distance must be {@link MetaObjectProfiSCT}.
      */
     public static class MetaObjectProfiSCTKwdist extends MetaObjectProfiSCT {
@@ -1962,7 +1985,7 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
          * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          */
         public MetaObjectProfiSCTKwdist(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
-            super(object, true);
+            super(object);
             this.keywordsWeight = keywordsWeight;
             this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
@@ -2029,13 +2052,98 @@ public class MetaObjectProfiSCT extends MetaObject implements BinarySerializable
         }
     }
 
+    /**
+     * Extension of the MetaObjectProfiSCT that preserves also the title and keywords strings.
+     */
+    public static class MetaObjectProfiSCTWithTKStrings extends MetaObjectProfiSCT {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTWithTKStrings from the given {@link MetaObjectProfiSCT}.
+         * The locator, the attributes and the encapsulated objects from the source {@code object} are
+         * taken.
+         *
+         * @param object the source metaobject from which to get the data
+         */
+        public MetaObjectProfiSCTWithTKStrings(MetaObjectProfiSCT object) {
+            super(object);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTWithTKStrings from the given {@link MetaObjectProfiSCT}.
+         * The locator, the attributes and the encapsulated objects from the source {@code object} are
+         * copied. The key word identifiers object as well as the title and keyword strings are replaced by the given ones.
+         *
+         * @param object the source metaobject from which to get the data
+         * @param titleString the title of this object as string
+         * @param keywordString the keywords of this object as string
+         * @param keyWords new value for the {@link #keyWords} object
+         */
+        public MetaObjectProfiSCTWithTKStrings(MetaObjectProfiSCT object, String titleString, String keywordString, ObjectIntMultiVectorJaccard keyWords) {
+            super(object, titleString, keywordString, keyWords);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTWithTKStrings loaded from binary input buffer.
+         *
+         * @param input the buffer to read the MetaObjectProfiSCTWithTKStrings from
+         * @param serializator the serializator used to write objects
+         * @throws IOException if there was an I/O error reading from the buffer
+         */
+        protected MetaObjectProfiSCTWithTKStrings(BinaryInput input, BinarySerializator serializator) throws IOException {
+            super(input, serializator);
+            titleString = serializator.readString(input);
+            keywordString = serializator.readString(input);
+        }
+
+        @Override
+        public int getBinarySize(BinarySerializator serializator) {
+            int size = super.getBinarySize(serializator);
+            size += serializator.getBinarySize(titleString);
+            size += serializator.getBinarySize(keywordString);
+            return size;
+        }
+
+        @Override
+        public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+            int size = super.binarySerialize(output, serializator);
+            size += serializator.write(output, titleString);
+            size += serializator.write(output, keywordString);
+            return size;
+        }
+
+        /**
+         * Java native serialization method.
+         * @param out the stream to serialize this object to
+         * @throws IOException if there was an error writing to the stream {@code out}
+         */
+        private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+            out.defaultWriteObject();
+            out.writeObject(titleString);
+            out.writeObject(keywordString);
+        }
+
+        /**
+         * Java native serialization method.
+         * @param in the stream to deserialize this object from
+         * @throws IOException if there was an error reading from the stream {@code in}
+         * @throws ClassNotFoundException if an unknown class was encountered in the stream 
+         */
+        private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+            in.defaultReadObject();
+            titleString = (String)in.readObject();
+            keywordString = (String)in.readObject();
+        }
+    }
+
 
     //************ BinarySerializable interface ************//
 
     /**
-     * Creates a new instance of MetaObjectPixMacShapeAndColor loaded from binary input buffer.
+     * Creates a new instance of MetaObjectProfiSCT loaded from binary input buffer.
      *
-     * @param input the buffer to read the MetaObjectPixMacShapeAndColor from
+     * @param input the buffer to read the MetaObjectProfiSCT from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
