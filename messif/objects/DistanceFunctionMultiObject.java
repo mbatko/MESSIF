@@ -16,6 +16,8 @@
  */
 package messif.objects;
 
+import java.util.Collection;
+
 /**
  * Interface for distance functions that compute the distance from a set of objects
  * to the given object. The distance function takes two parameters - the set of objects
@@ -46,5 +48,11 @@ public interface DistanceFunctionMultiObject<T> {
      * @return the distance between the given set of {@code objects} and the {@code object}
      * @throws IndexOutOfBoundsException if the passed {@code individualDistances} array is not big enough
      */
-    public float getDistanceMultiObject(T[] objects, T object, float[] individualDistances) throws IndexOutOfBoundsException;
+    public float getDistanceMultiObject(Collection<? extends T> objects, T object, float[] individualDistances) throws IndexOutOfBoundsException;
+
+    /**
+     * Returns the type of objects that this distance function accepts as arguments.
+     * @return the type of objects for this distance function
+     */
+    public Class<? extends T> getDistanceObjectClass();
 }

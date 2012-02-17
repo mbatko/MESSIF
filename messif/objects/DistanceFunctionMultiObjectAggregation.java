@@ -16,6 +16,9 @@
  */
 package messif.objects;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 /**
  * Enumeration that implements several variants of the {@link DistanceFunctionMultiObject multi-object distance function}.
  * It computes a regular {@link LocalAbstractObject}'s distance to the given object
@@ -69,11 +72,17 @@ public enum DistanceFunctionMultiObjectAggregation implements DistanceFunctionMu
     }
 
     @Override
-    public float getDistanceMultiObject(LocalAbstractObject[] objects, LocalAbstractObject object, float[] individualDistances) throws IndexOutOfBoundsException {
+    public float getDistanceMultiObject(Collection<? extends LocalAbstractObject> objects, LocalAbstractObject object, float[] individualDistances) throws IndexOutOfBoundsException {
         if (individualDistances == null)
-            individualDistances = new float[objects.length];
-        for (int i = 0; i < objects.length; i++)
-            individualDistances[i] = objects[i].getDistance(object);
+            individualDistances = new float[objects.size()];
+        Iterator<? extends LocalAbstractObject> objIterator = objects.iterator();
+        for (int i = 0; objIterator.hasNext(); i++)
+            individualDistances[i] = objIterator.next().getDistance(object);
         return evaluate(individualDistances);
+    }
+
+    @Override
+    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
+        return LocalAbstractObject.class;
     }
 }

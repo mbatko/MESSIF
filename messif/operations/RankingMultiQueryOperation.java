@@ -17,7 +17,11 @@
 package messif.operations;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import messif.objects.DistanceFunctionMultiObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.RankedAbstractMetaObject;
@@ -41,7 +45,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     //****************** Attributes ******************//
 
     /** Array with the query objects */
-    private LocalAbstractObject[] queryObjects;
+    private List<? extends LocalAbstractObject> queryObjects;
 
     /** Distance function for computing the distances between a data object and all query objects */
     private final DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction;
@@ -68,7 +72,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      */
     protected RankingMultiQueryOperation(LocalAbstractObject[] queryObjects, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction, boolean storeIndividualDistances, AnswerType answerType, int maxAnswerSize) throws NullPointerException {
         super(answerType, maxAnswerSize);
-        this.queryObjects = queryObjects.clone();
+        this.queryObjects = new ArrayList<LocalAbstractObject>(Arrays.asList(queryObjects));
         if (distanceFunction == null)
             throw new NullPointerException();
         this.distanceFunction = distanceFunction;
@@ -128,7 +132,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      */
     protected RankingMultiQueryOperation(LocalAbstractObject[] queryObjects, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction, boolean storeIndividualDistances, AnswerType answerType, RankedSortedCollection answerCollection) throws NullPointerException {
         super(answerType, answerCollection);
-        this.queryObjects = queryObjects.clone();
+        this.queryObjects = new ArrayList<LocalAbstractObject>(Arrays.asList(queryObjects));
         if (distanceFunction == null)
             throw new NullPointerException();
         this.distanceFunction = distanceFunction;
@@ -158,8 +162,8 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      * Returns the query objects of this operation.
      * @return the query objects of this operation
      */
-    public LocalAbstractObject[] getQueryObjects() {
-        return queryObjects.clone();
+    public Collection<? extends LocalAbstractObject> getQueryObjects() {
+        return Collections.unmodifiableCollection(queryObjects);
     }
 
     /**
@@ -167,7 +171,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      * @return the number of query objects of this operation
      */
     public int getQueryObjectsCount() {
-        return queryObjects.length;
+        return queryObjects.size();
     }
 
     /**
@@ -177,7 +181,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      * @throws IndexOutOfBoundsException if the given index is not valid
      */
     public LocalAbstractObject getQueryObject(int index) throws IndexOutOfBoundsException {
-        return queryObjects[index];
+        return queryObjects.get(index);
     }
 
     /**
@@ -210,10 +214,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     @Override
     public RankingMultiQueryOperation clone() throws CloneNotSupportedException {
         RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone();
-        LocalAbstractObject[] clonedQueryObjects = new LocalAbstractObject[operation.queryObjects.length];
-        for (int i = 0; i < clonedQueryObjects.length; i++)
-            clonedQueryObjects[i] = operation.queryObjects[i].clone();
-        operation.queryObjects = clonedQueryObjects;
+        operation.queryObjects = new ArrayList<LocalAbstractObject>(queryObjects);
         return operation;
     }
 
@@ -223,8 +224,8 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        for (int i = 0; i < queryObjects.length; i++)
-            queryObjects[i].clearSurplusData();
+        for (LocalAbstractObject queryObject : queryObjects)
+            queryObject.clearSurplusData();
     }
 
     @Override
@@ -232,11 +233,11 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
         // The argument obj is always RankingMultiQueryOperation or its descendant, because it has only abstract ancestors
         RankingMultiQueryOperation castObj = (RankingMultiQueryOperation)obj;
 
-        if (queryObjects.length != castObj.queryObjects.length)
+        if (queryObjects.size() != castObj.queryObjects.size())
             return false;
 
-        for (int i = 0; i < queryObjects.length; i++)
-            if (!queryObjects[i].dataEquals(castObj.queryObjects[i]))
+        for (int i = 0; i < queryObjects.size(); i++)
+            if (!queryObjects.get(i).dataEquals(castObj.queryObjects.get(i)))
                 return false;
 
         if (!distanceFunction.equals(castObj.distanceFunction))
@@ -248,8 +249,11 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     @Override
     public int dataHashCode() {
         int hc = distanceFunction.hashCode();
-        for (int i = 0; i < queryObjects.length; i++)
-            hc += queryObjects[i].dataHashCode() << i;
+        int i = 0;
+        for (LocalAbstractObject queryObject : queryObjects) {
+            hc += queryObject.dataHashCode() << i++;
+        }
+
         return hc;
     }
 
@@ -284,7 +288,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
         if (object == null)
             return null;
         if (individualDistances == null)
-            individualDistances = new float[queryObjects.length];
+            individualDistances = new float[queryObjects.size()];
         float distance = distanceFunction.getDistanceMultiObject(queryObjects, object, individualDistances);
 
         if (distance > distThreshold)
