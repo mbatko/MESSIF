@@ -17,6 +17,8 @@
 package messif.objects;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.Iterator;
 import messif.objects.util.AggregationFunction;
 
 /**
@@ -53,12 +55,18 @@ public class DistanceFunctionMultiObjectMetaAggregation implements DistanceFunct
     }
 
     @Override
-    public float getDistanceMultiObject(MetaObject[] objects, MetaObject object, float[] individualDistances) throws IndexOutOfBoundsException {
+    public float getDistanceMultiObject(Collection<? extends MetaObject> objects, MetaObject object, float[] individualDistances) throws IndexOutOfBoundsException {
         if (individualDistances == null)
-            individualDistances = new float[objects.length];
-        for (int i = 0; i < objects.length; i++)
-            individualDistances[i] = metaObjectAggregationDistance.getDistance(objects[i], object);
+            individualDistances = new float[objects.size()];
+        Iterator<? extends MetaObject> objIterator = objects.iterator();
+        for (int i = 0; objIterator.hasNext(); i++)
+            individualDistances[i] = metaObjectAggregationDistance.getDistance(objIterator.next(), object);
         return multiObjectAggregation.evaluate(individualDistances);
+    }
+
+    @Override
+    public Class<? extends MetaObject> getDistanceObjectClass() {
+        return MetaObject.class;
     }
 
 }
