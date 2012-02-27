@@ -20,7 +20,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.AggregationFunction;
 import messif.operations.AbstractOperation;
-import messif.operations.QueryOperation;
+import messif.operations.RankingQueryOperation;
 
 
 /**
@@ -60,7 +60,7 @@ public class TopCombinedQueryOperation extends AggregationFunctionQueryOperation
     protected final int numberOfRandomAccesses;
 
     /** Query operation to execute for sorted accesses */
-    protected final Class<? extends QueryOperation> initialSAQueryClass;
+    protected final Class<? extends RankingQueryOperation> initialSAQueryClass;
 
 
     //****************** Constructors ******************//
@@ -79,7 +79,7 @@ public class TopCombinedQueryOperation extends AggregationFunctionQueryOperation
      * @param aggregationFunction the aggregation function for combining the distances from sorted lists
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Number of initial sorted access objects", "Progressive sorted access flag", "Number of random accesses", "Query operation for sorted access", "Aggregation function"})
-    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends QueryOperation> initialSAQueryClass, AggregationFunction aggregationFunction) {
+    public TopCombinedQueryOperation(LocalAbstractObject queryObject, int k, int numberOfInitialSA, boolean numberOfInitialSAProgressive, int numberOfRandomAccesses, Class<? extends RankingQueryOperation> initialSAQueryClass, AggregationFunction aggregationFunction) {
         super(queryObject, k, aggregationFunction);
         this.numberOfInitialSA = numberOfInitialSA;
         this.numberOfInitialSAProgressive = numberOfInitialSAProgressive;
@@ -154,7 +154,7 @@ public class TopCombinedQueryOperation extends AggregationFunctionQueryOperation
      * Returns the class of the query operation to execute for initial sorted accesses.
      * @return the class of the query operation to execute for initial sorted accesses
      */
-    public Class<? extends QueryOperation> getInitialSAQueryClass() {
+    public Class<? extends RankingQueryOperation> getInitialSAQueryClass() {
         return initialSAQueryClass;
     }
 

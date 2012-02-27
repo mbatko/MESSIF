@@ -237,13 +237,15 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      * @throws SQLException if there was a problem parsing or executing the SQL command
      */
     protected final Object executeSingleValue(String sql, Object... parameters) throws NoSuchElementException, SQLException {
-        ResultSet rs = prepareAndExecute(null, sql, false, parameters).getResultSet();
+        PreparedStatement stmt = prepareAndExecute(null, sql, false, parameters);
+        ResultSet rs = stmt.getResultSet();
         try {
             if (!rs.next())
                 throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
             return rs.getObject(1);
         } finally {
             rs.close();
+            stmt.close();
         }
     }
 

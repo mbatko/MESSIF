@@ -65,6 +65,26 @@ public abstract class TextConversion {
     }
 
     /**
+     * Finds all occurances of the given pattern in the {@code string} and
+     * replace it with the replacement string according to the matched group.
+     * @param string the string to apply the find-and-replace on
+     * @param findPattern the pattern to find, must have the same number of
+     *          groups as the replacement array
+     * @param replacement the list of replacement strings
+     * @return the modified string
+     */
+    public static String findReplace(CharSequence string, Pattern findPattern, String... replacement) {
+        if (string == null)
+            return null;
+        Matcher matcher = findPattern.matcher(string);
+        StringBuffer str = new StringBuffer();
+        while (matcher.find())
+            matcher.appendReplacement(str, replacement[matcherGroupMatched(matcher) - 1]);
+        matcher.appendTail(str);
+        return str.toString();
+    }
+
+    /**
      * Normalizes the given string by lower-casing, replacing the diacritics characters
      * with their Latin counter-parts, and removing/replacing other unwanted character sequences.
      * @param string the string to normalize
@@ -73,12 +93,7 @@ public abstract class TextConversion {
      * @see #NORMALIZER_REPLACE_STRINGS
      */
     public static String normalizeString(String string) {
-        Matcher matcher = NORMALIZER_REPLACE_PATTERN.matcher(Normalizer.normalize(string.toLowerCase(), Form.NFD));
-        StringBuffer str = new StringBuffer();
-        while (matcher.find())
-            matcher.appendReplacement(str, NORMALIZER_REPLACE_STRINGS[matcherGroupMatched(matcher) - 1]);
-        matcher.appendTail(str);
-        return str.toString();
+        return findReplace(Normalizer.normalize(string.toLowerCase(), Form.NFD), NORMALIZER_REPLACE_PATTERN, NORMALIZER_REPLACE_STRINGS);
     }
 
     /**

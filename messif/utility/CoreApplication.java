@@ -797,15 +797,12 @@ public class CoreApplication {
         try {
             AbstractOperation operation = lastOperation;
             if (algorithm != null && operation != null) {
-                // Execute operation
-                OperationStatistics.resetLocalThreadStatistics();
-                if (bindOperationStatsRegexp != null)
-                    OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
+                // Reset operation answer if requested
                 if (args.length >= 2 && args[1].equalsIgnoreCase("true") && operation instanceof QueryOperation)
                     ((QueryOperation)operation).resetAnswer();
-                algorithm.executeOperation(operation);
-                if (bindOperationStatsRegexp != null)
-                    OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
+
+                // Execute operation
+                lastOperation = algorithm.setupStatsAndExecuteOperation(operation, bindOperationStatsRegexp);
                 return true;
             } else {
                 out.println("No operation has been executed yet. Use operationExecute method first.");
@@ -1091,6 +1088,111 @@ public class CoreApplication {
     }
 
     /**
+     * Print the given answer interator to the output.
+     * <p>
+     * Optional string arguments are accepted:
+     *   <ul>
+     *     <li>number of results to display (defaults to all)</li>
+     *     <li>number of results to skip from the beginning (defaults to 0)</li>
+     *   </ul>
+     * </p>
+     * 
+     * @param subAnswerIndex the index of the sub-answer to display (if <tt>null</tt> the whole answer is used)
+     * @param out a stream where the application writes information for the user
+     * @param optArgs additional optional arguments for the display
+     * @param optArgIndex the index of the first optional argument
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */  
+    private boolean operationAnswer(Integer subAnswerIndex, PrintStream out, int optArgIndex, String... optArgs) {
+        QueryOperation<?> operation = null;
+        try {
+            operation = (QueryOperation<?>)lastOperation;
+        } catch (ClassCastException ignore) {
+        }
+        if (operation == null) {
+            out.println("The operationAnswer method must be called after some QueryOperation was executed");
+            return false;
+        }
+
+        // The next optional argument is the separator (defaults to newline)
+        String separator = (optArgs.length > optArgIndex)?optArgs[optArgIndex]:System.getProperty("line.separator");
+        optArgIndex++;
+
+        // The next optional argument is the type of output (defaults to All)
+        char answerType = (optArgs.length > optArgIndex && optArgs[optArgIndex].length() > 0) ? Character.toUpperCase(optArgs[optArgIndex].charAt(0)) : 'A';
+        optArgIndex++;
+
+        // The next optional argument is the maximal number of results to display (all results are displayed if not specified)
+        int maxCount;
+        try {
+            maxCount = retrieveIntArgument(optArgs, optArgIndex, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
+            optArgIndex++;
+        } catch (NumberFormatException e) {
+            out.println("Invalid number of objects to display: " + optArgs[optArgIndex]);
+            return false;
+        }
+
+        // The next optional argument is the number results to skip before the actual answer is displayed (defaults to zero)
+        int skipCount;
+        try {
+            skipCount = retrieveIntArgument(optArgs, optArgIndex, 0, 0, Integer.MAX_VALUE);
+            optArgIndex++;
+        } catch (NumberFormatException e) {
+            out.println("Invalid number of objects to skip: " + optArgs[optArgIndex]);
+            return false;
+        }
+
+        // Display output
+        Iterator<?> answerIterator;
+        if (answerType == 'O' || answerType == 'L') {
+            answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswerObjects();
+        } else {
+            answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswer();
+        }
+        while (skipCount-- > 0 && answerIterator.hasNext())
+            answerIterator.next();
+        while (answerIterator.hasNext() && maxCount-- > 0) {
+            printOperationAnswer(answerIterator.next(), answerType, out);
+            if (answerIterator.hasNext() && maxCount > 0)
+                out.print(separator);
+        }
+        out.println();
+
+        return true;
+    }
+
+    /**
+     * Print the given answer object to the out stream.
+     * 
+     * @param answerObject the answer object to print (e.g. {@link AbstractObject} or {@link RankedAbstractObject})
+     * @param answerType the display type of the answer - see {@link #printOperationAnswer(java.lang.Object, char, java.io.PrintStream)}
+     * @param out a stream where the application writes information for the user
+     */
+    private void printOperationAnswer(Object answerObject, char answerType, PrintStream out) {
+        switch (answerType) {
+            case 'A':
+            case 'O':
+                out.print(answerObject);
+                break;
+            case 'L':
+                out.print(((AbstractObject)answerObject).getLocatorURI());
+                break;
+            case 'D':
+                RankedAbstractObject rankedAnswerObject = (RankedAbstractObject)answerObject;
+                out.print(rankedAnswerObject.getDistance());
+                out.print(": ");
+                out.print(rankedAnswerObject.getObject().getLocatorURI());
+                break;
+            case 'S':
+                rankedAnswerObject = (RankedAbstractObject)answerObject;
+                out.print(rankedAnswerObject.getObject().getLocatorURI());
+                out.print(": ");
+                out.print(rankedAnswerObject.getDistance());
+                break;
+        }
+    }
+
+    /**
      * Show the answer of the last executed query operation.
      * Specifically, the information about the operation created by last call to
      * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
@@ -1102,7 +1204,7 @@ public class CoreApplication {
      * this method will fail.
      * </p>
      * <p>
-     * An optional argument is accepted:
+     * The following optional arguments are accepted:
      *   <ul>
      *     <li>objects separator (defaults to newline)</li>
      *     <li>result type - can be 'All' = display everything,
@@ -1126,95 +1228,54 @@ public class CoreApplication {
      */  
     @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationAnswer(PrintStream out, String... args) {
-        AbstractOperation operation = lastOperation;
-        if (operation == null || !(operation instanceof QueryOperation)) {
-            out.println("The operationAnswer method must be called after some QueryOperation was executed");
-            return false;
-        }
+        return operationAnswer(null, out, 1, args);
+    }
 
-        // Separator is second argument (get newline if not specified)
-        String separator = (args.length > 1)?args[1]:System.getProperty("line.separator");
-
-        // Fourth (optional) argument is the maximal number of results to display
-        int maxCount;
+    /**
+     * Show the sub-answer of the last executed query operation if possible.
+     * Specifically, the information about the operation created by last call to
+     * {@link #operationExecute} or {@link #operationBgExecute} is shown. Note that
+     * the operation might be still running if the {@link #operationBgExecute} was
+     * used and thus the results might not be complete. Use {@link #operationWaitBg}
+     * to wait for background operations to finish.
+     * <p>
+     * If the last operation was not {@link messif.operations.QueryOperation query} operation,
+     * this method will fail.
+     * </p>
+     * <p>
+     * The following arguments are accepted:
+     *   <ul>
+     *     <li>zero-based index of the sub-answer to show (required argument)</li>
+     *     <li>objects separator (defaults to newline)</li>
+     *     <li>result type - can be 'All' = display everything,
+     *            'Objects' = displays just objects, 'Locators' = display just locators,
+     *             or 'DistanceLocators' = display format 'distance: locator'</li>
+     *     <li>number of results to display (defaults to all)</li>
+     *     <li>number of results to skip from the beginning (defaults to 0)</li>
+     *   </ul>
+     * </p>
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationSubAnswer 1 , Locators
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args sub-answer index, display separator for the list of objects, and type of the display
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */  
+    @ExecutableMethod(description = "list sub-answer objects retrieved by the last executed query operation", arguments = {"sub-answer index to show", "objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
+    public boolean operationSubAnswer(PrintStream out, String... args) {
+        Integer subAnswerIndex;
         try {
-            maxCount = retrieveIntArgument(args, 3, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
-        } catch (NumberFormatException e) {
-            out.println("Invalid number of objects to display: " + args[3]);
+            subAnswerIndex = Integer.valueOf(args[1]);
+        } catch (Exception e) {
+            out.println("Error reading sub-answer index from the first argument");
             return false;
         }
-
-        // Fifth (optional) argument is the number results to skip before the actual answer is displayed
-        int skipCount;
-        try {
-            skipCount = retrieveIntArgument(args, 4, 0, 0, Integer.MAX_VALUE);
-        } catch (NumberFormatException e) {
-            out.println("Invalid number of objects to skip: " + args[4]);
-            return false;
-        }
-
-        // Type of output is third argument (defaults to All)
-        switch ((args.length > 2 && args[2].length() > 0) ? Character.toUpperCase(args[2].charAt(0)) : 'A') {
-            case 'A':
-                Iterator<?> itAll = ((QueryOperation<?>)operation).getAnswer();
-                while (skipCount-- > 0 && itAll.hasNext())
-                    itAll.next();
-                while (itAll.hasNext() && maxCount-- > 0) {
-                    out.print(itAll.next());
-                    if (itAll.hasNext() && maxCount > 0)
-                        out.print(separator);
-                }
-                break;
-            case 'O':
-                Iterator<AbstractObject> itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
-                while (skipCount-- > 0 && itObjects.hasNext())
-                    itObjects.next();
-                while (itObjects.hasNext() && maxCount-- > 0) {
-                    out.print(itObjects.next());
-                    if (itObjects.hasNext() && maxCount > 0)
-                        out.print(separator);
-                }
-                break;
-            case 'L':
-                itObjects = ((QueryOperation<?>)operation).getAnswerObjects();
-                while (skipCount-- > 0 && itObjects.hasNext())
-                    itObjects.next();
-                while (itObjects.hasNext() && maxCount-- > 0) {
-                    out.print(itObjects.next().getLocatorURI());
-                    if (itObjects.hasNext() && maxCount > 0)
-                        out.print(separator);
-                }
-                break;
-            case 'D':
-                Iterator<RankedAbstractObject> answer = ((RankingQueryOperation)operation).getAnswer();
-                while (skipCount-- > 0 && answer.hasNext())
-                    answer.next();
-                while (answer.hasNext() && maxCount-- > 0) {
-                    RankedAbstractObject next = answer.next();
-                    out.print(next.getDistance());
-                    out.print(": ");
-                    out.print(next.getObject().getLocatorURI());
-                    if (answer.hasNext() && maxCount > 0)
-                        out.print(separator);
-                }
-                break;
-            case 'S':
-                answer = ((RankingQueryOperation)operation).getAnswer();
-                while (skipCount-- > 0 && answer.hasNext())
-                    answer.next();
-                while (answer.hasNext() && maxCount-- > 0) {
-                    RankedAbstractObject next = answer.next();
-                    out.print(next.getObject().getLocatorURI());
-                    out.print(": ");
-                    out.print(next.getDistance());
-                    if (answer.hasNext() && maxCount > 0)
-                        out.print(separator);
-                }
-                break;                
-        }
-        out.println();
-
-        return true;
+        return operationAnswer(subAnswerIndex, out, 2, args);
     }
 
 
