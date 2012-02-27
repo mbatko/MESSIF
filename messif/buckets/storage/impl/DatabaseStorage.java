@@ -335,7 +335,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     @Override
     public void destroy() throws Throwable {
         // Delete all records from the database
-        prepareAndExecute(null, deleteAllSQL, false);
+        prepareAndExecute(null, deleteAllSQL, false).close();
         closeConnection();
     }
 
