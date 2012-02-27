@@ -74,6 +74,8 @@ public class CophirXmlParser extends DefaultHandler {
     private final Stemmer stemmer;
     /** Index for translating words to addresses */
     private final IntStorageIndexed<String> wordIndex;
+    /** Index for translating words to addresses */
+    private final String csvObjectName;
 
 
     //****************** Constructors ******************//
@@ -94,8 +96,21 @@ public class CophirXmlParser extends DefaultHandler {
      *          (if <tt>null</tt> the key words descriptor is not created)
      */
     public CophirXmlParser(Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+        this(stemmer, wordIndex, null);
+    }
+
+    /**
+     * Creates a new handler for parsing CoPhIR XML files.
+     * The key words descriptor is created using the given stemmer and word index.
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
+     *          (if <tt>null</tt> the key words descriptor is not created)
+     * @param csvObjectName the name of the CSV key words object
+     */
+    public CophirXmlParser(Stemmer stemmer, IntStorageIndexed<String> wordIndex, String csvObjectName) {
         this.stemmer = stemmer;
         this.wordIndex = wordIndex;
+        this.csvObjectName = csvObjectName;
     }
 
 
@@ -244,6 +259,8 @@ public class CophirXmlParser extends DefaultHandler {
         try {
             if (wordIndex != null)
                 objects.put(wordObjectName, parseKeyWordsType(stemmer, wordIndex));
+            if (csvObjectName != null)
+                objects.put(csvObjectName, new ObjectString(parseKeyWordsCSV()));
             wordData.clear();
         } catch (TextConversionException e) {
             throw new SAXException(e);
@@ -277,6 +294,11 @@ public class CophirXmlParser extends DefaultHandler {
 
     /** Splitting pattern for the {@link #splitBySpace(java.lang.CharSequence)} method */
     private static final Pattern splitBySpacePattern = Pattern.compile("\\s+");
+
+    /** Replacement pattern for the {@link #parseKeyWordsCSV()} method */
+    private static final Pattern csvReplacementPattern = Pattern.compile("([\n\r]+)|(\")|([^\\p{Print}]+)");
+    /** Replacement strings for the {@link #parseKeyWordsCSV()} method */
+    private static final String[] csvReplacementStrings = {" ", "''", ""};
 
     /**
      * Parse the visual descriptor data.
@@ -352,6 +374,26 @@ public class CophirXmlParser extends DefaultHandler {
             wordIds[i] = TextConversion.textToWordIdentifiers(texts[i], TEXT_SPLIT_REGEXP, ignoreWords, stemmer, wordIndex);
         }
         return new ObjectIntMultiVectorJaccard(wordIds);
+    }
+
+    /**
+     * Parse the keywords data as comma-separated-values.
+     * @return the comma-separated keywords
+     */
+    private String parseKeyWordsCSV() {
+        StringBuilder str = new StringBuilder();
+        
+        for (String wordTagName : wordTagNames) {
+            if (str.length() > 0)
+                str.append(',');
+            StringBuilder word = wordData.get(wordTagName);
+            if (word != null) {
+                str.append('"');
+                str.append(TextConversion.findReplace(word, csvReplacementPattern, csvReplacementStrings));
+                str.append('"');
+            }
+        }
+        return str.toString();
     }
 
 
