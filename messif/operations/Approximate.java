@@ -37,7 +37,12 @@ public interface Approximate {
          * Stop after a specific number of I/O operations (page reads)..
          * The {@link #getLocalSearchParam() parameter} is the limit on "data regions" (partitions, buckets, clusters) to be accessed.
          */
-        BLOCK_READS
+        BLOCK_READS,
+        /**
+         * The search type and parameter are not set and the default of the structure should be used.
+          The {@link #getLocalSearchParam() parameter} is ignored.
+         */
+        USE_STRUCTURE_DEFAULT
     }
     
     /**
