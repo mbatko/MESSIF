@@ -94,11 +94,11 @@ public interface Sequence<T> {
     /**
      * Computes distance between a specified piece of this sequence and the given sequence.
      * It is supposed to be called from the implementation of a distance between two sequences.
-     * @param thisPiece The offset of an item in this sequence
-     * @param s The second sequence
-     * @param sPiece The offset of an item in the second sequence
+     * @param thisPieceOffset The offset of an item in this sequence
+     * @param other The second sequence
+     * @param otherPieceOffset The offset of an item in the second sequence
      * @return the distance between a specified piece of this sequence and the given sequence
      */
-    public abstract float getPiecewiseDist(int thisPiece, Sequence<T> s, int sPiece);
+    public abstract float getPiecewiseDist(int thisPieceOffset, Sequence<T> other, int otherPieceOffset);
 
 }

@@ -235,11 +235,15 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * The position is the value returned by the policy's matcher method.
      * The parameter <code>whoStays</code> denotes the partition that corresponds to <code>this</code> bucket, i.e.,
      * the objects marked with this number (<code>whoStays</code>) by the policy's matcher are left in this bucket
-     * and not moved to any new bucket. As a result, the <code>whoStays</code> index in <code>targetBuckets</code>
+     * and not moved to any new bucket (unless <code>whoStays</code> is smaller than zero). 
+     * As a result, the <code>whoStays</code> index in <code>targetBuckets</code>
      * is <code>null</code> (if this index existed in <code>targetBuckets</code>, it is left untouched).
+     * 
+     * ATTENTION: if <code>whoStays</code> is lower than zero, than no objects are to 
+     *  stay in this bucket and, due to efficiency, the objects are not removed from this bucket!
      *
      * The list <code>targetBuckets</code> is extended to contain all {@link SplitPolicy#getPartitionsCount() getPartitionsCount()} items.
-     * The items correponding to indexes that have not been returned by matcher for any object are initialized to <code>null</code> (or left
+     * The items corresponding to indexes that have not been returned by matcher for any object are initialized to <code>null</code> (or left
      * untouched if the index have already existed).
      * If <code>targetBuckets</code> is not initialized with references to buckets, the <code>bucketCreator</code>
      * must be able to create additional buckets.
@@ -250,7 +254,8 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      * @param policy the split policy used to split this bucket
      * @param targetBuckets the list of target buckets to split the objects to
      * @param bucketCreator the bucket dispatcher to use when creating target buckets; can be <tt>null</tt> if the <code>targetBuckets</code> has enough buckets
-     * @param whoStays identification of a partition whose objects stay in this bucket.
+     * @param whoStays identification of a partition whose objects stay in this bucket; if lower than zero, no objects are to 
+     *  stay in this bucket and, due to efficiency, the objects are not removed from this bucket!
      * @return the number of objects moved
      * @throws IllegalArgumentException if there are too few target buckets
      * @throws BucketStorageException if there was a storage error during objects
@@ -286,8 +291,10 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("Can't create bucket", e);
                 }
-                // Remove object from this bucket (so the move is complete)
-                iterator.remove(); // WARNING, if this method throws OccupationLowException, the object will be in both buckets!
+                // Remove object from this bucket (so the move is complete) - only if some objects are to stay in this bucket
+                if (whoStays >= 0) {
+                    iterator.remove(); // WARNING, if this method throws OccupationLowException, the object will be in both buckets!
+                }
                 count++;
             }
         }
