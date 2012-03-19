@@ -169,6 +169,10 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         return defaultWeights.clone();
     }
 
+    @Override
+    public float getMaxDistance() {
+        return 1f;
+    }    
 
     //****************** Distance function ******************//
 
