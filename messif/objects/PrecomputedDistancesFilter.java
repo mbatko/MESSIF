@@ -130,7 +130,7 @@ public abstract class PrecomputedDistancesFilter implements Cloneable, Serializa
      * <pre>#filter filterClass filter value</pre>
      *
      * @param stream the stream to write the key to
-     * @throws IOException if any problem occures during comment writing
+     * @throws IOException if any problem occurs during comment writing
      */
     public final void write(OutputStream stream) throws IOException {
         if (isDataWritable()) {
