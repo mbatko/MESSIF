@@ -18,15 +18,10 @@ package messif.objects.classification.impl;
 
 import java.util.Iterator;
 import messif.algorithms.Algorithm;
-import messif.algorithms.AlgorithmMethodException;
 import messif.objects.LocalAbstractObject;
-import messif.objects.classification.Classification;
-import messif.objects.classification.ClassificationException;
 import messif.objects.classification.Classifier;
-import messif.objects.classification.UpdatableClassifier;
 import messif.objects.util.RankedAbstractObject;
-import messif.operations.data.DeleteOperation;
-import messif.operations.data.InsertOperation;
+import messif.operations.RankingQueryOperation;
 import messif.operations.query.KNNQueryOperation;
 
 /**
@@ -41,14 +36,10 @@ import messif.operations.query.KNNQueryOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class KNNOperationClassifier<C> implements UpdatableClassifier<LocalAbstractObject, C> {
+public class KNNOperationClassifier<C> extends RankingQueryOperationClassifier<C> {
 
-    /** Classifier used to compute the object classification */
-    private final Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier;
     /** Number of nearest neighbors to retrieve */
     private final int k;
-    /** Algorithm that supplies the similar objects */
-    private final Algorithm algorithm;
 
     /**
      * Creates a new kNN classifier.
@@ -57,55 +48,12 @@ public class KNNOperationClassifier<C> implements UpdatableClassifier<LocalAbstr
      * @param algorithm the algorithm that supplies the similar objects
      */
     public KNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, Algorithm algorithm) {
-        this.classifier = classifier;
+        super(classifier, algorithm);
         this.k = k;
-        this.algorithm = algorithm;
     }
 
     @Override
-    public Classification<C> classify(LocalAbstractObject object) throws ClassificationException {
-        try {
-            KNNQueryOperation op = algorithm.executeOperation(new KNNQueryOperation(object, k));
-            return classifier.classify(op.getAnswer());
-        } catch (AlgorithmMethodException e) {
-            throw new ClassificationException("There was an error executing KNN query", e.getCause());
-        } catch (NoSuchMethodException e) {
-            throw new ClassificationException("Specified algorithm does not support KNN queries", e);
-        }
+    protected RankingQueryOperation createOperation(LocalAbstractObject object) {
+        return new KNNQueryOperation(object, k);
     }
-
-    @Override
-    public boolean addClasifiedObject(LocalAbstractObject object, C classification) throws ClassificationException {
-        try {
-            InsertOperation op = algorithm.executeOperation(new InsertOperation(object));
-            return op.wasSuccessful();
-        } catch (AlgorithmMethodException e) {
-            throw new ClassificationException("There was an error executing insert operation", e.getCause());
-        } catch (NoSuchMethodException e) {
-            throw new ClassificationException("Specified algorithm does not support insertion", e);
-        }
-    }
-
-    @Override
-    public boolean removeClasifiedObject(LocalAbstractObject object) throws ClassificationException {
-        try {
-            DeleteOperation op = algorithm.executeOperation(new DeleteOperation(object));
-            return op.wasSuccessful();
-        } catch (AlgorithmMethodException e) {
-            throw new ClassificationException("There was an error executing delete operation", e.getCause());
-        } catch (NoSuchMethodException e) {
-            throw new ClassificationException("Specified algorithm does not support deletion", e);
-        }
-    }
-
-    @Override
-    public Class<? extends C> getCategoriesClass() {
-        return classifier.getCategoriesClass();
-    }
-
-    @Override
-    public Class<? extends LocalAbstractObject> getClassifiedClass() {
-        return LocalAbstractObject.class;
-    }
-
 }
