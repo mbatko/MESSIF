@@ -732,10 +732,10 @@ public class BucketDispatcher implements Serializable {
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(getClass().getName()).append(": ");
-        rtv.append(buckets.size()).append('/').append(maxBuckets).append(" buckets of ");
-        rtv.append(bucketSoftCapacity).append('/').append(bucketCapacity).append(bucketOccupationAsBytes?" bytes":" objects").append(" capacity ");        
-        
+        StringBuilder rtv = new StringBuilder(getClass().getName()).append(": ");
+        rtv.append(getBucketCount()).append('/').append(maxBuckets).append(" buckets of ");
+        rtv.append(bucketSoftCapacity).append('/').append(bucketCapacity).append(" (low ").append(bucketLowOccupation).append(")").append(bucketOccupationAsBytes?" bytes":" objects").append(" capacity");
+        rtv.append(", def. ").append(defaultBucketClass.toString());
         return rtv.toString();
     }
 
