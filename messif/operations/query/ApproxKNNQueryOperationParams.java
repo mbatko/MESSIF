@@ -30,8 +30,11 @@ import messif.operations.AnswerType;
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
+ * 
+ * @deprecated to be removed, if not used by some old indexes
  */
 @AbstractOperation.OperationName("Parametrized Approximate kNN Query")
+@Deprecated
 public class ApproxKNNQueryOperationParams extends ApproxKNNQueryOperation {
 
     /** Class serial id for serialization. */
