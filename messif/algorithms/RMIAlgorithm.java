@@ -348,7 +348,12 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
 
     @Override
     Object methodExecute(String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object... methodArguments) throws InvocationTargetException, NoSuchInstantiatorException, IllegalArgumentException {
-        Object rtv = methodExecute("methodExecute", connectionRetries, methodName, convertStringArguments, namedInstances, methodArguments);
+        Object rtv = methodExecute(
+                "methodExecute", connectionRetries, methodName, convertStringArguments,
+                // FIXME: This is a partial fix that allows to call no-arg methods on RMI algorithm even when namedInstances contain non-serializable items
+                convertStringArguments && methodArguments.length > 0 ? namedInstances : null,
+                methodArguments
+        );
         if (rtv instanceof Exception) {
             if (rtv instanceof InvocationTargetException)
                 throw (InvocationTargetException)rtv;
