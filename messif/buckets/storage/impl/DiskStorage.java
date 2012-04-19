@@ -159,7 +159,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         this.bufferSize = ((memoryMap)?-1:1)*Math.abs(bufferSize);
         this.bufferDirect = bufferDirect;
         this.startPosition = startPosition;
-        this.maximalLength = maximalLength;
+        this.maximalLength = maximalLength + headerSize < 0 ? Long.MAX_VALUE - headerSize : maximalLength; // Compensate for long overflow
         this.serializator = serializator;
         this.readonly = readonly;
     }
@@ -209,7 +209,10 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     @Override
     public void finalize() throws Throwable {
         if (modifiedThread != null) {
-            Runtime.getRuntime().removeShutdownHook(modifiedThread);
+            try {
+                Runtime.getRuntime().removeShutdownHook(modifiedThread);
+            } catch (IllegalStateException ignore) {
+            }
             modifiedThread = null;
         }
         closeFileChannel();
@@ -375,7 +378,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                         try {
                             DiskStorage.this.finalize();
                         } catch (Throwable e) {
-                            log.log(Level.WARNING, "Error during finalization: {0}", e);
+                            log.log(Level.WARNING, "Error during finalization: {0}", (Object)e);
                         }
                     }
                 };
@@ -459,7 +462,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         deletedFragments = 0;
 
         // Read all objects (by seeking)
-        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
         try {
             // End iterating once a "null" object is found
             for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
@@ -498,9 +501,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
             // Create the input stream (copied below!)
             if (bufferSize < 0)
-                ret = new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength - headerSize);
+                ret = new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength);
             else
-                ret = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+                ret = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
 
             // Report time
             time = System.currentTimeMillis() - time;
@@ -509,9 +512,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         } else {
             // Create the input stream (copied above!)
             if (bufferSize < 0)
-                return new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength - headerSize);
+                return new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength);
             else
-                return new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+                return new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
         }
     }
 
@@ -549,7 +552,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             writeHeader(fileChannel, startPosition, 0);
 
         // Open output stream
-        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength - headerSize);
+        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
         outputStream.setPosition(startPosition + headerSize + fileOccupation);
     }
 
@@ -655,7 +658,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             try {
                 fileChannel = openFileChannel(file, readonly);
             } catch (IOException e) {
-                throw new IllegalStateException("Error opening disk storage " + file, e);
+                throw new IllegalStateException("Error opening disk storage " + file + ": " + e.getMessage(), e);
             }
         }
 
