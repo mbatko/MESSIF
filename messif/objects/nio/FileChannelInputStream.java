@@ -60,6 +60,8 @@ public class FileChannelInputStream extends ChannelInputStream {
         this.fileChannel = fileChannel;
         this.startPosition = position;
         this.endPosition = position + maxLength;
+        if (this.endPosition < this.startPosition)
+            throw new IllegalArgumentException("End position (" + this.endPosition + ") cannot be smaller than start position (" + this.startPosition + ") - wrong maximal length or there was a long-int overflow");
         this.position = position;
     }
 
