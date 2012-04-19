@@ -234,7 +234,7 @@ public abstract class Algorithm implements Serializable {
      * @param filepath the path to a file where the algorithm should be stored. If this path is a directory,
      *        the algorithm name (all non alphanumeric characters are replaced by underscore) with <tt>.bin</tt>
      *        extension is appended to the path.
-     * @throws IOException if the specified filename is not writable or if an error occurrs during the serialization
+     * @throws IOException if the specified filename is not writable or if an error occurs during the serialization
      *         (see {@link java.io.ObjectOutputStream#writeObject writeObject} method for detailed description)
      */
     public void storeToFile(String filepath) throws IOException {

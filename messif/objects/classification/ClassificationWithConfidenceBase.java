@@ -122,7 +122,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @param category the category to add
      * @param confidence the confidence of the category to add
      * @return this instance to allow chaining
-     * @throws IllegalArgumentException if the confidence is not withing the bounds
+     * @throws IllegalArgumentException if the confidence is not within the bounds
      */
     public ClassificationWithConfidenceBase<C> add(C category, float confidence) throws IllegalArgumentException {
         if (lowestConfidence < highestConfidence) {
