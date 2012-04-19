@@ -31,7 +31,7 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
     //****************** Attributes ******************//
 
     /** Query operation processed on a remote bucket */
-    private final QueryOperation query;
+    private final QueryOperation<?> query;
 
 
     //****************** Constructor ******************//
@@ -42,7 +42,7 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
      * @param message the original message this message is response to
      * @param query the query operation processed on a remote bucket
      */
-    public BucketProcessQueryReplyMessage(BucketProcessQueryRequestMessage message, QueryOperation query) {
+    public BucketProcessQueryReplyMessage(BucketProcessQueryRequestMessage message, QueryOperation<?> query) {
         super(message);
         this.query = query;
     }
@@ -54,7 +54,7 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
      * Returns the query operation processed on a remote bucket.
      * @return the query operation processed on a remote bucket
      */
-    public QueryOperation getQuery() {
+    public QueryOperation<?> getQuery() {
         return query;
     }
 

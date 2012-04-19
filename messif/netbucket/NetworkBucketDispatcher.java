@@ -107,7 +107,7 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * Creates a receiver for bucket messages and registers it in the message dispatcher.
      * @throws IllegalStateException if this network bucket dispatcher has a receiver associated already
      */
-    protected synchronized void startReceiving() throws IllegalStateException {
+    private synchronized void startReceiving() throws IllegalStateException {
         if (receiver != null)
             throw new IllegalStateException("Network bucket dispatcher already has a receiver associated");
 
@@ -121,7 +121,7 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * If this network bucket dispatcher has no receiver associated yet,
      * this method does nothing.
      */
-    protected synchronized void stopReceiving() {
+    private synchronized void stopReceiving() {
         if (receiver != null) {
             messageDisp.deregisterReceiver(receiver);
             receiver = null;

@@ -18,7 +18,6 @@ package messif.netbucket;
 
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketStorageException;
-import messif.buckets.LocalBucket;
 import messif.operations.QueryOperation;
 
 /**
@@ -36,7 +35,7 @@ public class BucketProcessQueryRequestMessage extends BucketRequestMessage<Bucke
     //****************** Attributes ******************//
 
     /** Query operation to process on a remote bucket */
-    private final QueryOperation query;
+    private final QueryOperation<?> query;
 
 
     //****************** Constructors ******************//
@@ -46,7 +45,7 @@ public class BucketProcessQueryRequestMessage extends BucketRequestMessage<Bucke
      * @param bucketID the ID of a remote bucket on which to process the request
      * @param query the query operation to process on a remote bucket
      */
-    public BucketProcessQueryRequestMessage(int bucketID, QueryOperation query) {
+    public BucketProcessQueryRequestMessage(int bucketID, QueryOperation<?> query) {
         super(bucketID);
         this.query = query;
     }
