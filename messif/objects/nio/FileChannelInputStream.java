@@ -142,6 +142,8 @@ public class FileChannelInputStream extends ChannelInputStream {
      */
     @Override
     protected void read(ByteBuffer buffer) throws EOFException, IOException {
+        if (position == endPosition)
+            throw new EOFException("Cannot read more bytes - end of file encountered");
         // Check for the maximal position
         if (position + buffer.remaining() > endPosition)
             buffer.limit(buffer.position() + (int)(endPosition - position));

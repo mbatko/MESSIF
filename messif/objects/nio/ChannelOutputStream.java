@@ -64,13 +64,20 @@ public class ChannelOutputStream extends BufferOutputStream implements BinaryOut
 
     /** 
      * Writes the buffered data to the write channel.
+     * This method writes all the buffered data from the specified buffer to the write channel.
+     * That is, the data from the beginning of the buffer up to the current position are written.
      * 
      * @param buffer the buffer from which to write data
      * @throws IOException if there was an error writing the data
      */
     @Override
     protected void write(ByteBuffer buffer) throws IOException {
-        writeChannel.write(buffer);
+        try {
+            buffer.flip();
+            writeChannel.write(buffer);
+        } finally {
+            buffer.compact();
+        }
     }
 
 }

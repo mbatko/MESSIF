@@ -16,6 +16,7 @@
  */
 package messif.objects.nio;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -97,6 +98,22 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
         return byteBuffer.position();
     }
 
+    /**
+     * Limit the buffer to the specified size.
+     * Note that the buffer size is only update if the actual limit is greater that the size.
+     * The size computation includes the actually buffered data.
+     * 
+     * @param size the number of bytes the buffer can accommodate (including the currently stored data)
+     */
+    protected void setBufferedSizeLimit(long size) {
+        if (byteBuffer.limit() > size) { // This ensures that size is actually smaller than int
+            int newLimit = (int)(size - byteBuffer.position());
+            if (newLimit < 0)
+                throw new InternalError("Attemping to discard buffered data: " + byteBuffer.position() + "B buffered, but setting size to: " + size);
+            byteBuffer.limit(newLimit);
+        }
+    }
+
 
     //****************** Output stream implementation ******************//
 
@@ -139,7 +156,7 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
     @Override
     public void flush() throws IOException {
         // Must empty the whole buffer, so require to free the whole capacity of the buffer
-        prepareOutput(byteBuffer.capacity());
+        prepareOutput(byteBuffer.limit());
     }
 
     @Override
@@ -157,16 +174,11 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
             return byteBuffer;
 
         // Try to free some space
-        try {
-            byteBuffer.flip();
-            write(byteBuffer);
-        } finally {
-            byteBuffer.compact();
-        }
+        write(byteBuffer);
 
         // Check the remaining size
         if (minBytes > byteBuffer.remaining())
-            throw new IOException("Buffer is too small to provide " + minBytes + " bytes");
+            throw new EOFException("Buffer is too small to provide " + minBytes + " bytes");
 
         return byteBuffer;
     }
@@ -174,14 +186,30 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
     /** 
      * Writes the buffered data out.
      * This method is responsible for writing all the buffered data from the
-     * specified buffer. That is, the data from current position of the buffer
-     * up to the actual buffer limit.
+     * specified buffer. That is, the data from the beginning of the buffer
+     * up to the current position.
      * 
      * @param buffer the buffer from which to write data
      * @throws IOException if there was an error writing the data
      */
     protected void write(ByteBuffer buffer) throws IOException {
         throw new IOException("The buffer is full");
+    }
+
+    /**
+     * Writes the buffered data to a byte array.
+     * Note that this <i>will consume</i> all the buffered data as with the other write methods.
+     * @return the buffered data
+     */
+    public byte[] write() {
+        byte[] ret = new byte[bufferedSize()];
+        try {
+            byteBuffer.flip();
+            byteBuffer.get(ret);
+        } finally {
+            byteBuffer.compact();
+        }
+        return ret;
     }
 
     /**
@@ -200,19 +228,6 @@ public class BufferOutputStream extends OutputStream implements BinaryOutput {
         } finally {
             byteBuffer.compact();
         }
-    }
-
-    /**
-     * Writes the buffered data to a byte array.
-     * Note that this <i>will consume</i> all the buffered data as with the other write methods.
-     * @return the buffered data
-     */
-    public byte[] write() {
-        byte[] ret = new byte[bufferedSize()];
-        byteBuffer.flip();
-        byteBuffer.get(ret);
-        byteBuffer.compact();
-        return ret;
     }
 
     /**

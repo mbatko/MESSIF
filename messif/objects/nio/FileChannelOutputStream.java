@@ -60,6 +60,7 @@ public class FileChannelOutputStream extends ChannelOutputStream {
         this.startPosition = position;
         this.position = position;
         this.endPosition = position + maxLength;
+        setBufferedSizeLimit(maxLength);
     }
 
     /**
@@ -83,9 +84,10 @@ public class FileChannelOutputStream extends ChannelOutputStream {
         // Flush the data and set new position
         flush();
         this.position = position;
+        setBufferedSizeLimit(endPosition - this.position);
     }
 
-    /** 
+    /**
      * Writes the buffered data to the file channel.
      * The writing is done at the correct position regardless of the underlying file's actual position.
      * 
@@ -94,9 +96,15 @@ public class FileChannelOutputStream extends ChannelOutputStream {
      */
     @Override
     protected void write(ByteBuffer buffer) throws IOException {
-        if (position + buffer.remaining() > endPosition)
-            throw new IOException("Attempt to write beyond the end position");
-        position += fileChannel.write(buffer, position);
+        try {
+            buffer.flip();
+            if (position + buffer.remaining() > endPosition)
+                throw new InternalError("Buffered data exceeds the end position");
+            position += fileChannel.write(buffer, position);
+        } finally {
+            buffer.compact();
+        }
+        setBufferedSizeLimit(endPosition - position);
     }
 
 }
