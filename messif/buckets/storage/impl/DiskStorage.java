@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
+import messif.buckets.CapacityFullException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
@@ -712,6 +713,8 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             objectCount++;
 
             return address;
+        } catch (EOFException e) {
+            throw new CapacityFullException(e.getMessage());
         } catch (IOException e) {
             throw new StorageFailureException("Cannot store object into disk storage", e);
         }
