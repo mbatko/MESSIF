@@ -21,9 +21,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
@@ -1908,13 +1911,12 @@ public class CoreApplication {
     @ExecutableMethod(description = "prints the value of a named instance", arguments = { "name of the instance" })
     public boolean namedInstanceEcho(PrintStream out, String... args) throws InvocationTargetException {
         if (args.length <= 1) {
-            out.println("The method invocation argument is required for namedInstanceReplace");
+            out.println("The argument with the instance name is required for namedInstanceEcho");
             return false;
         }
 
         try {
-            Object value;
-            value = namedInstances.get(args[1]);
+            Object value = namedInstances.get(args[1]);
             if (value == null) // Named instance not accessed directly, try instantiation
                 value = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
             out.println(value);
@@ -1924,6 +1926,82 @@ public class CoreApplication {
             return false;
         }
         
+    }
+
+    /**
+     * Creates a new named instance from an object serialized in a file.
+     * An argument specifying the file from which to read the instance is required.
+     * Additional argument specifies the name for the instance (defaults to
+     * name of the action where this is specified).
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceRestore path/to/serialized/object.bin my_object
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the file with the serialized object and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws IOException if there was an error while reading from the file
+     * @throws ClassNotFoundException if there was an error while creating a named instance
+     */
+    @ExecutableMethod(description = "creates a new named instance serialized in a file", arguments = { "file path", "name to register"})
+    public boolean namedInstanceRestore(PrintStream out, String... args) throws IOException, ClassNotFoundException {
+        if (args.length <= 2) {
+            out.println("Two arguments (file path and instance name) are required for namedInstanceRestore");
+            return false;
+        }
+        if (namedInstances.containsKey(args[2])) {
+            out.println("Named instance '" + args[2] + "' already exists");
+            return false;
+        }
+        ObjectInputStream stream = new ObjectInputStream(new FileInputStream(args[1]));
+        try {
+            namedInstances.put(args[2], stream.readObject());
+            return true;
+        } finally {
+            stream.close();
+        }
+    }
+
+    /**
+     * Serializes the value of a named instance into a file.
+     * Two arguments specifying the name of the instance to write and
+     * the file path where the object will be written are required.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceStore my_object path/to/serialized/object.bin
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name of the instance to write and the file name
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws IOException if there was an error while storing the named instance
+     */
+    @ExecutableMethod(description = "prints the value of a named instance", arguments = { "name of the instance" })
+    public boolean namedInstanceStore(PrintStream out, String... args) throws IOException {
+        if (args.length <= 2) {
+            out.println("Two arguments are required for namedInstanceStore:  the instance name and the file path");
+            return false;
+        }
+
+        Object value = namedInstances.get(args[1]);
+        if (value == null) {
+            out.print("There is no instance with name '" + args[1] + "'");
+            return false;
+        }
+
+        ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(args[2]));
+        try {
+            stream.writeObject(value);
+            return true;
+        } finally {
+            stream.close();
+        }        
     }
 
 
@@ -2611,7 +2689,7 @@ public class CoreApplication {
         String methodName = arguments.get(0);
 
         // SPECIAL! For objectStreamOpen/namedInstanceAdd method a third/second parameter is automatically added from action name
-        if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || ((methodName.equals("namedInstanceAdd") || methodName.equals("namedInstanceReplace")) && arguments.size() == 2))
+        if ((methodName.equals("objectStreamOpen") && arguments.size() == 3) || ((methodName.equals("namedInstanceAdd") || methodName.equals("namedInstanceRestore") || methodName.equals("namedInstanceReplace")) && arguments.size() == 2))
             arguments.add(actionName);
 
         // Read description (variable substition in description is done during the repeat)

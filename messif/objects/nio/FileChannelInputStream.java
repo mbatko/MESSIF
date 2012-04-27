@@ -59,7 +59,7 @@ public class FileChannelInputStream extends ChannelInputStream {
         super(fileChannel, bufferSize, bufferDirect);
         this.fileChannel = fileChannel;
         this.startPosition = position;
-        this.endPosition = position + maxLength;
+        this.endPosition = maxLength == Long.MAX_VALUE ? Long.MAX_VALUE : position + maxLength; // Compensate for long overflow
         if (this.endPosition < this.startPosition)
             throw new IllegalArgumentException("End position (" + this.endPosition + ") cannot be smaller than start position (" + this.startPosition + ") - wrong maximal length or there was a long-int overflow");
         this.position = position;

@@ -59,7 +59,7 @@ public class FileChannelOutputStream extends ChannelOutputStream {
         this.fileChannel = fileChannel;
         this.startPosition = position;
         this.position = position;
-        this.endPosition = position + maxLength;
+        this.endPosition = maxLength == Long.MAX_VALUE ? Long.MAX_VALUE : position + maxLength; // Compensate for long overflow
         setBufferedSizeLimit(maxLength);
     }
 
