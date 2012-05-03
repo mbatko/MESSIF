@@ -74,7 +74,7 @@ public abstract class Convert {
      * @return the converted value
      * @throws InstantiationException if the type cannot be created from the string value
      */
-    public static <E> E stringToType(String string, Class<E> type, Map<String, Object> namedInstances) throws InstantiationException {
+    public static <E> E stringToType(String string, Class<E> type, Map<String, ? extends Object> namedInstances) throws InstantiationException {
         if (string == null || string.equals("null"))
             return null;
 
@@ -258,7 +258,7 @@ public abstract class Convert {
      * @return a new static array
      * @throws InstantiationException if there was a problem converting the array elements
      */
-    public static <T> T stringToArray(CharSequence string, Pattern splitPattern, int splitLimit, Class<? extends T> type, Map<String, Object> namedInstances) throws InstantiationException {
+    public static <T> T stringToArray(CharSequence string, Pattern splitPattern, int splitLimit, Class<? extends T> type, Map<String, ? extends Object> namedInstances) throws InstantiationException {
         if (string == null)
             return null;
         Class<?> componentType = type.getComponentType();
@@ -643,7 +643,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, int argEndIndex, Map<String, Object> namedInstances) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, int argEndIndex, Map<String, ? extends Object> namedInstances) throws InstantiationException {
         // Create return array
         Object[] rtv = new Object[types.length];
 
@@ -721,7 +721,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, Map<String, Object> namedInstances) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, int argStartIndex, Map<String, ? extends Object> namedInstances) throws InstantiationException {
         return parseTypesFromString(strings, types, handleVarArgs, argStartIndex, strings.length - 1, namedInstances);
     }
 
@@ -755,7 +755,7 @@ public abstract class Convert {
      * @return the array of converted values
      * @throws InstantiationException if there was a type that cannot be created from the provided string value
      */
-    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, Map<String, Object> namedInstances) throws InstantiationException {
+    public static Object[] parseTypesFromString(String[] strings, Class<?>[] types, boolean handleVarArgs, Map<String, ? extends Object> namedInstances) throws InstantiationException {
         return parseTypesFromString(strings, types, handleVarArgs, 0, namedInstances);
     }
 

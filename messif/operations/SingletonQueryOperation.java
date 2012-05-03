@@ -107,8 +107,12 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
     }
 
     @Override
-    public Iterator<AbstractObject> getAnswer(final int skip, int count) {
-        return Collections.singleton(answer).iterator();
+    @SuppressWarnings("unchecked")
+    public Iterator<AbstractObject> getAnswer(int skip, int count) {
+        if (answer == null || skip >= 1)
+            return Collections.EMPTY_LIST.iterator();
+        else
+            return Collections.singleton(answer).iterator();
     }
 
     @Override

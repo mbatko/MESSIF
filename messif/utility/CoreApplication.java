@@ -503,20 +503,27 @@ public class CoreApplication {
     /**
      * Select algorithm to manage.
      * A parameter with algorithm sequence number is required for specifying, which algorithm to select.
+     * If an optional second parameter is provided, the algorithm is assigned to the given
+     * named instance variable instead of selecting.
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmSelect 0
      * </pre>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args the algorithm sequence number
+     * @param args the algorithm sequence number and, optionally, the name of the variable
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @see #algorithmInfoAll
      */
-    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select"})
+    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select", "name of the variable (optional)"})
     public boolean algorithmSelect(PrintStream out, String... args) {
         try {
-            algorithm = algorithms.get(Integer.parseInt(args[1]));
+            Algorithm alg = algorithms.get(Integer.parseInt(args[1]));
+            if (args.length > 2 && args[2] != null && !args[2].isEmpty()) {
+                namedInstances.put(args[2], alg);
+            } else {
+                algorithm = alg;
+            }
             return true;
         } catch (IndexOutOfBoundsException ignore) {
         } catch (NumberFormatException ignore) {
