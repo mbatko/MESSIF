@@ -105,7 +105,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     protected final File file;
 
     /** The channel on the file with data */
-    protected transient FileChannel fileChannel;
+    private transient FileChannel fileChannel;
 
     /** The position in the file where this storage starts (the real data starts at startPosition + headerSize) */
     protected final long startPosition;
@@ -160,7 +160,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         this.bufferSize = ((memoryMap)?-1:1)*Math.abs(bufferSize);
         this.bufferDirect = bufferDirect;
         this.startPosition = startPosition;
-        this.maximalLength = maximalLength + headerSize < 0 ? Long.MAX_VALUE - headerSize : maximalLength; // Compensate for long overflow
+        this.maximalLength = maximalLength;
         this.serializator = serializator;
         this.readonly = readonly;
     }
@@ -183,28 +183,6 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         this.maximalLength = copyAttributesDiskStorage.maximalLength;
         this.serializator = copyAttributesDiskStorage.serializator;
         this.readonly = copyAttributesDiskStorage.readonly;
-    }
-
-    /**
-     * Close the associated file channel if this storage is no longer references
-     * from any index.
-     * @return <tt>true</tt> if the file channel was closed
-     * @throws IOException if there was a problem closing the file channel
-     */
-    protected boolean closeFileChannel() throws IOException {
-        if (references <= 0) {
-            if (fileChannel == null)
-                return true;
-            if (modified) {
-                flush(true);
-                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
-            }
-            fileChannel.close();
-            return true;
-        } else {
-            references--;
-            return false;
-        }
     }
 
     @Override
@@ -431,7 +409,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             } else {
                 // Header indicates pending close, so it is probably incorrect - reconstruct it from the file
                 reconstructHeader(fileChannel, position + headerSize);
-                modified = true;
+                modified = !readonly;
             }
 
             // Check the file indicated occupation versus real size
@@ -463,7 +441,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         deletedFragments = 0;
 
         // Read all objects (by seeking)
-        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
+        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, position, maximalLength);
         try {
             // End iterating once a "null" object is found
             for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
@@ -482,8 +460,83 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
     }
 
+    /**
+     * Compacts the deleted fragments of the disk storage.
+     * All objects are read from the original file and written
+     * to a new temporary file. The new file is then renamed to the original one.
+     * Note that this operation is thread safe and it is also compatible with multiple
+     * searches running on the file concurrently.
+     * 
+     * @throws IOException if there was a problem with reading or writing the data
+     */
+    // FIXME: this operation WILL break indexes built on this storage
+    protected synchronized void compactData() throws IOException {
+        if (readonly || deletedFragments == 0)
+            return;
+        if (startPosition != 0) // Compacting is not yet implemented on one-storage, sorry
+            return;
+            
+        File compactFile = new File(file.getParentFile(), file.getName() + ".compact");
+        log.log(Level.INFO, "Compacting disk storage in file {0}", file.getAbsolutePath());
 
-    //****************** Construction methods ******************//
+        if (compactFile.exists()) {
+            log.log(Level.WARNING, "Cannot compact disk storage - the file {0} already exists", compactFile);
+            return;
+        }
+
+        // Open compact file
+        FileChannel compactChan = new RandomAccessFile(compactFile, "rw").getChannel();
+        long newPos;
+        try {
+            BufferInputStream reader = openInputStream();
+            try {
+                writeHeader(compactChan, startPosition, 0);
+                compactChan.position(headerSize);
+
+                // Read all objects and write them to the compact channel
+                ByteBuffer writeBuffer = bufferDirect ? ByteBuffer.allocateDirect(bufferSize) : ByteBuffer.allocate(bufferSize);
+                for (int objectSize = serializator.objectToBuffer(reader, writeBuffer, bufferSize); objectSize != 0; objectSize = serializator.objectToBuffer(reader, writeBuffer, bufferSize)) {
+                    writeBuffer.flip();
+                    compactChan.write(writeBuffer);
+                    writeBuffer.compact();
+                }
+                // Write remaining data if any (this should never happen, since these are file channels)
+                writeBuffer.flip();
+                while (writeBuffer.remaining() > 0)
+                    compactChan.write(writeBuffer);
+            } finally {
+                reader.close();
+            }
+            newPos = compactChan.position() - headerSize;
+        } finally {
+            compactChan.close();
+        }
+
+        if (!compactFile.renameTo(file)) {
+            log.log(Level.WARNING, "Cannot replace original disk storage file {0} with compacted data in {1}", new Object[] {file.getAbsolutePath(), compactFile.getAbsolutePath()});
+            return;
+        } else {
+            // Update file statistics
+            fileOccupation = newPos;
+            deletedFragments = 0;
+            modified = true;
+        }
+
+        // Reopen file channel
+        fileChannel.close();
+        fileChannel = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
+    }
+
+    /**
+     * Returns the file space fragmentation, i.e. the ratio between the free and occupied disk space.
+     * @return the file space fragmentation
+     */
+    public float getFragmentation() {
+        return (float)deletedFragments / (objectCount + deletedFragments);
+    }
+
+
+    //****************** File open/close methods ******************//
 
     /**
      * Create input stream on the specified channel.
@@ -491,10 +544,6 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected BufferInputStream openInputStream() throws IOException {
-        // Open file channel if not opened yet
-        if (fileChannel == null)
-            fileChannel = openFileChannel(file, readonly);
-
         if (log.isLoggable(Level.FINE)) {
             // Measure time
             long time = System.currentTimeMillis();
@@ -502,9 +551,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
             // Create the input stream (copied below!)
             if (bufferSize < 0)
-                ret = new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength);
+                ret = new MappedFileChannelInputStream(getFileChannel(), startPosition + headerSize, maximalLength);
             else
-                ret = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
+                ret = new FileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
 
             // Report time
             time = System.currentTimeMillis() - time;
@@ -513,9 +562,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         } else {
             // Create the input stream (copied above!)
             if (bufferSize < 0)
-                return new MappedFileChannelInputStream(fileChannel, startPosition + headerSize, maximalLength);
+                return new MappedFileChannelInputStream(getFileChannel(), startPosition + headerSize, maximalLength);
             else
-                return new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
+                return new FileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
         }
     }
 
@@ -544,44 +593,89 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected synchronized void openOutputStream() throws IOException {
-        // Open file channel if not opened yet
-        if (fileChannel == null)
-            fileChannel = openFileChannel(file, readonly);
-
         // Set modified flag
         if (!modified)
-            writeHeader(fileChannel, startPosition, 0);
+            writeHeader(getFileChannel(), startPosition, 0);
 
         // Open output stream
-        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, fileChannel, startPosition + headerSize, maximalLength);
+        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
         outputStream.setPosition(startPosition + headerSize + fileOccupation);
     }
 
     /**
-     * Opens the file channel on <code>file</code> and reads the header.
-     * @param file the file to open the channel on
-     * @param readonly if <tt>true</tt>, the channel will be opened in read-only mode
-     * @return the new file channel
+     * Returns the currently opened file channel.
+     * If the file channel is not open yet, the {@link #file} is opened and the header read.
+     * @return the current file channel
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected FileChannel openFileChannel(File file, boolean readonly) throws IOException {
-        // If file does not exist before, it is auto-created by the RandomAccessFile constructor
-        boolean fileExists = file.length() > startPosition;
+    protected final FileChannel getFileChannel() throws IOException {
+        if (fileChannel != null)
+            return fileChannel;
 
-        // Open the channel
-        FileChannel chan = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
+        synchronized (this) {
+            // If file does not exist before, it is auto-created by the RandomAccessFile constructor
+            boolean fileExists = file.length() > startPosition;
 
-        // Read the occupation and number of objects
-        if (fileExists) {
-            readHeader(chan, startPosition);
-            // If the header was rebuilt, flush the header so that next open does not need to rebuild it again
-            if (modified && !readonly)
-                writeHeader(chan, startPosition, FLAG_CLOSED);
-        } else {
-            writeHeader(chan, startPosition, FLAG_CLOSED);
+            // Open the channel (if the file does not exist and readonly is true, IOException is thrown, otherwise the file is created)
+            fileChannel = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
+
+            // Read the occupation and number of objects
+            if (fileExists) {
+                readHeader(fileChannel, startPosition);
+                if (deletedFragments > objectCount)
+                    compactData();
+                // If the header was rebuilt, flush the header so that next open does not need to rebuild it again
+                if (modified)
+                    writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+            } else {
+                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+            }
+
+            return fileChannel;
         }
+    }
 
-        return chan;
+    /**
+     * Flushes this storage and forces any buffered data to be written out.
+     * 
+     * @param syncPhysical if <tt>true</tt> then also the file is flushed
+     *          to be sure the data are really written to disk
+     * @throws IOException if there was an I/O error
+     */
+    public void flush(boolean syncPhysical) throws IOException {
+        if (outputStream != null) {
+            if (outputStream.isDirty())
+                synchronized (this) {
+                    inputStream = null;
+                    outputStream.flush();
+                }
+            if (syncPhysical)
+                fileChannel.force(false); // If output stream is not null, the file channel is open
+        }
+    }
+
+    /**
+     * Close the associated file channel if this storage is no longer references
+     * from any index.
+     * @return <tt>true</tt> if the file channel was closed
+     * @throws IOException if there was a problem closing the file channel
+     */
+    protected boolean closeFileChannel() throws IOException {
+        if (references <= 0) {
+            if (fileChannel == null)
+                return true;
+            if (modified) {
+                flush(true);
+                outputStream = null;
+                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
+            }
+            fileChannel.close();
+            fileChannel = null;
+            return true;
+        } else {
+            references--;
+            return false;
+        }
     }
 
     /**
@@ -654,16 +748,12 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      */
     @Override
     public int size() {
-        // Open file channel if not opened yet
-        if (fileChannel == null) {
-            try {
-                fileChannel = openFileChannel(file, readonly);
-            } catch (IOException e) {
-                throw new IllegalStateException("Error opening disk storage " + file + ": " + e.getMessage(), e);
-            }
+        try {
+            getFileChannel(); // Open file channel if not opened yet (so that header is read)
+            return objectCount;
+        } catch (IOException e) {
+            throw new IllegalStateException("Error opening disk storage " + file + ": " + e.getMessage(), e);
         }
-
-        return objectCount;
     }
 
     /**
@@ -672,25 +762,6 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      */
     public boolean isModified() {
         return modified;
-    }
-
-    /**
-     * Flushes this storage and forces any buffered data to be written out.
-     * 
-     * @param syncPhysical if <tt>true</tt> then also the file is flushed
-     *          to be sure the data are really written to disk
-     * @throws IOException if there was an I/O error
-     */
-    public void flush(boolean syncPhysical) throws IOException {
-        if (outputStream != null) {
-            if (outputStream.isDirty())
-                synchronized (this) {
-                    inputStream = null;
-                    outputStream.flush();
-                }
-            if (syncPhysical)
-                fileChannel.force(false); // If output stream is not null, the file channel is open
-        }
     }
 
     @Override
@@ -830,7 +901,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                 flush(false);
                 this.inputStream = openInputStream();
             } catch (IOException e) {
-                throw new IllegalStateException("Cannot initialize disk storage search", e);
+                throw new IllegalStateException("Cannot initialize disk storage search: " + e, e);
             }
         }
 
@@ -846,7 +917,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                 flush(false);
                 this.inputStream = openInputStream();
             } catch (IOException e) {
-                throw new IllegalStateException("Cannot initialize disk storage search", e);
+                throw new IllegalStateException("Cannot initialize disk storage search: " + e, e);
             }
         }
 
@@ -864,7 +935,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             } catch (EOFException e) {
                 return null;
             } catch (IOException e) {
-                throw new StorageFailureException("Cannot read next object from disk storage", e);
+                throw new StorageFailureException("Cannot read next object from disk storage: " + e, e);
             }
         }
 
