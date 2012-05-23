@@ -16,6 +16,7 @@
  */
 package messif.objects.nio;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -1382,6 +1383,43 @@ public abstract class BinarySerializator {
         }
 
         return objectSize;
+    }
+
+    /**
+     * Reads one object from the input stream into a buffer (including the header), no deserialization is performed.
+     * @param stream the stream to read the object from
+     * @param buffer the buffer into which an object is read
+     * @param copySize the maximal number of bytes read by a bulk read operation (i.e. the input stream buffer size)
+     * @return the size of the object loaded into the buffer (including the header)
+     * @throws IOException if there was a problem reading the stream or the given buffer is too small to hold the object data
+     */
+    public int objectToBuffer(BinaryInput stream, ByteBuffer buffer, int copySize) throws IOException {
+        int objectSize;
+        try {
+            objectSize = readObjectSize(stream);
+        } catch (EOFException ignore) {
+            return 0;
+        }
+        if (objectSize == 0)
+            return 0;
+        if (objectSize + 4 > buffer.remaining())
+            throw new IOException("Buffer too small - required " + (objectSize + 4) + " bytes but available only " + buffer.remaining());
+        buffer.putInt(objectSize);
+        int remainingSize = objectSize;
+        while (remainingSize > 0) {
+            ByteBuffer data = stream.readInput(Math.min(remainingSize, copySize));
+            if (remainingSize < data.remaining()) {
+                int limit = data.limit();
+                data.limit(data.position() + remainingSize);
+                remainingSize -= data.remaining();
+                buffer.put(data);
+                data.limit(limit);
+            } else {
+                remainingSize -= data.remaining();
+                buffer.put(data);
+            }
+        }
+        return objectSize + 4;
     }
 
     /**
