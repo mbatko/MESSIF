@@ -55,6 +55,7 @@ import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
+import messif.objects.extraction.MultiExtractor;
 import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
 import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.text.Stemmer;
@@ -1680,6 +1681,52 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          */
         public Extractor<? extends MetaObjectProfiSCT> createImageExtractor(String extractorCommand, boolean storeObjects, String[] dataLineParameterNames) {
             return new ImageExtractor(extractorCommand, dataLineParameterNames, storeObjects);
+        }
+
+        /**
+         * Creates a new extractor that uses external extractor on a directory of images.
+         * @param extractorCommand the external extractor command for extracting binary images
+         * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
+         * @param storeObjects if <tt>true</tt> every object successfully extracted by this extractor
+         *          is added to the encapsulated storage via {@link #storeObject(messif.objects.impl.MetaObjectProfiSCT)}
+         * @return a new extractor instance
+         */
+        public MultiExtractor<? extends MetaObjectProfiSCT> createImageDirExtractor(String extractorCommand, boolean fileAsArgument, boolean storeObjects) {
+            final MultiExtractor<? extends MetaObjectProfiSCT> extractor = Extractors.createExternalMultiExtractor(
+                    MetaObjectProfiSCT.class, extractorCommand, fileAsArgument, null, -1, new Object[] { stemmer, wordIndex }
+            );
+            if (!storeObjects)
+                return extractor;
+            return new MultiExtractor<MetaObjectProfiSCT>() {
+                @Override
+                public Iterator<MetaObjectProfiSCT> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                    final Iterator<? extends MetaObjectProfiSCT> it = extractor.extract(dataSource);
+                    return new Iterator<MetaObjectProfiSCT>() {
+                        @Override
+                        public boolean hasNext() {
+                            return it.hasNext();
+                        }
+                        @Override
+                        public MetaObjectProfiSCT next() {
+                            MetaObjectProfiSCT obj = it.next();
+                            try {
+                                storeObject(obj);
+                            } catch (BucketStorageException e) {
+                                throw new IllegalStateException("Cannot store data into database: " + e, e);
+                            }
+                            return obj;
+                        }
+                        @Override
+                        public void remove() {
+                            it.remove();
+                        }
+                    };
+                }
+                @Override
+                public Class<? extends MetaObjectProfiSCT> getExtractedClass() {
+                    return MetaObjectProfiSCT.class;
+                }
+            };
         }
 
         /**
