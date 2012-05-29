@@ -1153,7 +1153,7 @@ public abstract class Convert {
      * @param variables the variable names with their values
      * @return the original string with all variables replaced
      */
-    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String,String> variables) {
+    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String, ?> variables) {
         // Check null strings
         if (string == null)
             return null;
@@ -1165,14 +1165,14 @@ public abstract class Convert {
         // Find every occurance of pattern in string
         while (matcher.find()) {
             // Get variable with the name from the matched pattern group
-            String value = variables.get(matcher.group(variableRegexGroup));
+            Object value = variables.get(matcher.group(variableRegexGroup));
 
             // Set the default value if specified
             if (value == null && defaultValueRegexGroup > 0)
                 value = matcher.group(defaultValueRegexGroup);
 
             // Do the replacement, if variable is not found, the variable placeholder is removed
-            matcher.appendReplacement(sb, value != null ? Matcher.quoteReplacement(value) : "");
+            matcher.appendReplacement(sb, value != null ? Matcher.quoteReplacement(value.toString()) : "");
         }
 
         // Finish replacing
@@ -1183,12 +1183,12 @@ public abstract class Convert {
     }
 
     /**
-     * Returns the today's specified time in miliseconds.
-     * @param time the time in {@code hh:mm:ss.iii} format (seconds and miliseconds are optional)
-     * @return the today's specified time in miliseconds
+     * Returns the today's specified time in milliseconds.
+     * @param time the time in {@code hh:mm:ss.iii} format (seconds and milliseconds are optional)
+     * @return the today's specified time in milliseconds
      * @throws NumberFormatException if the specified time has invalid format
      */
-    public static long timeToMiliseconds(String time) throws NumberFormatException {
+    public static long timeToMilliseconds(String time) throws NumberFormatException {
         Calendar calendar = Calendar.getInstance();
         String[] hms = time.split("\\p{Space}*[:.]\\p{Space}*", 4);
         switch (hms.length) {
@@ -1296,7 +1296,7 @@ public abstract class Convert {
             str = new StringBuilder();
         try {
             char[] buf = new char[1024];
-            int len = 0;
+            int len;
             while ((len = data.read(buf)) != -1)
                 str.append(buf, 0, len);
         } finally {

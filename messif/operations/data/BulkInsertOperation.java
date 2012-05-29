@@ -70,18 +70,18 @@ public class BulkInsertOperation extends AbstractOperation {
      * @param insertedObjects a list of objects to be inserted by this operation
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    @AbstractOperation.OperationConstructor({"Collection of objects to insert"})
     public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
         this(new AbstractObjectList<LocalAbstractObject>(insertedObjects), false);
     }
 
     /**
-     * Creates a new instance of BulkInsertOperation.
+     * Creates a new instance of BulkInsertOperation from all objects provided by the iterator.
      * Empty collection is <em>not</em> permitted.
      * 
      * @param insertedObjects a list of objects to be inserted by this operation
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
+    @AbstractOperation.OperationConstructor({"Iterator of objects to insert"})
     public BulkInsertOperation(Iterator<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
         this(new AbstractObjectList<LocalAbstractObject>(insertedObjects), false);
     }

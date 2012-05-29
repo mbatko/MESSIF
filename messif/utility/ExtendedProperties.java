@@ -340,7 +340,7 @@ public class ExtendedProperties extends Properties {
      * If a <code>prefix</code> is specified, only keys that begins with that prefix are
      * copied and the prefix is removed in the process.
      *
-     * @param properties the propertries to load
+     * @param properties the properties to load
      * @param prefix if <tt>null</tt>, all keys from the <code>properties</code>
      *          are copied; otherwise, only the keys that starts with the prefix
      *          are copied without the prefix

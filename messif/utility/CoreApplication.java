@@ -2566,7 +2566,7 @@ public class CoreApplication {
         if (postponeUntil.length() == 0)
             return true;
         try {
-            long sleepTime = Convert.timeToMiliseconds(postponeUntil) - System.currentTimeMillis();
+            long sleepTime = Convert.timeToMilliseconds(postponeUntil) - System.currentTimeMillis();
             if (sleepTime > 0)
                 Thread.sleep(sleepTime);
         } catch (NumberFormatException e) {

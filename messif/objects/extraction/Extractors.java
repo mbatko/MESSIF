@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.impl.MetaObjectParametricMap;
@@ -63,6 +64,25 @@ public abstract class Extractors {
         Extractor<T> extractor = (Extractor<T>)extractorInstance; // This cast IS checked on the next line
         if (!extractedClass.isAssignableFrom(extractor.getExtractedClass()))
             throw new ClassCastException("Extractor " + extractor + " does not provide " + extractedClass);
+        return extractor;
+    }
+
+    /**
+     * Returns a type-safe cast of a given multi-extractor instance.
+     * @param <T> the class of objects the multi-extractor creates
+     * @param multiExtractorInstance the instance to cast
+     * @param extractedClass the class of objects the multi-extractor creates
+     * @return a cast multi-extractor
+     * @throws ClassCastException if the specified {@code multiExtractorInstance} is not an {@link MultiExtractor} or it extracts an incompatible class
+     */
+    public static <T extends LocalAbstractObject> MultiExtractor<T> castToMultiExtractor(Object multiExtractorInstance, Class<? extends T> extractedClass) throws ClassCastException {
+        if (multiExtractorInstance == null)
+            return null;
+
+        @SuppressWarnings("unchecked")
+        MultiExtractor<T> extractor = (MultiExtractor<T>)multiExtractorInstance; // This cast IS checked on the next line
+        if (!extractedClass.isAssignableFrom(extractor.getExtractedClass()))
+            throw new ClassCastException("MultiExtractor " + extractor + " does not provide " + extractedClass);
         return extractor;
     }
 
@@ -209,12 +229,17 @@ public abstract class Extractors {
         return createTextExtractor(objectClass, null, additionalArguments);
     }
 
+    /** Regular expression for parsing question-mark enclosed variables */
+    private static final Pattern externalCmdVariableSubstitution = Pattern.compile("\\?([^?]+?)(?::([^?]+))?\\?", Pattern.MULTILINE);
+
     /**
      * Calls an external extractor command and returns its output.
      * If {@code fileAsArgument} is <tt>true</tt>, the {@code dataSource} must
      * represent a valid file, which is passed in place of %s parameter in the {@code command}.
      * Otherwise, the external extractor receives the data from the {@code dataSource}
-     * on its standard input.
+     * on its standard input. Note that variable substitution using question-mark enclosure
+     * is applied using {@link ExtractorDataSource#getParameterMap() data source parameters}, i.e.
+     * every ?variable-name:default-value? is replaced with the value of {@link ExtractorDataSource#getParameter}("variable-name").
      *
      * @param command the external command (including all necessary arguments)
      * @param fileAsArgument if <tt>true</tt>, the "%s" argument of external command is replaced with the filename
@@ -224,6 +249,7 @@ public abstract class Extractors {
      */
     public static InputStream callExternalExtractor(String command, boolean fileAsArgument, ExtractorDataSource dataSource) throws IOException {
         Process extractorProcess;
+        command = Convert.substituteVariables(command, externalCmdVariableSubstitution, 1, 2, dataSource.getParameterMap());
         if (fileAsArgument) {
             Object dataFile = dataSource.getDataSource();
             if (!(dataFile instanceof File))
@@ -359,9 +385,9 @@ public abstract class Extractors {
     /**
      * Creates an extractor that creates multiple objects from binary data by external command.
      * The command is executed using the specified {@code command} and is expected to
-     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
+     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>false</tt>
      * or the data are read from file that is passed as "%s" argument to the external command if
-     * {@code fileAsArgument} is <tt>false</tt>.
+     * {@code fileAsArgument} is <tt>true</tt>.
      * The extractor must return the text parsable by the constructor of {@code objectClass} on its standard output.
      *
      * @param <T> the class of object that is created by the extractor
@@ -381,9 +407,9 @@ public abstract class Extractors {
     /**
      * Creates an extractor that creates multiple objects from binary data by external command.
      * The command is executed using the specified {@code command} and is expected to
-     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>true</tt>
+     * receive the binary data on its standard input if {@code fileAsArgument} is <tt>false</tt>
      * or the data are read from file that is passed as "%s" argument to the external command if
-     * {@code fileAsArgument} is <tt>false</tt>.
+     * {@code fileAsArgument} is <tt>true</tt>.
      * The extractor must return the text parsable by the constructor of {@code objectClass} on its standard output.
      *
      * @param <T> the class of object that is created by the extractor
