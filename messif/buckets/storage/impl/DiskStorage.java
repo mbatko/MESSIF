@@ -80,6 +80,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     /** The suffix for auto-generated filenames */
     public static final String FILENAME_SUFFIX = ".ds";
 
+    /** Ratio of {@link #deletedFragments} to {@link #objectCount} when the {@link #compactData()} is executed */
+    protected static final float COMPACTING_FRAGMENTATION_RATIO = 0.5f;
+
     /** Header flag constant for indication whether the file was correctly closed */
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
 
@@ -622,7 +625,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             // Read the occupation and number of objects
             if (fileExists) {
                 readHeader(fileChannel, startPosition);
-                if (deletedFragments > objectCount)
+                if (deletedFragments > COMPACTING_FRAGMENTATION_RATIO * objectCount)
                     compactData();
                 // If the header was rebuilt, flush the header so that next open does not need to rebuild it again
                 if (modified)
