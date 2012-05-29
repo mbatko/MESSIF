@@ -17,32 +17,29 @@
 package messif.utility.http;
 
 import com.sun.net.httpserver.HttpExchange;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 import messif.objects.LocalAbstractObject;
-import messif.objects.extraction.Extractor;
-import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
+import messif.objects.extraction.MultiExtractor;
 import messif.utility.reflection.InstantiatorSignature;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
- * Processor that creates {@link LocalAbstractObject} instances
+ * Processor that creates {@link Iterator} of {@link LocalAbstractObject} instances
  * from {@link InputStream}s taken from the HTTP request body.
  * 
- * @param <T> the class of objects that this processor creates
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpApplicationProcessor<T> {
+public class ExtractionMultiProcessor implements HttpApplicationProcessor<Iterator<? extends LocalAbstractObject>> {
     /** Extractor for the object created from the input stream */
-    protected final Extractor<? extends T> extractor;
+    protected final MultiExtractor<?> extractor;
 
     /**
      * Create a new instance of extraction processor.
@@ -50,7 +47,7 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
      * @param extractor the extractor for objects to create
      * @throws IllegalArgumentException if the specified {@code objectClass} is not valid
      */
-    public ExtractionProcessor(Extractor<? extends T> extractor) throws IllegalArgumentException {
+    public ExtractionMultiProcessor(MultiExtractor<?> extractor) throws IllegalArgumentException {
         this.extractor = extractor;
     }
 
@@ -62,21 +59,20 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
      * </pre>
      *
      * @param extractorSignature the signature of the extractor (constructor, factory method or named instance)
-     * @param extractedClass the class of instances created by the extractor
      * @param namedInstances collection of named instances that are used when converting string parameters
      * @throws IllegalArgumentException if there was an error creating the extractor instance
      * @see messif.objects.extraction.Extractors
      */
-    public ExtractionProcessor(String extractorSignature, Class<? extends T> extractedClass, Map<String, Object> namedInstances) throws IllegalArgumentException {
+    public ExtractionMultiProcessor(String extractorSignature, Map<String, Object> namedInstances) throws IllegalArgumentException {
         try {
             // Try to get named instance first
             Object instance = namedInstances.get(extractorSignature);
-            if (instance != null && instance instanceof Extractor) {
+            if (instance != null && instance instanceof MultiExtractor) {
                 // Named instance found
-                this.extractor = Extractors.cast(instance, extractedClass);
+                this.extractor = (MultiExtractor<?>)instance;
             } else {
                 // Create extractor from signature
-                this.extractor = Extractors.cast(InstantiatorSignature.createInstanceWithStringArgs(extractorSignature, Extractor.class, namedInstances), extractedClass);
+                this.extractor = InstantiatorSignature.createInstanceWithStringArgs(extractorSignature, MultiExtractor.class, namedInstances);
             }
         } catch (NoSuchInstantiatorException e) {
             throw new IllegalArgumentException("Cannot create " + extractorSignature + ": " + e.getMessage());
@@ -85,49 +81,13 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
         }
     }
 
-    /**
-     * Returns an {@link ExtractorDataSource} derived from the HTTP request.
-     * The stream is automatically decompressed, if "content-encoding" header was given.
-     *
-     * @param httpExchange the HTTP exchange with the request
-     * @param httpParams parsed parameters from the HTTP request
-     * @return an input stream from the HTTP request
-     * @throws IllegalArgumentException if there was a problem reading the HTTP body
-     */
-    protected static ExtractorDataSource getExtractorDataSource(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException {
+    @Override
+    public Iterator<? extends LocalAbstractObject> processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
         try {
-            InputStream input = httpExchange.getRequestBody();
-            String contentEncoding = httpExchange.getRequestHeaders().getFirst("content-encoding");
-            if (contentEncoding != null && contentEncoding.equalsIgnoreCase("gzip"))
-                input = new GZIPInputStream(input);
-            return new ExtractorDataSource(input, httpParams);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("There was a problem reading the HTTP body: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Performs an extraction on the given data source and returns the created instance.
-     * If the end-of-file in the data source is encountered, <tt>null</tt> value is returned.
-     * 
-     * @param dataSource the data source to use for extraction
-     * @return a new extracted instance
-     * @throws IllegalArgumentException if there was a problem reading data from the data source or extracting the object
-     * @throws ExtractorException if there was a problem calling extractor
-     */
-    protected final T extractObject(ExtractorDataSource dataSource) throws IllegalArgumentException, ExtractorException {
-        try {
-            return extractor.extract(dataSource);
-        } catch (EOFException e) {
-            return null;
+            return extractor.extract(ExtractionProcessor.getExtractorDataSource(httpExchange, httpParams));
         } catch (IOException e) {
             throw new IllegalArgumentException("There was a problem reading the object from the data: " + e.getMessage(), e);
         }
-    }
-
-    @Override
-    public T processHttpExchange(HttpExchange httpExchange, Map<String, String> httpParams) throws IllegalArgumentException, ExtractorException {
-        return extractObject(getExtractorDataSource(httpExchange, httpParams));
     }
 
     @Override
@@ -136,8 +96,9 @@ public class ExtractionProcessor<T extends LocalAbstractObject> implements HttpA
     }
 
     @Override
-    public Class<? extends T> getProcessorReturnType() {
-        return extractor.getExtractedClass();
+    @SuppressWarnings("unchecked")
+    public Class<? extends Iterator<? extends LocalAbstractObject>> getProcessorReturnType() {
+        return (Class)Iterator.class; // This cannot be cast safely
     }
 
 }

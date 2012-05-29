@@ -24,6 +24,7 @@ import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,7 +32,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import messif.algorithms.Algorithm;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.AbstractObjectList;
 import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 
@@ -153,8 +153,8 @@ public class HttpApplicationHandler implements HttpHandler {
             return new ExtractionProcessor(args[offset], processorClass, namedInstances);
         else if (RankedSortedCollection.class.isAssignableFrom(processorClass))
             return new InstantiatorProcessor<T>(algorithm, args[offset], processorClass, namedInstances);
-        else if (Collection.class.isAssignableFrom(processorClass))
-            return (HttpApplicationProcessor)new ExtractionListProcessor(args[offset], namedInstances);
+        else if (Iterator.class.isAssignableFrom(processorClass))
+            return (HttpApplicationProcessor)new ExtractionMultiProcessor(args[offset], namedInstances);
         else
             return new ValueProcessor<T>(args[offset], processorClass, namedInstances);
     }
