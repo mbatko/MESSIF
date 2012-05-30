@@ -109,20 +109,14 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
 
     //****************** Cloning ******************//
-    
-    /**
-     * Create a duplicate of this operation.
-     * The answer of the query is not cloned.
-     *
-     * @return a clone of this operation
-     * @throws CloneNotSupportedException if the operation instance cannot be cloned
-     */
+
     @Override
-    public RankingQueryOperation clone() throws CloneNotSupportedException {
+    public RankingQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
         RankingQueryOperation operation = (RankingQueryOperation)super.clone();
 
         // Create a new collection for the answer set (without data)
-        operation.answer = (RankedSortedCollection)operation.answer.clone(false);
+        if (!preserveAnswer)
+            operation.answer = (RankedSortedCollection)operation.answer.clone(false);
 
         return operation;
     }
@@ -282,7 +276,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        return answer.add(answerType, object, distance, objectDistances);
+        synchronized (answer) {
+            return answer.add(answerType, object, distance, objectDistances);
+        }
     }
 
     /**
@@ -291,7 +287,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     @Override
     public void resetAnswer() {
-        answer.clear();
+        synchronized (answer) {
+            answer.clear();
+        }
     }
 
     /**
@@ -313,7 +311,9 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @param operation the source operation from which to get the update
      */
     protected void updateFrom(RankingQueryOperation operation) {
-        answer.addAll(operation.answer);
+        synchronized (answer) {
+            answer.addAll(operation.answer);
+        }
     }
 
     @Override

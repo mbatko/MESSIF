@@ -204,15 +204,8 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
 
     //****************** Cloning ******************//
 
-    /**
-     * Create a duplicate of this operation.
-     * The answer of the query is not cloned.
-     *
-     * @return a clone of this operation
-     * @throws CloneNotSupportedException if the operation instance cannot be cloned
-     */
     @Override
-    public RankingMultiQueryOperation clone() throws CloneNotSupportedException {
+    public RankingMultiQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
         RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone();
         operation.queryObjects = new ArrayList<LocalAbstractObject>(queryObjects);
         return operation;

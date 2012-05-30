@@ -114,6 +114,36 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
     }
 
 
+    //****************** Cloning ******************//
+    
+    /**
+     * Create a duplicate of this operation.
+     * The answer of the query is cloned.
+     *
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @Override
+    public final QueryOperation<TAnswer> clone() throws CloneNotSupportedException {
+        return clone(false);
+    }
+
+    /**
+     * Create a duplicate of this operation.
+     * Optionally, if the {@code preserveAnswer} is <tt>true</tt> the answer is
+     * not cloned but both this and the cloned operation share the same answer collection.
+     *
+     * @param preserveAnswer flag whether to clone the answer (<tt>false</tt>) or preserve
+     *          the same answer collection (<tt>true</tt>) in the cloned operation
+     * @return a clone of this operation
+     * @throws CloneNotSupportedException if the operation instance cannot be cloned
+     */
+    @SuppressWarnings("unchecked")
+    public QueryOperation<TAnswer> clone(boolean preserveAnswer) throws CloneNotSupportedException {
+        return (QueryOperation)super.clone(); // This cast IS checked - this is cloning
+    }
+
+
     //****************** Answer methods ******************//
 
     /**

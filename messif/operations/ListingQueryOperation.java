@@ -75,17 +75,11 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
 
     //****************** Cloning ******************//
     
-    /**
-     * Create a duplicate of this operation.
-     * The answer of the query is not cloned.
-     *
-     * @return a clone of this operation
-     * @throws CloneNotSupportedException if the operation instance cannot be cloned
-     */
     @Override
-    public ListingQueryOperation clone() throws CloneNotSupportedException {
+    public ListingQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
         ListingQueryOperation operation = (ListingQueryOperation)super.clone();
-        operation.answer = new ArrayList<AbstractObject>();
+        if (!preserveAnswer)
+            operation.answer = new ArrayList<AbstractObject>();
         return operation;
     }
 
@@ -158,7 +152,9 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         try {
             if (object == null)
                 return false;
-            return answer.add(answerType.update(object));
+            synchronized (answer) {
+                return answer.add(answerType.update(object));
+            }
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }
@@ -170,7 +166,9 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     @Override
     public void resetAnswer() {
-        answer.clear();
+        synchronized (answer) {
+            answer.clear();
+        }
     }
 
     /**

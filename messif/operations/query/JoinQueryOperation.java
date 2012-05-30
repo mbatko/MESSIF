@@ -212,25 +212,21 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
         return getAnswerCount() - beforeCount;
     }
 
+
     //****************** Cloning ******************//
     
-    /**
-     * Create a duplicate of this operation.
-     * The answer of the query is not cloned.
-     *
-     * @return a clone of this operation
-     * @throws CloneNotSupportedException if the operation instance cannot be cloned
-     */
     @Override
     @SuppressWarnings("unchecked")
-    public JoinQueryOperation clone() throws CloneNotSupportedException {
+    public JoinQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
         JoinQueryOperation operation = (JoinQueryOperation)super.clone();
 
         // Create a new collection for the answer set (without data)
-        operation.answer = (DistanceRankedSortedCollection)operation.answer.clone(false);       // This is checked.
+        if (!preserveAnswer)
+            operation.answer = (DistanceRankedSortedCollection)operation.answer.clone(false);       // This is checked.
 
         return operation;
     }
+
 
     //****************** Overrides for answer set ******************//
 
