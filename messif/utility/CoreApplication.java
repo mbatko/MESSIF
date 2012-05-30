@@ -1765,6 +1765,38 @@ public class CoreApplication {
         }
     }
 
+    /**
+     * Creates a new named instance of properties from the values of configuration file.
+     * Note that this method is not available from the command line interface.
+     * This action does not have .parameter.#no syntax, but every value passed as
+     * with this action name will be stored in the created properties.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * myProps = propertiesCreate
+     * myProps.propName1 = propValue1
+     * myProps.propName2 = propValue2
+     * </pre>
+     * </p>
+     * This configuration file action will create (or replace) a named instance called "myProps"
+     * with a {@link ExtendedProperties} instance that will contain properties "propName1" and
+     * "propName2" with values "propValue1" and "propValue2" respectively.
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param inputProperties the properties to copy from
+     * @param name the name for the instance
+     * @param prefix the restrict prefix
+     * @param variables the map of variables
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    private boolean propertiesCreate(PrintStream out, Properties inputProperties, String name, String prefix, Map<String, String> variables) {
+        ExtendedProperties properties = ExtendedProperties.restrictProperties(inputProperties, prefix, variables);
+        if (namedInstances.put(name, properties) != null)
+            out.println("Previous named instance changed to a new one");
+        return true;
+    }
+
 
     //****************** Named instances ******************//
 
@@ -2752,6 +2784,14 @@ public class CoreApplication {
                                 (arguments.size() > 2)?arguments.get(2):actionName, // name
                                 (arguments.size() > 3)?arguments.get(3):null, // prefix
                                 (arguments.size() > 4)?Convert.stringToMap(arguments.get(4)):variables
+                        );
+                    // SPECIAL! Method propertiesCreate is called differently
+                    else if (methodName.equals("propertiesCreate"))
+                        rtv = propertiesCreate(out,
+                                props,
+                                actionName, // instance name
+                                actionName + '.', // prefix
+                                variables
                         );
                     else // Normal method
                         rtv = methodExecutor.execute(outputStream, arguments.toArray(new String[arguments.size()]));
