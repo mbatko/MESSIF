@@ -16,6 +16,7 @@
  */
 package messif.algorithms;
 
+import java.io.Closeable;
 import messif.operations.AbstractOperation;
 
 /**
@@ -36,13 +37,17 @@ import messif.operations.AbstractOperation;
  * state the conditions under which it can be executed in multiple threads.
  * </p>
  * 
+ * <p>
+ * The {@link #close() } method should be called after processing all the steps.
+ * </p>
+ * 
  * @param <O> the type of the operation that are processed by this navigator processor
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public interface NavigationProcessor<O extends AbstractOperation> {
+public interface NavigationProcessor<O extends AbstractOperation> extends Closeable {
     /**
      * Returns the operation for which this navigator was created.
      * @return the operation for which this navigator was created
@@ -63,7 +68,7 @@ public interface NavigationProcessor<O extends AbstractOperation> {
      * 
      * @return the number of objects affected
      */
-    public int processNext();
+    public int processNext() throws AlgorithmMethodException;
 
     /**
      * Returns the number of processing steps already evaluated by this processor.
