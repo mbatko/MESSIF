@@ -29,7 +29,7 @@ import java.util.Comparator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class KeyOperator<T> implements Comparator<T> {
+public abstract class KeyOperator<T extends Comparable<? super T>> implements Comparator<T> {
     
     /**
      * Returns the maximal value of given key type.

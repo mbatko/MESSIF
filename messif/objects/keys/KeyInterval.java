@@ -28,7 +28,7 @@ import java.util.ListIterator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
+public abstract class KeyInterval<T extends Comparable<? super T>> implements Comparable<KeyInterval<T>> {
 
     /** Return the lower bound of the interval.
      * @return the lower bound of the interval
@@ -43,23 +43,22 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
     /** 
      * Return <b>true</b> if the interval covers given key. 
      * @param key the key to be tested
-     * @param operator the operator fot this key type
      * @return <b>true</b> if the interval covers given key
      */
-    public final boolean isCovered(T key, KeyOperator<T> operator) {
-        return (operator.compare(getFrom(), key) <= 0) && (operator.compare(getTo(), key) >= 0);
+    public final boolean isCovered(T key) {
+        return (getFrom().compareTo(key) <= 0) && (getTo().compareTo(key) >= 0);
     }
 
     /** 
      * Return <b>true</b> if the interval intersects with this interval.
      * @param interval the interval to be tested
-     * @param operator the operator fot this key type
      * @return <b>true</b> if the interval covers given key
      */
-    public final boolean intersect(KeyInterval<T> interval, KeyOperator<T> operator) {
-        return (operator.compare(getTo(), interval.getFrom()) >= 0) && (operator.compare(getFrom(), interval.getTo()) <= 0);
+    public final boolean intersect(KeyInterval<T> interval) {
+        return (getTo().compareTo(interval.getFrom()) >= 0) && (getFrom().compareTo(interval.getTo()) <= 0);
     }
     
+    //   TODO: remove in MESSIF 2.0
     /** 
      * Given a list of intervals, cut from them the parts that intersects with "this" interval.
      * The intervals can be MODULO the domain size
@@ -107,7 +106,11 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
         }
         return retVal;
     }
-
+    //   TODO: remove in MESSIF 2.0
+    
+    
+    
+    
     @Override
     public boolean equals(Object obj) {
         if (! (obj instanceof KeyInterval)) {
@@ -120,13 +123,7 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
     public int hashCode() {
         return (getFrom().hashCode() << 8) ^ getTo().hashCode();
     }
-    
-    /**
-     * Given a set of keys, this method cuts the given interval to dijcunct set of "right-open" intervals.
-     */
-    //public List<KeyInterval<T>> cutIntervalsByKeys()
-       
-    
+        
     /** 
      * Return the string representation of this interval.
      */
@@ -134,5 +131,4 @@ public abstract class KeyInterval<T> implements Comparable<KeyInterval<T>> {
     public String toString() {
         return (new StringBuffer("[")).append(getFrom()).append(",").append(getTo()).append("]").toString();
     }
-
 }
