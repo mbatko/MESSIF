@@ -16,6 +16,8 @@
  */
 package messif.operations.query;
 
+import java.io.Serializable;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
@@ -66,6 +68,20 @@ public class GetObjectByLocatorOperation extends SingletonQueryOperation {
         this.locator = locator;
     }
 
+
+    /**
+     * Creates a new instance of GetObjectByLocatorOperation for a specified locator.
+     * @param locator the locator to be searched by this operation
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    @AbstractOperation.OperationConstructor({"The object locator", "Answer type"})
+    public GetObjectByLocatorOperation(String locator, AnswerType answerType, Map<String,Serializable> params) {
+        super(answerType);
+        this.locator = locator;
+        for (Map.Entry<String, Serializable> param : params.entrySet()) {
+            setParameter(param.getKey(), param.getValue());
+        }
+    }
 
     //****************** Attribute access ******************//
 
