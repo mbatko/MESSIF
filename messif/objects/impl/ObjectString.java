@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
 import messif.objects.LocalAbstractObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -165,6 +166,14 @@ public class ObjectString extends LocalAbstractObject implements StringDataProvi
         return text.length() * Character.SIZE / 8;
     }
 
+    @Override
+    public AbstractObjectKey getObjectKey() {
+        AbstractObjectKey objectKey = super.getObjectKey();
+        if (objectKey == null) {
+            return new AbstractObjectKey(text);
+        }
+        return objectKey;
+    }
 
     //****************************** Distance function *****************************//
 

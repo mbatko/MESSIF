@@ -460,7 +460,9 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     public int processQuery(QueryOperation query) throws UnsupportedOperationException {
         int beforeCount = query.getAnswerCount();
         try {
-            algorithm.executeOperation(query.clone(true));
+            QueryOperation clonedQuery = query.clone(true);
+            clonedQuery.clearSurplusData();
+            algorithm.executeOperation(clonedQuery);
             return query.getAnswerCount() - beforeCount;
         } catch (NoSuchMethodException e) {
             return super.processQuery(query);
