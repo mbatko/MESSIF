@@ -151,7 +151,7 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
 
     @Override
     public RankingSingleQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        RankingSingleQueryOperation operation = (RankingSingleQueryOperation)super.clone();
+        RankingSingleQueryOperation operation = (RankingSingleQueryOperation)super.clone(preserveAnswer);
         if (operation.queryObject != null)
             operation.queryObject = operation.queryObject.clone();
         return operation;

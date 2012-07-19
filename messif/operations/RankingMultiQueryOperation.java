@@ -206,7 +206,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
 
     @Override
     public RankingMultiQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone();
+        RankingMultiQueryOperation operation = (RankingMultiQueryOperation)super.clone(preserveAnswer);
         operation.queryObjects = new ArrayList<LocalAbstractObject>(queryObjects);
         return operation;
     }
