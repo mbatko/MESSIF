@@ -63,7 +63,7 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
 
     @Override
     public SingletonQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        SingletonQueryOperation operation = (SingletonQueryOperation)super.clone();
+        SingletonQueryOperation operation = (SingletonQueryOperation)super.clone(preserveAnswer);
         if (!preserveAnswer)
             operation.answer = null;
         return operation;

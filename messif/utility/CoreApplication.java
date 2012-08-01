@@ -33,12 +33,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -137,6 +139,10 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                the repeating ends after their number of repeats or an exception
  *                whichever comes first. If no "repeat" or "foreach" is specified
  *                the action is repeated until an exception occurs.
+ * <li><i>repeatEvery</i> parameter is optional and allows to execute the action repeatedly
+ *                at time intervals specified by the argument. Note that the action will
+ *                be executed normally (as a normal action) at first and then it will
+ *                be run asynchronously (in another thread!) at the given time intervals.
  * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all successive writes are appended to this file
@@ -196,6 +202,9 @@ public class CoreApplication {
 
     /** List of currently created named instances */
     protected final Map<String, Object> namedInstances = new HashMap<String, Object>();
+
+    /** List of asynchronous threads for "repeatEvery" actions */
+    protected final Map<String, Thread> repeatEveryThreads = new HashMap<String, Thread>();
 
     /** Socket used for command communication */
     protected ServerSocketChannel cmdSocket;
@@ -503,27 +512,20 @@ public class CoreApplication {
     /**
      * Select algorithm to manage.
      * A parameter with algorithm sequence number is required for specifying, which algorithm to select.
-     * If an optional second parameter is provided, the algorithm is assigned to the given
-     * named instance variable instead of selecting.
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmSelect 0
      * </pre>
      * 
      * @param out a stream where the application writes information for the user
-     * @param args the algorithm sequence number and, optionally, the name of the variable
+     * @param args the algorithm sequence number
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @see #algorithmInfoAll
      */
-    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select", "name of the variable (optional)"})
+    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select"})
     public boolean algorithmSelect(PrintStream out, String... args) {
         try {
-            Algorithm alg = algorithms.get(Integer.parseInt(args[1]));
-            if (args.length > 2 && args[2] != null && !args[2].isEmpty()) {
-                namedInstances.put(args[2], alg);
-            } else {
-                algorithm = alg;
-            }
+            algorithm = algorithms.get(Integer.parseInt(args[1]));
             return true;
         } catch (IndexOutOfBoundsException ignore) {
         } catch (NumberFormatException ignore) {
@@ -533,6 +535,53 @@ public class CoreApplication {
         out.println(algorithms.size() - 1);
 
         return false;
+    }
+
+    /**
+     * Assign one or more running algorithms to a given named instance.
+     * The first parameter specifies the name to which the selected algorithms are assigned.
+     * If the second parameter is not specified, the current algorithm is used.
+     * Otherwise, the second parameter can be:
+     * <ul>
+     *   <li>a number, which select the algorithm (similarly to the {@link #algorithmSelect});</li>
+     *   <li>a number range (dash-connected two numbers), which select all the algorithms with number from the given range
+     *          - note that a static array with the selected algorithms will be assigned to the named instance;</li>
+     *   <li>coma-separated list of numbers or number ranges;</li>
+     *   <li>word "all" to get all currently running algorithms as a static array.</li>
+     * </ul>
+     * 
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmToNamedInstace runningAlgs 0-2,6,9
+     * </pre>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args the name of the variable and, optionally, the algorithm sequence number selector 
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "select algorithm to manage", arguments = {"name of the variable", "algorithm sequence number selector (optional)"})
+    public boolean algorithmToNamedInstance(PrintStream out, String... args) {
+        Object value;
+        if (args.length <= 2) {
+            value = algorithm;
+        } else if (args[2].equalsIgnoreCase("all")) {
+            value = algorithms.toArray(new Algorithm[algorithms.size()]);
+        } else {
+            try {
+                value = algorithms.get(Integer.parseInt(args[2]));
+            } catch (NumberFormatException ignore) {
+                Collection<Integer> algIndexes = Convert.rangeSelectorsToIndexes(args[2], false);
+                Algorithm[] algs = new Algorithm[algIndexes.size()];
+                int i = 0;
+                for (Iterator<Integer> it = algIndexes.iterator(); it.hasNext(); i++)
+                    algs[i] = algorithms.get(it.next());
+                value = algs;
+            }
+        }
+
+        namedInstances.put(args[1], value);
+
+        return true;
     }
 
     /**
@@ -2722,7 +2771,7 @@ public class CoreApplication {
      * @return <tt>true</tt> if the action was executed successfully
      * @throws InvocationTargetException if there was an error executing the action while the {@code throwException} is <tt>true</tt>
      */
-    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {
+    protected boolean controlFileExecuteAction(final PrintStream out, final Properties props, final String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {
         // Parse action name and arguments
         List<String> arguments = getCFActionArguments(props, actionName, variables);
         String methodName = arguments.get(0);
@@ -2831,6 +2880,36 @@ public class CoreApplication {
         if (assignVariable != null && assignOutput != null)
             variables.put(assignVariable, assignOutput.toString().trim());
 
+        // If repeatEvery modifier was specified, start the thread
+        String repeatEveryModifier = props.getProperty(actionName + ".repeatEvery");
+        if (repeatEveryModifier != null && !repeatEveryThreads.containsKey(actionName)) {
+            synchronized (repeatEveryThreads) {
+                final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
+                final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
+                final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
+                Thread repeatEveryThread = new Thread("Repeat action " + actionName + " ever " + repeatEveryModifier) {
+                    @Override
+                    public void run() {
+                        while (!isInterrupted()) {
+                            try {
+                                sleep(repeatTime);
+                            } catch (InterruptedException ignore) {
+                                break;
+                            }
+                            try {
+                                if (!controlFileExecuteAction(out, props, actionName, variablesCopy, outputStreamsCopy, false))
+                                    break;
+                            } catch (InvocationTargetException e) {
+                                throw new InternalError("Exception thrown even though it should not have been thrown: " + e);
+                            }
+                        }
+                    }
+                };
+                repeatEveryThreads.put(actionName, repeatEveryThread);
+                repeatEveryThread.start();
+            }
+        }
+
         return true; // Execution successful
     }
 
@@ -2840,7 +2919,7 @@ public class CoreApplication {
      * The first argument is required to specify the file with commands.
      * Additional arguments are either variable specifications in the form of "varname=value"
      * or the action name that is started (which defaults to "actions").
-     * For a full explanation of the command sytax see {@link CoreApplication}.
+     * For a full explanation of the command syntax see {@link CoreApplication}.
      * 
      * <p>
      * Example of usage:
@@ -3063,7 +3142,7 @@ public class CoreApplication {
                     public void run() {
                         try {
                             processInteractiveSocket(connection);
-                        } catch (ClosedByInterruptException e) {
+                        } catch (ClosedChannelException ignore) {
                             // Ignore this exception because it is a correct exit
                         } catch (IOException e) {
                             log.warning(e.toString());

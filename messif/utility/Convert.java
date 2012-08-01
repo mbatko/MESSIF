@@ -31,8 +31,10 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -1225,6 +1227,95 @@ public abstract class Convert {
             str.append(" is invalid");
             throw new NumberFormatException(str.toString());
         }
+    }
+
+    /**
+     * Converts a string specifying hours/minutes/seconds time period.
+     * The string must contain only numbers with a one-char specifier of
+     * <b>h</b>ours, <b>m</b>inutes, or <b>s</b>econds. If no specifier is
+     * given, the number represents milliseconds.
+     * 
+     * <p>Example: 1h 10 m 23s 999<br/>
+     *      will return 4223999 milliseconds
+     * </p>
+     * 
+     * @param hmsStr the string containing the hours/minutes/seconds time period
+     * @return the number of milliseconds the string represents
+     * @throws NumberFormatException if the format of the string is not recognized or the numbers cannot be converted
+     */
+    public static long hmsToMilliseconds(String hmsStr) throws NumberFormatException {
+        Matcher matcher = Pattern.compile("\\G\\s*(\\d+)\\s*(\\D)?\\s*").matcher(hmsStr);
+        long time = 0;
+        int lastMatchEnd = 0;
+        while (matcher.find()) {
+            long mult;
+            lastMatchEnd = matcher.end();
+            String type = matcher.group(2);
+            if (type == null || type.isEmpty()) {
+                mult = 1;
+            } else {
+                switch (type.charAt(0)) {
+                    case 'H':
+                    case 'h':
+                        mult = 60 * 60 * 1000;
+                        break;
+                    case 'M':
+                    case 'm':
+                        mult = 60 * 1000;
+                        break;
+                    case 'S':
+                    case 's':
+                        mult = 1000;
+                        break;
+                    default:
+                        throw new NumberFormatException("Unknown time specification: " + type);
+                }
+            }
+            time += mult*Long.parseLong(matcher.group(1));
+        }
+        if (lastMatchEnd != hmsStr.length())
+            throw new NumberFormatException("Cannot understand hours/minutes/seconds value '" + hmsStr + "'");
+        return time;
+    }
+
+    /**
+     * Fills the given collection with integer indexes that correspond to the
+     * coma-separated numbers or number ranges specified by the given string.
+     * @param rangeSelectors the coma-separated numbers or number ranges
+     * @param collection the collection to which to add the indexes
+     * @throws NumberFormatException if the format of the string is not recognized or the numbers cannot be converted
+     */
+    public static void rangeSelectorsToIndexes(String rangeSelectors, Collection<? super Integer> collection) throws NumberFormatException {
+        Matcher matcher = Pattern.compile("\\G(?:^|,)\\s*(\\d+)(?:-(\\d+))?").matcher(rangeSelectors);
+        int lastMatchEnd = 0;
+        while (matcher.find()) {
+            lastMatchEnd = matcher.end();
+            int number = Integer.parseInt(matcher.group(1));
+            if (matcher.group(2) != null) {
+                int range = Integer.parseInt(matcher.group(2));
+                for (; number <= range; number++)
+                    collection.add(number);
+            } else {
+                collection.add(number);
+            }
+        }
+        if (lastMatchEnd != rangeSelectors.length())
+            throw new NumberFormatException("Cannot understand range selector value '" + rangeSelectors + "'");
+    }
+
+    /**
+     * Returns a collection of integer indexes that correspond to the coma-separated
+     * numbers or number ranges specified by the given string.
+     * @param rangeSelectors the coma-separated numbers or number ranges
+     * @param removeDuplicates flag if each index is selected only once (<tt>true</tt>)
+     *          or if the returned collection can contain the same indexes multiple times
+     * @return a collection of indexes
+     * @throws NumberFormatException if the format of the string is not recognized or the numbers cannot be converted
+     */
+    public static Collection<Integer> rangeSelectorsToIndexes(String rangeSelectors, boolean removeDuplicates) throws NumberFormatException {
+        Collection<Integer> ret = removeDuplicates ? new LinkedHashSet<Integer>() : new ArrayList<Integer>();
+        rangeSelectorsToIndexes(rangeSelectors, ret);
+        return ret;
     }
 
     /**

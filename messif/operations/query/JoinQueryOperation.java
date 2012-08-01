@@ -218,7 +218,7 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
     @Override
     @SuppressWarnings("unchecked")
     public JoinQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        JoinQueryOperation operation = (JoinQueryOperation)super.clone();
+        JoinQueryOperation operation = (JoinQueryOperation)super.clone(preserveAnswer);
 
         // Create a new collection for the answer set (without data)
         if (!preserveAnswer)

@@ -77,7 +77,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     
     @Override
     public ListingQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        ListingQueryOperation operation = (ListingQueryOperation)super.clone();
+        ListingQueryOperation operation = (ListingQueryOperation)super.clone(preserveAnswer);
         if (!preserveAnswer)
             operation.answer = new ArrayList<AbstractObject>();
         return operation;

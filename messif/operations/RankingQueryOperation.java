@@ -112,7 +112,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     @Override
     public RankingQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
-        RankingQueryOperation operation = (RankingQueryOperation)super.clone();
+        RankingQueryOperation operation = (RankingQueryOperation)super.clone(preserveAnswer);
 
         // Create a new collection for the answer set (without data)
         if (!preserveAnswer)
