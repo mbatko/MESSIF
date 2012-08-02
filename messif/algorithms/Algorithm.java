@@ -42,11 +42,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -114,7 +110,7 @@ public abstract class Algorithm implements Serializable {
     private transient ThreadLocal<StatisticsEnabledMethodThreadList> bgExecutionList;
 
     /** Thread pool service to process operations in threads. */
-    private transient ExecutorService operationsThreadPool = null;
+    private transient ExecutorService operationsThreadPool;
     
 
     //****************** Constructors ******************//
@@ -142,6 +138,8 @@ public abstract class Algorithm implements Serializable {
      */
     @Override
     public void finalize() throws Throwable {
+        if (operationsThreadPool != null)
+            operationsThreadPool.shutdown();
         super.finalize();
     }
 
@@ -183,13 +181,22 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Sets new thread pool {@link #operationsThreadPool} to be used for processing of operations (via {@link NavigationProcessor}).
-     * If {@link #operationsThreadPool} is not null, parallel processing is used.
+     * Sets a new {@link #operationsThreadPool thread pool} used for processing operations (via {@link NavigationProcessor}).
+     * If {@code operationsThreadPool} is not null, parallel processing is used.
+     * @param operationsThreadPool the new thread pool instance to set (can be <tt>null</tt>)
      */
     public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
         this.operationsThreadPool = operationsThreadPool;
     }
-    
+
+    /**
+     * Returns the current thread pool used for processing operations.
+     * @return the current thread pool instance or <tt>null</tt> if no thread pool is set
+     */
+    public ExecutorService getOperationsThreadPool() {
+        return operationsThreadPool;
+    }
+
 
     //****************** Serialization ******************//
 
@@ -441,12 +448,16 @@ public abstract class Algorithm implements Serializable {
             if (addTimeStatistic) {
                 StatisticTimer operationTime = OperationStatistics.getOpStatistics("OperationTime", StatisticTimer.class);
                 operationTime.start();
-                operationExecutor.execute(params);
+                if (!NavigationProcessors.executeWithCast(operationsThreadPool, this, params[0]))
+                    operationExecutor.execute(params);
                 operationTime.stop();
             } else {
-                operationExecutor.execute(params);
+                if (!NavigationProcessors.executeWithCast(operationsThreadPool, this, params[0]))
+                    operationExecutor.execute(params);
             }
         } catch (ClassCastException e) { // This can occur when OperationTime statistics exists, but has a wrong class
+            throw new AlgorithmMethodException(e);
+        } catch (InterruptedException e) {
             throw new AlgorithmMethodException(e);
         } catch (InvocationTargetException e) {
             throw new AlgorithmMethodException(e.getCause());
@@ -749,7 +760,6 @@ public abstract class Algorithm implements Serializable {
 
     }
 
-    
     /**
      * This method can be used by all algorithms before processing any operation to set default (operation) statistics.
      * @throws ClassCastException if new statistic cannot be created
@@ -778,87 +788,7 @@ public abstract class Algorithm implements Serializable {
         }
     }    
 
-    /**
-     * Process all steps of given {@link NavigationProcessor} either sequentially or in parallel 
-     *  (if the {@link #operationsThreadPool} is not null).
-     * @param processor a processor that encapsulates an operation to be processed
-     * @throws AlgorithmMethodException if the processing goes wrong
-     */
-    public void processOperation(NavigationProcessor processor) throws AlgorithmMethodException {
-        if (operationsThreadPool != null) {
-            processOperationParallel(processor);
-        } else {
-            processOperationSequentially(processor);
-        }
-    }
-    
-    /**
-     * Process all steps of given {@link NavigationProcessor} sequentially.
-     * @param processor a processor that encapsulates an operation to be processed
-     * @throws AlgorithmMethodException if the processing goes wrong
-     */
-    private void processOperationSequentially(NavigationProcessor processor) throws AlgorithmMethodException {
-        while (processor.hasProcessNext()) {
-            processor.processNext();
-        }
-    }
-    
-    /**
-     * Process all steps of given {@link NavigationProcessor} in parallel using the internal threadPool.
-     * @param operation to be processed
-     * @throws AlgorithmMethodException 
-     */
-    private void processOperationParallel(NavigationProcessor processor) throws AlgorithmMethodException {
-        do {
-            List<Future<Integer>> tasks = new ArrayList<Future<Integer>>();
-            AlgorithmMethodException toBeTrown = null;
-            while (processor.hasProcessNext()) {
-                // currently return value of processNext is not used
-                try {
-                    tasks.add(operationsThreadPool.submit(new ProcessNextThreadCallable(processor)));
-                } catch (RejectedExecutionException ex) {
-                    toBeTrown = new AlgorithmMethodException("A processNext task on NavigationProcessor was rejected!", ex);
-                }
-            }
-            for (Future<Integer> future : tasks) {
-                try {
-                    future.get();
-                } catch (InterruptedException ignore) {
-                } catch (ExecutionException ex) {
-                    toBeTrown = new AlgorithmMethodException(ex);
-                }
-            }
-            if (toBeTrown != null) {
-                throw toBeTrown;
-            }
-        } while (processor.hasProcessNext());
-    }
 
-    /**
-     * Class to encapsulate thread processing of individual steps of the {@link NavigationProcessor}.
-     */
-    private class ProcessNextThreadCallable implements Callable<Integer> {
-        /** Navigation processor encapsulating processing of an operation. */
-        private final NavigationProcessor navigationProcessor;
-
-        /**
-         * Standard constructor setting the {@link #navigationProcessor} field.
-         * @param navigationProcessor operation navigation processor
-         */
-        public ProcessNextThreadCallable(NavigationProcessor navigationProcessor) {
-            this.navigationProcessor = navigationProcessor;
-        }
-
-        @Override
-        public Integer call() throws Exception {
-            if (navigationProcessor.hasProcessNext()) {
-                return navigationProcessor.processNext();
-            }
-            return -1;
-        }
-    }
-    
-    
     //****************** Operation method specifier ******************//
 
     /**

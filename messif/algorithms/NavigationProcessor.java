@@ -17,6 +17,7 @@
 package messif.algorithms;
 
 import java.io.Closeable;
+import java.io.IOException;
 import messif.operations.AbstractOperation;
 
 /**
@@ -24,22 +25,12 @@ import messif.operations.AbstractOperation;
  * The instance of {@link NavigationProcessor} is first obtained on a given {@link NavigationDirectory}
  * via {@link NavigationDirectory#getNavigationProcessor(messif.operations.AbstractOperation) getNavigationProcessor}
  * method for a given {@link AbstractOperation operation} instance.
- * The operation then can be processed iteratively by calling {@link #processNext()}
+ * The operation then can be processed iteratively by calling {@link #processStep()}
  * until there are no more directory items available. This typically means that
  * the navigation directory provides candidates where the operation
  * should be processed which are either computed before the processing (i.e. the
  * list of buckets to visit) or dynamically when the next processing
  * is requested.
- * 
- * <p>
- * The steps of the navigation processor may be independent and thus executed
- * in parallel. Every implementation of the {@link NavigationProcessor} should
- * state the conditions under which it can be executed in multiple threads.
- * </p>
- * 
- * <p>
- * The {@link #close() } method should be called after processing all the steps.
- * </p>
  * 
  * @param <O> the type of the operation that are processed by this navigator processor
  * 
@@ -55,20 +46,38 @@ public interface NavigationProcessor<O extends AbstractOperation> extends Closea
     public O getOperation();
 
     /**
-     * Returns whether there are more processing steps available.
-     * @return <tt>true</tt> if additional processing via {@link #processNext()} is possible
+     * Processes the encapsulated operation by the next processing step.
+     * The returned value indicates if a processing step was executed or if
+     * this processor is finished. Note that this method may block if necessary.
+     * 
+     * @return <tt>true</tt> if the next processing step was taken or
+     *         <tt>false</tt> if no processing was done and this processor is finished
+     * @throws InterruptedException if the thread processing the step is interrupted
+     * @throws AlgorithmMethodException if an error occurred during the evaluation of the processing step
      */
-    public boolean hasProcessNext();
+    public boolean processStep() throws InterruptedException, AlgorithmMethodException;
 
     /**
-     * Processes the encapsulated operation by the next processing step.
-     * The returned value depends on the context of the processor,
-     * it can be the number of objects inserted into or deleted from the algorithm,
-     * the number of objects added to the answer of a query operation, etc.
-     * 
-     * @return the number of objects affected
+     * Finishes the processing prematurely.
+     * @throws IllegalStateException if this processor has already {@link #isFinished() finished} processing
      */
-    public int processNext() throws AlgorithmMethodException;
+//    public void abort() throws IllegalStateException;
+
+
+    /**
+     * Method to be called after processing all the steps.
+     */
+    @Override
+    public void close();
+
+    /**
+     * Returns whether this processor is finished.
+     * Note that this method should return <tt>true</tt> if and only if the next call
+     * to {@link #processStep()} returns <tt>false</tt>.
+     * @return <tt>false</tt> if additional processing via {@link #processNext()} is possible or
+     *         <tt>true</tt> if this processor has finished
+     */
+    public boolean isFinished();
 
     /**
      * Returns the number of processing steps already evaluated by this processor.
