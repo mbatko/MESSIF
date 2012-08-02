@@ -17,10 +17,7 @@
 package messif.algorithms.impl;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.NavigationProcessor;
 import messif.buckets.Bucket;
 import messif.operations.QueryOperation;
@@ -34,31 +31,22 @@ import messif.operations.QueryOperation;
  * The implementation is thread-safe, if operation cloning is enabled. Otherwise,
  * the operation answer needs to be synchronized.
  * 
- * @param <O> the type of the operation that are processed by this navigator processor
+ * @param <O> the type of the operation that are processed by this navigation processor
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  */
-public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>> implements NavigationProcessor<O> {
-    /** Operation for which this navigator was created */
-    private final O operation;
-    /** Internal queue of buckets to process */
-    private final Queue<Bucket> buckets;
-    /** Number of buckets processed so far */
-    private int processed;
-    /** Flag whether the queue is closed, if <tt>false</tt>, i.e. getting a next element from the queue blocks and waits for the queue to fill */
-    private boolean queueClosed;
+public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>> extends AbstractNavigationProcessor<O, Bucket> {
 
     /**
      * Create a new bucket navigation processor.
      * The processor is {@link #isClosed() closed} and contains only the specified buckets.
      * No additional buckets can be added.
      * @param operation the operation to process
+     * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      * @param buckets the buckets on which to process
      */
-    public BucketQueryOperationNavigationProcessor(O operation, Collection<Bucket> buckets) {
-        this.operation = operation;
-        this.buckets = new LinkedList<Bucket>(buckets);
-        this.queueClosed = true;
+    public BucketQueryOperationNavigationProcessor(O operation, boolean cloneAsynchronousOperation, Collection<? extends Bucket> buckets) {
+        super(operation, cloneAsynchronousOperation, buckets);
     }
 
     /**
@@ -69,104 +57,15 @@ public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>
      * in order to be able to finish the processing.
      * 
      * @param operation the operation to process
+     * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      */
-    public BucketQueryOperationNavigationProcessor(O operation) {
-        this.operation = operation;
-        this.buckets = new LinkedList<Bucket>();
-        this.queueClosed = false;
-    }
-
-    /**
-     * Adds a collection of buckets to this processor.
-     * Note that buckets can be added only if this processor is not {@link #isClosed() closed}.
-     * 
-     * @param buckets the collection of buckets to add
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
-     */
-    public void addBuckets(Collection<Bucket> buckets) throws IllegalStateException {
-        synchronized (this.buckets) {
-            if (queueClosed)
-                throw new IllegalStateException();
-            this.buckets.addAll(buckets);
-            this.buckets.notifyAll();
-        }
-    }
-
-    /**
-     * Adds a bucket to this processor.
-     * Note that bucket can be added only if this processor is not {@link #isClosed() closed}.
-     * 
-     * @param bucket the bucket to add
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
-     */
-    public void addBucket(Bucket bucket) throws IllegalStateException {
-        addBuckets(Collections.singletonList(bucket));
-    }
-
-    /**
-     * Closes this processor.
-     * That means that no additional buckets can be added and the {@link #processNext()}
-     * method will block and wait for additional buckets.
-     * 
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
-     */
-    public void close() throws IllegalStateException {
-        synchronized (buckets) {
-            if (queueClosed)
-                throw new IllegalStateException();
-            queueClosed = true;
-            buckets.notifyAll();
-        }
-    }
-
-    /**
-     * Returns whether additional buckets can be added to this processor (<tt>false</tt>)
-     * or this processor is closed (<tt>true</tt>).
-     * @return <tt>true</tt> if this processor is closed and no additional buckets can be added for processing
-     */
-    public boolean isClosed() {
-        return queueClosed;
+    public BucketQueryOperationNavigationProcessor(O operation, boolean cloneAsynchronousOperation) {
+        super(operation, cloneAsynchronousOperation);
     }
 
     @Override
-    public O getOperation() {
-        return operation;
+    protected void processItem(O operation, Bucket processingItem) throws AlgorithmMethodException {
+        processingItem.processQuery(operation);
     }
 
-    @Override
-    public boolean hasProcessNext() {
-        return !queueClosed || !buckets.isEmpty();
-    }
-
-    @Override
-    public int processNext() {
-        Bucket bucket;
-        synchronized (buckets) {
-            bucket = buckets.poll();
-            while (bucket == null) {
-                if (queueClosed)
-                    throw new NoSuchElementException();
-                try {
-                    buckets.wait();
-                    bucket = buckets.poll();
-                } catch (InterruptedException e) {
-                    throw new NoSuchElementException(e.getMessage());
-                }
-            }
-        }
-        int ret = bucket.processQuery(operation);
-        processed++;
-        return ret;
-    }
-
-    @Override
-    public int getProcessedCount() {
-        return processed;
-    }
-
-    @Override
-    public int getRemainingCount() {
-        return buckets.size();
-    }
-    
 }

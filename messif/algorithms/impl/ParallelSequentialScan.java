@@ -16,9 +16,14 @@
  */
 package messif.algorithms.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Executors;
 import messif.algorithms.Algorithm;
+import messif.algorithms.AsynchronousNavigationProcessor;
+import messif.algorithms.NavigationDirectory;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketErrorCode;
 import messif.buckets.BucketStorageException;
@@ -44,14 +49,14 @@ import messif.operations.query.GetObjectCountOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ParallelSequentialScan extends Algorithm {
+public class ParallelSequentialScan extends Algorithm implements NavigationDirectory<QueryOperation<?>> {
     /** class id for serialization */
     static final long serialVersionUID = 1L;
 
     //****************** Attributes ******************//
 
     /** Instances of bucket where all the objects are stored */
-    private final LocalBucket[] buckets;
+    private final List<LocalBucket> buckets;
 
     /** Index of the bucket that receives next inserted object */
     private int insertBucket;
@@ -80,10 +85,11 @@ public class ParallelSequentialScan extends Algorithm {
             throw new IllegalArgumentException("Parallelization argument must be at least 1");
 
         // Create empty buckets (using the provided bucket class and parameters)
-        buckets = new LocalBucket[parallelization];
+        buckets = new ArrayList<LocalBucket>(parallelization);
         for (int i = 0; i < parallelization; i++)
-            buckets[i] = BucketDispatcher.createBucket(bucketClass, Long.MAX_VALUE, Long.MAX_VALUE, 0, true, bucketClassParams);
+            buckets.add(BucketDispatcher.createBucket(bucketClass, Long.MAX_VALUE, Long.MAX_VALUE, 0, true, bucketClassParams));
         insertBucket = 0;
+        setOperationsThreadPool(Executors.newFixedThreadPool(buckets.size()));
     }
 
     /**
@@ -170,9 +176,9 @@ public class ParallelSequentialScan extends Algorithm {
      */
     public void insert(InsertOperation operation) {
         try {
-            buckets[insertBucket].addObject(operation.getInsertedObject());
+            buckets.get(insertBucket).addObject(operation.getInsertedObject());
             operation.endOperation();
-            insertBucket = (insertBucket + 1) % buckets.length;
+            insertBucket = (insertBucket + 1) % buckets.size();
         } catch (BucketStorageException e) {
             operation.endOperation(e.getErrorCode());
         }
@@ -186,8 +192,8 @@ public class ParallelSequentialScan extends Algorithm {
     public void insert(BulkInsertOperation operation) {
         try {
             for (LocalAbstractObject object : operation.getInsertedObjects()) {
-                buckets[insertBucket].addObject(object);
-                insertBucket = (insertBucket + 1) % buckets.length;
+                buckets.get(insertBucket).addObject(object);
+                insertBucket = (insertBucket + 1) % buckets.size();
             }
             operation.endOperation();
         } catch (BucketStorageException e) {
@@ -247,74 +253,9 @@ public class ParallelSequentialScan extends Algorithm {
 
     //****************** Query processing thread implementation ******************//
 
-    /**
-     * Internal thread used for processing an operation on a given bucket.
-     */
-    private static class QueryProcessingThread extends Thread {
-        /** Operation processed by this thread */
-        private final QueryOperation<?> operation;
-        /** Bucket on which the operation is processed by this thread */
-        private final LocalBucket bucket;
-        /** Exception thrown during the processing */
-        private RuntimeException processingException;
-
-        /**
-         * Creates a new processing thread for given operation and bucket.
-         * @param bucketName the identification of the bucket processed by this thread
-         * @param operation the operation processed by this thread
-         * @param bucket the bucket on which the operation is processed by this thread
-         */
-        private QueryProcessingThread(String bucketName, QueryOperation<?> operation, LocalBucket bucket) {
-            super("Query processing thread - " + bucketName);
-            this.operation = operation;
-            this.bucket = bucket;
-        }
-
-        @Override
-        public void run() {
-            processingException = null;
-            try {
-                bucket.processQuery(operation);
-            } catch (RuntimeException e) {
-                processingException = e;
-            }
-        }
-
-        /**
-         * Finishes processing of this thread by updating the given operation
-         * with answers from this operation. This method waits for this thread
-         * to finish.
-         * @param originalOperation the operation to update
-         * @throws RuntimeException if there was an error during the processing
-         * @throws InterruptedException if a waiting for this thread to finish was interrupted
-         */
-        public void finishUpdate(QueryOperation<?> originalOperation) throws RuntimeException, InterruptedException {
-            join();
-            if (processingException != null)
-                throw processingException;
-            originalOperation.updateFrom(operation);
-        }
-    }
-
-    /**
-     * Performs a query operation.
-     * @param operation the query operation which is to be executed and which will received the result list.
-     * @throws CloneNotSupportedException if the operation does not support cloning (and thus cannot be used in parallel)
-         * @throws InterruptedException if a waiting for a processing thread was interrupted
-     */
-    public void search(QueryOperation<?> operation) throws CloneNotSupportedException, InterruptedException {
-        // Create a processing thread for each bucket
-        QueryProcessingThread[] operationThreads = new QueryProcessingThread[buckets.length];
-        for (int i = 0; i < buckets.length; i++) {
-            operationThreads[i] = new QueryProcessingThread("bucket " + i, (QueryOperation<?>)operation.clone(), buckets[i]);
-            operationThreads[i].start();
-        }
-
-        // Wait for the threads to finish
-        for (int i = 0; i < operationThreads.length; i++)
-            operationThreads[i].finishUpdate(operation);
-
-        operation.endOperation();
+    @Override
+    public AsynchronousNavigationProcessor<? extends QueryOperation<?>> getNavigationProcessor(QueryOperation<?> operation) {
+        return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>(operation, true, buckets);
     }
 
 
@@ -331,14 +272,14 @@ public class ParallelSequentialScan extends Algorithm {
         
         rtv = new StringBuffer();
         rtv.append("Algorithm: ").append(getName()).append(lineSeparator);
-        rtv.append("Bucket Class: ").append(buckets[0].getClass().getName()).append(lineSeparator);
+        rtv.append("Bucket Class: ").append(buckets.get(0).getClass().getName()).append(lineSeparator);
         long occupation = 0;
         int objectCount = 0;
         for (LocalBucket bucket : buckets) {
             occupation += bucket.getOccupation();
             objectCount += bucket.getObjectCount();
         }
-        rtv.append("Number of buckets (threads): ").append(buckets.length).append(lineSeparator);
+        rtv.append("Number of buckets (threads): ").append(buckets.size()).append(lineSeparator);
         rtv.append("Bucket Occupation: ").append(occupation).append(" bytes").append(lineSeparator);
         rtv.append("Bucket Occupation: ").append(objectCount).append(" objects").append(lineSeparator);
         
