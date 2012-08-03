@@ -69,7 +69,7 @@ public abstract class NavigationProcessors {
      * @throws InterruptedException if the processing thread is interrupted during the processing
      * @throws AlgorithmMethodException if there was an error during the processing
      */
-    public static <O extends AbstractOperation> void execute(ExecutorService executor, AsynchronousNavigationProcessor<? extends O> processor) throws InterruptedException, AlgorithmMethodException {
+    public static <O extends AbstractOperation> void executeAsync(ExecutorService executor, AsynchronousNavigationProcessor<? extends O> processor) throws InterruptedException, AlgorithmMethodException {
         List<Future<? extends O>> futures = new ArrayList<Future<? extends O>>();
         Callable<? extends O> callable = processor.processStepAsynchronously();
         while (callable != null) {
@@ -99,7 +99,7 @@ public abstract class NavigationProcessors {
     @SuppressWarnings("empty-statement")
     public static <O extends AbstractOperation> void execute(ExecutorService executor, NavigationProcessor<O> processor) throws InterruptedException, AlgorithmMethodException {
         if (executor != null && processor instanceof AsynchronousNavigationProcessor) {
-            execute(executor, (AsynchronousNavigationProcessor<O>)processor);
+            executeAsync(executor, (AsynchronousNavigationProcessor<O>)processor);
         } else {
             try {
                 while (processor.processStep()); // This empty body is intended
