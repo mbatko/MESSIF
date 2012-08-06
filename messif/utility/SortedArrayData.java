@@ -18,6 +18,7 @@ package messif.utility;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 import messif.buckets.index.IndexComparator;
 
 /**
@@ -173,7 +174,7 @@ public abstract class SortedArrayData<K, T> {
     }
 
     /**
-     * Returns the last element of this collection according to the order
+     * Returns the first element of this collection according to the order
      * specified by the comparator.
      * @return the element at the specified position in this collection
      * @throws NoSuchElementException if the collection is empty
@@ -202,7 +203,7 @@ public abstract class SortedArrayData<K, T> {
         }
     }
 
-
+    
     //****************** Bulk modification methods ******************//
 
     /**
