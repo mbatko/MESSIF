@@ -55,8 +55,8 @@ public class BucketProcessQueryRequestMessage extends BucketRequestMessage<Bucke
 
     @Override
     public BucketProcessQueryReplyMessage execute(BucketDispatcher bucketDispatcher) throws RuntimeException, BucketStorageException {
-        bucketDispatcher.getBucket(bucketID).processQuery(query);
-        return new BucketProcessQueryReplyMessage(this, query);
+        int count = bucketDispatcher.getBucket(bucketID).processQuery(query);
+        return new BucketProcessQueryReplyMessage(this, query, count);
     }
 
     @Override

@@ -32,6 +32,8 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
 
     /** Query operation processed on a remote bucket */
     private final QueryOperation<?> query;
+    /** Number of objects that were added to answer */
+    private final int count;
 
 
     //****************** Constructor ******************//
@@ -41,10 +43,12 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
      *
      * @param message the original message this message is response to
      * @param query the query operation processed on a remote bucket
+     * @param count the number of objects that were added to answer
      */
-    public BucketProcessQueryReplyMessage(BucketProcessQueryRequestMessage message, QueryOperation<?> query) {
+    public BucketProcessQueryReplyMessage(BucketProcessQueryRequestMessage message, QueryOperation<?> query, int count) {
         super(message);
         this.query = query;
+        this.count = count;
     }
 
 
@@ -58,4 +62,11 @@ public class BucketProcessQueryReplyMessage extends BucketReplyMessage {
         return query;
     }
 
+    /**
+     * Returns the number of objects that were added to answer.
+     * @return the number of objects that were added to answer
+     */
+    public int getCount() {
+        return count;
+    }
 }

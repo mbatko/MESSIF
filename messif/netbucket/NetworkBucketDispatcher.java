@@ -100,6 +100,12 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
         startReceiving();
     }
 
+    @Override
+    public void finalize() throws Throwable {
+        stopReceiving();
+        super.finalize();
+    }
+
 
     //****************** Messaging inicialization methods ******************//
 

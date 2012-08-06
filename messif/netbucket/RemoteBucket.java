@@ -16,6 +16,7 @@
  */
 package messif.netbucket;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -154,14 +155,13 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getObject(objectID);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
         }
-         */
-        return null;
     }
 
     /**
@@ -175,14 +175,13 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getObject(locator);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(locator, bucketID), remoteNetworkNode).getObject();
         } catch (IOException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
+            throw new IllegalStateException("Network error while getting object with locator " + locator + " from " + toString(), e);
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Network error while getting object with locator " + locator + " from " + toString(), e);
         }
-         */
-        return null;
     }
 
     /**
@@ -196,14 +195,13 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getObject(key);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(key, bucketID), remoteNetworkNode).getObject();
         } catch (IOException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
+            throw new IllegalStateException("Network error while getting object with key " + key + " from " + toString(), e);
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("Network error while getting object with key " + key + " from " + toString(), e);
         }
-         */
-        return null;
     }
 
     /**
@@ -218,16 +216,15 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).getAllObjects();
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(bucketID), remoteNetworkNode).getObjects().iterator();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(bucketID), remoteNetworkNode).getObjects().iterator();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while getting all objects from " + toString(), e);
         } catch (NoSuchElementException e) {
             throw new IllegalStateException(e.getMessage());
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException(e);
         }
-         */
-        return null;
     }
 
     @Override
@@ -237,18 +234,13 @@ public class RemoteBucket extends Bucket implements Serializable {
             netbucketDisp.getBucket(bucketID).addObject(object);
         } else {
             // Otherwise, send message to remote netnode
-            /* FIXME:
             try {
-                BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID), remoteNetworkNode);
-                if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
-                    throw new CapacityFullException();
-                return msg.getErrorCode();
+                netbucketDisp.send(new BucketManipulationRequestMessage(object, bucketID), remoteNetworkNode);
             } catch (IOException e) {
                 throw new IllegalStateException("Network error while adding " + object + " to " + toString(), e);
             } catch (NoSuchElementException e) {
                 throw new IllegalStateException(e.getMessage());
             }
-             */
         }
     }
 
@@ -259,19 +251,14 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).addObjects(objects);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            BucketManipulationReplyMessage msg = netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objects, bucketID), remoteNetworkNode);
-            if (msg.getErrorCode().equals(BucketErrorCode.HARDCAPACITY_EXCEEDED))
-                throw new CapacityFullException();
+            BucketManipulationReplyMessage msg = netbucketDisp.send(new BucketManipulationRequestMessage(objects, bucketID), remoteNetworkNode);
             return msg.getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while adding " + objects + " to " + toString(), e);
         } catch (NoSuchElementException e) {
             throw new IllegalStateException(e.getMessage());
         }            
-         */
-        return 0;
     }
 
     @Override
@@ -281,14 +268,11 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).deleteObject(objectID);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(objectID, bucketID, true), remoteNetworkNode).getObject();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(objectID, bucketID, true), remoteNetworkNode).getObject();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting Object (" + objectID + ") from " + toString(), e);
         }
-         */
-        return null;
     }
 
     @Override
@@ -298,14 +282,11 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).deleteObject(object, deleteLimit);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting Object (" + object + ") from " + toString(), e);
         }
-         */
-        return 0;
     }
 
     @Override
@@ -315,14 +296,11 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).deleteObject(locatorURI, deleteLimit);
         
         // Otherwise, send message to remote netnode
-        /* FIXME:
         try {
-            return netbucketDisp.sendMessageWaitReply(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(locatorURI, bucketID, true), remoteNetworkNode).getChangesCount();
         } catch (IOException e) {
-            throw new IllegalStateException("Network error while deleting Object (" + object + ") from " + toString(), e);
+            throw new IllegalStateException("Network error while deleting object with locator " + locatorURI + " from " + toString(), e);
         }
-         */
-        return 0;
     }
 
     @Override
@@ -346,16 +324,15 @@ public class RemoteBucket extends Bucket implements Serializable {
             return netbucketDisp.getBucket(bucketID).processQuery(query);
         
         // Otherwise, send message to remote netnode
-            /* FIXME:
         try {
-            BucketManipulationReplyMessage msg = sendMessageWaitSingleReply(new BucketProcessQueryRequestMessage(bucketID, query), BucketCreateReplyMessage.class, remoteNetworkNode);
+            BucketProcessQueryReplyMessage msg = netbucketDisp.send(new BucketProcessQueryRequestMessage(bucketID, query), remoteNetworkNode);
             query.updateFrom(msg.getQuery());
-            return msg.getChangesCount();
+            return msg.getCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while executing query (" + query + ") from " + toString(), e);
-        }       
-            */
-        return 0;
+        } catch (BucketStorageException e) {
+            throw new IllegalStateException("This should never happen: " + e, e);
+        }
     }
 
 
