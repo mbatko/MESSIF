@@ -241,11 +241,6 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
     }
 
     @Override
-    public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
-        return addObjects(objects.iterator());
-    }
-
-    @Override
     public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
 
         BulkInsertOperation operation = new BulkInsertOperation(objects);

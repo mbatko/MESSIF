@@ -213,9 +213,9 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
         if (processingItem == null)
             return false;
         O processedOperation = processItem(operation, processingItem);
+        processed++;
         if (processedOperation != operation) // This equality check is correct, we update the operation only if it is not the same instance
             operation.updateFrom(processedOperation);
-        processed++;
         return true;
     }
 
