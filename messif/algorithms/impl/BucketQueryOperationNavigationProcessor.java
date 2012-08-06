@@ -64,8 +64,9 @@ public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>
     }
 
     @Override
-    protected void processItem(O operation, Bucket processingItem) throws AlgorithmMethodException {
+    protected O processItem(O operation, Bucket processingItem) throws AlgorithmMethodException {
         processingItem.processQuery(operation);
+        return operation;
     }
 
 }

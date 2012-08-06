@@ -202,16 +202,19 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      * 
      * @param operation the operation that is to be processed
      * @param processingItem the processing item using which to process the operation
+     * @return the operation after processing (can be the same instance as the given operation)
      * @throws AlgorithmMethodException if an error occurred during the evaluation of the processing step
      */
-    protected abstract void processItem(O operation, T processingItem) throws AlgorithmMethodException;
+    protected abstract O processItem(O operation, T processingItem) throws AlgorithmMethodException;
 
     @Override
     public final boolean processStep() throws InterruptedException, AlgorithmMethodException {
         T processingItem = getNextProcessingItem();
         if (processingItem == null)
             return false;
-        processItem(operation, processingItem);
+        O processedOperation = processItem(operation, processingItem);
+        if (processedOperation != operation) // This equality check is correct, we update the operation only if it is not the same instance
+            operation.updateFrom(processedOperation);
         return true;
     }
 
@@ -221,20 +224,20 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
         if (processingItem == null)
             return null;
         return new Callable<O>() {
+            @SuppressWarnings("unchecked")
             @Override
             public O call() throws InterruptedException, CloneNotSupportedException, AlgorithmMethodException {
+                O processedOperation;
                 if (cloneAsynchronousOperation) {
-                    @SuppressWarnings("unchecked")
-                    O clonedOperation = (O)operation.clone(); // This cast IS safe, since this is cloning
-                    processItem(clonedOperation, processingItem);
-                    processed++;
-                    synchronized (operation) {
-                        operation.updateFrom(clonedOperation);
-                    }
+                    processedOperation = processItem((O)operation.clone(), processingItem); // This cast IS safe, since this is cloning
                 } else {
-                    processItem(operation, processingItem);
-                    processed++;
+                    processedOperation = processItem(operation, processingItem);
                 }
+                processed++;
+                if (processedOperation != operation) // This equality check is correct, we update the operation only if it is not the same instance
+                    synchronized (operation) {
+                        operation.updateFrom(processedOperation);
+                    }
                 return operation;
             }
         };
