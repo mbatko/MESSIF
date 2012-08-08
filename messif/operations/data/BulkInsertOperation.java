@@ -44,7 +44,7 @@ public class BulkInsertOperation extends AbstractOperation {
     //****************** Attributes ******************//
 
     /** List of objects to insert */
-    private final AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
+    private AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
 
 
     //****************** Constructors ******************//
@@ -157,10 +157,26 @@ public class BulkInsertOperation extends AbstractOperation {
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        for (LocalAbstractObject object : insertedObjects)
-            object.clearSurplusData();
+        // TODO: solve this better
+        insertedObjects.clear();
+        //for (LocalAbstractObject object : insertedObjects)
+        //    object.clearSurplusData();
     }
 
+    //****************** Cloning ******************//
+
+    @Override
+    public BulkInsertOperation clone() throws CloneNotSupportedException {
+        BulkInsertOperation operation = (BulkInsertOperation)super.clone();
+        if (operation.insertedObjects != null) {
+            AbstractObjectList<LocalAbstractObject> abstractObjectList = new AbstractObjectList<LocalAbstractObject>();
+            for (LocalAbstractObject localAbstractObject : insertedObjects) {
+                abstractObjectList.add((LocalAbstractObject)localAbstractObject.clone());
+            }
+            operation.insertedObjects = abstractObjectList;
+        }
+        return operation;
+    }
 
     //****************** Equality driven by operation data ******************//
 

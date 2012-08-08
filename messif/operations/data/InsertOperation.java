@@ -37,7 +37,7 @@ public class InsertOperation extends AbstractOperation {
     //****************** Operation request attributes ******************//
     
     /** Inserted object */
-    protected final LocalAbstractObject insertedObject;
+    protected LocalAbstractObject insertedObject;
          
     
     //****************** Constructors ******************//
@@ -123,10 +123,21 @@ public class InsertOperation extends AbstractOperation {
     @Override
     public void clearSurplusData() {
         super.clearSurplusData();
-        insertedObject.clearSurplusData();
+        // TODO: solve this better
+        //insertedObject.clearSurplusData();
     }
 
+    
+    //****************** Cloning ******************//
 
+    @Override
+    public InsertOperation clone() throws CloneNotSupportedException {
+        InsertOperation operation = (InsertOperation)super.clone();
+        if (operation.insertedObject != null)
+            operation.insertedObject = operation.insertedObject.clone();
+        return operation;
+    }
+    
     //****************** Equality driven by operation data ******************//
 
     /** 
