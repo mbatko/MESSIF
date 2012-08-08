@@ -19,6 +19,7 @@ package messif.algorithms.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.Executors;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.NavigationDirectory;
@@ -33,7 +34,7 @@ import messif.operations.AbstractOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MultipleOverlaysAlgorithm implements NavigationDirectory<AbstractOperation> {
+public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDirectory<AbstractOperation> {
     /** Internal list of algorithms on which the operations are actually processed */
     private final Collection<Algorithm> algorithms;
     /** Flag whether to clone the operation for asynchronous processing */
@@ -45,8 +46,11 @@ public class MultipleOverlaysAlgorithm implements NavigationDirectory<AbstractOp
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      */
     public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
+        super("Multiple overlay algorithm on: " + algorithms.size() + " algorithms");
         this.algorithms = new ArrayList<Algorithm>(algorithms);
         this.cloneAsynchronousOperation = cloneAsynchronousOperation;
+
+        setOperationsThreadPool(Executors.newFixedThreadPool(algorithms.size()));
     }
 
     /**
@@ -54,12 +58,13 @@ public class MultipleOverlaysAlgorithm implements NavigationDirectory<AbstractOp
      * @param algorithms the algorithms on which the operations are processed
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      */
+    @Algorithm.AlgorithmConstructor(description = "Constructor with created algorithms", arguments = {"array of running algorithms", "t/f if operation should be clonned before running"})
     public MultipleOverlaysAlgorithm(Algorithm[] algorithms, boolean cloneAsynchronousOperation) {
         this(Arrays.asList(algorithms), cloneAsynchronousOperation);
     }
 
     @Override
-    protected void finalize() throws Throwable {
+    public void finalize() throws Throwable {
         for (Algorithm algorithm : algorithms)
             algorithm.finalize();
         super.finalize();
@@ -77,5 +82,10 @@ public class MultipleOverlaysAlgorithm implements NavigationDirectory<AbstractOp
                 }
             }
         };
+    }
+
+    @Override
+    public String toString() {
+        return getName();
     }
 }
