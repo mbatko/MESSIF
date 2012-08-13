@@ -391,14 +391,15 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
     }
 
     /**
-     * Returns sum of hash code values for all the encapsulated objects' data.
+     * Returns sum of hash code values for all the encapsulated objects data.
      * @return a hash code value for the data of this object
      */
     @Override
     public int dataHashCode() {
         int rtv = 0;
-        for (LocalAbstractObject object : (LocalAbstractObject[]) objects.toArray())
+        for (ObjectFeature object : objects) {
             rtv = rtv*47 + object.dataHashCode();
+        }
         return rtv;
     }
 

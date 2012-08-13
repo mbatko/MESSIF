@@ -82,9 +82,6 @@ public class ObjectFeatureSetNeedlemanWunsch extends ObjectFeatureSetStringWindo
             
         int n; // length of s
         int m; // length of t
-        int i; // iterates through s
-        int j; // iterates through t
-        float cost; // cost
 
         // check for zero length input
         n = getObjectCount();
@@ -103,7 +100,7 @@ public class ObjectFeatureSetNeedlemanWunsch extends ObjectFeatureSetStringWindo
                 ((ObjectFeature) getObject(startCoordSet1)).getX() :
                 ((ObjectFeature) getObject(startCoordSet1)).getY()) <= MinCoordSet1 && startCoordSet1 < n) {
             startCoordSet1++;
-        };
+        }
         stopCoordSet1 = startCoordSet1;
         while ( ((coord == Coordinate.CoordX) ?
                 ((ObjectFeature) getObject(startCoordSet1)).getX() :
@@ -119,7 +116,7 @@ public class ObjectFeatureSetNeedlemanWunsch extends ObjectFeatureSetStringWindo
                 ((ObjectFeature) set2.getObject(startCoordSet1)).getY()) <= MinCoordSet2 && startCoordSet2 < m) {
             startCoordSet2++;
         }
-        stopCoordSet1 = startCoordSet1;
+        stopCoordSet2 = startCoordSet2;
         while ( ((coord == Coordinate.CoordX) ?
                 ((ObjectFeature) set2.getObject(startCoordSet1)).getX() :
                 ((ObjectFeature) set2.getObject(startCoordSet1)).getY()) <= MaxCoordSet2 && stopCoordSet2 < m) {
