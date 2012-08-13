@@ -17,7 +17,6 @@
 package messif.network;
 
 import java.io.Serializable;
-import java.util.Collection;
 import messif.statistics.OperationStatistics;
 import java.util.HashSet;
 import java.util.Set;
@@ -125,8 +124,8 @@ public class NavigationElement implements Serializable {
     }
 
     /**
-     * Returns <tt>true</tt> if the node for this navigation element is skiping reply waiting.
-     * @return <tt>true</tt> if the node for this navigation element is skiping reply waiting
+     * Returns <tt>true</tt> if the node for this navigation element is skipping reply waiting.
+     * @return <tt>true</tt> if the node for this navigation element is skipping reply waiting
      */
     public final boolean isSkipping() {
         return skipWaiting;
@@ -137,8 +136,9 @@ public class NavigationElement implements Serializable {
      * Returns the list of destinations that this path element's node doesn't wait for reply from.
      * @return the list of destinations that this path element's node doesn't wait for reply from
      */
+    @SuppressWarnings("ReturnOfCollectionOrArrayField")
     final Set<NetworkNode> getNotWaitingDestinations() {
-        return notWaitingDestinations;
+        return notWaitingDestinations; // This is internal method only, so access is direct
     }
 
 
@@ -211,7 +211,7 @@ public class NavigationElement implements Serializable {
      */
     @Override
     public String toString() {
-        StringBuffer strbuf = new StringBuffer();
+        StringBuilder strbuf = new StringBuilder(128);
         if (reply)
             strbuf.append("REPLY: ");
         else {
@@ -220,12 +220,12 @@ public class NavigationElement implements Serializable {
                 strbuf.append("(don't wait): ");
             else strbuf.append("(will answer): ");
         }
-        strbuf.append("from: " + sender + " to: " + destination);
+        strbuf.append("from: ").append(sender).append(" to: ").append(destination);
         if (! notWaitingDestinations.isEmpty())
-            strbuf.append("; not waiting dests: "+notWaitingDestinations);
+            strbuf.append("; not waiting dests: ").append(notWaitingDestinations);
         if (! waitingDestinations.isEmpty())
-            strbuf.append("; waiting dests: "+waitingDestinations);
-        
+            strbuf.append("; waiting dests: ").append(waitingDestinations);
+
         return strbuf.toString();
     }
 }

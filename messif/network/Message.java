@@ -319,17 +319,17 @@ public abstract class Message implements Serializable, Cloneable {
 
     /**
      * Indicates whether some other object is "equal to" this message.
-     * The obj is equal to this message if and only if it is an instance of Message
+     * The {@code obj} is equal to this message if and only if it is an instance of Message
      * that has the same ID and the same original sender.
      *
      * <p>
-     * The <code>equals</code> method cannot be overriden to avoid bugs while
+     * The <code>equals</code> method cannot be overridden to avoid bugs while
      * receiving reply messages. If you need to use a different hashing on messages,
      * use a wrapper class.
      * </p>
      *
      * @param obj the reference object with which to compare
-     * @return <code>true</code> if this message is the same as the obj argument; <code>false</code> otherwise
+     * @return <code>true</code> if this message is the same as the {@code obj} argument; <code>false</code> otherwise
      */
     @Override
     public final boolean equals(Object obj) {
@@ -345,10 +345,10 @@ public abstract class Message implements Serializable, Cloneable {
 
     /**
      * Returns a hash code value for this message. 
-     * The hashcode of a message is its ID (the low part of the long).
+     * The hash code of a message is its ID (the low part of the long).
      *
      * <p>
-     * The <code>hashCode</code> method cannot be overriden to avoid bugs while 
+     * The <code>hashCode</code> method cannot be overridden to avoid bugs while 
      * receiving reply messages. If you need to use a different hashing on messages,
      * use a wrapper class.
      * </p>
