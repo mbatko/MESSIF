@@ -40,6 +40,11 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
     /** Flag whether to clone the operation for asynchronous processing */
     private final boolean cloneAsynchronousOperation;
 
+    /** Returns the number of algorithms encapsulated by this MultiAlgorithms */
+    public int getNumberAlgorithms() {
+        return algorithms.size();
+    }
+    
     /**
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
      * @param algorithms the algorithms on which the operations are processed
