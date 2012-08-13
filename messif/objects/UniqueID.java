@@ -106,7 +106,7 @@ public class UniqueID implements Serializable, Comparable<UniqueID> {
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(digits(mostSigBits >> 32, 8)).append('-');
+        StringBuilder rtv = new StringBuilder(digits(mostSigBits >> 32, 8)).append('-');
         rtv.append(digits(mostSigBits >> 16, 4)).append('-');
 	rtv.append(digits(mostSigBits, 4)).append('-');
 	rtv.append(digits(leastSigBits >> 48, 4)).append('-');

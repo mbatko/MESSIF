@@ -79,7 +79,7 @@ public class ErrorCode implements Serializable {
     }
 
 
-    //***************** Overriden methods *****************//
+    //***************** Overridden methods *****************//
 
     /**
      * Returns the textual representation of this error code.

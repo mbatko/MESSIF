@@ -29,31 +29,56 @@ public class CapacityFullException extends BucketStorageException {
     private static final long serialVersionUID = 1L;
     
     /**
-     * Number of objects that was actually inserted by a single operation before this exception
-     *  was thrown.
+     * Number of objects that were inserted by a single operation before this exception was thrown.
      */
-    private int numberOfInsertedObjects = 0;
+    private int numberOfInsertedObjects;
 
 
     /**
      * Creates a new instance of <code>BucketCapacityFullException</code> without detail message.
      */
     public CapacityFullException() {
-        super(BucketErrorCode.HARDCAPACITY_EXCEEDED, "No free space to allocate");
+        this(0);
     }
-        
+
     /**
      * Creates a new instance of <code>BucketCapacityFullException</code> without detail message.
+     * @param numberOfInsertedObjects the number of objects that were actually inserted
+     */
+    public CapacityFullException(int numberOfInsertedObjects) {
+        this("No free space to allocate", numberOfInsertedObjects);
+    }
+
+    /**
+     * Creates a new instance of <code>BucketCapacityFullException</code> with a detail message.
      * @param msg detailed message
      */
     public CapacityFullException(String msg) {
+        this(msg, 0);
+    }
+
+    /**
+     * Creates a new instance of <code>BucketCapacityFullException</code> with a detail message.
+     * @param msg detailed message
+     * @param numberOfInsertedObjects the number of objects that were actually inserted
+     */
+    public CapacityFullException(String msg, int numberOfInsertedObjects) {
         super(BucketErrorCode.HARDCAPACITY_EXCEEDED, msg);
+        this.numberOfInsertedObjects = numberOfInsertedObjects;
+    }
+
+    /**
+     * Sets the number of objects that were inserted by a single operation before this exception was thrown
+     * @param numberOfInsertedObjects the number of objects that were actually inserted
+     */
+    protected void setNumberOfInsertedObjects(int numberOfInsertedObjects) {
+    	this.numberOfInsertedObjects = numberOfInsertedObjects;
     }
     
-    public void setNumberOfInsertedObjects(int number) {
-    	numberOfInsertedObjects = number;
-    }
-    
+    /**
+     * Returns the number of objects that were inserted by a single operation before this exception was thrown.
+     * @return the number of objects that were inserted by a single operation before this exception was thrown
+     */
     public int getNumberOfInsertedObjects() {
     	return numberOfInsertedObjects;
     }

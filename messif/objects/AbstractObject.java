@@ -230,11 +230,11 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(getClass().getSimpleName()).append(" (");
+        StringBuilder rtv = new StringBuilder(getClass().getSimpleName()).append(" (");
         if (objectKey != null)
             rtv.append(objectKey.toString());
         else rtv.append(super.toString());
-        rtv.append(")");
+        rtv.append(')');
         return rtv.toString();
     }
 

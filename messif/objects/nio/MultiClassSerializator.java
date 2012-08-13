@@ -230,7 +230,7 @@ public class MultiClassSerializator<T> extends BinarySerializator implements Ser
     }
 
 
-    //************************ Overriden methods ************************//
+    //************************ Overridden methods ************************//
 
     /**
      * Returns a default class that is used for deserialization when a class is not specified.

@@ -290,8 +290,9 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
     
     /****************** Text representation ******************/
     
+    @Override
     public String toString() { 
-	StringBuffer buf = new StringBuffer();
+	StringBuilder buf = new StringBuilder();
         
         buf.append(getName());
 	buf.append(": {");
@@ -304,7 +305,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
             StatisticCounter counter = e.getValue();
             
             buf.append(key);
-	    buf.append("=");
+	    buf.append('=');
             buf.append(counter.get());
             
             hasNext = it.hasNext();
@@ -312,7 +313,7 @@ public final class StatisticRefCounter extends Statistics<StatisticRefCounter> {
                 buf.append(", ");
         }
 
-	buf.append("}");
+	buf.append('}');
 	return buf.toString();
     }
 

@@ -74,7 +74,7 @@ public interface NavigationProcessor<O extends AbstractOperation> extends Closea
      * Returns whether this processor is finished.
      * Note that this method should return <tt>true</tt> if and only if the next call
      * to {@link #processStep()} returns <tt>false</tt>.
-     * @return <tt>false</tt> if additional processing via {@link #processNext()} is possible or
+     * @return <tt>false</tt> if additional processing via {@link #processStep()} is possible or
      *         <tt>true</tt> if this processor has finished
      */
     public boolean isFinished();

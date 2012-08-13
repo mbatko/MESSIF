@@ -72,7 +72,7 @@ public class SingleClassSerializator<T> extends BinarySerializator implements Se
     }
 
 
-    //************************ Overriden methods ************************//
+    //************************ Overridden methods ************************//
 
     /**
      * Returns a default class that is used for deserialization when a class is not specified.

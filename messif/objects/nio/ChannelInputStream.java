@@ -70,7 +70,7 @@ public class ChannelInputStream extends BufferInputStream implements BinaryInput
     }
 
 
-    //****************** Overriden methods ******************//
+    //****************** Overridden methods ******************//
 
     @Override
     protected void read(ByteBuffer buffer) throws EOFException, IOException {

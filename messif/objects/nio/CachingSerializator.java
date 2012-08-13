@@ -184,7 +184,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
     }
 
 
-    //************************ Overriden methods ************************//
+    //************************ Overridden methods ************************//
 
     /**
      * Returns a hash code value for this serializator. 

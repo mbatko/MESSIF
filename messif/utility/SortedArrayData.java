@@ -18,7 +18,6 @@ package messif.utility;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 import messif.buckets.index.IndexComparator;
 
 /**

@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.buckets.BucketErrorCode;
-import messif.objects.AbstractObject;
 import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
@@ -170,9 +169,8 @@ public class BulkInsertOperation extends AbstractOperation {
         BulkInsertOperation operation = (BulkInsertOperation)super.clone();
         if (operation.insertedObjects != null) {
             AbstractObjectList<LocalAbstractObject> abstractObjectList = new AbstractObjectList<LocalAbstractObject>();
-            for (LocalAbstractObject localAbstractObject : insertedObjects) {
-                abstractObjectList.add((LocalAbstractObject)localAbstractObject.clone());
-            }
+            for (LocalAbstractObject localAbstractObject : insertedObjects)
+                abstractObjectList.add(localAbstractObject.clone());
             operation.insertedObjects = abstractObjectList;
         }
         return operation;

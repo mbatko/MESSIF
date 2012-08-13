@@ -167,7 +167,7 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
         return statistics.containsKey(name);
     }
     
-    // More operations of the original `values()' collection may be overriden to enhance the processing
+    // More operations of the original `values()' collection may be overridden to enhance the processing
     
 
     /****************** Special operations ******************/

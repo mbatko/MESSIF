@@ -37,7 +37,7 @@ import messif.operations.QueryOperation;
  * The bucket provides methods for inserting one or more objects, deleting them, retrieving all
  * objects or just a particular one (providing its ID). It also has a method for evaluating
  * queries, which pushes all objects from the bucket to the sequential scan implementation of the
- * respective query (if not overriden).
+ * respective query (if not overridden).
  * 
  * Every bucket is also automatically assigned a unique ID used for addressing the bucket.
  *
@@ -89,7 +89,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     /**
      * Insert several new objects into this bucket.
      * 
-     * This method can be overriden if there is more efficient implementation
+     * This method can be overridden if there is more efficient implementation
      * available at the storage level.
      * 
      * @param objects the collection of new objects
@@ -103,7 +103,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     /**
      * Insert several new objects to this bucket.
      * 
-     * This method can be overriden if there is more efficient implementation
+     * This method can be overridden if there is more efficient implementation
      * available at the storage level.
      * 
      * @param objects iterator that provides the new objects to insert
@@ -115,15 +115,15 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
             return 0;
         int ret = 0;
         try {
-	        // Iterate through all objects and add one by one
-	        while (objects.hasNext()) {
-	            addObject(objects.next());
-	            ret++;
-	        }
-	        return ret;
+            // Iterate through all objects and add one by one
+            while (objects.hasNext()) {
+                addObject(objects.next());
+                ret++;
+            }
+            return ret;
         } catch (CapacityFullException ex) {
-        	ex.setNumberOfInsertedObjects(ret);
-        	throw ex;
+            ex.setNumberOfInsertedObjects(ret);
+            throw ex;
         }
     }
 
@@ -190,7 +190,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     /**
      * Delete multiple objects with specified IDs.
      * 
-     * This method can be overriden if there is more efficient implementation
+     * This method can be overridden if there is more efficient implementation
      * available at the storage level.
      *
      * @param objectIDs List of object IDs to be deleted
@@ -220,7 +220,7 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     /**
      * Delete all objects from this bucket.
      * 
-     * This method can be overriden if there is more efficient implementation
+     * This method can be overridden if there is more efficient implementation
      * available at the storage level.
      *
      * @return the number of deleted objects
