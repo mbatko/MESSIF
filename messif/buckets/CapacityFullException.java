@@ -26,7 +26,14 @@ package messif.buckets;
 public class CapacityFullException extends BucketStorageException {
 
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 1L;    
+    private static final long serialVersionUID = 1L;
+    
+    /**
+     * Number of objects that was actually inserted by a single operation before this exception
+     *  was thrown.
+     */
+    private int numberOfInsertedObjects = 0;
+
 
     /**
      * Creates a new instance of <code>BucketCapacityFullException</code> without detail message.
@@ -41,6 +48,14 @@ public class CapacityFullException extends BucketStorageException {
      */
     public CapacityFullException(String msg) {
         super(BucketErrorCode.HARDCAPACITY_EXCEEDED, msg);
+    }
+    
+    public void setNumberOfInsertedObjects(int number) {
+    	numberOfInsertedObjects = number;
+    }
+    
+    public int getNumberOfInsertedObjects() {
+    	return numberOfInsertedObjects;
     }
     
 }

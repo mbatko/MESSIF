@@ -113,14 +113,18 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
         if (objects == null)
             return 0;
-        
-        // Iterate through all objects and add one by one
         int ret = 0;
-        while (objects.hasNext()) {
-            addObject(objects.next());
-            ret++;
+        try {
+	        // Iterate through all objects and add one by one
+	        while (objects.hasNext()) {
+	            addObject(objects.next());
+	            ret++;
+	        }
+	        return ret;
+        } catch (CapacityFullException ex) {
+        	ex.setNumberOfInsertedObjects(ret);
+        	throw ex;
         }
-        return ret;
     }
 
 
