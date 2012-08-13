@@ -346,27 +346,28 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      * @param  args  expected size of the array is 2: <b>minVector</b> vector with minimal values in all positions
      *         <b>maxVector</b> vector with maximal values in all positions
      * @return a randomly modified clone of this instance.
+     * @throws IllegalArgumentException if the passed arguments are not two {@link ObjectByteVector}s
      */
     @Override
-    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
+    public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException, IllegalArgumentException {
+        // Get random modification arguments
+        ObjectByteVector minVector;
+        ObjectByteVector maxVector;
+        try {
+            minVector = (ObjectByteVector) args[0];
+            maxVector = (ObjectByteVector) args[1];
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid argument given for random modify method: " + e, e);
+        }
+
+        Random random = new Random();
         ObjectByteVector rtv = (ObjectByteVector) this.clone();
         rtv.data = this.data.clone();
-        
-        try {
-            ObjectIntVector minVector = (ObjectIntVector) args[0];
-            ObjectIntVector maxVector = (ObjectIntVector) args[1];
-            Random random = new Random(System.currentTimeMillis());
-            
-            // pick a vector position in random
-            int position = random.nextInt(Math.min(rtv.data.length, Math.min(minVector.data.length, maxVector.data.length)));
-            
-            // calculate 1/1000 of the possible range of this value and either add or substract it from the origival value
-            float smallStep = (maxVector.data[position] - minVector.data[position]) / 1000;
-            if (rtv.data[position] + smallStep <= maxVector.data[position])
-                rtv.data[position] += smallStep;
-            else rtv.data[position] -= smallStep;
-        } catch (ArrayIndexOutOfBoundsException ignore) {
-        } catch (ClassCastException ignore) { }
+
+        // pick a vector position in random
+        int position = random.nextInt(Math.min(rtv.data.length, Math.min(minVector.data.length, maxVector.data.length)));
+        // set random value from the min/max vector range on that position
+        rtv.data[position] = (byte)(minVector.data[position] + random.nextInt(maxVector.data[position] - minVector.data[position]));
         
         return rtv;
     }
@@ -381,13 +382,13 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      */
     @Override
     public String toString() {
-        StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
+        StringBuilder rtv = new StringBuilder(super.toString()).append(" [");
 
         for (int i = 0; i < this.data.length; i++) {
             if (i > 0) rtv.append(", ");
             rtv.append(data[i]);
         }
-        rtv.append("]");
+        rtv.append(']');
 
         return rtv.toString();
     }

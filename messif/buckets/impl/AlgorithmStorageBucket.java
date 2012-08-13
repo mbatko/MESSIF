@@ -343,7 +343,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @param keys list of keys to search for
          * @throws IllegalStateException if there was a problem querying the encapsulated algorithm
          */
-        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
+        private AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) throws IllegalStateException {
             super(comparator, keys);
             this.iterator = executeAlgorithmOperation(comparator, keys);
         }
@@ -355,7 +355,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @param toKey the upper bound on the searched keys
          */
         @SuppressWarnings("unchecked")
-        public AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C fromKey, C toKey) {
+        private AlgorithmStorageSearch(IndexComparator<? super C, ? super LocalAbstractObject> comparator, C fromKey, C toKey) {
             super(comparator, fromKey, toKey);
             this.iterator = executeAlgorithmOperation(comparator, Arrays.asList(fromKey, toKey));
         }
@@ -367,7 +367,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * @return a new instance of query operation for the given key
          */
         @SuppressWarnings("unchecked")
-        protected ListIterator<LocalAbstractObject> executeAlgorithmOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) {
+        protected final ListIterator<LocalAbstractObject> executeAlgorithmOperation(IndexComparator<? super C, ? super LocalAbstractObject> comparator, Collection<? extends C> keys) {
             // Prepare operation for the given comparator
             QueryOperation<?> operation;
             if (comparator != null && !keys.isEmpty() && comparator instanceof OperationIndexComparator)
@@ -391,7 +391,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
 
         /**
          * Executes a query operation on the encapsulated algorithm and wraps
-         * the query's answer into a list.
+         * the query answer into a list.
          * @param operation the operation to execute on the algorithm
          * @return the operation executed by the algorithm
          * @throws IllegalStateException if there was a problem executing the operation on the encapsulated algorithm
@@ -484,7 +484,7 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
          * Creates a new instance of SplitResult.
          * @param bucketCreator the bucket dispatcher that is used to create the encapsulating buckets
          */
-        public SplitResult(BucketDispatcher bucketCreator) {
+        private SplitResult(BucketDispatcher bucketCreator) {
             this.bucketCreator = bucketCreator;
         }
 

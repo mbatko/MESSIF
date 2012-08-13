@@ -52,7 +52,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
 
     /**
      * Create a new navigation processor with a given queue instance.
-     * The processor is {@link #isClosed() closed} and contains only the specified processing items.
+     * The processor is {@link #isQueueClosed() closed} and contains only the specified processing items.
      * No additional processing items can be added.
      * @param operation the operation to process
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
@@ -68,7 +68,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
 
     /**
      * Create a new navigation processor.
-     * The processor is {@link #isClosed() closed} and contains only the specified processing items.
+     * The processor is {@link #isQueueClosed() closed} and contains only the specified processing items.
      * No additional processing items can be added.
      * @param operation the operation to process
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
@@ -84,7 +84,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     /**
      * Create a new navigation processor.
      * The processor does not contain any processing items and the processing
-     * will block in method {@link #processNext()}. Additional processing items
+     * will block in method {@link #processStep()}. Additional processing items
      * must be added via {@link #addProcessingItem} methods and then {@link #close() closed}
      * in order to be able to finish the processing.
      * 
@@ -100,10 +100,10 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
 
     /**
      * Adds a collection of processing items to this processor.
-     * Note that processing items can be added only if this processor is not {@link #isClosed() closed}.
+     * Note that processing items can be added only if this processor is not {@link #isQueueClosed() closed}.
      * 
      * @param processingItems the collection of processing items to add
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
+     * @throws IllegalStateException if this processor is already {@link #isQueueClosed() closed}.
      */
     public final void addProcessingItems(Collection<? extends T> processingItems) throws IllegalStateException {
         for (T processingItem : processingItems)
@@ -112,11 +112,11 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
 
     /**
      * Adds a processing item to this processor.
-     * Note that processing item can be added only if this processor is not {@link #isClosed() closed}.
+     * Note that processing item can be added only if this processor is not {@link #isQueueClosed() closed}.
      * 
      * @param processingItem the processing item to add
      * @return returns the added processing item
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
+     * @throws IllegalStateException if this processor is already {@link #isQueueClosed() closed}.
      */
     public synchronized T addProcessingItem(T processingItem) throws IllegalStateException {
         if (queueClosed)
@@ -127,17 +127,26 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     }
 
     /**
-     * Closes this processor.
-     * That means that no additional processing items can be added and the {@link #processNext()}
+     * Closes this processor queue.
+     * That means that no additional processing items can be added and the {@link #processStep()}
      * method will no longer block and wait for additional processing items.
      * 
-     * @throws IllegalStateException if this processor is already {@link #isClosed() closed}.
+     * @throws IllegalStateException if this processor is already {@link #isQueueClosed() closed}.
      */
-    public synchronized void closeQueue() throws IllegalStateException {
+    public synchronized void queueClose() throws IllegalStateException {
         if (queueClosed)
             throw new IllegalStateException();
         queueClosed = true;
         notifyAll();
+    }
+
+    /**
+     * Returns whether additional processing items can be added to this processor (<tt>false</tt>)
+     * or this processor is closed (<tt>true</tt>).
+     * @return <tt>true</tt> if this processor is closed and no additional processing items can be added for processing
+     */
+    public boolean isQueueClosed() {
+        return queueClosed;
     }
 
     @Override
@@ -150,15 +159,6 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
         queueClosed = true;
         processingItems.clear();
         notifyAll();
-    }
-
-    /**
-     * Returns whether additional processing items can be added to this processor (<tt>false</tt>)
-     * or this processor is closed (<tt>true</tt>).
-     * @return <tt>true</tt> if this processor is closed and no additional processing items can be added for processing
-     */
-    public boolean isClosed() {
-        return queueClosed;
     }
 
     @Override

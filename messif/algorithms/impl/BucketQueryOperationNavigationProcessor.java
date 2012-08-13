@@ -39,7 +39,7 @@ public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>
 
     /**
      * Create a new bucket navigation processor.
-     * The processor is {@link #isClosed() closed} and contains only the specified buckets.
+     * The processor is {@link #isQueueClosed() closed} and contains only the specified buckets.
      * No additional buckets can be added.
      * @param operation the operation to process
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
@@ -52,8 +52,8 @@ public class BucketQueryOperationNavigationProcessor<O extends QueryOperation<?>
     /**
      * Create a new bucket navigation processor.
      * The processor does not contain any buckets and the processing
-     * will block in method {@link #processNext()}. Additional buckets must be
-     * added via {@link #addBucket} methods and then {@link #close() closed}
+     * will block in method {@link #processStep()}. Additional buckets must be
+     * added via {@link #addProcessingItem} methods and then {@link #queueClose() closed}
      * in order to be able to finish the processing.
      * 
      * @param operation the operation to process

@@ -18,14 +18,13 @@ package messif.pivotselection;
 
 import java.io.Serializable;
 import messif.buckets.BucketFilterAfterAdd;
-import messif.buckets.FilterRejectException;
 import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 
 
 /**
- * This class provides a privot chooser that selects maximally two pivots.
+ * This class provides a pivot chooser that selects maximally two pivots.
  * The chooser is incrementally maintaining two objects that have a maximal distance.
  * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
@@ -36,7 +35,7 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /** Actual selected pivots' distance */
+    /** Actual distance of the currently selected pivots */
     private float pivotsDistance = 0;
 
 
@@ -98,7 +97,7 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
     //****************** Overrides ******************//
     
     /**
-     * Select at least <i>count</i> pitvots and
+     * Select at least <i>count</i> pivots and
      * add them by <code>addPivot</code> method.
      * @param count Number of pivots to generate
      * @param sampleSetIterator Iterator over the sample set of objects to choose new pivots from
@@ -114,7 +113,7 @@ public class TwoDistantIncrementalPivotChooser extends AbstractPivotChooser impl
 
     /**
      * Updates the selected pivots.
-     * If the distance between the left or the right pivot is bigger than current pivots'
+     * If the distance between the left or the right pivot is bigger than current pivots
      * distance, the object replaces the other pivot.
      * @param object the object to check
      */

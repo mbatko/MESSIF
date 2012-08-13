@@ -35,16 +35,14 @@ import messif.operations.AbstractOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDirectory<AbstractOperation> {
+    /** class id for serialization */
+    private static final long serialVersionUID = 1L;
+
     /** Internal list of algorithms on which the operations are actually processed */
     private final Collection<Algorithm> algorithms;
     /** Flag whether to clone the operation for asynchronous processing */
     private final boolean cloneAsynchronousOperation;
 
-    /** Returns the number of algorithms encapsulated by this MultiAlgorithms */
-    public int getNumberAlgorithms() {
-        return algorithms.size();
-    }
-    
     /**
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
      * @param algorithms the algorithms on which the operations are processed
@@ -87,6 +85,14 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
                 }
             }
         };
+    }
+
+    /**
+     * Returns the number of the currently encapsulated algorithms.
+     * @return the number of the currently encapsulated algorithms
+     */
+    public int getAlgorithmsCount() {
+        return algorithms.size();
     }
 
     @Override
