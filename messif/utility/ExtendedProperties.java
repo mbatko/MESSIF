@@ -625,6 +625,8 @@ public class ExtendedProperties extends Properties {
      */
     public <E> Class<E> getClassProperty(String key, boolean required, Class<E> checkClass) throws ExtendedPropertiesException {
         String className = required?getRequiredProperty(key):getProperty(key);
+        if (className == null) // Required is false and key does not exist
+            return null;
         try {
             return Convert.getClassForName(className, checkClass);
         } catch (ClassNotFoundException e) {
@@ -641,6 +643,8 @@ public class ExtendedProperties extends Properties {
      */
     public Class<?> getClassProperty(String key, boolean required) throws ExtendedPropertiesException {
         String className = required?getRequiredProperty(key):getProperty(key);
+        if (className == null) // Required is false and key does not exist
+            return null;
         try {
             return Class.forName(className);
         } catch (ClassNotFoundException e) {
