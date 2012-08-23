@@ -1248,6 +1248,19 @@ public class CoreApplication {
                 out.print(": ");
                 out.print(rankedAnswerObject.getDistance());
                 break;
+            case 'W':
+                try {
+                    if (answerObject instanceof RankedAbstractObject) {
+                        ((LocalAbstractObject) ((RankedAbstractObject) answerObject).getObject()).write(out);
+                    } else {
+                        ((LocalAbstractObject) answerObject).write(out);
+                    }
+                } catch (IOException ex) {
+                    throw new IllegalArgumentException(ex);
+                } catch (ClassCastException ex) {
+                    throw new IllegalArgumentException(ex);
+                }
+                break;
         }
     }
 
@@ -1268,7 +1281,8 @@ public class CoreApplication {
      *     <li>objects separator (defaults to newline)</li>
      *     <li>result type - can be 'All' = display everything,
      *            'Objects' = displays just objects, 'Locators' = display just locators,
-     *             or 'DistanceLocators' = display format 'distance: locator'</li>
+     *             or 'DistanceLocators' = display format 'distance: locator',
+     *             or 'WriteRawData' = write the objects by {@link LocalAbstractObject#write(java.io.OutputStream) }</li>
      *     <li>number of results to display (defaults to all)</li>
      *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
