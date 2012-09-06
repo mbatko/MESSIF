@@ -17,42 +17,49 @@
 package messif.statistics;
 
 
-/** Statistics for counting time. The time is incremented by the amount of
- *  time elapsed between calls to methods start() & stop().
+/**
+ * Statistics for counting wall-clock time.
+ * The time is incremented by the amount of the wall-clock time elapsed
+ * between calls to methods start() & stop().
  *
- *  Note that additional calls to start will have no affect until stop is called.
- *  Update & set methods will leave current statistics stopped/started state untouched,
- *  but they will add values including elapsed time if started.
+ * <p>
+ * Note that additional calls to start will have no affect until stop is called.
+ * Update & set methods will leave current statistics stopped/started state untouched,
+ * but they will add values including elapsed time if started.
+ * </p>
  *
- *  An example:
- *  get() => 0 milis
- *  start()
- *  1000 milis elapsed
- *  get() => 1000 milis
- *  100 milis elapsed
- *  get() => 1100 milis
- *  stop()
- *  1000 milis elapsed
- *  get() => 1100 milis
- *
+ * <p>
+ * An example:
+ * <pre>
+ * get() => 0 milliseconds
+ * start()
+ * 1000 milliseconds elapsed
+ * get() => 1000 milliseconds
+ * 100 milliseconds elapsed
+ * get() => 1100 milliseconds
+ * stop()
+ * 1000 milliseconds elapsed
+ * get() => 1100 milliseconds
+ * </pre>
+ * </p>
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public final class StatisticTimer extends Statistics<StatisticTimer> {
-    
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
     //****************** Counter operation ******************//
 
     /** Time elapsed between calls to {@link #start()} and {@link #stop()}. */
-    protected long time = 0;
+    private long time = 0;
     /** Time of the last call to {@link #start()} of started statistics */
-    protected long lastStartTime = 0;
+    private long lastStartTime = 0;
     /** Backup time for checkpoint feature */
     private long timeCheckpoint = 0;
-    
+
     /** Starts incrementing the timer */
     public void start() {
         if (!canPerformOperation())
@@ -64,7 +71,7 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
                 stat.start();
         }
     }
-    
+
     /** Stops incrementing timer */
     public void stop() {
         if (!canPerformOperation())
@@ -80,9 +87,9 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     }
 
     /**
-     * Time elapsed in msec.
+     * Time elapsed in milliseconds.
      * If the statistics has been stopped, the elapsed time is returned, otherwise current time minus start time is returned.
-     * @return time elapsed in msec.
+     * @return time elapsed in milliseconds.
      */
     public synchronized long get() {
         if (lastStartTime > 0)
@@ -115,37 +122,40 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
 
 
     //****************** Statistics merging ******************//
-    
+
     @Override
     protected synchronized void updateFrom(StatisticTimer sourceStat) {
         time += sourceStat.get();
     }
-    
+
     @Override
     protected synchronized void setFrom(StatisticTimer sourceStat) {
         time = sourceStat.get();
     }
-    
+
     @Override
     public void reset() {
         time = 0;
         lastStartTime = 0;
         setCheckpoint();
     }
-    
+
+
     //****************** Constructors ******************//
 
-    /** Creates a new instance of StatisticTimer
-     * @param name requested name of the statitics
+    /**
+     * Creates a new instance of StatisticTimer.
+     * @param name the requested name of the statistics
      */
     protected StatisticTimer(String name) {
         super(name);
     }
 
-    
+
     //****************** Creator ******************//
-    
-    /** Factory method for creating a new statistic timer with the specified name or get the one already existing.
+
+    /**
+     * Factory method for creating a new statistic timer with the specified name or get the one already existing.
      * @param name requested name of the statistics
      * @return instance of {@link StatisticTimer} having the passed name.
      * @throws ClassCastException if the statistics of the given name exists, but is of a different class than {@link StatisticTimer}
@@ -154,9 +164,9 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         return getStatistics(name, StatisticTimer.class);
     }
 
-    
+
     //****************** Text representation ******************//
-    
+
     @Override
     public String toString() {
         return getName() + ": " + get();
@@ -169,8 +179,9 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     public boolean changedSinceCheckpoint() {
         return (time != timeCheckpoint || lastStartTime > 0);
     }
-    
-    /** Sets checkpoint. Stores the current state of timer.
+
+    /**
+     * Sets checkpoint. Stores the current state of timer.
      */
     public void setCheckpoint() {
         timeCheckpoint = time;
@@ -180,5 +191,4 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     protected StatisticTimer cast() {
         return this;
     }
-    
 }

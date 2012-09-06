@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
@@ -313,6 +314,29 @@ public abstract class MetaObject extends LocalAbstractObject {
                 if (readObject) // Silently ignore errors on objects that are skipped
                     throw e;
             }
+        }
+        return objects;
+    }
+
+    /**
+     * Utility method for reading {@code count} objects of class {@code objectClass} from a text stream.
+     * This method is intended to be used in subclasses to implement the {@link BufferedReader} constructor.
+     *
+     * @param stream the text stream to read the objects from
+     * @param count the number of objects to read from the stream
+     * @param objectClass the class of objects to read
+     * @return the objects array
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @throws IllegalArgumentException if the count parameter is negative
+     */
+    protected final LocalAbstractObject[] readObjects(BufferedReader stream, int count, Class<? extends LocalAbstractObject> objectClass) throws IOException, IllegalArgumentException {
+        LocalAbstractObject[] objects = new LocalAbstractObject[count];
+        for (int i = 0; i < count; i ++) {
+            LocalAbstractObject object = readObject(stream, objectClass);
+            if (object.getObjectKey() == null)
+                object.setObjectKey(this.getObjectKey());
+            objects[i] = object;
         }
         return objects;
     }
