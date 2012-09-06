@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.utility.Convert;
 
 /**
  * Implementation of the {@link MetaObject} that stores a fixed array of encapsulated objects.
@@ -152,12 +154,45 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * Note that a header must contain also the object names even though they are not
      * stored and used by the array.
      * @param stream the text stream to read the objects from
+     * @param readHomogenousObjects flag whether to read list of homogenous objects
+     *          (i.e. the header is the count and the class name), or a heterogenous header
+     *          (i.e. the header is a semi-colon separated list of object names and classes)
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     */
+    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects) throws IOException {
+        String[] header = readObjectsHeader(stream);
+        if (readHomogenousObjects) {
+            int count;
+            Class<? extends LocalAbstractObject> objectClass;
+            try {
+                count = Integer.parseInt(header[0]);
+                objectClass = Convert.getClassForName(header[1], LocalAbstractObject.class);
+            } catch (IndexOutOfBoundsException e) {
+                throw new IOException("Can't create object from stream: object count and class expected but '" + Arrays.toString(header) + "' found");
+            } catch (NumberFormatException e) {
+                throw new IOException("Can't create object from stream: object count cannot be converted '" + header[0] + "' found");
+            } catch (ClassNotFoundException e) {
+                throw new IOException("Can't create object from stream: " + e);
+            }
+            this.objects = readObjects(stream, count, objectClass);
+        } else {
+            this.objects = readObjects(stream, null, header, new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);            
+        }
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream with header.
+     * Note that a header must contain also the object names even though they are not
+     * stored and used by the array.
+     * @param stream the text stream to read the objects from
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
     public MetaObjectArray(BufferedReader stream) throws IOException {
-        this.objects = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);
+        this(stream, false);
     }
 
 
