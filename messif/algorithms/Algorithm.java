@@ -278,6 +278,7 @@ public abstract class Algorithm implements Serializable {
             } finally {
                 out.close();
             }
+            onStoreToFile(filepath);
         } finally {
             // Unlock operations
             if (maximalConcurrentOperations > 0)
@@ -285,6 +286,14 @@ public abstract class Algorithm implements Serializable {
         }
     }
 
+    /**
+     * This method is executed after the method {@link #storeToFile(java.lang.String)} 
+     *  was called. It is empty and expected to be overridden.
+     * @param filepath the path to a file where the algorithm was stored
+     */
+    protected void onStoreToFile(String filepath) { 
+    }
+    
 
     //****************** Operation info methods ******************//
 
