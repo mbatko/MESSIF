@@ -196,15 +196,6 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         objects.add(obj);
     }
 
-    public void SetOrderOfObjects () {
-        synchronized (objects) {
-            for (int i = objects.size() - 1; i >= 0; i--) {
-                objects.get(i).OrderInSet = i;
-            }
-        }
-    }
-
-
     //****************** Parametric interface implementation ******************//
 
     @Override
@@ -333,9 +324,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         // Read objects and add them to the collection
         objects.clear();
         for (int i = 0; i < vectorCount; i++) {
-            ObjectFeature o = (ObjectFeature)readObject(stream, objTypeAndLength[0]);
-            o.NumericKey = i;
-            objects.add(o);
+            objects.add((ObjectFeature)readObject(stream, objTypeAndLength[0]));
         }
     }
 

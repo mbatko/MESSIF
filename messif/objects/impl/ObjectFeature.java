@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.DimensionObjectKey;
@@ -30,7 +31,7 @@ import messif.objects.nio.BinarySerializator;
 public abstract class ObjectFeature extends LocalAbstractObject implements DimensionObjectKey.Point, BinarySerializable {
 
     /** class id for serialization */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /** x component of spatial coordinates (relative number in the interval [0,1) ) */
     protected float x;
@@ -41,41 +42,59 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     /** Scale of the gravity vector */
     protected float scl;
 
-    @Deprecated
-    public int OrderInSet;      // This is used in old implementations of ObjectFeatureSet descendants
+    /** List of keys of this feature (e.g. M-Index cluster numbers) */
+    protected long [] keys;
 
-    @Deprecated
-    public long NumericKey;     // This is used in old implementations of ObjectFeatureSet descendants
-    
+    /**
+     * Default constructor that sets the params to 0f and null.
+     */
     public ObjectFeature() {
-        OrderInSet = 0;
     }
-
+    
     public ObjectFeature(float x,  float y,  float ori,  float scl) {
         this.x = x;
         this.y = y;
         this.ori = ori;
         this.scl = scl;
-        OrderInSet = 0;
-        NumericKey = 0;
+        this.keys = null;
     }
     
-    public ObjectFeature (float x, float y, float ori, float scl, long key) {
+    public ObjectFeature (float x, float y, float ori, float scl, long [] keys) {
         this.x = x;
         this.y = y;
         this.ori = ori;
         this.scl = scl;
-        OrderInSet = 0;
-        NumericKey = key;
+        this.keys = keys;
     }
+    
+    /**
+     * Expected format: 
+     * #key locator
+     * x, y, orientation, scale; key1, key2, key3...
+     * data vector
+     * 
+     * @param stream
+     * @throws IOException
+     * @throws NumberFormatException 
+     */
     public ObjectFeature(BufferedReader stream) throws IOException, NumberFormatException {
         String line = readObjectComments(stream);
         try {
-            String[] params = line.trim().split("[, ]+");
+            String[] paramsAndKeys = line.trim().split("[; ]+");
+            String[] params = paramsAndKeys[0].trim().split("[, ]+");
             this.x = Float.parseFloat(params[0]);
             this.y = Float.parseFloat(params[1]);
             this.ori = Float.parseFloat(params[2]);
             this.scl = Float.parseFloat(params[3]);
+            // if the keys were specified
+            if (paramsAndKeys.length > 1) {
+                String[] keyString = paramsAndKeys[1].trim().split("[, ]+");
+                this.keys = new long [keyString.length];
+                int i = 0;
+                for (String string : keyString) {
+                    keys[i ++] = Long.parseLong(string);
+                }
+            }
         } catch (NumberFormatException numberFormatException) {
             Logger.getLogger(getClass().getName()).warning("error while parsing line '"+ line+ "' for 4 floats, locator: " + getLocatorURI());
             throw numberFormatException;
@@ -85,6 +104,16 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     @Override
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.format("%1$f, %2$f, %3$f, %4$f", this.x, this.y, this.ori, this.scl).getBytes());
+        if (keys != null) {
+            stream.write(';');
+            for (int i = 0; i < keys.length; i++ ) {
+                stream.write(' ');
+                stream.write(Long.toString(keys[i]).getBytes());
+                if (i != keys.length - 1) {
+                    stream.write(',');
+                }
+            }
+        }
         stream.write('\n');
     }
 
@@ -149,6 +178,14 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     public final float getScl() {
         return getScale();
     }
+
+    public long[] getKeys() {
+        return Arrays.copyOf(keys, keys.length);
+    }
+
+    public void setKeys(long[] keys) {
+        this.keys = keys;
+    }
     
     //************ BinarySerializable interface ************//
 
@@ -165,7 +202,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         this.y = serializator.readFloat(input);
         this.ori = serializator.readFloat(input);
         this.scl = serializator.readFloat(input);
-        this.NumericKey = serializator.readLong(input);
+        this.keys = serializator.readLongArray(input);
     }
 
     @Override
@@ -175,7 +212,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
                serializator.write(output, this.y) +
                serializator.write(output, this.ori) +
                serializator.write(output, this.scl) +
-               serializator.write(output, this.NumericKey);
+               serializator.write(output, this.keys);
     }
 
     @Override
@@ -185,7 +222,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
                serializator.getBinarySize(this.y) +
                serializator.getBinarySize( this.ori) +
                serializator.getBinarySize(this.scl) +
-               serializator.getBinarySize(this.NumericKey);
+               serializator.getBinarySize(this.keys);
     }
 
     @Override
