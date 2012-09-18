@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.TreeSet;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
@@ -335,6 +337,8 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
      *
      * The returned instance is exactly the same as passed in the parameter 'list'. Chosen objects are 
      * only added to this list. If the passed list contains some objects they are left untouched.
+     * 
+     * WARNING: THE DATA OBJECTS IS NOT SELECTED UNIFORMLY.
      *
      * @param <F> the class of objects that are stored in the list
      * @param <T> the list class that receives random objects
@@ -420,6 +424,68 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
     }
 
     /**
+     * Selector of random data from an iterator source with known number of objects in the iterator. The 
+     *  objects are selected uniformly from the iterator.
+     * 
+     * The returned instance is exactly the same as passed in the parameter 'list'. Chosen objects are 
+     * only added to this list. If the passed list contains some objects they are left untouched.
+     * 
+     * @param <F> the class of objects that are stored in the list
+     * @param <T> the list class that receives random objects
+     * @param count      Number of object to return.
+     * @param unique     Flag if returned list contains each object only once.
+     * @param list       An instance of a class extending ObjectList<E> used to carry selected objects.
+     * @param iterSource Iterator from which objects are randomly picked.
+     * @param sizeOfSource number of objects in the iterator
+     */
+    public static <F extends AbstractObject, T extends List<F>> T randomList(int count, boolean unique, T list, Iterator<F> iterSource, int sizeOfSource) {
+        if (list == null || iterSource == null)
+            return null;
+        if (count <= 0) {
+            return list;
+        }
+
+        // Ignore all previous elements in the list, just use it as it is empty.
+        List<F> resList = list.subList(list.size(), list.size());
+                
+        // Append objects upto count
+        if (count >= sizeOfSource && unique) {
+            while (count > 0 && iterSource.hasNext()) {
+                resList.add(iterSource.next());
+                count--;
+            }
+            return list;
+        }
+        
+        Random random = new Random();
+        Collection<Integer> selected = unique ? new TreeSet<Integer>() : new ArrayList<Integer>(count);
+        
+        while (selected.size() < count) {
+            selected.add(random.nextInt(sizeOfSource));
+        }
+
+        Integer [] sortedRandomPositions = selected.toArray(new Integer [count]);
+        Arrays.sort(sortedRandomPositions);
+        
+        int positionCounter = 0;
+        int i = 0;
+        while (iterSource.hasNext()) {
+            F next = iterSource.next();
+            if (i == sortedRandomPositions[positionCounter]) {
+                list.add(next);
+                positionCounter ++;
+                if (positionCounter >= sortedRandomPositions.length) {
+                    break;
+                }
+            }
+            i++;
+        }
+        
+        // return the list of selected objects
+        return list;
+    }
+    
+    /**
      * Returns a list containing randomly choosen objects from the passed iterator.
      * If the uniqueness of objects in the retrieved list is not required, the number of objects
      * in the response is equal to 'count'. If a unique list is requested, the number of objects
@@ -437,6 +503,24 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
      */
     public static <F extends AbstractObject> AbstractObjectList<F> randomList(int count, boolean unique, Iterator<F> iterSource) {
         return randomList(count, unique, new AbstractObjectList<F>(count), iterSource);
+    }
+    
+    /**
+     * Selector of random data from an iterator source with known number of objects in the iterator. The 
+     *  objects are selected uniformly from the iterator.
+     * 
+     * The returned instance is a new AbstractObjectList with the iterator's type of objects.
+     *
+     * @param <F> the class of objects that are stored in the list
+     * @param count      Number of object to return.
+     * @param unique     Flag if returned list contains each object only once.
+     * @param iterSource Iterator from which objects are randomly picked.
+     * @param sizeOfSource number of objects in the iterator
+     *
+     * @return the instance passed in list which contains the randomly selected objects as requested
+     */
+    public static <F extends AbstractObject> AbstractObjectList<F> randomList(int count, boolean unique, Iterator<F> iterSource, int sizeOfSource) {
+        return randomList(count, unique, new AbstractObjectList<F>(count), iterSource, sizeOfSource);
     }
     
 }
