@@ -2901,7 +2901,7 @@ public class CoreApplication {
                 final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
                 final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
                 final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
-                Thread repeatEveryThread = new Thread("Repeat action " + actionName + " ever " + repeatEveryModifier) {
+                Thread repeatEveryThread = new Thread("Repeat action " + actionName + " every " + repeatEveryModifier) {
                     @Override
                     public void run() {
                         while (!isInterrupted()) {

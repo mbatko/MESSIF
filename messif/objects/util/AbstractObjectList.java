@@ -29,6 +29,7 @@ import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
 import messif.objects.UniqueID;
+import messif.utility.SortedCollection;
 
 
 /**
@@ -458,25 +459,23 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
         }
         
         Random random = new Random();
-        Collection<Integer> selected = unique ? new TreeSet<Integer>() : new ArrayList<Integer>(count);
+        Collection<Integer> selected = unique ? new TreeSet<Integer>() : new SortedCollection<Integer>(count);
         
         while (selected.size() < count) {
             selected.add(random.nextInt(sizeOfSource));
         }
 
-        Integer [] sortedRandomPositions = selected.toArray(new Integer [count]);
-        Arrays.sort(sortedRandomPositions);
-        
-        int positionCounter = 0;
         int i = 0;
+        Iterator<Integer> iterator = selected.iterator();
+        Integer currentRandomPosition = iterator.next();
         while (iterSource.hasNext()) {
-            F next = iterSource.next();
-            if (i == sortedRandomPositions[positionCounter]) {
+            F next = iterSource.next();            
+            if (i == currentRandomPosition) {
                 list.add(next);
-                positionCounter ++;
-                if (positionCounter >= sortedRandomPositions.length) {
+                if (! iterator.hasNext()) {
                     break;
                 }
+                currentRandomPosition = iterator.next();
             }
             i++;
         }
