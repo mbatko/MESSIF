@@ -169,22 +169,21 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         return ori;
     }
     
-    @Deprecated
-    public final float getOri() {
-        return getOrientation();
-    }
-
-    @Deprecated
-    public final float getScl() {
-        return getScale();
-    }
-
     public long[] getKeys() {
         return Arrays.copyOf(keys, keys.length);
     }
 
     public void setKeys(long[] keys) {
         this.keys = keys;
+    }
+
+    public void addKey(long key) {
+        if (keys == null) {
+            keys = new long [1];
+        } else {
+            keys = Arrays.copyOf(keys, keys.length + 1);
+        }
+        keys[keys.length - 1] = key;
     }
     
     //************ BinarySerializable interface ************//
