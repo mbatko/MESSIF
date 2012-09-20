@@ -47,13 +47,16 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
      * @param algorithms the algorithms on which the operations are processed
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
+     * @param processInThreads only if this flag is true, the operations are processed asynchronously on each encapsulated algorithm
      */
-    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
+    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation, boolean processInThreads) {
         super("Multiple overlay algorithm on: " + algorithms.size() + " algorithms");
         this.algorithms = new ArrayList<Algorithm>(algorithms);
         this.cloneAsynchronousOperation = cloneAsynchronousOperation;
 
-        setOperationsThreadPool(Executors.newFixedThreadPool(algorithms.size()));
+        if (processInThreads) {
+            setOperationsThreadPool(Executors.newFixedThreadPool(algorithms.size()));
+        }
     }
 
     /**
@@ -63,7 +66,7 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      */
     @Algorithm.AlgorithmConstructor(description = "Constructor with created algorithms", arguments = {"array of running algorithms", "t/f if operation should be clonned before running"})
     public MultipleOverlaysAlgorithm(Algorithm[] algorithms, boolean cloneAsynchronousOperation) {
-        this(Arrays.asList(algorithms), cloneAsynchronousOperation);
+        this(Arrays.asList(algorithms), cloneAsynchronousOperation, true);
     }
 
     @Override
