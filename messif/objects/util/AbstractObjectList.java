@@ -468,12 +468,13 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
         int i = 0;
         Iterator<Integer> iterator = selected.iterator();
         Integer currentRandomPosition = iterator.next();
+        DATAITERATOR:
         while (iterSource.hasNext()) {
             F next = iterSource.next();            
-            if (i == currentRandomPosition) {
-                list.add(next);
+            while (i == currentRandomPosition) {
+                resList.add(next);
                 if (! iterator.hasNext()) {
-                    break;
+                    break DATAITERATOR;
                 }
                 currentRandomPosition = iterator.next();
             }
