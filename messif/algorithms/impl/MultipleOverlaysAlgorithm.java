@@ -19,6 +19,7 @@ package messif.algorithms.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -96,6 +97,14 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      */
     public int getAlgorithmsCount() {
         return algorithms.size();
+    }
+
+    /**
+     * Returns all the currently encapsulated algorithms.
+     * @return all the currently encapsulated algorithms
+     */
+    protected Collection<Algorithm> getAlgorithms() {
+        return Collections.unmodifiableCollection(algorithms);
     }
 
     @Override
