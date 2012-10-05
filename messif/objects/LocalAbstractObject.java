@@ -1094,6 +1094,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      *   <li>"#objectKey keyClass keyValue", where keyClass extends AbstractObjectKey and the comment {@link #setObjectKey(messif.objects.keys.AbstractObjectKey) sets the object key}</li>
      *   <li>"#filter filterClass filterValue", where filterClass extends PrecomputedDistancesFilter and the comment {@link #chainFilter(messif.objects.PrecomputedDistancesFilter, boolean) adds a precomputed distances filter}</li>
      * </ul>
+     * You can override this method to support more object comments, but do not forget to call super.parseObjectComment first!
      *
      * @param line a line with comment
      * @return <tt>true</tt> if the line was parsed as comment; <tt>false</tt>
@@ -1114,6 +1115,25 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
         }
     }
 
+    /**
+     * Write comment lines of text representation of this object.
+     * The comment is of format "#typeOfComment text".
+     * 
+     * If you override this method, always call super.writeObjectComment first.
+     * @param stream the stream to write the comments to
+     * @throws IOException if there was an error while writing to stream
+     */
+    protected void writeObjectComment(OutputStream stream) throws IOException {
+        // Write object key
+        AbstractObjectKey key = getObjectKey();
+        if (key != null)
+            key.write(stream);
+
+        // Write object distance filters
+        if (distanceFilter != null)
+            distanceFilter.write(stream);
+    }
+    
     /**
      * Writes the object comments and data - key and filters - into an output text stream.
      * Writes the following comments: <ul>
@@ -1143,14 +1163,7 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
      */
     public final void write(OutputStream stream, boolean writeComments) throws IOException {
         if (writeComments) {
-            // Write object key
-            AbstractObjectKey key = getObjectKey();
-            if (key != null)
-                key.write(stream);
-
-            // Write object distance filters
-            if (distanceFilter != null)
-                distanceFilter.write(stream);
+            writeObjectComment(stream);
         }
         writeData(stream);
     }
