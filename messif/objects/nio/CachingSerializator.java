@@ -22,11 +22,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import messif.utility.Convert;
 
@@ -57,6 +60,9 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
     /** The list of factory methods for the cached classes with the exactly the same order as specified by cachedClasses */
     protected transient List<Method> cachedFactoryMethods;
 
+    /** List of classes that are not cached but were serialized by this serializator. */
+    protected transient Set<Class<? extends BinarySerializable>> notCachedClasses;
+    
     /**
      * Creates a new instance of CachingSerializator.
      * The constructors/factory methods of the <code>cachedClasses</code>
@@ -81,6 +87,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
         this.cachedClasses = new HashMap<Class<? extends BinarySerializable>, Integer>(cachedClasses.length);
         this.cachedConstructors = new ArrayList<Constructor<?>>(cachedClasses.length);
         this.cachedFactoryMethods = new ArrayList<Method>(cachedClasses.length);
+        this.notCachedClasses = new HashSet<Class<? extends BinarySerializable>>();
 
         // Fill the predefined data
         for (Class selClass : cachedClasses) {
@@ -179,10 +186,20 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
             return position;
 
         // Other class
-        log.log(Level.INFO, "Consider using cache for class {0}", object.getClass());
+        if (! notCachedClasses.contains(object.getClass())) {
+            log.log(Level.INFO, "Consider using cache for class {0}", object.getClass());
+            notCachedClasses.add(object.getClass());
+        }
         return CLASSNAME_SERIALIZATION;
     }
 
+    /**
+     * Returns the unmodifiable list of classes that are not cached but were serialized 
+     *  by this serializator.
+     */
+    public Collection<Class<? extends BinarySerializable>> getNotCachedClasses() {
+        return Collections.unmodifiableCollection(notCachedClasses);
+    }
 
     //************************ Overridden methods ************************//
 
@@ -236,6 +253,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
         // Restore cached constructors and factory methods
         cachedConstructors = new ArrayList<Constructor<?>>(cachedClasses.size());
         cachedFactoryMethods = new ArrayList<Method>(cachedClasses.size());
+        notCachedClasses = new HashSet<Class<? extends BinarySerializable>>();
 
         // Get the list of classes sorted by position
         List<Class<? extends BinarySerializable>> classes = new ArrayList<Class<? extends BinarySerializable>>(cachedClasses.keySet());
