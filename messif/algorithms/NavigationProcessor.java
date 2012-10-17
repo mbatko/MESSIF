@@ -55,7 +55,7 @@ public interface NavigationProcessor<O extends AbstractOperation> extends Closea
      * @throws InterruptedException if the thread processing the step is interrupted
      * @throws AlgorithmMethodException if an error occurred during the evaluation of the processing step
      */
-    public boolean processStep() throws InterruptedException, AlgorithmMethodException;
+    public boolean processStep() throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException;
 
     /**
      * Finishes the processing prematurely.

@@ -1208,7 +1208,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(long[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**

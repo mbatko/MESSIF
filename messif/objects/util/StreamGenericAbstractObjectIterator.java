@@ -61,7 +61,7 @@ public class StreamGenericAbstractObjectIterator<E extends LocalAbstractObject> 
     /**
      * Creates a new instance of StreamGenericAbstractObjectIterator.
      * The objects are loaded from the given stream on the fly as this iterator is iterated.
-     * The constructor of <code>objClass</code> that acceps {@link BufferedReader}
+     * The constructor of <code>objClass</code> that accepts {@link BufferedReader}
      * as the first argument and all the arguments from the <code>constructorArgs</code>
      * is used to read objects from the stream.
      *
