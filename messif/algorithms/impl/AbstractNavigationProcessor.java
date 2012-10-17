@@ -43,6 +43,8 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     private final O operation;
     /** Flag whether to clone the operation for asynchronous processing */
     private final boolean cloneAsynchronousOperation;
+    /** Flag whether to clone the operation also for sequential processing */
+    private final boolean cloneSequentialOperation;
     /** Internal queue of items used for processing */
     private final Queue<T> processingItems;
     /** Number of items processed so far */
@@ -56,12 +58,14 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      * No additional processing items can be added.
      * @param operation the operation to process
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
+     * @param cloneSequentialOperation the flag whether to clone the operation also for sequential processing
      * @param processingItems the processing items queue
      * @param queueClosed the flag whether the given queue is closed, if <tt>false</tt>, i.e. getting a next element from the queue blocks and waits for the queue to fill
      */
-    protected AbstractNavigationProcessor(O operation, boolean cloneAsynchronousOperation, Queue<T> processingItems, boolean queueClosed) {
+    protected AbstractNavigationProcessor(O operation, boolean cloneAsynchronousOperation, boolean cloneSequentialOperation, Queue<T> processingItems, boolean queueClosed) {
         this.operation = operation;
         this.cloneAsynchronousOperation = cloneAsynchronousOperation;
+        this.cloneSequentialOperation = cloneSequentialOperation;
         this.processingItems = processingItems;
         this.queueClosed = queueClosed;
     }
@@ -72,13 +76,23 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      * No additional processing items can be added.
      * @param operation the operation to process
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
+     * @param cloneSequentialOperation the flag whether to clone the operation also for sequential processing
+     * @param processingItems the processing items for the operation
+     */
+    public AbstractNavigationProcessor(O operation, boolean cloneAsynchronousOperation, boolean cloneSequentialOperation, Collection<? extends T> processingItems) {
+        this(operation, cloneAsynchronousOperation, cloneSequentialOperation, new LinkedList<T>(processingItems), true);
+    }
+    
+    /**
+     * Create a new navigation processor.
+     * The processor is {@link #isQueueClosed() closed} and contains only the specified processing items.
+     * No additional processing items can be added.
+     * @param operation the operation to process
+     * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      * @param processingItems the processing items for the operation
      */
     public AbstractNavigationProcessor(O operation, boolean cloneAsynchronousOperation, Collection<? extends T> processingItems) {
-        this.operation = operation;
-        this.cloneAsynchronousOperation = cloneAsynchronousOperation;
-        this.processingItems = new LinkedList<T>(processingItems);
-        this.queueClosed = true;
+        this(operation, cloneAsynchronousOperation, false, new LinkedList<T>(processingItems), true);
     }
 
     /**
@@ -92,10 +106,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      */
     public AbstractNavigationProcessor(O operation, boolean cloneAsynchronousOperation) {
-        this.operation = operation;
-        this.cloneAsynchronousOperation = cloneAsynchronousOperation;
-        this.processingItems = new LinkedList<T>();
-        this.queueClosed = false;
+        this(operation, cloneAsynchronousOperation, false, new LinkedList<T>(), false);
     }
 
     /**
@@ -208,14 +219,18 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     protected abstract O processItem(O operation, T processingItem) throws AlgorithmMethodException;
 
     @Override
-    public final boolean processStep() throws InterruptedException, AlgorithmMethodException {
+    public final boolean processStep() throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
         T processingItem = getNextProcessingItem();
         if (processingItem == null)
             return false;
-        O processedOperation = processItem(operation, processingItem);
+        O processedOperation;
+        if (cloneSequentialOperation) {
+            processedOperation = processItem((O)operation.clone(), processingItem);
+        } else {
+            processedOperation = processItem(operation, processingItem);
+        }
         processed++;
-        if (processedOperation != operation) // This equality check is correct, we update the operation only if it is not the same instance
-            operation.updateFrom(processedOperation);
+        stepFinished(processedOperation);
         return true;
     }
 
@@ -235,13 +250,24 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
                     processedOperation = processItem(operation, processingItem);
                 }
                 processed++;
-                if (processedOperation != operation) // This equality check is correct, we update the operation only if it is not the same instance
-                    synchronized (operation) {
-                        operation.updateFrom(processedOperation);
-                    }
+                stepFinished(processedOperation);
                 return operation;
             }
         };
     }
 
+    /**
+     * This method is called immediately after a single processing step of this navigation processor
+     *  was finished. It, by default, updates the original operation from the clone of the typically cloned operation.
+     * @param processedOperation the instance of the operation that has been just processed
+     */
+    protected void stepFinished(O processedOperation) {
+        // This equality check is correct, we update the operation only if it is not the same instance
+        if (processedOperation != operation) { 
+            synchronized (operation) {
+                operation.updateFrom(processedOperation);
+            }
+        }
+    }
+    
 }
