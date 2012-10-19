@@ -464,6 +464,8 @@ public abstract class Algorithm implements Serializable {
                 if (!NavigationProcessors.executeWithCast(operationsThreadPool, this, params[0]))
                     operationExecutor.execute(params);
             }
+        } catch (CloneNotSupportedException e) {
+            throw new AlgorithmMethodException(e);
         } catch (ClassCastException e) { // This can occur when OperationTime statistics exists, but has a wrong class
             throw new AlgorithmMethodException(e);
         } catch (InterruptedException e) {
