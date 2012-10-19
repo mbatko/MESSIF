@@ -97,7 +97,7 @@ public abstract class NavigationProcessors {
      * @throws AlgorithmMethodException if there was an error during the processing
      */
     @SuppressWarnings("empty-statement")
-    public static <O extends AbstractOperation> void execute(ExecutorService executor, NavigationProcessor<O> processor) throws InterruptedException, AlgorithmMethodException {
+    public static <O extends AbstractOperation> void execute(ExecutorService executor, NavigationProcessor<O> processor) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
         if (executor != null && processor instanceof AsynchronousNavigationProcessor) {
             executeAsync(executor, (AsynchronousNavigationProcessor<O>)processor);
         } else {
@@ -124,7 +124,7 @@ public abstract class NavigationProcessors {
      * @throws InterruptedException if the processing thread is interrupted during the processing
      * @throws AlgorithmMethodException if there was an error during the processing
      */
-    public static boolean executeWithCast(ExecutorService executor, Object navigationDirectory, Object operation) throws InterruptedException, AlgorithmMethodException {
+    public static boolean executeWithCast(ExecutorService executor, Object navigationDirectory, Object operation) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
         if (!(operation instanceof AbstractOperation))
             return false;
         NavigationProcessor<? extends AbstractOperation> navigationProcessor = getNavigationProcessor(navigationDirectory, (AbstractOperation)operation);
