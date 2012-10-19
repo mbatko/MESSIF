@@ -219,13 +219,14 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     protected abstract O processItem(O operation, T processingItem) throws AlgorithmMethodException;
 
     @Override
+    @SuppressWarnings("unchecked")
     public final boolean processStep() throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
         T processingItem = getNextProcessingItem();
         if (processingItem == null)
             return false;
         O processedOperation;
         if (cloneSequentialOperation) {
-            processedOperation = processItem((O)operation.clone(), processingItem);
+            processedOperation = processItem((O)operation.clone(), processingItem); // This cast IS safe, since this is cloning
         } else {
             processedOperation = processItem(operation, processingItem);
         }
