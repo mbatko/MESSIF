@@ -80,8 +80,8 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     public ObjectFeature(BufferedReader stream) throws IOException, NumberFormatException {
         String line = readObjectComments(stream);
         try {
-            String[] paramsAndKeys = line.trim().split("[; ]+");
-            String[] params = paramsAndKeys[0].trim().split("[, ]+");
+            String[] paramsAndKeys = line.trim().split("\\s*;\\s*");
+            String[] params = paramsAndKeys[0].trim().split("\\s*,\\s*");
             this.x = Float.parseFloat(params[0]);
             this.y = Float.parseFloat(params[1]);
             this.ori = Float.parseFloat(params[2]);
