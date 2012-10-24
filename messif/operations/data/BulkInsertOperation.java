@@ -123,6 +123,13 @@ public class BulkInsertOperation extends AbstractOperation {
         return Collections.unmodifiableList(insertedObjects);
     }
 
+    /**
+     * Return the number of objects to be inserted by this bulk insert operation.
+     * @return the number of objects to be inserted by this bulk insert operation.
+     */
+    public int getNumberInsertedObjects() {
+        return insertedObjects.size();
+    }
 
     //****************** Overrides ******************//
 
