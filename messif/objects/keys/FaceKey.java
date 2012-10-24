@@ -25,6 +25,7 @@ import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -47,6 +48,10 @@ public abstract class FaceKey extends AbstractObjectKey {
 
     /** Facial landmark constants */
     public static enum FaceLandmark {
+        /** Facial feature constant EAR_LEFT */
+        EAR_LEFT,
+        /** Facial feature constant EAR_RIGHT */
+        EAR_RIGHT,
         /** Facial feature constant EYE_LEFT */
         EYE_LEFT,
         /** Facial feature constant EYE_LEFT_OUTER_CORNER */
@@ -81,6 +86,8 @@ public abstract class FaceKey extends AbstractObjectKey {
         NOSE_LEFT_WING,
         /** Facial feature constant NOSE_RIGHT_WING */
         NOSE_RIGHT_WING,
+        /** Facial feature constant MOUTH_CENTER */
+        MOUTH_CENTER,
         /** Facial feature constant MOUTH_TOP */
         MOUTH_TOP,
         /** Facial feature constant MOUTH_BOTTOM */
@@ -124,6 +131,25 @@ public abstract class FaceKey extends AbstractObjectKey {
         super(locatorURI);
     }
 
+    public boolean intersect(FaceKey retrievedFaceKey, double threshold) {
+        Rectangle2D retrievedBounds = retrievedFaceKey.getContour().getBounds2D();
+        if(!getContour().intersects(retrievedBounds)){
+            return false;
+        }
+        double thisArea = getBoundingArea(getContour());
+        double otherArea = getBoundingArea(retrievedBounds);
+        double intersection = getBoundingArea(getContour().getBounds2D().createIntersection(retrievedBounds));
+        if(intersection > thisArea || intersection > otherArea){
+            Rectangle2D i = getContour().getBounds2D().createIntersection(retrievedFaceKey.getContour().getBounds2D());
+            throw new Error("Wrong intersection count");
+        }
+        return (2d * intersection / (thisArea + otherArea)) >= threshold;
+    }
+    
+    private double getBoundingArea(Shape s){
+        Rectangle2D rec = s.getBounds2D();
+        return Math.abs(rec.getHeight() * rec.getWidth());        
+    }
 
     //****************** Attribute access ******************//
 
