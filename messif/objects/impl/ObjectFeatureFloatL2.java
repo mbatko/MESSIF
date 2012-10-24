@@ -20,9 +20,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
-public class ObjectFeatureFloatL2 extends ObjectFeatureFloat {
+public class ObjectFeatureFloatL2 extends ObjectFeatureFloat implements BinarySerializable {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 
