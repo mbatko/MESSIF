@@ -16,6 +16,7 @@
  */
 package messif.objects.util;
 
+import java.util.Collection;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
@@ -159,7 +160,20 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
     }
 
     @Override
-    public boolean add(RankedAbstractObject obj) {
+    public final boolean add(RankedAbstractObject obj) {
+        return add(obj, rankInAdd);
+    }
+
+    /**
+     * Adds the specified element to this list.
+     * The element is added according the to order defined by the comparator.
+     * @param obj element to be appended to this list
+     * @param rankInAdd flag whether the rank of the added object is recomputed (<tt>true</tt>) or
+     *          the object is added as-is (<tt>false</tt>)
+     * @return <tt>true</tt> if the object was added to the collection or
+     *          <tt>false</tt> if not (e.g. because of the limited capacity of the collection)
+     */
+    protected boolean add(RankedAbstractObject obj, boolean rankInAdd) {
         if (!rankInAdd)
             return super.add(obj);
         return add(
@@ -168,4 +182,38 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
             ) != null;
     }
 
+    /**
+     * Returns the distance function used for the ranking.
+     * @return the distance function used for the ranking
+     */
+    public DistanceFunction<? super T> getRankingDistanceFunction() {
+        return rankingDistanceFunction;
+    }
+
+    /**
+     * Returns the ranking object used as the first argument for the {@link #getRankingDistanceFunction()}.
+     * @return the ranking object used as the first argument for the {@link #getRankingDistanceFunction()}
+     */
+    public T getRankingObject() {
+        return rankingObject;
+    }
+
+    /**
+     * Returns the weight of the original distance that is summed with the new distance to get the ranking.
+     * If zero, the ranking ignores the original distances completely and computes
+     * the ranking based only on the new distances.
+     * @return the weight of the original distance
+     */
+    public float getOriginalDistanceWeight() {
+        return originalDistanceWeight;
+    }
+
+    /**
+     * Returns <tt>true</tt> if the {@link #add(java.lang.Object) add} method computes the rank or <tt>false</tt>,
+     * if the ranked objects are added without additional computations.
+     * @return the flag whether the {@link #add(java.lang.Object) add} method computes the rank or not
+     */
+    public boolean isRankingInAdd() {
+        return rankInAdd;
+    }
 }

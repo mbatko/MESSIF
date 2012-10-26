@@ -78,7 +78,7 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation implements Approx
      */
     @AbstractOperation.OperationConstructor({"Query object", "Number of nearest objects", "Answer type"})
     public ApproxKNNQueryOperation(LocalAbstractObject queryObject, int k, AnswerType answerType) {
-        this(queryObject, k, answerType, 25, LocalSearchType.PERCENTAGE, LocalAbstractObject.UNKNOWN_DISTANCE);
+        this(queryObject, k, answerType, 0, LocalSearchType.USE_STRUCTURE_DEFAULT, LocalAbstractObject.UNKNOWN_DISTANCE);
     }
 
     /**

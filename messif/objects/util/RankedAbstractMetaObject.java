@@ -63,6 +63,24 @@ public class RankedAbstractMetaObject extends RankedAbstractObject {
         return subDistances.clone();
     }
 
+    /**
+     * Returns the number of sub-object distances stored in this object.
+     * @return the number of sub-object distances
+     */
+    public int getSubDistancesCount() {
+        return subDistances.length;
+    }
+
+    /**
+     * Returns the distance to the sub-object {@code index} of the encapsulated object.
+     * @param index the index of the sub-object the distance of which to get
+     * @return the distance to the respective sub-object
+     * @throws IndexOutOfBoundsException if the given index is not valid 
+     */
+    public float getSubDistance(int index) throws IndexOutOfBoundsException {
+        return subDistances[index];
+    }
+
 
     //****************** Textual representation ******************//
 

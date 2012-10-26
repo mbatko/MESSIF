@@ -65,7 +65,7 @@ public abstract class TextConversion {
     }
 
     /**
-     * Finds all occurances of the given pattern in the {@code string} and
+     * Finds all occurrences of the given pattern in the {@code string} and
      * replace it with the replacement string according to the matched group.
      * @param string the string to apply the find-and-replace on
      * @param findPattern the pattern to find, must have the same number of
@@ -81,6 +81,23 @@ public abstract class TextConversion {
         while (matcher.find())
             matcher.appendReplacement(str, replacement[matcherGroupMatched(matcher) - 1]);
         matcher.appendTail(str);
+        return str.toString();
+    }
+
+    /**
+     * Returns the string created by joining the {@code words} using the given {@code separator}.
+     * @param words the strings to join
+     * @param separator the separator to join the strings with
+     * @return the joined string
+     */
+    public static String join(String[] words, String separator) {
+        if (words == null)
+            return null;
+        if (words.length == 0)
+            return "";
+        StringBuilder str = new StringBuilder(words[0]);
+        for (int i = 1; i < words.length; i++)
+            str.append(separator).append(words[i]);
         return str.toString();
     }
 
@@ -186,15 +203,20 @@ public abstract class TextConversion {
      * @param words the list of words to transform
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param expander instance for expanding the list of words
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
      * @param normalize if <tt>true</tt>, each word is first {@link #normalizeString(java.lang.String) normalized}
      * @return array of translated addresses
      * @throws TextConversionException if there was an error stemming the word or reading the index
      */
-    public static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) throws TextConversionException {
+    public static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) throws TextConversionException {
         if (words == null)
             return new int[0];
+
+        // Expand words
+        if (expander != null)
+            words = expander.expandWords(words);
 
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
         Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stemmer, normalize);
@@ -278,14 +300,7 @@ public abstract class TextConversion {
      * @throws TextConversionException if there was an error expanding or stemming the words
      */
     public static int[] textToWordIdentifiers(String string, String stringSplitRegexp, Set<String> ignoreWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
-        // Normalize and spit the string
-        String[] words = normalizeAndSplitString(string, stringSplitRegexp);
-
-        // Expand words
-        if (expander != null)
-            words = expander.expandWords(words);
-
-        return wordsToIdentifiers(words, ignoreWords, stemmer, wordIndex, false);
+        return wordsToIdentifiers(normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, expander, stemmer, wordIndex, false);
     }
 
     /**

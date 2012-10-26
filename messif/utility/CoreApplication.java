@@ -1556,18 +1556,21 @@ public class CoreApplication {
      * @param args regular expression to match statistic names and the display separators for the statistic values
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */ 
-    @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)" })
+    @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)", "separator appended after printed statistics (defaults to newline)"})
     public boolean statisticsLastOperation(PrintStream out, String... args) {
         if (args.length >= 3) {
             String stats = algorithm.getOperationStatistics().printStatistics(args[1], args[2]);
             if (args.length >= 4) {
                 out.print(stats);
                 out.print(args[3]);
-            } else
+            } else {
                 out.println(stats);
-        } else if (args.length >= 2)
+            }
+        } else if (args.length >= 2) {
             out.println(algorithm.getOperationStatistics().printStatistics(args[1]));
-        else out.println(algorithm.getOperationStatistics().printStatistics());
+        } else {
+            out.println(algorithm.getOperationStatistics().printStatistics());
+        }
         return true;
     }
 
@@ -2307,7 +2310,7 @@ public class CoreApplication {
     /**
      * Schedules {@link System#gc() full garbage collection}.
      * If an optional argument is passed, the application will sleep for the number
-     * of miliseconds specified.
+     * of milliseconds specified.
      * 
      * <p>
      * Example of usage:
@@ -2338,7 +2341,6 @@ public class CoreApplication {
         return true;
     }
 
-
     /**
      * Displays the memory usage of this virtual machine.
      * 
@@ -2364,7 +2366,7 @@ public class CoreApplication {
     }
 
     /**
-     * Returns current time in miliseconds or the specified date format.
+     * Returns current time in milliseconds or the specified date format.
      * 
      * <p>
      * Example of usage:
@@ -2377,7 +2379,7 @@ public class CoreApplication {
      * @param args an optional argument specifying the date/time format according to {@link SimpleDateFormat}
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "returns current time in milis", arguments = { })
+    @ExecutableMethod(description = "returns current time in milliseconds", arguments = { })
     public boolean currentTime(PrintStream out, String... args) {
         if (args.length > 1) {
             try {
@@ -2836,8 +2838,11 @@ public class CoreApplication {
                 if (methodName.indexOf(' ') != -1) {
                     // Special "block" method 
                     for (String blockActionName : methodName.split("[ \t]+"))
-                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null))
+                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null)) {
+                            if (assignOutput != null)
+                                out.print(assignOutput.toString());
                             return false; // Stop execution of block if there was an error
+                        }
                 } else try {
                     Object rtv;
                     // SPECIAL! Method propertiesOpen is called with additional arguments

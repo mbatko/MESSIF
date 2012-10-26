@@ -16,6 +16,9 @@
  */
 package messif.statistics;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+
 
 /**
  * Statistics for counting wall-clock time.
@@ -51,12 +54,46 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    //****************** CPU time support ******************//
+
+    /** User/system CPU time measurement bean */
+    private static ThreadMXBean threadMXBean;
+    static {
+        setupCPUTime(true);
+    }
+
+    /**
+     * Initialization method for computing CPU times.
+     * @param enable 
+     */
+    public static void setupCPUTime(boolean enable) {
+        if (enable) {
+            threadMXBean = ManagementFactory.getThreadMXBean();
+            if (threadMXBean.isThreadCpuTimeSupported()) {
+                threadMXBean.setThreadCpuTimeEnabled(true);
+            } else {
+                threadMXBean = null;
+            }
+        } else {
+            threadMXBean = null;
+        }
+    }
+
+
     //****************** Counter operation ******************//
 
     /** Time elapsed between calls to {@link #start()} and {@link #stop()}. */
     private long time = 0;
     /** Time of the last call to {@link #start()} of started statistics */
     private long lastStartTime = 0;
+    /** Total CPU time elapsed between calls to {@link #start()} and {@link #stop()}. Note that this is in nanoseconds! */
+    private long cpuTime = 0;
+    /** User CPU time elapsed between calls to {@link #start()} and {@link #stop()}. Note that this is in nanoseconds! */
+    private long userTime = 0;
+    /** Total CPU time of the last call to {@link #start()} of started statistics. Note that this is in nanoseconds! */
+    private long lastStartCpuTime = 0;
+    /** User CPU time of the last call to {@link #start()} of started statistics. Note that this is in nanoseconds! */
+    private long lastStartUserTime = 0;
     /** Backup time for checkpoint feature */
     private long timeCheckpoint = 0;
 
@@ -65,8 +102,13 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         if (!canPerformOperation())
             return;
         synchronized (this) {
-            if (lastStartTime == 0)
+            if (lastStartTime == 0) {
                 lastStartTime = System.currentTimeMillis();
+                if (threadMXBean != null) {
+                    lastStartCpuTime = threadMXBean.getCurrentThreadCpuTime();
+                    lastStartUserTime = threadMXBean.getCurrentThreadUserTime();
+                }
+            }
             for (StatisticTimer stat : getBoundStats())
                 stat.start();
         }
@@ -80,6 +122,12 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
             if (lastStartTime > 0) {
                 this.time += System.currentTimeMillis() - lastStartTime;
                 lastStartTime = 0;
+                if (threadMXBean != null) {
+                    this.cpuTime += threadMXBean.getCurrentThreadCpuTime() - lastStartCpuTime;
+                    this.userTime += threadMXBean.getCurrentThreadUserTime() - lastStartUserTime;
+                    lastStartCpuTime = 0;
+                    lastStartUserTime = 0;
+                }
             }
             for (StatisticTimer stat : getBoundStats())
                 stat.stop();
@@ -95,6 +143,34 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
         if (lastStartTime > 0)
             return time + System.currentTimeMillis() - lastStartTime;
         else return time;
+    }
+
+    /**
+     * Total CPU time elapsed in milliseconds.
+     * If the statistics has been stopped, the elapsed time is returned, otherwise current time minus start time is returned.
+     * @return time elapsed in milliseconds.
+     */
+    public synchronized long getCpuTime() {
+        if (threadMXBean == null)
+            return 0;
+        if (lastStartCpuTime > 0)
+            return (cpuTime + threadMXBean.getCurrentThreadCpuTime() - lastStartCpuTime) / 1000000; // Note that the values are in nano, so division is required
+        else
+            return cpuTime / 1000000;
+    }
+
+    /**
+     * User CPU time elapsed in milliseconds.
+     * If the statistics has been stopped, the elapsed time is returned, otherwise current time minus start time is returned.
+     * @return time elapsed in milliseconds.
+     */
+    public synchronized long getUserTime() {
+        if (threadMXBean == null)
+            return 0;
+        if (lastStartUserTime > 0)
+            return (userTime + threadMXBean.getCurrentThreadUserTime() - lastStartUserTime) / 1000000; // Note that the values are in nano, so division is required
+        else
+            return userTime / 1000000;
     }
 
     @Override
@@ -126,17 +202,25 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
     @Override
     protected synchronized void updateFrom(StatisticTimer sourceStat) {
         time += sourceStat.get();
+        cpuTime += sourceStat.getCpuTime();
+        userTime += sourceStat.getUserTime();
     }
 
     @Override
     protected synchronized void setFrom(StatisticTimer sourceStat) {
         time = sourceStat.get();
+        cpuTime = sourceStat.getCpuTime();
+        userTime = sourceStat.getUserTime();
     }
 
     @Override
     public void reset() {
         time = 0;
+        cpuTime = 0;
+        userTime = 0;
         lastStartTime = 0;
+        lastStartCpuTime = 0;
+        lastStartUserTime = 0;
         setCheckpoint();
     }
 
@@ -169,7 +253,13 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
 
     @Override
     public String toString() {
-        return getName() + ": " + get();
+        StringBuilder str = new StringBuilder();
+        str.append(getName()).append(": ").append(get());
+        if (threadMXBean != null) {
+            str.append(", ").append(getName()).append(".cpu: ").append(getCpuTime());
+            str.append(", ").append(getName()).append(".user: ").append(getUserTime());
+        }
+        return str.toString();
     }
 
     /**

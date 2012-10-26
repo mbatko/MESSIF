@@ -17,6 +17,7 @@
 package messif.objects.util;
 
 import java.util.Collection;
+import java.util.Collections;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.operations.AnswerType;
@@ -79,23 +80,37 @@ public class RankedSortedDistFunctionRerankingCollection<T extends AbstractObjec
     //****************** Overrides ******************//
 
     @Override
-    public boolean add(RankedAbstractObject obj) {
-        memory.add(obj);
-        return super.add(obj);
-    }
-
-    @Override
     public void setMaximalCapacity(int capacity) {
         super.setMaximalCapacity(capacity);
         memory.setMaximalCapacity(capacity);
     }
 
     @Override
-    public boolean addAll(Collection<? extends RankedAbstractObject> c) {
-        if (c instanceof RankedSortedDistFunctionRerankingCollection)
-            return super.addAll(((RankedSortedDistFunctionRerankingCollection<?>)c).memory);
-        else
-            return super.addAll(c);
+    public final boolean addAll(Collection<? extends RankedAbstractObject> c) {
+        if (c instanceof RankedSortedDistFunctionRerankingCollection) {
+            this.memory.addAll(((RankedSortedDistFunctionRerankingCollection<?>)c).memory);
+        } else {
+            this.memory.addAll(c);
+        }
+        return addAllWithRanking(memory);
     }
 
+    /**
+     * Returns the memorized collection with the original ranking.
+     * @return the original ranking collection
+     */
+    protected final Collection<? extends RankedAbstractObject> getOriginalRankingCollection() {
+        return Collections.unmodifiableCollection(memory);
+    }
+
+    /**
+     * Compute the new ranking of the given data.
+     * It is the responsibility of this method to {@link #add(java.lang.Object) add}
+     * the data according to the new ranking.
+     * @param c the collection with the data to rank
+     * @return <tt>true</tt> if this collection changed as a result of the call
+     */
+    protected boolean addAllWithRanking(Collection<? extends RankedAbstractObject> c) {
+        return super.addAll(c);
+    }
 }

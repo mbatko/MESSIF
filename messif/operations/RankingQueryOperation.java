@@ -24,6 +24,8 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.CollectionProviders;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
+import messif.statistics.StatisticTimer;
+import messif.statistics.Statistics;
 import messif.utility.ErrorCode;
 
 
@@ -46,6 +48,12 @@ import messif.utility.ErrorCode;
 public abstract class RankingQueryOperation extends QueryOperation<RankedAbstractObject> {
     /** class id for serialization */
     private static final long serialVersionUID = 2L;
+
+    //****************** Statistics ******************//
+
+    /** Time spent in {@link #setAnswerCollection(messif.objects.util.RankedSortedCollection)} */
+    private static final StatisticTimer timeSetAnswerCollection = StatisticTimer.getStatistics("OperationSetAnswerCollectionTime");
+
 
     //****************** Attributes ******************//
 
@@ -134,7 +142,13 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         if (!collection.isEmpty())
             collection.clear();
         collection.setMaximalCapacity(answer.getMaximalCapacity()); // Preserve maximal capacity (note that the collection can ignore it silently)
-        collection.addAll(answer);
+        if (Statistics.isEnabledGlobally()) {
+            timeSetAnswerCollection.start();
+            collection.addAll(answer);
+            timeSetAnswerCollection.stop();
+        } else {
+            collection.addAll(answer);
+        }
         this.answer = collection; // This assignment IS intended
     }
 
