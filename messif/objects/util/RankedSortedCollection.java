@@ -161,14 +161,14 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
     @Override
     protected boolean add(RankedAbstractObject e, int index) {
         if (ignoringDuplicates && !isEmpty()) {
-            for (int i = index; i >= 0; i--) {
+            for (int i = index; i < size(); i++) {
                 RankedAbstractObject objI = get(i);
                 if (objI.getDistance() != e.getDistance())
                     break;
                 if (isEqual(e.getObject(), objI.getObject()))
                     return false;
             }
-            for (int i = index + 1; i < size(); i++) {
+            for (int i = index - 1; i >= 0; i--) {
                 RankedAbstractObject objI = get(i);
                 if (objI.getDistance() != e.getDistance())
                     break;
