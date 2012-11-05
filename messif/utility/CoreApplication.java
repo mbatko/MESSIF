@@ -58,6 +58,7 @@ import messif.executor.MethodNameExecutor;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractStreamObjectIterator;
+import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.objects.util.StreamGenericAbstractObjectIterator;
@@ -115,6 +116,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  &lt;actionName&gt;.repeat = &lt;repeats&gt;
  *  &lt;actionName&gt;.foreach = &lt;value&gt; &lt;value&gt; ...
  *  &lt;actionName&gt;.repeatUntilException = &lt;some exception class, e.g. java.util.NoSuchElementException&gt;
+ *  &lt;actionName&gt;.loopVariable = &lt;variable name&gt;
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
@@ -127,18 +129,22 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                    see the documentation of the respective {@link CoreApplication} methods for their parameters.</li>
  * <li><i>repeat</i> parameter is optional and allows to specify multiple execution of
  *                 the same action &lt;repeats&gt; times. It can be used together with "block" method name to implement
- *                 a loop of commands with specified number of repeats. In each iteration the variable &lt;actionName&gt;
- *                 is assigned the number of the actual iteration (starting from 1).</li>
+ *                 a loop of commands with specified number of repeats. In each iteration the variable &lt;loopVariable&gt;
+ *                 is assigned the number of the actual iteration (starting from 1) and <i>loopVariable</i>_iteration is assigned
+ *                 the zero-based number of the iteration.</li>
  * <li><i>foreach</i> parameter is also optional and similarly to <i>repeat</i> it allows the action to be
  *                executed multiple times - the number of repeats is equal to the number of values provided.
- *                Moreover, in each iteration the variable &lt;actionName&gt; is assigned &lt;value&gt; taken
- *                one by one from the <i>foreach</i> parameter.</li>
+ *                Moreover, in each iteration the variable <i>loopVariable</i> is assigned &lt;value&gt; taken
+ *                one by one from the <i>foreach</i> parameter and <i>loopVariable</i>_iteration is assigned
+ *                the zero-based number of the iteration.</li>
  * <li><i>repeatUntilException</i> parameter is optional and allows to stop repeating the action
  *                when the exception given as the value of this parameter occurs. Note
  *                that if either "repeat" or "foreach" parameter is also specified,
  *                the repeating ends after their number of repeats or an exception
  *                whichever comes first. If no "repeat" or "foreach" is specified
  *                the action is repeated until an exception occurs.
+ * <li><i>loopVariable</i> the name of the variable to set in <i>foreach</i>, <i>repeat</i>,
+ *                or <i>repeatUntilException</i> modifier. If not specified, the &lt;actionName&gt; is used.</li>
  * <li><i>repeatEvery</i> parameter is optional and allows to execute the action repeatedly
  *                at time intervals specified by the argument. Note that the action will
  *                be executed normally (as a normal action) at first and then it will
@@ -1211,7 +1217,7 @@ public class CoreApplication {
         while (skipCount-- > 0 && answerIterator.hasNext())
             answerIterator.next();
         while (answerIterator.hasNext() && maxCount-- > 0) {
-            printOperationAnswer(answerIterator.next(), answerType, out);
+            printOperationAnswer(answerIterator.next(), answerType, subAnswerIndex, out);
             if (answerIterator.hasNext() && maxCount > 0)
                 out.print(separator);
         }
@@ -1225,9 +1231,10 @@ public class CoreApplication {
      * 
      * @param answerObject the answer object to print (e.g. {@link AbstractObject} or {@link RankedAbstractObject})
      * @param answerType the display type of the answer - see {@link #printOperationAnswer(java.lang.Object, char, java.io.PrintStream)}
+     * @param subAnswerIndex the index of the sub-answer to display (if <tt>null</tt> the whole answer is used)
      * @param out a stream where the application writes information for the user
      */
-    private void printOperationAnswer(Object answerObject, char answerType, PrintStream out) {
+    private void printOperationAnswer(Object answerObject, char answerType, Integer subAnswerIndex, PrintStream out) {
         switch (answerType) {
             case 'A':
             case 'O':
@@ -1247,6 +1254,12 @@ public class CoreApplication {
                 out.print(rankedAnswerObject.getObject().getLocatorURI());
                 out.print(": ");
                 out.print(rankedAnswerObject.getDistance());
+                break;
+            case 'M':
+                RankedAbstractMetaObject rankedAnswerMetaObject = (RankedAbstractMetaObject)answerObject;
+                out.print(rankedAnswerMetaObject.getObject().getLocatorURI());
+                out.print(": ");
+                out.print(subAnswerIndex == null ? rankedAnswerMetaObject.getDistance() : rankedAnswerMetaObject.getSubDistance(subAnswerIndex));
                 break;
             case 'W':
                 try {
@@ -2806,7 +2819,7 @@ public class CoreApplication {
         if (outputStream == null)
             return false;
 
-        // Read number of repeats of this method
+        // Read number of repeats (or foreach value) of this method
         String[] foreachValues = getCFActionForeach(out, props, actionName, variables);
         Class<? extends Throwable> repeatUntilExceptionClass = getCFActionException(out, props, actionName, variables);
         if (repeatUntilExceptionClass == Throwable.class)
@@ -2816,6 +2829,9 @@ public class CoreApplication {
             out.println("Number of repeats specified in action '" + actionName + "' is not a valid non-negative integer");
             return false;
         }
+        String loopVariable = substituteVariables(props.getProperty(actionName + ".loopVariable"), variables);
+        if (loopVariable == null)
+            loopVariable = actionName;
 
         // Postpone action
         if (!postponeCFAction(out, props, actionName, variables))
@@ -2825,10 +2841,13 @@ public class CoreApplication {
         try {
             for (int i = 0; i < repeat; i++) {
                 // Add foreach/repeat value
-                if (foreachValues != null)
-                    variables.put(actionName, foreachValues[i]);
-                else if (repeat > 1)
-                    variables.put(actionName, Integer.toString(i + 1));
+                if (foreachValues != null) {
+                    variables.put(loopVariable, foreachValues[i]);
+                    variables.put(loopVariable + "_iteration", Integer.toString(i));
+                } else if (repeat > 1) {
+                    variables.put(loopVariable, Integer.toString(i + 1));
+                    variables.put(loopVariable + "_iteration", Integer.toString(i));
+                }
 
                 // Show description if set
                 if (description != null)

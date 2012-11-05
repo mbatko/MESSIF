@@ -36,6 +36,12 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    //****************** Attributes******************//
+
+    /** Flag whether the add method checks if the object that {@link #isEqual} exists already in the collection */
+    private boolean ignoringDuplicates;
+
+
     //****************** Constructors ******************//
 
     /**
@@ -131,6 +137,65 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
     @Override
     public void setMaximalCapacity(int capacity) {
         super.setMaximalCapacity(capacity);
+    }
+
+    /**
+     * Set the flag whether the add method checks if the object that {@link #isEqual} exists already in the collection.
+     * @param ignoringDuplicates the flag whether the add method checks for duplicate objects
+     */
+    public void setIgnoringDuplicates(boolean ignoringDuplicates) {
+        this.ignoringDuplicates = ignoringDuplicates;
+    }
+
+    /**
+     * Returns the flag whether the add method checks if the object that {@link #isEqual} exists already in the collection.
+     * @return the flag whether the add method checks for duplicate objects
+     */
+    public boolean isIgnoringDuplicates() {
+        return ignoringDuplicates;
+    }
+
+
+    //****************** Overrides ******************//
+
+    @Override
+    protected boolean add(RankedAbstractObject e, int index) {
+        if (ignoringDuplicates && !isEmpty()) {
+            for (int i = index; i >= 0; i--) {
+                RankedAbstractObject objI = get(i);
+                if (objI.getDistance() != e.getDistance())
+                    break;
+                if (isEqual(e.getObject(), objI.getObject()))
+                    return false;
+            }
+            for (int i = index + 1; i < size(); i++) {
+                RankedAbstractObject objI = get(i);
+                if (objI.getDistance() != e.getDistance())
+                    break;
+                if (isEqual(e.getObject(), objI.getObject()))
+                    return false;
+            }
+        }
+        return super.add(e, index);
+    }
+
+    /**
+     * Given two objects, this method compares them according to locator (if not null) and, if both locators null,
+     *  then according to {@link LocalAbstractObject#dataEquals(java.lang.Object)}.
+     * @param e1 first object
+     * @param e2 second object
+     * @return <b>true</b> only if the locators are not null and equal or both null and data are equal
+     */
+    protected boolean isEqual(AbstractObject e1, AbstractObject e2) {
+        String e1Locator = e1.getLocatorURI();
+        String e2Locator = e2.getLocatorURI();
+        if (e1Locator != null && e2Locator != null) {
+            return e1Locator.equals(e2Locator);
+        }
+        if (e1Locator == null && e2Locator == null && e1 instanceof LocalAbstractObject && e2 instanceof LocalAbstractObject) {
+            return ((LocalAbstractObject) e1).dataEquals((LocalAbstractObject) e2);
+        }
+        return false;
     }
 
 

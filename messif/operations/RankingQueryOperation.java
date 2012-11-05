@@ -142,6 +142,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         if (!collection.isEmpty())
             collection.clear();
         collection.setMaximalCapacity(answer.getMaximalCapacity()); // Preserve maximal capacity (note that the collection can ignore it silently)
+        collection.setIgnoringDuplicates(answer.isIgnoringDuplicates()); // Preserve ignore duplicates flag (note that the collection can ignore it silently)
         if (Statistics.isEnabledGlobally()) {
             timeSetAnswerCollection.start();
             collection.addAll(answer);
@@ -150,6 +151,14 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
             collection.addAll(answer);
         }
         this.answer = collection; // This assignment IS intended
+    }
+
+    /**
+     * Set the flag whether the {@link #addToAnswer} method checks if an equal object exists already in the collection.
+     * @param ignoringDuplicates the flag whether the method checks for duplicate objects
+     */
+    public void setAnswerIgnoringDuplicates(boolean ignoringDuplicates) {
+        answer.setIgnoringDuplicates(ignoringDuplicates);
     }
 
     @Override
