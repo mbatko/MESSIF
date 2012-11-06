@@ -57,7 +57,7 @@ import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
 import messif.objects.extraction.MultiExtractor;
 import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
-import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
+import messif.objects.impl.ObjectIntMultiVector.WeightProvider;
 import messif.objects.text.Stemmer;
 import messif.objects.text.TextConversion;
 import messif.objects.keys.AbstractObjectKey;
@@ -94,7 +94,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
     };
 
     /** Weights for the visual descriptors */
-    protected static float[] visualWeights = { 2.0f, 2.0f, 5.0f, 2.0f, 4.0f };
+    private static final float[] visualWeights = { 2.0f, 2.0f, 5.0f, 2.0f, 4.0f };
 
     /** Regular expression used to split title */
     public static final String TITLE_SPLIT_REGEXP = "[^\\p{javaLowerCase}\\p{javaUpperCase}]+";
@@ -310,6 +310,24 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
 
     /**
      * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
+     * and given title words, key words, and search words. The locator and the encapsulated objects from the source
+     * {@code object} are taken.
+     * @param object the source metaobject from which to get the data
+     * @param titleWords the title to set for the new object
+     * @param keywordWords the keywords to set for the new object
+     * @param searchWords the searched string to set for the new object
+     * @param expander instance for expanding the list of title, key, and search words
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
+     */
+    public MetaObjectProfiSCT(MetaObjectProfiSCT object, String[] titleWords, String[] keywordWords, String[] searchWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) {
+        this(object, TextConversion.join(titleWords, " "), TextConversion.join(keywordWords, " "), null);
+        if (titleWords != null || keywordWords != null || searchWords != null)
+            this.keyWords = convertWordsToIdentifiers(expander, stemmer, wordIndex, titleWords, keywordWords, searchWords);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectProfiSCT from the given {@link MetaObjectProfiSCT}
      * and given set of keywords. The locator and the encapsulated objects from the source
      * {@code object} are taken.
      * @param object the source metaobject from which to get the data
@@ -452,20 +470,20 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
      *
      * @param stemmer the stemmer to use for stemming of the words
      * @param wordIndex the index used to transform the words into integers
-     * @param titleString the title string to convert
-     * @param keywordString the keywords string to convert
-     * @param searchString the search string to convert
+     * @param title the title string (or words array) to convert
+     * @param keyword the keywords string (or words array) to convert
+     * @param search the search string (or words array) to convert
      * @param expander instance for expanding the list of title, key, and search words
      * @return a new instance of int multi-vector object with Jaccard distance function
      */
-    protected final ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, String titleString, String keywordString, String searchString) {
+    protected final ObjectIntMultiVectorJaccard convertWordsToIdentifiers(WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, Object title, Object keyword, Object search) {
         try {
-            int[][] data = new int[searchString != null ? 3 : 2][];
+            int[][] data = new int[search != null ? 3 : 2][];
             Set<String> ignoreWords = new HashSet<String>();
-            if (searchString != null)
-                data[2] = TextConversion.textToWordIdentifiers(searchString, SEARCH_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
-            data[0] = TextConversion.textToWordIdentifiers(titleString, TITLE_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
-            data[1] = TextConversion.textToWordIdentifiers(keywordString, KEYWORD_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
+            if (search != null)
+                data[2] = search instanceof String[] ? TextConversion.wordsToIdentifiers((String[])search, ignoreWords, expander, stemmer, wordIndex, true) : TextConversion.textToWordIdentifiers((String)search, SEARCH_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
+            data[0] = title instanceof String[] ? TextConversion.wordsToIdentifiers((String[])title, ignoreWords, expander, stemmer, wordIndex, true) : TextConversion.textToWordIdentifiers((String)title, TITLE_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
+            data[1] = keyword instanceof String[] ? TextConversion.wordsToIdentifiers((String[])keyword, ignoreWords, expander, stemmer, wordIndex, true) : TextConversion.textToWordIdentifiers((String)keyword, KEYWORD_SPLIT_REGEXP, ignoreWords, expander, stemmer, wordIndex);
             return new ObjectIntMultiVectorJaccard(data);
         } catch (Exception e) {
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.WARNING, "Cannot create keywords for object ''{0}'': {1}", new Object[]{getLocatorURI(), e.toString()});
@@ -505,7 +523,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          */
         private static Set<Integer> getIgnoredIDs(String[] keywords, Stemmer stemmer, IntStorageIndexed<String> keyWordIndex) throws TextConversionException {
             HashSet<Integer> retVal = new HashSet<Integer>();
-            int[] keywordsToIdentifiers = TextConversion.wordsToIdentifiers(keywords, new HashSet<String>(), stemmer, keyWordIndex, true);
+            int[] keywordsToIdentifiers = TextConversion.wordsToIdentifiers(keywords, new HashSet<String>(), null, stemmer, keyWordIndex, true);
             Logger.getLogger(MetaObjectProfiSCT.class.getName()).log(Level.INFO, "the following words will be ignored: ''{0}'' with the following IDs: {1}", new Object[]{Arrays.deepToString(keywords), Arrays.toString(keywordsToIdentifiers)});
             for (int id : keywordsToIdentifiers) {
                 retVal.add(id);
@@ -1037,6 +1055,129 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         }
 
 
+        //****************** Stopword support ******************//
+
+        /** Encapsulation of database stopword */
+        public static class Stopword {
+            /** Stopword identifier */
+            private final int wordId;
+            /** Stopword string value */
+            private final String keyword;
+            /** Stopword category */
+            private final String category;
+            /** Flag for conditional stopwords */
+            private final boolean conditional;
+
+            /**
+             * Creates a new stopword instance from a db result set with columns
+             * "keyword_id, keyword, category, conditional_stopword".
+             * @param rs the result set to load the stopword from
+             * @throws SQLException if there was a problem reading a column value
+             */
+            private Stopword(ResultSet rs) throws SQLException {
+                this.wordId = rs.getInt("keyword_id");
+                this.keyword = rs.getString("keyword");
+                this.category = rs.getString("category");
+                this.conditional = rs.getBoolean("conditional_stopword");
+            }
+
+            /**
+             * Creates a new stopword instance with the given attributes.
+             * @param wordId the stopword identifier
+             * @param keyword the stopword string value
+             * @param category the stopword category
+             * @param conditional the flag for conditional stopwords
+             */
+            public Stopword(int wordId, String keyword, String category, boolean conditional) {
+                this.wordId = wordId;
+                this.keyword = keyword;
+                this.category = category;
+                this.conditional = conditional;
+            }
+
+            /**
+             * Returns the identifier of this stopword.
+             * @return the identifier of this stopword
+             */
+            public int getWordId() {
+                return wordId;
+            }
+
+            /**
+             * Returns the string value of this stopword.
+             * @return the string value of this stopword
+             */
+            public String getKeyword() {
+                return keyword;
+            }
+
+            /**
+             * Returns the category of this stopword.
+             * @return the category of this stopword
+             */
+            public String getCategory() {
+                return category;
+            }
+
+            /**
+             * Returns the flag whether this stopword is conditional or not.
+             * @return the flag whether this stopword is conditional or not
+             */
+            public boolean isConditionalStopword() {
+                return conditional;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (!(obj instanceof Stopword))
+                    return false;
+                return this.wordId == ((Stopword)obj).wordId;
+            }
+
+            @Override
+            public int hashCode() {
+                return this.wordId;
+            }
+
+        }
+
+        /**
+         * Retrieves the stopwords from the database.
+         * @param tableName the table where the stop words are stored
+         *      (it should have a keyword_id integer column and category string column)
+         * @param categories the list of categories for which to retrieve the stop words
+         * @return the stopword list
+         * @throws SQLException if there was a database problem loading the stopwords
+         */
+        private Collection<Stopword> loadStopWords(String tableName, String[] categories) throws SQLException {
+            // Prepare SQL string
+            StringBuilder sql = new StringBuilder("SELECT keyword_id, keyword, category, conditional_stopword FROM ").append(tableName);
+            if (categories != null && categories.length > 0) {
+                sql.append(" WHERE category IN ('");
+                for (int i = 0; i < categories.length; i++) {
+                    if (i > 0)
+                        sql.append("','");
+                    sql.append(categories[i]);
+                }
+                sql.append("')");
+            }
+
+            // Execute SQL and retrieve the data
+            PreparedStatement objectsCursor = prepareAndExecute(null, sql.toString(), false, (Object[])null);
+            try {
+                ResultSet rs = objectsCursor.getResultSet();
+                Collection<Stopword> ret = new ArrayList<Stopword>();
+                while (rs.next()) {
+                    ret.add(new Stopword(rs));
+                }
+                rs.close();
+                return ret;
+            } finally {
+                objectsCursor.close();
+            }
+        }
+
+
         //****************** Attributes ******************//
 
         /** Random number generator for {@link #randomLocators(int)} */
@@ -1060,7 +1201,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         /** Database storage used to add objects extracted by image extractor */
         private final DatabaseStorage<MetaObjectProfiSCT> databaseStorage;
         /** List of stopwords */
-        private final List<Integer> stopwords;
+        private final Collection<Stopword> stopwords;
 
 
         /**
@@ -1145,44 +1286,11 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         }
 
         /**
-         * Retrieves the stopwords from the database.
-         * @param tableName the table where the stop words are stored
-         *      (it should have a keyword_id integer column and category string column)
-         * @param categories the list of categories for which to retrieve the stop words
-         * @return the stopword list
-         * @throws SQLException if there was a database problem loading the stopwords
-         */
-        public final List<Integer> loadStopWords(String tableName, String[] categories) throws SQLException {
-            // Prepare SQL string
-            StringBuilder sql = new StringBuilder("SELECT keyword_id FROM ").append(tableName);
-            if (categories != null && categories.length > 0) {
-                sql.append(" WHERE category IN ('");
-                for (int i = 0; i < categories.length; i++) {
-                    if (i > 0)
-                        sql.append("','");
-                    sql.append(categories[i]);
-                }
-                sql.append("')");
-            }
-
-            // Execute SQL and retrieve the data
-            PreparedStatement objectsCursor = prepareAndExecute(null, sql.toString(), false, (Object[])null);
-            ResultSet rs = objectsCursor.getResultSet();
-            List<Integer> sw = new ArrayList<Integer>();
-            while (rs.next()) {
-                sw.add(rs.getInt(1));
-            }
-            rs.close();
-            objectsCursor.close();
-            return sw;
-        }
-
-        /**
          * Returns the stopwords loaded from database.
          * If the stopword table was not specified in constructor, <tt>null</tt> is returned.
          * @return the list of stopwords
          */
-        public Collection<Integer> getStopwords() {
+        public Collection<Stopword> getStopwords() {
             return Collections.unmodifiableCollection(stopwords);
         }
 
@@ -1213,7 +1321,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          * @throws TextConversionException if there was an error stemming the word or reading the index
          */
         public int[] wordsToIdentifiers(String[] words) throws TextConversionException {
-            return TextConversion.wordsToIdentifiers(words, null, stemmer, wordIndex, true);
+            return TextConversion.wordsToIdentifiers(words, null, null, stemmer, wordIndex, true);
         }
 
         /**
@@ -1479,7 +1587,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          * @throws TextConversionException if there was a problem retrieving keyword frequencies from the database
          */
         private float keywordDistanceTfIdf(ObjectIntMultiVector o1, ObjectIntMultiVector o2, float[] keyWordWeights) throws TextConversionException {
-            return ObjectIntMultiVectorJaccard.getWeightedDistance(o1, getKeywordWeightProvider(o1, keyWordWeights), o2, getKeywordWeightProvider(o2, keyWordWeights));
+            return ObjectIntMultiVectorJaccard.getWeightedJaccardDistance(o1, getKeywordWeightProvider(o1, keyWordWeights), o2, getKeywordWeightProvider(o2, keyWordWeights));
         }
 
         /**
@@ -1938,7 +2046,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         /**
          * Implements a database provider for keyword weights.
          */
-        private static class KeywordWeightProvider implements WeightProvider, java.io.Serializable {
+        protected static class KeywordWeightProvider implements WeightProvider, java.io.Serializable {
             /** Class id for serialization. */
             private static final long serialVersionUID = 1L;
             /** Static weights for the respective keyword IDs - keys is the keyword id and value is its idf weight */
@@ -1999,6 +2107,20 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
                 }
                 return sum;
             }
+
+            @Override
+            public double getWeightNorm(ObjectIntMultiVector obj) {
+                double sum = 0;
+                int documentKwCount = obj.getDimensionality();
+                for (int i = 0; i < obj.getVectorDataCount(); i++) {
+                    int[] vector = obj.getVectorData(i);
+                    for (int j = 0; j < vector.length; j++) {
+                        float weight = getWeight(vector[j], documentKwCount, i);
+                        sum += weight * weight;
+                    }
+                }
+                return Math.sqrt(sum);
+            }
         }
     }
 
@@ -2007,7 +2129,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
      * weighted Jaccard with weights based on tf-idf algorithm. Note
      * that the other object for the distance must be {@link MetaObjectProfiSCT}.
      */
-    public static class MetaObjectProfiSCTKwdist extends MetaObjectProfiSCT {
+    public static class MetaObjectProfiSCTKwDistJaccard extends MetaObjectProfiSCT {
         /** Class id for serialization. */
         private static final long serialVersionUID = 2L;
 
@@ -2022,7 +2144,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         //****************** Constructor ******************//
 
         /**
-         * Creates a new instance of MetaObjectProfiSCTKwdist from the given {@link MetaObjectProfiSCT}.
+         * Creates a new instance of MetaObjectProfiSCTKwDistJaccard from the given {@link MetaObjectProfiSCT}.
          * The locator and the encapsulated objects from the source {@code object} are
          * taken.
          *
@@ -2031,14 +2153,14 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          *          if <tt>null</tt>, only the text distance is used
          * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          */
-        public MetaObjectProfiSCTKwdist(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
+        public MetaObjectProfiSCTKwDistJaccard(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
             super(object);
             this.keywordsWeight = keywordsWeight;
             this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Creates a new instance of MetaObjectProfiSCT.
+         * Creates a new instance of MetaObjectProfiSCTKwDistJaccard.
          * A keyword index is used to translate keywords to addresses.
          *
          * @param stream stream to read the data from
@@ -2049,14 +2171,14 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          * @throws IOException if reading from the stream fails
          */
-        public MetaObjectProfiSCTKwdist(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+        public MetaObjectProfiSCTKwDistJaccard(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
             super(stream, stemmer, wordIndex);
             this.keywordsWeight = keywordsWeight;
             this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Creates a new instance of MetaObjectProfiSCTKwdist from the given text stream.
+         * Creates a new instance of MetaObjectProfiSCTKwDistJaccard from the given text stream.
          * Note that the keywords are expected to be present and already converted to IDs.
          *
          * @param stream the stream from which the data are read
@@ -2065,21 +2187,21 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          * @throws IOException if there was an error reading the data from the stream
          */
-        public MetaObjectProfiSCTKwdist(BufferedReader stream, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+        public MetaObjectProfiSCTKwDistJaccard(BufferedReader stream, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
             super(stream, true, true);
             this.keywordsWeight = keywordsWeight;
             this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Creates a new instance of MetaObjectProfiSCTKwdist from the given text stream.
+         * Creates a new instance of MetaObjectProfiSCTKwDistJaccard from the given text stream.
          * Note that the keywords are expected to be present and already converted to IDs.
          * Null keyword weight is applied, i.e. the distance is computed by text only.
          *
          * @param stream the stream from which the data are read
          * @throws IOException if there was an error reading the data from the stream
          */
-        public MetaObjectProfiSCTKwdist(BufferedReader stream) throws IOException {
+        public MetaObjectProfiSCTKwDistJaccard(BufferedReader stream) throws IOException {
             this(stream, null, null);
         }
 
@@ -2089,7 +2211,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         @Override
         protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
             try {
-                float distance = keyWords.getWeightedDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
+                float distance = keyWords.getWeightedJaccardDistance(((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider, kwWeightProvider);
                 if (keywordsWeight != null)
                     distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
                 return distance;
@@ -2100,7 +2222,105 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
     }
 
     /**
-     * Extension of the MetaObjectProfiSCT that preserves also the title and keywords strings.
+     * Object that holds only keywords and measures the distance as the
+     * weighted Cosine distance with weights based on tf-idf algorithm. Note
+     * that the other object for the distance must be {@link MetaObjectProfiSCT}.
+     */
+    public static class MetaObjectProfiSCTKwDistCosine extends MetaObjectProfiSCT {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 2L;
+
+        //****************** Attributes ******************//
+
+        /** Weight for combining the keywords distance with the visual descriptors distance */
+        private final Float keywordsWeight;
+        /** Internal keyword weight provider based on tf-idf */
+        private final WeightProvider kwWeightProvider;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwDistCosine from the given {@link MetaObjectProfiSCT}.
+         * The locator and the encapsulated objects from the source {@code object} are
+         * taken.
+         *
+         * @param object the source metaobject from which to get the data
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         */
+        public MetaObjectProfiSCTKwDistCosine(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
+            super(object);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwDistCosine.
+         * A keyword index is used to translate keywords to addresses.
+         *
+         * @param stream stream to read the data from
+         * @param stemmer instances that provides a {@link Stemmer} for word transformation
+         * @param wordIndex the index for translating words to addresses
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         * @throws IOException if reading from the stream fails
+         */
+        public MetaObjectProfiSCTKwDistCosine(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+            super(stream, stemmer, wordIndex);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwDistCosine from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         *
+         * @param stream the stream from which the data are read
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         * @throws IOException if there was an error reading the data from the stream
+         */
+        public MetaObjectProfiSCTKwDistCosine(BufferedReader stream, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+            super(stream, true, true);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTKwDistCosine from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         * Null keyword weight is applied, i.e. the distance is computed by text only.
+         *
+         * @param stream the stream from which the data are read
+         * @throws IOException if there was an error reading the data from the stream
+         */
+        public MetaObjectProfiSCTKwDistCosine(BufferedReader stream) throws IOException {
+            this(stream, null, null);
+        }
+
+
+        //****************** Distance function ******************//
+
+        @Override
+        protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+            try {
+                float distance = ObjectIntMultiVectorCosine.getWeightedCosineDistance(keyWords, kwWeightProvider, ((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider);
+                if (keywordsWeight != null)
+                    distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
+                return distance;
+            } catch (RuntimeException e) {
+                throw new IllegalStateException("Error computing distance between " + this + " and " + obj + ": " + e, e);
+            }
+        }
+    }
+
+    /**
+     * Extension of the MetaObjectProfiSCT that preserves also the title and keywords
+     * strings in both binary and Java serialization.
      */
     public static class MetaObjectProfiSCTWithTKStrings extends MetaObjectProfiSCT {
         /** Class id for serialization. */

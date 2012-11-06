@@ -18,18 +18,12 @@ package messif.objects.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Properties;
 import messif.buckets.storage.IntStorageIndexed;
-import messif.buckets.storage.impl.DatabaseStorage;
-import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConvertor;
-import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
 import messif.objects.LocalAbstractObject;
-import messif.objects.extraction.ExtractorException;
 import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.text.Stemmer;
 import messif.objects.text.TextConversionException;
@@ -49,7 +43,7 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
     //****************** Constants ******************//
 
     /** Weights for the visual descriptors */
-    protected static float[] visualWeights = { 4.0f, 6.0f, 7.5f, 7.5f, 3.0f };
+    private static final float[] visualWeights = { 4.0f, 6.0f, 7.5f, 7.5f, 3.0f };
 
 
     //****************** Constructors ******************//
@@ -111,7 +105,7 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
-        MetaObjectProfiSCTiDIM castObj = (MetaObjectProfiSCTiDIM)obj;
+        MetaObjectProfiSCT castObj = (MetaObjectProfiSCTiDIM)obj;
 
         float rtv = 0;
 
@@ -205,134 +199,189 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
     }
 
 
-    //****************** Database storage and extraction support ******************//
+    //****************** Distance wrapper objects ******************//
 
     /**
-     * Utility class that allows to read/store the necessary data of the Profi objects
-     * in a database.
+     * Object that holds only keywords and measures the distance as the
+     * weighted Cosine distance with weights based on tf-idf algorithm. Note
+     * that the other object for the distance must be {@link MetaObjectProfiSCT}.
      */
-    public static class DatabaseSupport extends MetaObjectProfiSCT.DatabaseSupport {
+    public static class MetaObjectProfiSCTiDIMKwDistCosine extends MetaObjectProfiSCTiDIM {
         /** Class id for serialization. */
-        private static final long serialVersionUID = 162001L;
+        private static final long serialVersionUID = 2L;
 
-        //****************** Database column definition ******************//
+        //****************** Attributes ******************//
+
+        /** Weight for combining the keywords distance with the visual descriptors distance */
+        private final Float keywordsWeight;
+        /** Internal keyword weight provider based on tf-idf */
+        private final ObjectIntMultiVector.WeightProvider kwWeightProvider;
+
+
+        //****************** Constructor ******************//
 
         /**
-         * Returns the database column name for creating the {@link MetaObjectProfiSCT} object
-         * from the text stream.
-         * @param useLinkTable flag whether to use the title and keyword link tables
-         * @return the database column name
+         * Creates a new instance of MetaObjectProfiSCTiDIMKwDistCosine from the given {@link MetaObjectProfiSCT}.
+         * The locator and the encapsulated objects from the source {@code object} are
+         * taken.
+         *
+         * @param object the source metaobject from which to get the data
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
          */
-        public static String getTextStreamColumnName(boolean useLinkTable) {
-            return useLinkTable ?
-                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', f_profimedia_title_ids(id),'\n', f_profimedia_keyword_ids(id),'\n') as char)":
-                    "cast(concat_ws('', color_layout,'\n', color_structure,'\n', edge_histogram,'\n', scalable_color,'\n', region_shape,'\n', rights,'\n', territories,'\n', added,'\n', archivID,'\n', attractiveness,'\n', title,'\n', keywords,'\n') as char)";
+        public MetaObjectProfiSCTiDIMKwDistCosine(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
+            super(object);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Returns the database column convertor for creating the {@link MetaObjectProfiSCT} object
-         * from the text stream.
-         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
+         * Creates a new instance of MetaObjectProfiSCTiDIMKwDistCosine.
+         * A keyword index is used to translate keywords to addresses.
+         *
+         * @param stream stream to read the data from
+         * @param stemmer instances that provides a {@link Stemmer} for word transformation
          * @param wordIndex the index for translating words to addresses
-         * @param useLinkTable flag whether to use the title and keyword link tables
-         * @return the database column convertor
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         * @throws IOException if reading from the stream fails
          */
-        public static ColumnConvertor<MetaObjectProfiSCT> getTextStreamColumnConvertor(Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean useLinkTable) {
-            return DatabaseStorage.wrapConvertor(
-                    useLinkTable ?
-                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, true, false, true, true) :
-                        new DatabaseStorage.LocalAbstractObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, true, false, stemmer, wordIndex),
-                    true, false, true
-            );
+        public MetaObjectProfiSCTiDIMKwDistCosine(BufferedReader stream, Stemmer stemmer, IntStorageIndexed<String> wordIndex, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+            super(stream, stemmer, wordIndex);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Returns the database column definitions for the {@link MetaObjectProfiSCT} object.
-         * @param addTextStreamColumn flag whether to add the metaobject stream column to the resulting map
-         * @param stemmer an instance that provides a {@link Stemmer} for word transformation
-         * @param wordIndex the index for translating words to addresses
-         * @param useLinkTable flag whether to use the title and keyword link tables
-         * @return the database column definitions for the {@link MetaObjectProfiSCT} object
+         * Creates a new instance of MetaObjectProfiSCTiDIMKwDistCosine from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         *
+         * @param stream the stream from which the data are read
+         * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
+         *          if <tt>null</tt>, only the text distance is used
+         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         * @throws IOException if there was an error reading the data from the stream
          */
-        public static Map<String, ColumnConvertor<MetaObjectProfiSCT>> getDBColumnMap(boolean addTextStreamColumn, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean useLinkTable) {
-            Map<String, ColumnConvertor<MetaObjectProfiSCT>> map = new LinkedHashMap<String, ColumnConvertor<MetaObjectProfiSCT>>();
-            // id -- primary key
-            // thumbfile -- location of the thumbnail image file
-            map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, defaultBinarySerializator));
-            if (addTextStreamColumn)
-                map.put(getTextStreamColumnName(useLinkTable), getTextStreamColumnConvertor(stemmer, wordIndex, useLinkTable));
-            map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
-            map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "ColorLayoutType"));
-            map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "ColorStructureType"));
-            map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "EdgeHistogramType"));
-            map.put("scalable_color", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "ScalableColorType"));
-            map.put("region_shape", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "RegionShapeType"));
-            map.put("rights", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("rights", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("territories", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("territories", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("added", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("added", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("archivID", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("archiveID", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("attractiveness", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("attractiveness", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("title", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("title", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("keywords", new DatabaseStorage.BeanPropertyColumnConvertor<MetaObjectProfiSCT>("keywords", MetaObjectProfiSCTiDIM.class, false, true));
-            map.put("keyword_id_multivector", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCTiDIM.class, "KeyWordsType"));
-
-            return map;
-        }
-
-        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, String wordFrequencyTable, String stopwordTable, String[] stopwordCategories, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws IllegalArgumentException, SQLException {
-            super(dbConnUrl, dbConnInfo, dbDriverClass, tableName, wordLinkTable, wordFrequencyTable, stopwordTable, stopwordCategories, stemmer, wordIndex);
-        }
-
-        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String wordLinkTable, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws IllegalArgumentException, SQLException {
-            super(dbConnUrl, dbConnInfo, dbDriverClass, tableName, wordLinkTable, stemmer, wordIndex);
-        }
-
-        public DatabaseSupport(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws IllegalArgumentException, SQLException {
-            super(dbConnUrl, dbConnInfo, dbDriverClass, tableName, stemmer, wordIndex);
-        }
-
-        
-
-
-        /**
-         * Returns the object with given {@code locator}.
-         * The object is retrieved from the database.
-         * @param locator the locator of the object to return
-         * @param remove if <tt>true</tt>, the object is removed from the database after it is retrieved
-         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
-         * @param expander instance for expanding the list of search words
-         * @return the created instance of the object
-         * @throws ExtractorException if there was a problem retrieving or instantiating the data
-         */
-        public MetaObjectProfiSCTiDIM locatorToObject(String locator, boolean remove, String searchWords, WordExpander expander) throws ExtractorException {
-            return (MetaObjectProfiSCTiDIM) super.locatorToObject(locator, remove, searchWords, expander);
+        public MetaObjectProfiSCTiDIMKwDistCosine(BufferedReader stream, Float keywordsWeight, float[] keywordLayerWeights) throws IOException {
+            super(stream, true, true);
+            this.keywordsWeight = keywordsWeight;
+            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
         }
 
         /**
-         * Returns the object with given {@code locator}.
-         * The object is retrieved from the database.
-         * @param locator the locator of the object to return
-         * @param searchWords the search words that will be encapsulated in the keyWords object as the third array
-         * @param expander instance for expanding the list of search words
-         * @return the created instance of the object
-         * @throws ExtractorException if there was a problem retrieving or instantiating the data
+         * Creates a new instance of MetaObjectProfiSCTiDIMKwDistCosine from the given text stream.
+         * Note that the keywords are expected to be present and already converted to IDs.
+         * Null keyword weight is applied, i.e. the distance is computed by text only.
+         *
+         * @param stream the stream from which the data are read
+         * @throws IOException if there was an error reading the data from the stream
          */
-        public MetaObjectProfiSCTiDIM locatorToObject(String locator, String searchWords, WordExpander expander) throws ExtractorException {
-            return locatorToObject(locator, false, searchWords, expander);
-        }
-        
-        /**
-         * Returns the object with given {@code locator}.
-         * The object is retrieved from the database.
-         * @param locator the locator of the object to return
-         * @return the created instance of the object
-         * @throws ExtractorException if there was a problem retrieving or instantiating the data
-         */
-        public MetaObjectProfiSCTiDIM locatorToObject(String locator) throws ExtractorException {
-            return locatorToObject(locator, null, null);
+        public MetaObjectProfiSCTiDIMKwDistCosine(BufferedReader stream) throws IOException {
+            this(stream, null, null);
         }
 
+
+        //****************** Distance function ******************//
+
+        @Override
+        protected float getDistanceImpl(LocalAbstractObject obj, float[] metaDistances, float distThreshold) {
+            try {
+                float distance = ObjectIntMultiVectorCosine.getWeightedCosineDistance(keyWords, kwWeightProvider, ((MetaObjectProfiSCT)obj).keyWords, kwWeightProvider);
+                if (keywordsWeight != null)
+                    distance = super.getDistanceImpl(obj, metaDistances, distThreshold) + keywordsWeight * distance;
+                return distance;
+            } catch (RuntimeException e) {
+                throw new IllegalStateException("Error computing distance between " + this + " and " + obj + ": " + e, e);
+            }
+        }
     }
 
+    /**
+     * Extension of the MetaObjectProfiSCT that preserves also the title and keywords
+     * strings in both binary and Java serialization.
+     */
+    public static class MetaObjectProfiSCTiDIMWithTKStrings extends MetaObjectProfiSCTiDIM {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTiDIMWithTKStrings from the given {@link MetaObjectProfiSCT}.
+         * The locator, the attributes and the encapsulated objects from the source {@code object} are
+         * taken.
+         *
+         * @param object the source metaobject from which to get the data
+         */
+        public MetaObjectProfiSCTiDIMWithTKStrings(MetaObjectProfiSCT object) {
+            super(object);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTiDIMWithTKStrings from the given {@link MetaObjectProfiSCT}.
+         * The locator, the attributes and the encapsulated objects from the source {@code object} are
+         * copied. The key word identifiers object as well as the title and keyword strings are replaced by the given ones.
+         *
+         * @param object the source metaobject from which to get the data
+         * @param titleString the title of this object as string
+         * @param keywordString the keywords of this object as string
+         * @param keyWords new value for the {@link #keyWords} object
+         */
+        public MetaObjectProfiSCTiDIMWithTKStrings(MetaObjectProfiSCT object, String titleString, String keywordString, ObjectIntMultiVectorJaccard keyWords) {
+            super(object, titleString, keywordString, keyWords);
+        }
+
+        /**
+         * Creates a new instance of MetaObjectProfiSCTiDIMWithTKStrings loaded from binary input buffer.
+         *
+         * @param input the buffer to read the MetaObjectProfiSCTWithTKStrings from
+         * @param serializator the serializator used to write objects
+         * @throws IOException if there was an I/O error reading from the buffer
+         */
+        protected MetaObjectProfiSCTiDIMWithTKStrings(BinaryInput input, BinarySerializator serializator) throws IOException {
+            super(input, serializator);
+            titleString = serializator.readString(input);
+            keywordString = serializator.readString(input);
+        }
+
+        @Override
+        public int getBinarySize(BinarySerializator serializator) {
+            int size = super.getBinarySize(serializator);
+            size += serializator.getBinarySize(titleString);
+            size += serializator.getBinarySize(keywordString);
+            return size;
+        }
+
+        @Override
+        public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+            int size = super.binarySerialize(output, serializator);
+            size += serializator.write(output, titleString);
+            size += serializator.write(output, keywordString);
+            return size;
+        }
+
+        /**
+         * Java native serialization method.
+         * @param out the stream to serialize this object to
+         * @throws IOException if there was an error writing to the stream {@code out}
+         */
+        private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+            out.defaultWriteObject();
+            out.writeObject(titleString);
+            out.writeObject(keywordString);
+        }
+
+        /**
+         * Java native serialization method.
+         * @param in the stream to deserialize this object from
+         * @throws IOException if there was an error reading from the stream {@code in}
+         * @throws ClassNotFoundException if an unknown class was encountered in the stream 
+         */
+        private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+            in.defaultReadObject();
+            titleString = (String)in.readObject();
+            keywordString = (String)in.readObject();
+        }
+    }
 
 }
