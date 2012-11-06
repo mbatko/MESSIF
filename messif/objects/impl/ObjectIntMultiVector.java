@@ -20,9 +20,12 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
@@ -306,6 +309,16 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
         public boolean isArgumentIntersecting() {
             return this == BOTH || this == ARGUMENT_ONLY;
         }
+
+        /**
+         * Returns <tt>true</tt> if the result indicates that there was an intersecting
+         * object found both this iterator and the iterator passed as argument.
+         * @return <tt>true</tt> if the result indicates that there was an intersecting
+         *      object found both this iterator and the iterator passed as argument
+         */
+        public boolean isBothIntersecting() {
+            return this == BOTH;
+        }
     };
 
     /**
@@ -415,6 +428,34 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
             return data[nextWhich][dataIndex[nextWhich]];
         }
 
+        /**
+         * Returns <tt>true</tt> (and advances this iterator) if the next value in this iterator
+         * is equal to the given {@code value}.
+         * @param value the value to check
+         * @return <tt>true</tt> if this iterator was advanced to the next value or <tt>false</tt> otherwise.
+         */
+        public boolean nextIfEqual(int value) {
+            if (which == -1 || nextWhich == -1)
+                return false;
+            if (peekNextInt() != value)
+                return false;
+            nextInt();
+            return true;
+        }
+
+        /**
+         * Returns <tt>true</tt> (and advances this iterator) if the next value in this iterator
+         * is equal to the current value of the given iterator.
+         * This method is used in intersection to correctly handle duplicate values.
+         * @param iterator the iterator the current value of which to check
+         * @return <tt>true</tt> if this iterator was advanced to the next value or <tt>false</tt> otherwise.
+         */
+        private boolean nextIfEqual(SortedDataIterator iterator) {
+            if (iterator.which == -1) // To avoid illegal state in the iterator if no next was called yet
+                return false;
+            return nextIfEqual(iterator.currentInt());
+        }
+
         @Override
         public Integer next() {
             return nextInt();
@@ -426,37 +467,41 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
         }
 
         /**
-         * Returns <tt>true</tt> (and advances this iterator) if the next value in this iterator
-         * is equal to the current value of the given iterator.
-         * This method is used in intersection to correctly handle duplicate values.
-         * @param iterator the iterator the current value of which to check
-         * @return <tt>true</tt> if this iterator was advanced to the next value or <tt>false</tt> otherwise.
+         * Read all items (by calling {@link #next()}) that have the same value 
+         * as the current item.
+         * @return the number of duplicates skipped
+         * @throws IllegalStateException if the iterator has no current value
          */
-        private boolean nextIntEqual(SortedDataIterator iterator) {
-            if (which == -1 || iterator.which == -1 || nextWhich == -1)
-                return false;
-            if (peekNextInt() != iterator.currentInt())
-                return false;
-            nextInt();
-            return true;
+        public int skipDuplicates() throws IllegalStateException {
+            int count = 0;
+            int curval = currentInt();
+            while (nextIfEqual(curval))
+                count++;
+            return count;
         }
 
         /**
          * Find the next value that is present in this iterator and the given {@code iterator}.
-         * If no such value can be found, <tt>false</tt> is returned - in that case, at least
-         * one of the iterators has run out of values.
+         * The return value indicates whether {@link SDIteratorIntersectionResult#NONE no intersecting}
+         * items were found (and either this or the given {@code iterator} has no more items),
+         * or an intersecting item was found. In the later case the current item of
+         * both iterators is the same. Note that there can be duplicate items in which
+         * case the next call to this method will return either {@link SDIteratorIntersectionResult#THIS_ONLY}
+         * or {@link SDIteratorIntersectionResult#ARGUMENT_ONLY} value to indicate
+         * that a duplicate in the respective iterator was found.
          *
          * @param iterator the iterator to intersect with
-         * @return <tt>true</tt> if a value in both the iterators was found (their current value will be the same)
-         *      or <tt>false</tt> if one of the iterators reached last item without a matching value
+         * @return {@link SDIteratorIntersectionResult#NONE} if one of the iterators reached last item without a matching value,
+         *         or one of the other three {@link SDIteratorIntersectionResult} values if a value in both the iterators was found
+         *         (their current value will be the same)
          */
         public SDIteratorIntersectionResult intersect(SortedDataIterator iterator) {
             // If this iterator has the same next value as the other iterator's current value (duplicate objects)
-            if (nextIntEqual(iterator))
+            if (nextIfEqual(iterator))
                 return SDIteratorIntersectionResult.THIS_ONLY;
 
             // If the other iterator has the same next value as this iterator's current value (duplicate objects)
-            if (iterator.nextIntEqual(this))
+            if (iterator.nextIfEqual(this))
                 return SDIteratorIntersectionResult.ARGUMENT_ONLY;
 
             // If there are no items in either iterator, exit
@@ -481,6 +526,319 @@ public abstract class ObjectIntMultiVector extends LocalAbstractObject implement
                     return SDIteratorIntersectionResult.BOTH;
                 }
             }
+        }
+
+        /**
+         * Find the next value that is present in this iterator and the given {@code iterator}.
+         * The return value indicates whether {@link SDIteratorIntersectionResult#NONE no intersecting}
+         * items were found (and either this or the given {@code iterator} has no more items),
+         * or an intersecting item was found. In the later case the current item of
+         * both iterators is the same. Note that there can be duplicate items in which
+         * case the next call to this method will return either {@link SDIteratorIntersectionResult#THIS_ONLY}
+         * or {@link SDIteratorIntersectionResult#ARGUMENT_ONLY} value to indicate
+         * that a duplicate in the respective iterator was found. This can be avoided
+         * if {@code duplicates} array is passed in which case the array is filled with
+         * the number of duplicate items in this and the given {@code iterator}.
+         *
+         * @param iterator the iterator to intersect with
+         * @param frequency if an array instance is provided, the first item will be set
+         *          to the number of duplicate items encountered (skipped) in this iterator
+         *          when an intersection is found and the second array item is set to the
+         *          number of duplicates in the {@code iterator};
+         *          this is ignored if <tt>null</tt> is passed
+         * @return <tt>true</tt> if a value in both the iterators was found (their current value will be the same)
+         *      or <tt>false</tt> if one of the iterators reached last item without a matching value
+         */
+        public SDIteratorIntersectionResult intersectSkipDuplicates(SortedDataIterator iterator, int[] frequency) {
+            SDIteratorIntersectionResult result = intersect(iterator);
+            // Skip all duplicates and set the frequencies into the array
+            if (result != SDIteratorIntersectionResult.NONE && frequency != null && frequency.length == 2) {
+                frequency[0] = 1 + skipDuplicates();
+                frequency[1] = 1 + iterator.skipDuplicates();
+            }
+            return result;
+        }
+    }
+
+
+    //****************** Weight provider interface ******************//
+
+    /**
+     * Interface for providing the weights for the Jaccard distance function.
+     */
+    public static interface WeightProvider {
+        /**
+         * Returns the weight for the item that the {@code iterator} points to.
+         * @param iterator this iterator's current object weight is to be retrieved
+         * @return the weight for the current item of the iterator
+         */
+        public float getWeight(SortedDataIterator iterator);
+        /**
+         * Returns the sum of all weights for the given object.
+         * Note that this value must be consistent with {@link #getWeight(messif.objects.impl.ObjectIntMultiVector.SortedDataIterator)},
+         * i.e. the returned sum is the sum of the weight retrieved by iterating over
+         * all items from the {@code obj.getSortedIterator()}.
+         * @param obj the object for which the weights are given
+         * @return the total sum of all weights
+         */
+        public float getWeightSum(ObjectIntMultiVector obj);
+        /**
+         * Returns the square root of the sum of all weight squares for the given object.
+         * Note that this value must be consistent with {@link #getWeight(messif.objects.impl.ObjectIntMultiVector.SortedDataIterator)},
+         * i.e. the returned number is the square root of the sum of all weight squares retrieved by iterating over
+         * all items from the {@code obj.getSortedIterator()}.
+         * @param obj the object for which the weights are given
+         * @return the total norm of all weights
+         */
+        public double getWeightNorm(ObjectIntMultiVector obj);
+    }
+
+
+    /**
+     * Implementation of {@link WeightProvider} that has a single weight for every data array
+     * of the {@link ObjectIntMultiVector}.
+     */
+    public static class MultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** Weights for data arrays - all the items in the respective data array has a single weight */
+        protected final float[] weights;
+
+        /**
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
+         */
+        public MultiWeightProvider(float[] weights) {
+            if (weights == null)
+                throw new NullPointerException();
+            this.weights = weights;
+        }
+
+        @Override
+        public float getWeight(SortedDataIterator iterator) {
+            return weights[iterator.getCurrentVectorDataIndex()];
+        }
+
+        /**
+         * Returns the weights for data arrays encapsulated in this {@link WeightProvider}.
+         * Note that a copy is returned, so any modifications in the returned array are
+         * not reflected by the provider.
+         * @return the weights for data arrays
+         */
+        public float[] getWeights() {
+            return weights.clone();
+        }
+
+        /**
+         * Returns the weight for the given data array encapsulated in this {@link WeightProvider}.
+         * @param array the index of the data array for which to get the weight
+         * @return the weight for the given data array
+         */
+        public float getWeight(int array) {
+            return weights[array];
+        }
+
+        @Override
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++)
+                sum += obj.data[i].length * weights[i];
+            return sum;
+        }
+
+        @Override
+        public double getWeightNorm(ObjectIntMultiVector obj) {
+            double sum = 0;
+            for (int i = 0; i < obj.data.length; i++)
+                sum += obj.data[i].length * weights[i] * weights[i];
+            return Math.sqrt(sum);
+        }
+    }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a given weight for every
+     * item of every data array of {@link ObjectIntMultiVector}.
+     * Note that the number of weights <em>must</em> be equal to the
+     * number of data items in the respective data array of the
+     * {@link ObjectIntMultiVector}.
+     */
+    public static class ArrayMultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** Weights for the items in respective data array */
+        private final float[][] weights;
+        /** Sum of the weights in all data arrays */
+        private final float weightSum;
+        /** Norm of the weights in all data arrays */
+        private final double weightNorm;
+
+        /**
+         * Creates a new instance of ArrayWeightProvider with the two given weights.
+         * @param weights the weights for the items in the data arrays
+         */
+        public ArrayMultiWeightProvider(float[][] weights) {
+            this.weights = weights;
+            float weightSumTemp = 0;
+            double weightSqSum = 0;
+            for (int i = 0; i < weights.length; i++)
+                for (int j = 0; j < weights[i].length; j++) {
+                    weightSumTemp += weights[i][j];
+                    weightSqSum += weights[i][j] * weights[i][j];
+                }
+            
+            this.weightSum = weightSumTemp;
+            this.weightNorm = Math.sqrt(weightSqSum);
+        }
+
+        @Override
+        public float getWeight(SortedDataIterator iterator) {
+            return weights[iterator.getCurrentVectorDataIndex()][iterator.currentIndex()];
+        }
+
+        @Override
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            return weightSum;
+        }
+
+        @Override
+        public double getWeightNorm(ObjectIntMultiVector obj) {
+            return weightNorm;
+        }
+    }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a map of weights for
+     * based on items of {@link ObjectIntMultiVector}.
+     * Note that the map <em>must</em> contain a weight for every value in the
+     * respective {@link ObjectIntMultiVector}.
+     */
+    public static class MapMultiWeightProvider implements WeightProvider, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** Map with weights for the values */
+        private final Map<Integer, Float> dataToWeightMap;
+
+        /**
+         * Creates a new weight provider with a map of weights.
+         * The key for the map is a value from the {@link ObjectIntMultiVector}.
+         * @param dataToWeightMap the map of weights
+         */
+        public MapMultiWeightProvider(Map<Integer, Float> dataToWeightMap) {
+            this.dataToWeightMap = dataToWeightMap;
+        }
+
+        /**
+         * Returns the weight from the data weight map.
+         * @param value the value for which to get the weight
+         * @return the weight for the given value
+         * @throws IllegalArgumentException if the map does not contain a weight for the given value
+         */
+        protected float getWeight(Integer value) throws IllegalArgumentException {
+            Float weight = dataToWeightMap.get(value);
+            if (weight == null)
+                throw new IllegalArgumentException("Weight map has no value for value " + value);
+            return weight.floatValue();
+        }
+
+        @Override
+        public float getWeight(SortedDataIterator iterator) {
+            return getWeight(iterator.currentInt());
+        }
+
+        @Override
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                int[] data = obj.data[i];
+                for (int j = 0; j < data.length; j++) {
+                    sum += getWeight(data[j]);
+                }
+            }
+            return sum;
+        }
+
+        @Override
+        public double getWeightNorm(ObjectIntMultiVector obj) {
+            double sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                int[] data = obj.data[i];
+                for (int j = 0; j < data.length; j++) {
+                    float weight = getWeight(data[j]);
+                    sum += weight * weight;
+                }
+            }
+            return Math.sqrt(sum);
+        }
+    }
+
+    /**
+     * Implementation of {@link WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     *  and it ignores a specified list of integers (created from a given list of keywords) - the ignore weight is specified in the
+     *  last weight in the weight array.
+     */
+    public static class MultiWeightIgnoreProvider extends MultiWeightProvider {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 51101L;
+
+        /** Weight used for the specified list of ignored keywords. */
+        private final float ignoreWeight;
+
+        /** Set of integer IDs to be ignored */
+        private final Set<Integer> ignoredItems;
+
+        /**
+         * Creates a new instance of MultiWeightProvider with the the given array of weights.
+         * @param weights the weights for the data arrays
+         * @param ignoreWeight weight used for the {@code ignoredKeywords}
+         * @param ignoredItems  set of IDs to be ignored 
+         */
+        public MultiWeightIgnoreProvider(float[] weights, float ignoreWeight, Set<Integer> ignoredItems) {
+            super(weights);
+            this.ignoreWeight = ignoreWeight;
+            if (ignoredItems == null)
+                throw new NullPointerException();
+            this.ignoredItems = ignoredItems;
+        }
+
+        @Override
+        public float getWeight(SortedDataIterator iterator) {
+            if (ignoredItems.contains(iterator.currentInt())) {
+                return ignoreWeight;
+            }
+            return super.getWeight(iterator);
+        }
+
+        @Override
+        public float getWeightSum(ObjectIntMultiVector obj) {
+            float sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                sum += obj.data[i].length * weights[i];
+                // substract the IDs to be ignored
+                for (int j= 0; j < obj.data[i].length; j++) {
+                    if (ignoredItems.contains(obj.data[i][j])) {
+                        sum += (ignoreWeight - weights[i]);
+                    }
+                }
+            }
+            return sum;
+        }
+
+        @Override
+        public double getWeightNorm(ObjectIntMultiVector obj) {
+            double sum = 0;
+            for (int i = 0; i < obj.data.length; i++) {
+                sum += obj.data[i].length * weights[i] * weights[i];
+                // substract the IDs to be ignored
+                for (int j= 0; j < obj.data[i].length; j++) {
+                    if (ignoredItems.contains(obj.data[i][j])) {
+                        sum += (ignoreWeight * ignoreWeight - weights[i] * weights[i]);
+                    }
+                }
+            }
+            return Math.sqrt(sum);
         }
     }
 

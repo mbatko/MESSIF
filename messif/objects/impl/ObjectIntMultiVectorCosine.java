@@ -19,21 +19,19 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Map;
-import java.util.Set;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * Implements the Jaccard coefficient distance function.
+ * Implements the Cosine distance function.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements Serializable {
+public class ObjectIntMultiVectorCosine extends ObjectIntMultiVector implements Serializable {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -41,41 +39,41 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     //****************** Constructors ******************//
 
     /**
-     * Creates a new instance of ObjectIntMultiVectorJaccard.
+     * Creates a new instance of ObjectIntMultiVectorCosine.
      * If {@code forceSort} is <tt>false</tt>, the provided data are expected to be sorted!
      *
      * @param data the data content of the new object
      * @param forceSort if <tt>false</tt>, the data is expected to be sorted
      */
-    public ObjectIntMultiVectorJaccard(int[][] data, boolean forceSort) {
+    public ObjectIntMultiVectorCosine(int[][] data, boolean forceSort) {
         super(data);
         if (forceSort)
             sortData();
     }
 
     /**
-     * Creates a new instance of ObjectIntMultiVectorJaccard.
+     * Creates a new instance of ObjectIntMultiVectorCosine.
      * @param data the data content of the new object
      */
-    public ObjectIntMultiVectorJaccard(int[]... data) {
+    public ObjectIntMultiVectorCosine(int[]... data) {
         this(data, true);
     }
 
     /**
-     * Creates a new instance of randomly generated ObjectIntMultiVectorJaccard.
+     * Creates a new instance of randomly generated ObjectIntMultiVectorCosine.
      * Content will be generated using normal distribution of random numbers from interval
      * [0;1).
      *
      * @param arrays the number of vector data arrays to create
      * @param dimension number of dimensions to generate
      */
-    public ObjectIntMultiVectorJaccard(int arrays, int dimension) {
+    public ObjectIntMultiVectorCosine(int arrays, int dimension) {
         super(arrays, dimension);
     }
 
 
     /**
-     * Creates a new instance of ObjectIntMultiVectorJaccard from stream - it expects that the data is already sorted!
+     * Creates a new instance of ObjectIntMultiVectorCosine from stream - it expects that the data is already sorted!
      * The data are stored as several lines of comma-separated integers.
      * @param stream text stream to read the data from
      * @param arrays number of arrays to read from the stream
@@ -84,12 +82,12 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
      * @throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectIntMultiVectorJaccard(BufferedReader stream, int arrays) throws IOException, NumberFormatException {
+    public ObjectIntMultiVectorCosine(BufferedReader stream, int arrays) throws IOException, NumberFormatException {
         super(stream, arrays);
     }
 
     /**
-     * Creates a new instance of ObjectIntMultiVectorJaccard from stream - it expects that the data is already sorted!
+     * Creates a new instance of ObjectIntMultiVectorCosine from stream - it expects that the data is already sorted!
      * The data are stored as a single line with semicolon separated lists of comma-separated integers.
      * @param stream text stream to read the data from
      * @throws IOException when an error appears during reading from given stream.
@@ -97,18 +95,18 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
      * @throws NumberFormatException when the line read from given stream does
      * not consist of comma-separated or space-separated numbers.
      */
-    public ObjectIntMultiVectorJaccard(BufferedReader stream) throws IOException, NumberFormatException {
+    public ObjectIntMultiVectorCosine(BufferedReader stream) throws IOException, NumberFormatException {
         super(stream);
     }
 
     /**
-     * Creates a new instance of ObjectIntMultiVectorJaccard loaded from binary input buffer.
+     * Creates a new instance of ObjectIntMultiVectorCosine loaded from binary input buffer.
      *
      * @param input the buffer to read the ObjectIntVector from
      * @param serializator the serializator used to write objects
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    public ObjectIntMultiVectorJaccard(BinaryInput input, BinarySerializator serializator) throws IOException {
+    public ObjectIntMultiVectorCosine(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
     }
 
@@ -116,29 +114,32 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
     //****************** Distance function ******************//
 
     /**
-     * Implements the Jaccard coefficient distance function.
-     * @return 0, if both sets are empty; 1, if only one set is empty; Jaccard distance otherwise
+     * Implements the Cosine distance function.
+     * @return 0, if both sets are empty; 1, if only one set is empty; Cosine distance otherwise
      */
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        SortedDataIterator iterator = getSortedIterator();
-        SortedDataIterator objIterator = ((ObjectIntMultiVectorJaccard)obj).getSortedIterator();
-
-        float intersectCount = 0;
-        for (SDIteratorIntersectionResult intersect = iterator.intersect(objIterator); intersect.isIntersecting(); intersect = iterator.intersect(objIterator)) {
-            if (intersect.isThisIntersecting())
-                intersectCount++;
-        }
-
-        return 1f - intersectCount / (getDimensionality() + ((ObjectIntMultiVectorJaccard)obj).getDimensionality() - intersectCount);
+        return getWeightedCosineDistance(this, null, (ObjectIntMultiVectorCosine)obj, null);
     }
 
 
-    //****************** Weighted Jaccard distance function ******************//
+    //****************** Weighted Cosine distance function ******************//
+
+    /**
+     * Returns the weight of the current sorted iterator value multiplied by the square-root of the value frequency.
+     * @param iterator the iterator with the value
+     * @param weightProvider the provider of the weights; if <tt>null</tt>, the weight equals the frequency
+     * @return the frequency multiplied weight
+     */
+    private static double getWeightWithFrequency(SortedDataIterator iterator, WeightProvider weightProvider) {
+        return (weightProvider == null ? 1 : weightProvider.getWeight(iterator)) * (Math.sqrt(1 + iterator.skipDuplicates()));
+    }
 
     /**
      * Computes a distance between two {@link ObjectIntMultiVector}s using
-     * a non-metric weighted Jaccard coefficient.
+     * a metric weighted cosine distance. Specifically, the dot product of
+     * the intersecting weights divided by the multiplication of their norms
+     * is returned.
      * @param o1 the object to compute distance from
      * @param weightProviderO1 the weight provider for object {@code o1}
      * @param o2 the object to compute distance to
@@ -146,48 +147,68 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
      * @return the non-metric weighted Jaccard distance between object {@code o1} and object {@code o2}
      * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
      */
-    public static float getWeightedJaccardDistance(ObjectIntMultiVector o1, WeightProvider weightProviderO1, ObjectIntMultiVector o2, WeightProvider weightProviderO2) throws NullPointerException {
+    public static float getWeightedCosineDistance(ObjectIntMultiVector o1, WeightProvider weightProviderO1, ObjectIntMultiVector o2, WeightProvider weightProviderO2) throws NullPointerException {
         SortedDataIterator o1Iterator = o1.getSortedIterator();
         SortedDataIterator o2Iterator = o2.getSortedIterator();
 
-        float intersectWeight = 0;
-        while (true) {
-            SDIteratorIntersectionResult intersect = o1Iterator.intersect(o2Iterator);
-            if (!intersect.isIntersecting())
-                break;
-            if (intersect.isThisIntersecting())
-                intersectWeight += weightProviderO1.getWeight(o1Iterator);
-            if (intersect.isArgumentIntersecting())
-                intersectWeight += weightProviderO2.getWeight(o2Iterator);
+        // If no data in either iterator, return max distance
+        if (!o1Iterator.hasNext() || !o2Iterator.hasNext())
+            return 1;
+
+        // Get first values
+        int o1Value = o1Iterator.nextInt();
+        int o2Value = o2Iterator.nextInt();
+        double weight1 = getWeightWithFrequency(o1Iterator, weightProviderO1);
+        double weight2 = getWeightWithFrequency(o2Iterator, weightProviderO2);
+
+        // Initialize computing variables
+        double dotProduct = 0;
+        double sumSqrWeight1 = weight1 * weight1;
+        double sumSqrWeight2 = weight2 * weight2;
+
+        // Iterate to find all intersections (for dot product)
+        for (;;) {
+            if (o1Value == o2Value)
+                dotProduct += weight1 * weight2;
+            if (o1Value <= o2Value) {
+                if (!o1Iterator.hasNext()) { // Compute the other sumSqWeight
+                    while (o2Iterator.hasNext()) {
+                        o2Iterator.nextInt();
+                        weight2 = getWeightWithFrequency(o2Iterator, weightProviderO2);
+                        sumSqrWeight2 += weight2 * weight2;
+                    }
+                    break;
+                }
+                o1Value = o1Iterator.nextInt();
+                weight1 = getWeightWithFrequency(o1Iterator, weightProviderO1);
+                sumSqrWeight1 += weight1 * weight1;
+            } else {
+                if (!o2Iterator.hasNext()){ // Compute the other sumSqWeight
+                    while (o1Iterator.hasNext()) {
+                        o1Iterator.nextInt();
+                        weight1 = getWeightWithFrequency(o1Iterator, weightProviderO1);
+                        sumSqrWeight1 += weight1 * weight1;
+                    }
+                    break;
+                }
+                o2Value = o2Iterator.nextInt();
+                weight2 = getWeightWithFrequency(o2Iterator, weightProviderO2);
+                sumSqrWeight2 += weight2 * weight2;
+            }
         }
 
-        float sumWeight = weightProviderO1.getWeightSum(o1) + weightProviderO2.getWeightSum(o2);
-        if (Math.abs(intersectWeight - sumWeight) < 0.0001) // This is needed since the sum can be different when different number order is used
+        double distance = 1.0 - dotProduct / (Math.sqrt(sumSqrWeight1) * Math.sqrt(sumSqrWeight2));
+        // Compensate for float sizing error
+        if (distance < 0.0000001)
             return 0;
-        return (intersectWeight == 0 && sumWeight == 0) ? 0 : (1f - intersectWeight / sumWeight);
-    }
-
-    /**
-     * Implements a non-metric weighted Jaccard coefficient distance function.
-     * If either {@code weightProviderThis} or {@code weightProviderObj} is <tt>null</tt>,
-     * the normal Jaccard {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) distance} is returned.
-     * @param obj the object to compute distance to
-     * @param weightProviderThis the weight provider for this object
-     * @param weightProviderObj the weight provider for {@code obj}
-     * @return the non-metric weighted Jaccard distance between this object and the given {@code obj}
-     */
-    public float getWeightedJaccardDistance(ObjectIntMultiVector obj, WeightProvider weightProviderThis, WeightProvider weightProviderObj) {
-        // If weights are not provided, fall back to non-weighted distance
-        if (weightProviderThis == null || weightProviderObj == null)
-            return getDistanceImpl(obj, MAX_DISTANCE);
-        return getWeightedJaccardDistance(this, weightProviderThis, obj, weightProviderObj);
+        return (float)distance;
     }
 
     /**
      * Class for distance functions that compute distances between two
-     * {@link ObjectIntMultiVector}s using a non-metric weighted Jaccard coefficient.
+     * {@link ObjectIntMultiVector}s using weighted Cosine distance.
      */
-    public static class WeightedJaccardDistanceFunction implements DistanceFunction<ObjectIntMultiVector>, Serializable {
+    public static class WeightedCosineDistanceFunction implements DistanceFunction<ObjectIntMultiVector>, Serializable {
         /** Class id for serialization. */
         private static final long serialVersionUID = 1L;
 
@@ -197,12 +218,12 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
         private final WeightProvider weightProviderO2;
 
         /**
-         * Creates a new instance of weighted Jaccard distance function.
+         * Creates a new instance of weighted Cosine distance function.
          * @param weightProviderO1 the weight provider for the first object
          * @param weightProviderO2 the weight provider for the second object
          * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
          */
-        public WeightedJaccardDistanceFunction(WeightProvider weightProviderO1, WeightProvider weightProviderO2) throws NullPointerException {
+        public WeightedCosineDistanceFunction(WeightProvider weightProviderO1, WeightProvider weightProviderO2) throws NullPointerException {
             if (weightProviderO1 == null || weightProviderO2 == null)
                 throw new NullPointerException();
             this.weightProviderO1 = weightProviderO1;
@@ -227,7 +248,7 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
 
         @Override
         public float getDistance(ObjectIntMultiVector o1, ObjectIntMultiVector o2) {
-            return getWeightedJaccardDistance(o1, weightProviderO1, o2, weightProviderO2);
+            return getWeightedCosineDistance(o1, weightProviderO1, o2, weightProviderO2);
         }
 
         @Override
@@ -235,5 +256,4 @@ public class ObjectIntMultiVectorJaccard extends ObjectIntMultiVector implements
             return ObjectIntMultiVector.class;
         }
     }
-
 }
