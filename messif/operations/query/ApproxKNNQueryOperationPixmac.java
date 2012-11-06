@@ -20,8 +20,8 @@ import java.util.Iterator;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectPixMacSCT;
+import messif.objects.impl.ObjectIntMultiVector.WeightProvider;
 import messif.objects.impl.ObjectIntMultiVectorJaccard;
-import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
@@ -119,7 +119,7 @@ public class ApproxKNNQueryOperationPixmac extends ApproxKNNQueryOperation {
         if (queryKeyWords == null || dbObjectKeyWords == null)
             return 0;
         else
-            return queryKeyWords.getWeightedDistance(dbObjectKeyWords, queryWeights, dbWeights);
+            return queryKeyWords.getWeightedJaccardDistance(dbObjectKeyWords, queryWeights, dbWeights);
     }
 
     @Override

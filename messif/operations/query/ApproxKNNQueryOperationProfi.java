@@ -21,8 +21,8 @@ import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.impl.MetaObjectProfiSCT;
 import messif.objects.impl.MetaObjectProfiSCT.Territory;
+import messif.objects.impl.ObjectIntMultiVector.WeightProvider;
 import messif.objects.impl.ObjectIntMultiVectorJaccard;
-import messif.objects.impl.ObjectIntMultiVectorJaccard.WeightProvider;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
@@ -150,7 +150,7 @@ public class ApproxKNNQueryOperationProfi extends ApproxKNNQueryOperation {
         if (queryKeyWords == null || dbObjectKeyWords == null)
             return 0;
         else
-            return queryKeyWords.getWeightedDistance(dbObjectKeyWords, queryWeights, dbWeights);
+            return queryKeyWords.getWeightedJaccardDistance(dbObjectKeyWords, queryWeights, dbWeights);
     }
 
     @Override
