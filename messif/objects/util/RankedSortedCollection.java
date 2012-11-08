@@ -18,6 +18,7 @@ package messif.objects.util;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import messif.objects.AbstractObject;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
@@ -156,10 +157,15 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
     }
 
 
-    //****************** Overrides ******************//
+    //****************** Overrides with synchronization ******************//
 
     @Override
-    protected boolean add(RankedAbstractObject e, int index) {
+    public synchronized boolean add(RankedAbstractObject e) {
+        return super.add(e);
+    }
+
+    @Override
+    protected synchronized final boolean add(RankedAbstractObject e, int index) {
         if (ignoringDuplicates && !isEmpty()) {
             for (int i = index; i < size(); i++) {
                 RankedAbstractObject objI = get(i);
@@ -196,6 +202,41 @@ public class RankedSortedCollection extends DistanceRankedSortedCollection<Ranke
             return ((LocalAbstractObject) e1).dataEquals((LocalAbstractObject) e2);
         }
         return false;
+    }
+
+    @Override
+    public synchronized void clear() {
+        super.clear();
+    }
+
+    @Override
+    public synchronized boolean remove(Object o) {
+        return super.remove(o);
+    }
+
+    @Override
+    protected synchronized boolean remove(int index) {
+        return super.remove(index);
+    }
+
+    @Override
+    public synchronized RankedAbstractObject removeLast() throws NoSuchElementException {
+        return super.removeLast();
+    }
+
+    @Override
+    public synchronized RankedAbstractObject removeFirst() throws NoSuchElementException {
+        return super.removeFirst();
+    }
+
+    @Override
+    public synchronized Object[] toArray() {
+        return super.toArray();
+    }
+
+    @Override
+    public synchronized <E> E[] toArray(E[] array) {
+        return super.toArray(array);
     }
 
 

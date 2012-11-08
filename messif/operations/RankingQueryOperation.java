@@ -337,9 +337,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        synchronized (answer) {
-            return answer.add(answerType, object, distance, objectDistances);
-        }
+        return answer.add(answerType, object, distance, objectDistances);
     }
 
     /**
@@ -348,9 +346,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     @Override
     public void resetAnswer() {
-        synchronized (answer) {
-            answer.clear();
-        }
+        answer.clear();
     }
 
     /**
@@ -372,9 +368,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @param operation the source operation from which to get the update
      */
     protected void updateFrom(RankingQueryOperation operation) {
-        synchronized (answer) {
-            answer.addAll(operation.answer);
-        }
+        answer.addAll(operation.answer);
     }
 
     @Override
