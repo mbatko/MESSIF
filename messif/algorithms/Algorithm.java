@@ -186,6 +186,9 @@ public abstract class Algorithm implements Serializable {
      * @param operationsThreadPool the new thread pool instance to set (can be <tt>null</tt>)
      */
     public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
+        if (this.operationsThreadPool != null) {
+            this.operationsThreadPool.shutdown();
+        }
         this.operationsThreadPool = operationsThreadPool;
     }
 

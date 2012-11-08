@@ -728,7 +728,7 @@ public abstract class BinarySerializator {
         }
         return array;
     }
-
+    
     /**
      * Returns a <code>short</code> array read from the specified input.
      * @param input the buffer to read the array from
