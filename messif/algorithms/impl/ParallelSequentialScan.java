@@ -16,6 +16,8 @@
  */
 package messif.algorithms.impl;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -256,6 +258,20 @@ public class ParallelSequentialScan extends Algorithm implements NavigationDirec
     @Override
     public AsynchronousNavigationProcessor<? extends QueryOperation<?>> getNavigationProcessor(QueryOperation<?> operation) {
         return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>(operation, true, buckets);
+    }
+
+
+    //****************** Deserialization ******************//
+
+    /**
+     * Read the serialized algorithm from an object stream.
+     * @param in the object stream from which to read the disk storage
+     * @throws IOException if there was an I/O error during deserialization
+     * @throws ClassNotFoundException if there was an unknown object in the stream
+     */
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        setOperationsThreadPool(Executors.newFixedThreadPool(buckets.size()));
     }
 
 

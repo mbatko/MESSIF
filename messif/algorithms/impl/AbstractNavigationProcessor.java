@@ -264,10 +264,8 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      */
     protected void stepFinished(O processedOperation) {
         // This equality check is correct, we update the operation only if it is not the same instance
-        if (processedOperation != operation) { 
-            synchronized (operation) {
-                operation.updateFrom(processedOperation);
-            }
+        if (processedOperation != operation) {
+            operation.updateFrom(processedOperation); // This should be thread-safe by synchronization in the operation
         }
     }
     

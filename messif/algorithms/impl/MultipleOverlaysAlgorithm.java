@@ -16,6 +16,8 @@
  */
 package messif.algorithms.impl;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -75,6 +77,17 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
         for (Algorithm algorithm : algorithms)
             algorithm.finalize();
         super.finalize();
+    }
+
+    /**
+     * Read the serialized algorithm from an object stream.
+     * @param in the object stream from which to read the disk storage
+     * @throws IOException if there was an I/O error during deserialization
+     * @throws ClassNotFoundException if there was an unknown object in the stream
+     */
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        setOperationsThreadPool(Executors.newFixedThreadPool(getAlgorithmsCount()));
     }
 
     @Override
