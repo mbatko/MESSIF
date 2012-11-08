@@ -17,6 +17,7 @@
 package messif.operations;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import messif.objects.AbstractObject;
@@ -69,7 +70,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     protected ListingQueryOperation(AnswerType answerType, List<AbstractObject> answer) {
         super(answerType);
-        this.answer = answer;
+        this.answer = Collections.synchronizedList(answer);
     }
 
 
@@ -79,7 +80,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
     public ListingQueryOperation clone(boolean preserveAnswer) throws CloneNotSupportedException {
         ListingQueryOperation operation = (ListingQueryOperation)super.clone(preserveAnswer);
         if (!preserveAnswer)
-            operation.answer = new ArrayList<AbstractObject>();
+            operation.answer = Collections.synchronizedList(new ArrayList<AbstractObject>());
         return operation;
     }
 
@@ -152,9 +153,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         try {
             if (object == null)
                 return false;
-            synchronized (answer) {
-                return answer.add(answerType.update(object));
-            }
+            return answer.add(answerType.update(object));
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }
@@ -166,9 +165,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
      */
     @Override
     public void resetAnswer() {
-        synchronized (answer) {
-            answer.clear();
-        }
+        answer.clear();
     }
 
     /**
