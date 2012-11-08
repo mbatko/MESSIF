@@ -47,7 +47,7 @@ import messif.utility.ErrorCode;
  */
 public abstract class RankingQueryOperation extends QueryOperation<RankedAbstractObject> {
     /** class id for serialization */
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     //****************** Statistics ******************//
 
@@ -59,6 +59,11 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /** Set holding the answer of this query */
     private RankedSortedCollection answer;
+    /**
+     * Flag whether the collection always returns {@link LocalAbstractObject#MAX_DISTANCE}
+     * in {@link #getThresholdDistance()} (<tt>true</tt>) or not (<tt>false</tt>)
+     */
+    private boolean ignoringAnswerDistance;
 
 
     //****************** Constructor ******************//
@@ -278,6 +283,37 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
     /**
+     * Returns the flag whether the operation always returns {@link LocalAbstractObject#MAX_DISTANCE}
+     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
+     * @return the flag whether the operation ignores answer threshold distance
+     */
+    public boolean isIgnoringAnswerDistance() {
+        return ignoringAnswerDistance;
+    }
+
+    /**
+     * Set flag whether the operation always returns {@link LocalAbstractObject#MAX_DISTANCE}
+     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
+     * @param ignoringAnswerDistance the flag whether the operation ignores answer threshold distance
+     */
+    public void setIgnoringAnswerDistance(boolean ignoringAnswerDistance) {
+        this.ignoringAnswerDistance = ignoringAnswerDistance;
+    }
+
+    /**
+     * Set flag whether the given {@code operation} always returns {@link LocalAbstractObject#MAX_DISTANCE}
+     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
+     * @param <T> the type of the operation to set the flag for
+     * @param operation the operation to set the flag for
+     * @param ignoringAnswerDistance the flag whether the operation ignores answer threshold distance
+     * @return the given operation
+     */
+    public static <T extends RankingQueryOperation> T setIgnoringAnswerDistance(T operation, boolean ignoringAnswerDistance) {
+        operation.setIgnoringAnswerDistance(ignoringAnswerDistance);
+        return operation;
+    }
+
+    /**
      * Returns the threshold distance for the current answer of this query.
      * If the answer has not reached the maximal size (specified in constructor) yet,
      * {@link LocalAbstractObject#MAX_DISTANCE} is returned.
@@ -286,6 +322,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
      */
     public float getAnswerThreshold() {
+        if (ignoringAnswerDistance)
+            return LocalAbstractObject.MAX_DISTANCE;
         return answer.getThresholdDistance();
     }
 
