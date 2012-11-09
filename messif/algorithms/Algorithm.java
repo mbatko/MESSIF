@@ -182,11 +182,12 @@ public abstract class Algorithm implements Serializable {
 
     /**
      * Sets a new {@link #operationsThreadPool thread pool} used for processing operations (via {@link NavigationProcessor}).
+     * The previously set {@link #operationsThreadPool} is shut down (destroyed).
      * If {@code operationsThreadPool} is not null, parallel processing is used.
      * @param operationsThreadPool the new thread pool instance to set (can be <tt>null</tt>)
      */
     public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
-        if (this.operationsThreadPool != null) {
+        if (this.operationsThreadPool != null && this.operationsThreadPool != operationsThreadPool) {
             this.operationsThreadPool.shutdown();
         }
         this.operationsThreadPool = operationsThreadPool;
