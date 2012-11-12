@@ -80,8 +80,8 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
         super(object, searchString, expander, stemmer, wordIndex);
     }
 
-    public MetaObjectProfiSCTiDIM(BufferedReader stream, boolean haveWords, boolean wordsConverted) throws IOException {
-        super(stream, haveWords, wordsConverted);
+    public MetaObjectProfiSCTiDIM(BufferedReader stream, boolean haveStringWords, boolean haveConvertedWords) throws IOException {
+        super(stream, haveStringWords, haveConvertedWords);
     }
 
     public MetaObjectProfiSCTiDIM(BufferedReader stream) throws IOException {

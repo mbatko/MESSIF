@@ -388,12 +388,11 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
      * descriptor {@link LocalAbstractObject} is loaded.
      *
      * @param stream the stream from which the data are read
-     * @param haveWords flag whether the data contains title and keywords lines
-     * @param wordsConverted flag whether to read the title and keyword word lines
-     *                          as integer vectors (<tt>true</tt>) or strings (<tt>false</tt>)
+     * @param haveStringWords flag whether the data contains two lines of strings with title and keywords
+     * @param haveConvertedWords flag whether the data contains two lines of integer vectors with title and keywords identifiers
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectProfiSCT(BufferedReader stream, boolean haveWords, boolean wordsConverted) throws IOException {
+    public MetaObjectProfiSCT(BufferedReader stream, boolean haveStringWords, boolean haveConvertedWords) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         readObjectCommentsWithoutData(stream);
         colorLayout = new ObjectColorLayout(stream);
@@ -409,16 +408,17 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         archiveID = (line == null || line.isEmpty()) ? 0 : Integer.parseInt(line);
         line = stream.readLine();
         attractiveness = line == null ? null : ObjectIntVector.parseIntVector(line);
-        if (haveWords) {
-            if (wordsConverted) {
-                titleString = null;
-                keywordString = null;
-                keyWords = new ObjectIntMultiVectorJaccard(stream, 2);
-            } else {
-                titleString = stream.readLine();
-                keywordString = stream.readLine();
-                keyWords = null;
-            }
+        if (haveConvertedWords) {
+            keyWords = new ObjectIntMultiVectorJaccard(stream, 2);
+        } else {
+            keyWords = null;
+        }
+        if (haveStringWords) {
+            titleString = stream.readLine();
+            keywordString = stream.readLine();
+        } else {
+            titleString = null;
+            keywordString = null;
         }
     }
 
