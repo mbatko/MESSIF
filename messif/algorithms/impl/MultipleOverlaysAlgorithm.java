@@ -16,14 +16,11 @@
  */
 package messif.algorithms.impl;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.NavigationDirectory;
@@ -51,16 +48,11 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
      * @param algorithms the algorithms on which the operations are processed
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
-     * @param processInThreads only if this flag is true, the operations are processed asynchronously on each encapsulated algorithm
      */
-    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation, boolean processInThreads) {
+    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
         super("Multiple overlay algorithm on: " + algorithms.size() + " algorithms");
         this.algorithms = new ArrayList<Algorithm>(algorithms);
         this.cloneAsynchronousOperation = cloneAsynchronousOperation;
-
-        if (processInThreads) {
-            setOperationsThreadPool(Executors.newFixedThreadPool(algorithms.size()));
-        }
     }
 
     /**
@@ -70,7 +62,7 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      */
     @Algorithm.AlgorithmConstructor(description = "Constructor with created algorithms", arguments = {"array of running algorithms", "t/f if operation should be clonned before running"})
     public MultipleOverlaysAlgorithm(Algorithm[] algorithms, boolean cloneAsynchronousOperation) {
-        this(Arrays.asList(algorithms), cloneAsynchronousOperation, true);
+        this(Arrays.asList(algorithms), cloneAsynchronousOperation);
     }
 
     @Override
@@ -79,17 +71,6 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
         for (Algorithm algorithm : algorithms)
             algorithm.finalize();
         super.finalize();
-    }
-
-    /**
-     * Read the serialized algorithm from an object stream.
-     * @param in the object stream from which to read the disk storage
-     * @throws IOException if there was an I/O error during deserialization
-     * @throws ClassNotFoundException if there was an unknown object in the stream
-     */
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
-//        setOperationsThreadPool(Executors.newFixedThreadPool(getAlgorithmsCount()));
     }
 
     /**
