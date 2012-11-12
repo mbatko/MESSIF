@@ -32,6 +32,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -189,8 +190,10 @@ public abstract class Algorithm implements Serializable {
     public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
         if (this.operationsThreadPool != null && this.operationsThreadPool != operationsThreadPool) {
             this.operationsThreadPool.shutdown();
+            log.info("shutting down threadpool: " + this.operationsThreadPool);
         }
         this.operationsThreadPool = operationsThreadPool;
+        log.info("setting threadpool to: " + operationsThreadPool + Arrays.toString(Thread.currentThread().getStackTrace()));
     }
 
     /**
