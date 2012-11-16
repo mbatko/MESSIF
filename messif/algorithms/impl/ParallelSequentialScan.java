@@ -19,6 +19,8 @@ package messif.algorithms.impl;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -173,14 +175,12 @@ public class ParallelSequentialScan extends Algorithm implements NavigationDirec
 
     /**
      * Inserts a new object.
-     * 
      * @param operation the insert operation which carries the object to be inserted.
      */
     public void insert(InsertOperation operation) {
         try {
-            buckets.get(insertBucket).addObject(operation.getInsertedObject());
+            processObjectInsert(Collections.singleton(operation.getInsertedObject()));
             operation.endOperation();
-            insertBucket = (insertBucket + 1) % buckets.size();
         } catch (BucketStorageException e) {
             operation.endOperation(e.getErrorCode());
         }
@@ -188,18 +188,26 @@ public class ParallelSequentialScan extends Algorithm implements NavigationDirec
 
     /**
      * Inserts multiple new objects.
-     * 
      * @param operation the bulk-insert operation which carries the objects to be inserted.
      */
     public void insert(BulkInsertOperation operation) {
         try {
-            for (LocalAbstractObject object : operation.getInsertedObjects()) {
-                buckets.get(insertBucket).addObject(object);
-                insertBucket = (insertBucket + 1) % buckets.size();
-            }
+            processObjectInsert(operation.getInsertedObjects());
             operation.endOperation();
         } catch (BucketStorageException e) {
             operation.endOperation(e.getErrorCode());
+        }
+    }
+
+    /**
+     * Processes the insertion of objects into buckets.
+     * @param objects the collection of objects to insert
+     * @throws BucketStorageException if there was an error inserting an object into internal buckets
+     */
+    protected synchronized void processObjectInsert(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
+        for (LocalAbstractObject object : objects) {
+            buckets.get(insertBucket).addObject(object);
+            insertBucket = (insertBucket + 1) % buckets.size();
         }
     }
 

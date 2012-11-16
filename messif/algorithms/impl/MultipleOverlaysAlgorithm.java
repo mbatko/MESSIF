@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -40,7 +41,7 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
     private static final long serialVersionUID = 1L;
 
     /** Internal list of algorithms on which the operations are actually processed */
-    private final Collection<Algorithm> algorithms;
+    private final List<Algorithm> algorithms;
     /** Flag whether to clone the operation for asynchronous processing */
     private final boolean cloneAsynchronousOperation;
 
@@ -74,17 +75,14 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
     }
 
     /**
-     * The provided thread pool is set to this algorithm and also to all
+     * The provided thread pool is set on the given encapsulated algorithm and also to all
      *  the encapsulated algorithms: see 
      *  {@link  Algorithm#setOperationsThreadPool(java.util.concurrent.ExecutorService)} for details.
+     * @param algorithmIndex 
      * @param operationsThreadPool new thread pool (or null)
      */
-    @Override
-    public final void setOperationsThreadPool(ExecutorService operationsThreadPool) {
-        super.setOperationsThreadPool(operationsThreadPool);
-        for (Algorithm algorithm : algorithms) {
-            algorithm.setOperationsThreadPool(operationsThreadPool);
-        }
+    public void setOperationsThreadPool(int algorithmIndex, ExecutorService operationsThreadPool) {
+        algorithms.get(algorithmIndex).setOperationsThreadPool(operationsThreadPool);
     }
 
     @Override
