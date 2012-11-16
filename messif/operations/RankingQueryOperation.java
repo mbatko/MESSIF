@@ -16,6 +16,7 @@
  */
 package messif.operations;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -59,11 +60,8 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
 
     /** Set holding the answer of this query */
     private RankedSortedCollection answer;
-    /**
-     * Flag whether the collection always returns {@link LocalAbstractObject#MAX_DISTANCE}
-     * in {@link #getThresholdDistance()} (<tt>true</tt>) or not (<tt>false</tt>)
-     */
-    private boolean ignoringAnswerDistance;
+    /** Array of last k seen distances used to compute threshold */
+    private float[] thresholdDistances;
 
 
     //****************** Constructor ******************//
@@ -283,33 +281,45 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
     }
 
     /**
-     * Returns the flag whether the operation always returns {@link LocalAbstractObject#MAX_DISTANCE}
-     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
-     * @return the flag whether the operation ignores answer threshold distance
+     * Set the operation {@link #getAnswerThreshold() answer threshold distance} computation.
+     * By default, the original threshold distance is used.
+     * If the {@code useOriginalThresholdDistance} is <tt>false</tt>, the threshold
+     * distance is always {@link LocalAbstractObject#MAX_DISTANCE} if {@code ignoreThresholdDistance}
+     * is <tt>true</tt>. Or the threshold is computed from the first {@computeSize} objects.
+     * @param useOriginalThresholdDistance the flag whether the operation answer collection computes the threshold distance
+     * @param ignoreThresholdDistance the flag whether the operation ignores answer threshold distance completely
+     * @param computeSize the number of candidate objects to compute the threshold distance to;
+     *          effective only if both {@code useOriginalThresholdDistance} and {@code ignoreThresholdDistance} are <tt>false</tt>
+     * @throws IllegalStateException if some answer has been computed already 
      */
-    public boolean isIgnoringAnswerDistance() {
-        return ignoringAnswerDistance;
+    public void setAnswerThresholdComputation(boolean useOriginalThresholdDistance, boolean ignoreThresholdDistance, int computeSize) throws IllegalStateException {
+        if (!answer.isEmpty())
+            throw new IllegalStateException("Cannot modify threshold computation when answer is already computed");
+        if (useOriginalThresholdDistance) {
+            thresholdDistances = null;
+        } else if (ignoreThresholdDistance) {
+            thresholdDistances = new float[0];
+        } else {
+            thresholdDistances = new float[computeSize];
+            Arrays.fill(thresholdDistances, LocalAbstractObject.MAX_DISTANCE);
+        }
     }
 
     /**
-     * Set flag whether the operation always returns {@link LocalAbstractObject#MAX_DISTANCE}
-     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
-     * @param ignoringAnswerDistance the flag whether the operation ignores answer threshold distance
-     */
-    public void setIgnoringAnswerDistance(boolean ignoringAnswerDistance) {
-        this.ignoringAnswerDistance = ignoringAnswerDistance;
-    }
-
-    /**
-     * Set flag whether the given {@code operation} always returns {@link LocalAbstractObject#MAX_DISTANCE}
-     * in {@link #getAnswerDistance()} (<tt>true</tt>) or not (<tt>false</tt>).
+     * Set the given operation {@link #getAnswerThreshold() answer threshold distance} computation.
+     * If the {@code useOriginalThresholdDistance} is <tt>false</tt>, the threshold
+     * distance is always {@link LocalAbstractObject#MAX_DISTANCE} if {@code ignoreThresholdDistance}
+     * is <tt>true</tt>. Or the threshold is computed from the first {@computeSize} objects.
      * @param <T> the type of the operation to set the flag for
      * @param operation the operation to set the flag for
-     * @param ignoringAnswerDistance the flag whether the operation ignores answer threshold distance
+     * @param useOriginalThresholdDistance the flag whether the operation answer collection computes the threshold distance
+     * @param ignoreThresholdDistance the flag whether the operation ignores answer threshold distance completely
+     * @param computeSize the number of candidate objects to compute the threshold distance to;
+     *          effective only if both {@code useOriginalThresholdDistance} and {@code ignoreThresholdDistance} are <tt>false</tt>
      * @return the given operation
      */
-    public static <T extends RankingQueryOperation> T setIgnoringAnswerDistance(T operation, boolean ignoringAnswerDistance) {
-        operation.setIgnoringAnswerDistance(ignoringAnswerDistance);
+    public static <T extends RankingQueryOperation> T setAnswerThresholdComputation(T operation, boolean useOriginalThresholdDistance, boolean ignoreThresholdDistance, int computeSize) {
+        operation.setAnswerThresholdComputation(useOriginalThresholdDistance, ignoreThresholdDistance, computeSize);
         return operation;
     }
 
@@ -322,9 +332,13 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
      */
     public float getAnswerThreshold() {
-        if (ignoringAnswerDistance)
+        // No threshold distances are stored, use the collection
+        if (thresholdDistances == null)
+            return answer.getThresholdDistance();
+        // Zero threshold distances means no threshold distances are returned
+        if (thresholdDistances.length == 0)
             return LocalAbstractObject.MAX_DISTANCE;
-        return answer.getThresholdDistance();
+        return thresholdDistances[thresholdDistances.length - 1];
     }
 
     /**
@@ -337,6 +351,12 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * @throws IllegalArgumentException if the answer type of this operation requires cloning but the passed object cannot be cloned
      */
     public RankedAbstractObject addToAnswer(AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
+        if (thresholdDistances != null && thresholdDistances.length > 0) {
+            synchronized (thresholdDistances) { // This synchronization should be safe, since the threshold computation setup is allowed only if answer is empty
+                int pos = Arrays.binarySearch(thresholdDistances, distance); // Returns the insertion point
+                insert(thresholdDistances, distance, pos < 0 ? -(pos + 1) : pos);
+            }
+        }
         return answer.add(answerType, object, distance, objectDistances);
     }
 
@@ -369,6 +389,23 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      */
     protected void updateFrom(RankingQueryOperation operation) {
         answer.addAll(operation.answer);
+        if (thresholdDistances != null && thresholdDistances.length > 0) {
+            synchronized (thresholdDistances) { // This synchronization should be safe, since the threshold computation setup is allowed only if answer is empty
+                synchronized (operation.thresholdDistances) { // This is necessary, however, deadlock would be present only two operations update each other
+                    if (operation.thresholdDistances != null && operation.thresholdDistances.length > 0) {
+                        int tdIndex = 0;
+                        forloop:for (int i = 0; i < operation.thresholdDistances.length; i++) { // Insert sort all values of the copied operation into this
+                            while (thresholdDistances[tdIndex] < operation.thresholdDistances[i]) {
+                                tdIndex++;
+                                if (tdIndex < thresholdDistances.length)
+                                    break forloop;
+                            }
+                            insert(thresholdDistances, operation.thresholdDistances[i], tdIndex);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -376,5 +413,21 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
         super.endOperation(errValue);
         if (answer instanceof EndOperationListener)
             ((EndOperationListener)answer).onEndOperation(this, errValue);
+    }
+
+    //****************** Float array utility methods ******************//
+
+    /**
+     * Insert value into the array on position {@code pos}.
+     * Note that if position is beyond the array length, the array is not modified.
+     * @param array the array into which to insert the value
+     * @param value the value to insert
+     * @param pos the position in the array
+     */
+    private static void insert(float[] array, float value, int pos) {
+        if (pos < array.length) {
+            System.arraycopy(array, pos, array, pos + 1, array.length - pos - 1);
+            array[pos] = value;
+        }
     }
 }
