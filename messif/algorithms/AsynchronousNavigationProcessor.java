@@ -41,7 +41,7 @@ public interface AsynchronousNavigationProcessor<O extends AbstractOperation> ex
      * Returns a {@link Callable} that allows to execute the next processing step asynchronously.
      * Note that this method may block if necessary.
      * @return a {@link Callable} for next step or <tt>null</tt> if there are no more steps
-     * @throws InterruptedException if the 
+     * @throws InterruptedException if the processing thread was interrupted
      */
     public Callable<O> processStepAsynchronously() throws InterruptedException;
 }

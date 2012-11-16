@@ -17,7 +17,6 @@
 package messif.algorithms;
 
 import java.io.Closeable;
-import java.io.IOException;
 import messif.operations.AbstractOperation;
 
 /**
@@ -54,6 +53,7 @@ public interface NavigationProcessor<O extends AbstractOperation> extends Closea
      *         <tt>false</tt> if no processing was done and this processor is finished
      * @throws InterruptedException if the thread processing the step is interrupted
      * @throws AlgorithmMethodException if an error occurred during the evaluation of the processing step
+     * @throws CloneNotSupportedException if there was a need for cloning (due to asynchronous access) but cloning was not supported
      */
     public boolean processStep() throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException;
 
