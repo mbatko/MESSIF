@@ -51,7 +51,7 @@ public class DimensionObjectKey extends AbstractObjectKey {
         // Dimensions:
         try {
             String d = AbstractObjectKey.getKeyStringPart(value, " ", 0).substring(value.indexOf('[') + 1, value.indexOf(']'));
-            String[] dims = d.split(",");
+            String[] dims = d.split("[,:]");
             this.dimensions = new int[dims.length];
             for (int i = 0; i < dims.length; i++) {
                 dimensions[i] = Integer.parseInt(dims[i]);
@@ -265,7 +265,17 @@ public class DimensionObjectKey extends AbstractObjectKey {
      * @return relative value
      */
     public float convertToRelative(int value, int dimension) {
-        return (float)value / (float)getDimension(dimension);
+        return convertToRelative((float)value, dimension);
+    }
+
+    /**
+     * Convert the passed absolute value in the passed dimension to a relative value in the interval [0,1).
+     * @param value absolute value in the passed dimension
+     * @param dimension zero-based dimension index (0 = x-axis, 1 = y-axis, ...)
+     * @return relative value
+     */
+    public float convertToRelative(float value, int dimension) {
+        return value / (float)getDimension(dimension);
     }
 
     /**
@@ -295,6 +305,7 @@ public class DimensionObjectKey extends AbstractObjectKey {
         public float getY();
     }
     
+    @Deprecated
     public static interface Range {
         public float getMin();
         public float getMax();

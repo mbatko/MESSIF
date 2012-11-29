@@ -19,7 +19,6 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.DimensionObjectKey;
@@ -28,6 +27,12 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
+/**
+ * Abstract class for local image feature
+ * 
+ * @author Vlastislav Dohnal, dohnal@fi.muni.cz
+ * @author Tomáš Homola, xhomola@fi.muni.cz
+ */
 public abstract class ObjectFeature extends LocalAbstractObject implements DimensionObjectKey.Point, BinarySerializable {
 
     /** class id for serialization */
@@ -42,12 +47,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     /** Scale of the gravity vector */
     protected float scl;
 
-    /** List of keys of this feature (e.g. M-Index cluster numbers) */
-    protected long [] keys;
-
-    /**
-     * Default constructor that sets the params to 0f and null.
-     */
     public ObjectFeature() {
     }
     
@@ -56,7 +55,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         this.y = y;
         this.ori = ori;
         this.scl = scl;
-        this.keys = null;
     }
     
     public ObjectFeature (float x, float y, float ori, float scl, long [] keys) {
@@ -64,7 +62,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         this.y = y;
         this.ori = ori;
         this.scl = scl;
-        this.keys = keys;
     }
     
     /**
@@ -80,21 +77,12 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     public ObjectFeature(BufferedReader stream) throws IOException, NumberFormatException {
         String line = readObjectComments(stream);
         try {
-            String[] paramsAndKeys = line.trim().split("\\s*;\\s*");
-            String[] params = paramsAndKeys[0].trim().split("\\s*,\\s*");
+            String[] paramsAndKeys = line.trim().split("[; ]+");
+            String[] params = paramsAndKeys[0].trim().split("[, ]+");
             this.x = Float.parseFloat(params[0]);
             this.y = Float.parseFloat(params[1]);
             this.ori = Float.parseFloat(params[2]);
             this.scl = Float.parseFloat(params[3]);
-            // if the keys were specified
-            if (paramsAndKeys.length > 1) {
-                String[] keyString = paramsAndKeys[1].trim().split("[, ]+");
-                this.keys = new long [keyString.length];
-                int i = 0;
-                for (String string : keyString) {
-                    keys[i ++] = Long.parseLong(string);
-                }
-            }
         } catch (NumberFormatException numberFormatException) {
             Logger.getLogger(getClass().getName()).warning("error while parsing line '"+ line+ "' for 4 floats, locator: " + getLocatorURI());
             throw numberFormatException;
@@ -104,28 +92,29 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
     @Override
     public void writeData(OutputStream stream) throws IOException {
         stream.write(String.format("%1$f, %2$f, %3$f, %4$f", this.x, this.y, this.ori, this.scl).getBytes());
-        if (keys != null) {
-            stream.write(';');
-            for (int i = 0; i < keys.length; i++ ) {
-                stream.write(' ');
-                stream.write(Long.toString(keys[i]).getBytes());
-                if (i != keys.length - 1) {
-                    stream.write(',');
-                }
-            }
-        }
         stream.write('\n');
     }
 
     //****************** Equality comparing function ******************
 
-    // Ignores the unique Key
     @Override
     public boolean dataEquals(Object obj) {
+        if (!(obj instanceof ObjectFeature))
+            return false;
         return (((ObjectFeature)obj).x == this.x && ((ObjectFeature)obj).y == this.y
                 && ((ObjectFeature)obj).ori == this.ori && ((ObjectFeature)obj).scl == this.scl);
     }
 
+    @Override
+    public int dataHashCode() {
+        int hash = 7;
+        hash = 97 * hash + Float.floatToIntBits(this.x);
+        hash = 97 * hash + Float.floatToIntBits(this.y);
+        hash = 97 * hash + Float.floatToIntBits(this.ori);
+        hash = 97 * hash + Float.floatToIntBits(this.scl);
+        return hash;
+    }
+    
     //****************** Size function ******************
 
     /** Returns the size of object in bytes
@@ -169,23 +158,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         return ori;
     }
     
-    public long[] getKeys() {
-        return Arrays.copyOf(keys, keys.length);
-    }
-
-    public void setKeys(long[] keys) {
-        this.keys = keys;
-    }
-
-    public void addKey(long key) {
-        if (keys == null) {
-            keys = new long [1];
-        } else {
-            keys = Arrays.copyOf(keys, keys.length + 1);
-        }
-        keys[keys.length - 1] = key;
-    }
-    
     //************ BinarySerializable interface ************//
 
     /**
@@ -201,7 +173,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         this.y = serializator.readFloat(input);
         this.ori = serializator.readFloat(input);
         this.scl = serializator.readFloat(input);
-        this.keys = serializator.readLongArray(input);
     }
 
     @Override
@@ -210,8 +181,7 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
                serializator.write(output, this.x) +
                serializator.write(output, this.y) +
                serializator.write(output, this.ori) +
-               serializator.write(output, this.scl) +
-               serializator.write(output, this.keys);
+               serializator.write(output, this.scl);
     }
 
     @Override
@@ -219,9 +189,8 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         return super.getBinarySize(serializator) + 
                serializator.getBinarySize(this.x) +
                serializator.getBinarySize(this.y) +
-               serializator.getBinarySize( this.ori) +
-               serializator.getBinarySize(this.scl) +
-               serializator.getBinarySize(this.keys);
+               serializator.getBinarySize(this.ori) +
+               serializator.getBinarySize(this.scl);
     }
 
     @Override

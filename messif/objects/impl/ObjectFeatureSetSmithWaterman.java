@@ -12,18 +12,30 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.util.SequenceMatchingCost;
+import messif.objects.util.SortDimension;
 import messif.utility.ArrayResetableIterator;
 import messif.utility.ResetableIterator;
 
 /**
- *
+ * Smith-Waterman local sequence alignment algorithm.
+ * 
+ * Default scoring is set to {@link SequenceMatchingCost#SIFT_DEFAULT}.
+ * A user-specific scoring can be set throgh static member {@link #defaultCost}.
+ * 
+ * Distance is computed based on the similarity evaluted after projecting the feature set to X axis and to Y axis.
+ * In particular, distance is 1 - (sim_X + simY) / 2*max_sim, where 
+ * max_sim = min(featureCount1, featureCount2) * max_cost.
+ * 
+ * If the feature sets are ordered in advance, the distance is returned only by this ordering 
+ * (so no reorderings by X and Y axes are done)!!!
+ * 
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  */
 public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
     
-    protected SequenceMatchingCost cost;
+    public static SequenceMatchingCost defaultCost = SequenceMatchingCost.SIFT_DEFAULT;
 
     public ObjectFeatureSetSmithWaterman(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
@@ -34,14 +46,11 @@ public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
     }
 
     public ObjectFeatureSetSmithWaterman(String locatorURI, int width, int height, 
-                                         Collection<? extends ObjectFeature> objects,
-                                         SequenceMatchingCost cost) {
+                                         Collection<? extends ObjectFeature> objects) {
         super(locatorURI, width, height, objects);
-        this.cost = cost;
     }
     
     public static float getMaximumSimilarity(SequenceMatchingCost cost, int featureCount1, int featureCount2) {
-//        return (featureCount1 + featureCount2) * cost.getMaxCost();
         if (featureCount1 == 0 || featureCount2 == 0)
             return cost.getMaxCost();       // This is just a protection against devision by zero exception.
         else
@@ -53,21 +62,30 @@ public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
         ObjectFeatureOrderedSet obj = (ObjectFeatureOrderedSet)o;
         
         if (this.isFeaturesOrdered() && this.getOrderOfFeatures() == obj.getOrderOfFeatures()) {
-            return getDistance(this.cost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+            return getDistance(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
         } else {
-            orderFeatures(ObjectFeatureOrderedSet.sortDimensionX);
-            obj.orderFeatures(ObjectFeatureOrderedSet.sortDimensionX);
-            float simX = getSimilarity(cost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+            orderFeatures(SortDimension.sortDimensionX);
+            obj.orderFeatures(SortDimension.sortDimensionX);
+            float simX = getSimilarity(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
 
-            orderFeatures(ObjectFeatureOrderedSet.sortDimensionY);
-            obj.orderFeatures(ObjectFeatureOrderedSet.sortDimensionY);
-            float simY = getSimilarity(cost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+            orderFeatures(SortDimension.sortDimensionY);
+            obj.orderFeatures(SortDimension.sortDimensionY);
+            float simY = getSimilarity(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
 
-            return 1f - (simX + simY) / (2 * getMaximumSimilarity(cost, this.getObjectCount(), obj.getObjectCount()));
+            return 1f - (simX + simY) / (2 * getMaximumSimilarity(defaultCost, this.getObjectCount(), obj.getObjectCount()));
         }
     }
 
-    public static float getDistance(SequenceMatchingCost cost, ResetableIterator<ObjectFeature> it1, ResetableIterator<ObjectFeature> it2) {
+    public static void setDefaultCost(SequenceMatchingCost cost) {
+        defaultCost = cost;
+    }
+
+    //****************** Implementation ******************//
+
+    /** 
+     * CAVEAT: This implementation is different from the implementation in {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) getDistanceImpl}
+     */
+    protected static float getDistance(SequenceMatchingCost cost, ResetableIterator<ObjectFeature> it1, ResetableIterator<ObjectFeature> it2) {
         return 1f - getSimilarity(cost, it1, it2) / getMaximumSimilarity(cost, it1.size(), it2.size());
     }
     
@@ -135,11 +153,7 @@ public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
         // y1...yi
         float vDiagonal;
         
-        g[0] = Float.NEGATIVE_INFINITY;
-        h = Float.NEGATIVE_INFINITY;
-        v[0] = 0;
-        
-        for (int j = 1; j < n; j++) {
+        for (int j = 0; j < n; j++) {
             g[j] = Float.NEGATIVE_INFINITY;
             v[j] = 0;
         }
@@ -234,16 +248,15 @@ public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
         return Math.max(Math.max(f1, f2), Math.max(f3, f4));
     }
     
-    public static float getDistanceByWindowing(SequenceMatchingCost cost, 
-                                                 int wndWidth, int wndHeight, int shiftX, int shiftY,
-                                                 ObjectFeatureOrderedSet fs1, ObjectFeatureOrderedSet fs2) {
+    public static float getDistanceByWindowing(SequenceMatchingCost cost, SlidingWindow wnd,
+                                               ObjectFeatureOrderedSet fs1, ObjectFeatureOrderedSet fs2) {
         float dist = LocalAbstractObject.MAX_DISTANCE;
-        Iterator<Window> it1 = fs1.windowIterator(wndWidth, wndHeight, shiftX, shiftY);
+        Iterator<SortDimension.Window> it1 = fs1.windowIterator(wnd);
         while (it1.hasNext()) {
-            Window w1 = it1.next();
-            Iterator<Window> it2 = fs2.windowIterator(wndWidth, wndHeight, shiftX, shiftY);
+            SortDimension.Window w1 = it1.next();
+            Iterator<SortDimension.Window> it2 = fs2.windowIterator(wnd);
             while (it2.hasNext()) {
-                Window w2 = it2.next();
+                SortDimension.Window w2 = it2.next();
                 float wndDist = getDistance(cost, fs1.iterator(w1), fs2.iterator(w2));
                 if (wndDist < dist)
                     dist = wndDist;

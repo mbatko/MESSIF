@@ -26,6 +26,10 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
+/**
+ * @author xdohnal
+ * @deprecated This is superseded by {@link ObjectFeatureQuantized}
+ */
 public abstract class ObjectFeatureClustered extends ObjectFeature  implements BinarySerializable {
 
     /** class id for serialization */

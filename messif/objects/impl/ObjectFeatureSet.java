@@ -35,6 +35,7 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.text.StringDataProvider;
 import messif.utility.Convert;
 import messif.utility.Parametric;
 
@@ -50,7 +51,7 @@ import messif.utility.Parametric;
  * @author Tomas Homola, Masaryk University, Brno, Czech Republic, xhomola@fi.muni.cz 
  */
 
-public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<ObjectFeature>, Parametric {
+public abstract class ObjectFeatureSet extends LocalAbstractObject implements BinarySerializable, Iterable<ObjectFeature>, Parametric, StringDataProvider {
     /** Class id for serialization. */
     private static final long serialVersionUID = 667L;
 
@@ -117,7 +118,7 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
      * @param maxY maximal Y-coordinate to be included in the resulting subset
      */
     public ObjectFeatureSet (ObjectFeatureSet supSet, float minX, float maxX, float minY, float maxY) {
-        super (supSet.getLocatorURI());
+        super(supSet.getLocatorURI());
         this.objects =  new ArrayList<ObjectFeature>();
         for (int i = 0; i < supSet.getObjectCount(); i++) {
             ObjectFeature of = (ObjectFeature) supSet.getObject(i);
@@ -324,7 +325,8 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         // Read objects and add them to the collection
         objects.clear();
         for (int i = 0; i < vectorCount; i++) {
-            objects.add((ObjectFeature)readObject(stream, objTypeAndLength[0]));
+            ObjectFeature o = (ObjectFeature)readObject(stream, objTypeAndLength[0]);
+            objects.add(o);
         }
     }
 
@@ -438,6 +440,16 @@ public abstract class ObjectFeatureSet extends LocalAbstractObject implements Bi
         StringBuilder sb = new StringBuilder(super.toString());
         for (LocalAbstractObject object : objects)
             sb.append("\n").append(object.toString());
+        return sb.toString();
+    }
+
+    @Override
+    public String getStringData() {
+        StringBuilder sb = new StringBuilder();
+        Iterator<ObjectFeature> iterator = iterator();
+        while (iterator.hasNext()) {
+            sb.append(((ObjectFeatureQuantized)iterator.next()).getStringData()).append(" ");
+        }     
         return sb.toString();
     }
 

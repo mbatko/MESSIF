@@ -1,182 +1,173 @@
 package messif.objects.impl;
 
-import messif.objects.*;
-import java.util.*;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.*;
+import messif.objects.*;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.SortedCollection;
+import messif.objects.util.SequenceMatchingCost;
+import messif.objects.util.SortDimension;
+import messif.utility.ArrayResetableIterator;
+import messif.utility.ResetableIterator;
 
-public class ObjectFeatureSetNeedlemanWunsch extends ObjectFeatureSetStringWindow {
+/**
+ * Needleman-Wunsch global sequence alignment algorithm.
+ * 
+ * Default scoring is set to {@link SequenceMatchingCost#SIFT_DEFAULT}.
+ * A user-specific scoring can be set throgh static member {@link #defaultCost}.
+ * 
+ * Distance is computed based on the similarity evaluted after projecting the feature set to X axis and to Y axis.
+ * In particular, distance is 1 - (sim_X + simY) / 2*max_sim, where 
+ * max_sim = max(featureCount1, featureCount2) * max_cost.
+ * 
+ * If the feature sets are ordered in advance, the distance is returned only by this ordering 
+ * (so no reorderings by X and Y axes are done)!!!
+ * 
+ * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+ */
+public class ObjectFeatureSetNeedlemanWunsch extends ObjectFeatureOrderedSet {
+    /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
-    
-    public ObjectFeatureSetNeedlemanWunsch () {
-        super ();
+
+    public static SequenceMatchingCost defaultCost = SequenceMatchingCost.SIFT_DEFAULT;
+
+    public ObjectFeatureSetNeedlemanWunsch(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
     }
 
-    public ObjectFeatureSetNeedlemanWunsch (BufferedReader stream) throws IOException {
+    public ObjectFeatureSetNeedlemanWunsch(BufferedReader stream) throws IOException {
         super(stream);
     }
 
-    public ObjectFeatureSetNeedlemanWunsch (BinaryInput input, BinarySerializator serializator) throws IOException {
-        super (input, serializator);
+    public ObjectFeatureSetNeedlemanWunsch(String locatorURI, int width, int height, 
+                                         Collection<? extends ObjectFeature> objects) {
+        super(locatorURI, width, height, objects);
     }
-
-    public ObjectFeatureSetNeedlemanWunsch (ObjectFeatureSetStringWindow superSet, float minX, float maxX, float minY, float maxY) {
-        super (superSet, minX, maxX, minY, maxY);
+    
+    public static float getMaximumSimilarity(SequenceMatchingCost cost, int featureCount1, int featureCount2) {
+        if (featureCount1 == 0 && featureCount2 == 0)
+            return cost.getMaxCost();       // This is just a protection against devision by zero exception.
+        else
+            return Math.max(featureCount1, featureCount2) * cost.getMaxCost();
     }
-
-    public ObjectFeatureSetNeedlemanWunsch (ObjectFeatureSetStringWindow superSet) {
-        super (superSet);
-    }
-
-    public float getDistanceInOneAxis (ObjectFeatureSet set2,
-            Coordinate coord) {
-        return getDistanceInOneAxis(set2, coord, 0.0f, Float.MAX_VALUE, 0.0f, Float.MAX_VALUE);
-    }
-
-    public float getDistanceInOneAxis (float [][] distances) {
-        final float[][] d; // matrix
-
-
-        int n = distances.length;
-        if (n == 0)
-            return 0;
-        int m = distances[0].length;
-        int i, j;
-        float cost;
+    
+    @Override
+    public float getDistanceImpl(LocalAbstractObject o, float distTreshold) {
+        ObjectFeatureOrderedSet obj = (ObjectFeatureOrderedSet)o;
         
+        if (this.isFeaturesOrdered() && this.getOrderOfFeatures() == obj.getOrderOfFeatures()) {
+            return getDistance(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+        } else {
+            orderFeatures(SortDimension.sortDimensionX);
+            obj.orderFeatures(SortDimension.sortDimensionX);
+            float simX = getSimilarity(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+
+            orderFeatures(SortDimension.sortDimensionY);
+            obj.orderFeatures(SortDimension.sortDimensionY);
+            float simY = getSimilarity(defaultCost, new ArrayResetableIterator<ObjectFeature>(objects), new ArrayResetableIterator<ObjectFeature>(obj.objects));
+
+            return 1f - (simX + simY) / (2 * getMaximumSimilarity(defaultCost, this.getObjectCount(), obj.getObjectCount()));
+        }
+    }
+
+    public static void setDefaultCost(SequenceMatchingCost cost) {
+        defaultCost = cost;
+    }
+
+    //****************** Implementation ******************//
+
+    /** 
+     * CAVEAT: This implementation is different from the implementation in {@link #getDistanceImpl(messif.objects.LocalAbstractObject, float) getDistanceImpl}
+     */
+    protected static float getDistance(SequenceMatchingCost cost, ResetableIterator<ObjectFeature> it1, ResetableIterator<ObjectFeature> it2) {
+        return 1f - getSimilarity(cost, it1, it2) / getMaximumSimilarity(cost, it1.size(), it2.size());
+    }    
+
+    public static float getSimilarity(SequenceMatchingCost cost, ResetableIterator<ObjectFeature> it1, ResetableIterator<ObjectFeature> it2) {
+        int n = it1.size();       // length of this "string"
+        int m = it2.size();       // length of o."string"
+
+        if (m == 0 || n == 0)
+            return 0f;
+
         //create matrix (n+1)x(m+1)
-        d = new float[n + 1][m + 1];
+        final float[][] d = new float[n + 1][m + 1];
 
         //put row and column numbers in place
-        for (i = 0; i <= n; i++) {
+        for (int i = 0; i <= n; i++) {
             d[i][0] = 0;
         }
-        for (j = 0; j <= m; j++) {
+        for (int j = 0; j <= m; j++) {
             d[0][j] = 0;
         }
 
         // cycle through rest of table filling values from the lowest cost value of the three part cost function
-        for (i = 1; i <= n; i++) {
-            for (j = 1; j <= m; j++) {
+        for (int i = 1; i <= n; i++) {
+            ObjectFeature o1 = it1.next();
+
+            for (int j = 1; j <= m; j++) {
+                ObjectFeature o2 = it2.next();
                 // get the substution cost
-                // cost = getCost(getObject(i - 1), obj.getObject(j - 1));
-                cost = Math.max(0, getCost(distances[i-1][j-1]));
+                float c = Math.max(0, cost.getCost(o1, o2));
 
                 // find lowest cost at point from three possible
-                d[i][j] = max3(d[i - 1][j] - gapCostOpening, d[i][j - 1] - gapCostOpening, d[i - 1][j - 1] + cost);
+                d[i][j] = max3(d[i - 1][j] - cost.getGapOpening(), d[i][j - 1] - cost.getGapOpening(), d[i - 1][j - 1] + c);
             }
+            it2.reset();
         }
-        return Math.max(d[i-1][j-1], 0);
-
+        return Math.max(d[n][m], 0);
     }
     
-    public float getDistanceInOneAxis (ObjectFeatureSet set2,
-            Coordinate coord,
-            float MinCoordSet1,
-            float MaxCoordSet1,
-            float MinCoordSet2,
-            float MaxCoordSet2) {
-            
-        int n; // length of s
-        int m; // length of t
+    public static float getSimilarity(SequenceMatchingCost cost, float[][] distances) {
+        int n = distances.length;       // length of this "string"
+        int m = distances[0].length;    // length of o."string"
 
-        // check for zero length input
-        n = getObjectCount();
-        m = set2.getObjectCount();
-        if (n == 0) {
-            return 0;
-        }
-        if (m == 0) {
-            return 0;
-        }
-                int startCoordSet1 = 0; int stopCoordSet1 = 0;
-        int startCoordSet2 = 0; int stopCoordSet2 = 0;
+        if (m == 0 || n == 0)
+            return 0f;
+        
+        //create matrix (n+1)x(m+1)
+        final float[][] d = new float[n + 1][m + 1];
 
-        // count the number of features within the allowed range
-        while ( ((coord == Coordinate.CoordX) ?
-                ((ObjectFeature) getObject(startCoordSet1)).getX() :
-                ((ObjectFeature) getObject(startCoordSet1)).getY()) <= MinCoordSet1 && startCoordSet1 < n) {
-            startCoordSet1++;
+        //put row and column numbers in place
+        for (int i = 0; i <= n; i++) {
+            d[i][0] = 0;
         }
-        stopCoordSet1 = startCoordSet1;
-        while ( ((coord == Coordinate.CoordX) ?
-                ((ObjectFeature) getObject(startCoordSet1)).getX() :
-                ((ObjectFeature) getObject(startCoordSet1)).getY()) <= MaxCoordSet1 && stopCoordSet1 < n) {
-            stopCoordSet1++;
+        for (int j = 0; j <= m; j++) {
+            d[0][j] = 0;
         }
-        n = stopCoordSet1 - startCoordSet1;
-        if (n == 0)
-            return m;
 
-        while ( ((coord == Coordinate.CoordX) ?
-                ((ObjectFeature) set2.getObject(startCoordSet1)).getX() :
-                ((ObjectFeature) set2.getObject(startCoordSet1)).getY()) <= MinCoordSet2 && startCoordSet2 < m) {
-            startCoordSet2++;
-        }
-        stopCoordSet2 = startCoordSet2;
-        while ( ((coord == Coordinate.CoordX) ?
-                ((ObjectFeature) set2.getObject(startCoordSet1)).getX() :
-                ((ObjectFeature) set2.getObject(startCoordSet1)).getY()) <= MaxCoordSet2 && stopCoordSet2 < m) {
-            stopCoordSet2++;
-        }
-        m = stopCoordSet2 - startCoordSet2;
-        if (m == 0)
-            return n;
-        float distances[][] = new float[n][m];
-        for (int i1 = n - 1; i1 >= 0; i1--) {
-            for (int i2 = m - 1; i2 >= 0; i2--) {
-                distances[i1][i2] = getObject(i1).getDistance(set2.getObject(i2));
+        // cycle through rest of table filling values from the lowest cost value of the three part cost function
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= m; j++) {
+                // get the substution cost
+                float c = Math.max(0, cost.getCost(distances[i-1][j-1]));
+
+                // find lowest cost at point from three possible
+                d[i][j] = max3(d[i - 1][j] - cost.getGapOpening(), d[i][j - 1] - cost.getGapOpening(), d[i - 1][j - 1] + c);
             }
         }
-
-        return getDistanceInOneAxis(distances);
-
+        return Math.max(d[n][m], 0);
     }
     
-    @Override
-    public float getDistanceImpl (LocalAbstractObject o, float distTreshold) {
-        ObjectFeatureSet obj = (ObjectFeatureSet) o;
-
-        Collections.sort(objects, new ObjectLocalFeatureComparatorX());
-        Collections.sort(obj.objects, new ObjectLocalFeatureComparatorX());
-        // scxthis.addAll(this. objects);
-        float rx = getDistanceInOneAxis (obj, Coordinate.CoordX);
-
-        Collections.sort(objects, new ObjectLocalFeatureComparatorY());
-        Collections.sort(obj.objects, new ObjectLocalFeatureComparatorY());
-        float ry = getDistanceInOneAxis (obj, Coordinate.CoordY);
-
-        float res = rx + ry; // (rx + ry) / 2;
-
-        //normalise into zero to one region from min max possible
-        /*
-        float maxValue = Math.max(getObjectCount(), obj.getObjectCount());
-        float minValue = maxValue;
-        if (getMaxCost() > gapCost) {
-            maxValue *= equalityTreshold;
-        } else {
-            maxValue *= gapCost;
+    public static float max3(final float f1, final float f2, final float f3) {
+        return Math.max(Math.max(f1, f2), f3);
+    }
+        
+    public static float getDistanceByWindowing(SequenceMatchingCost cost, SlidingWindow wnd,
+                                               ObjectFeatureOrderedSet fs1, ObjectFeatureOrderedSet fs2) {
+        float dist = LocalAbstractObject.MAX_DISTANCE;
+        Iterator<SortDimension.Window> it1 = fs1.windowIterator(wnd);
+        while (it1.hasNext()) {
+            SortDimension.Window w1 = it1.next();
+            Iterator<SortDimension.Window> it2 = fs2.windowIterator(wnd);
+            while (it2.hasNext()) {
+                SortDimension.Window w2 = it2.next();
+                float wndDist = getDistance(cost, fs1.iterator(w1), fs2.iterator(w2));
+                if (wndDist < dist)
+                    dist = wndDist;
+            }
         }
-        if (getMinCost() < gapCost) {
-            minValue *= getMinCost();
-        } else {
-            minValue *= gapCost;
-        }
-        if (minValue < 0.0f) {
-            maxValue -= minValue;
-            res -= minValue;
-        }
-
-        //check for 0 maxLen
-        if (maxValue == 0) {
-            return 1.0f; //as both strings identically zero length
-        } else {
-            //return actual / possible NeedlemanWunch distance to get 0-1 range
-            return 1.0f - (res / maxValue);
-        }*/
-        return res;
+        return dist;
     }
 }

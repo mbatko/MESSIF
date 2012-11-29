@@ -26,6 +26,12 @@ import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 
+/**
+ * 
+ * @author xdohnal
+ * @deprecated I do not know the purpose of this class, so I marked it as deprecated.
+ */
+@Deprecated
 public abstract class ObjectFeatureFloatWClusters extends ObjectFeature  implements BinarySerializable {
 
     /** class id for serialization */

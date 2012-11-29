@@ -16,19 +16,24 @@
  */
 package messif.objects.impl;
 
+import messif.objects.util.SortDimension;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.keys.DimensionObjectKey;
 import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
+import messif.objects.util.SortDimension.Window;
 import messif.utility.ArrayResetableIterator;
 import messif.utility.ResetableIterator;
 
@@ -41,7 +46,7 @@ import messif.utility.ResetableIterator;
  */
 public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
     /** Class id for serialization. */
-    private static final long serialVersionUID = 6L;
+    private static final long serialVersionUID = 7L;
     
     //****************** Attributes ******************//
 
@@ -61,58 +66,6 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         super(locatorURI, objects);
         setObjectKey(new DimensionObjectKey(locatorURI, width, height));
     }
-
-    /**
-     * Creates a new instance of ObjectFeatureSet from a text stream.
-     * @param stream the text stream to read an object from
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     */
-    public ObjectFeatureOrderedSet(BufferedReader stream) throws IOException {
-        this(stream, null);
-    }
-
-    /**
-     * Creates a new instance of ObjectFeatureSet from a text stream.
-     * @param stream the text stream to read an object from
-     * @param additionalParameters additional parameters for this meta object
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     */
-    public ObjectFeatureOrderedSet(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException {
-        super(stream, additionalParameters);
-        AbstractObjectKey key = getObjectKey();
-        if (key != null && !(key instanceof DimensionObjectKey))
-            throw new IllegalArgumentException("Incorrect object key class: " + key.getClass().getCanonicalName() + " Required: " + DimensionObjectKey.class.getCanonicalName());
-    }
-
-//    /**
-//     * Creates a new instance of ObjectFeatureSet as a subset of an existing ObjectFeatureSet.
-//     * Subset is determined as a sub-window.
-//     * @param supSet original set of features (super-set)
-//     * @param minX minimal X-coordinate to be included in the resulting subset
-//     * @param maxX maximal X-coordinate to be included in the resulting subset
-//     * @param minY minimal Y-coordinate to be included in the resulting subset
-//     * @param maxY maximal Y-coordinate to be included in the resulting subset
-//     */
-//    public ObjectFeatureOrderedSet(ObjectFeatureSet supSet, float minX, float maxX, float minY, float maxY) {
-//        super (supSet.getLocatorURI());
-//        this.objects =  new ArrayList<LocalAbstractObject>();
-//        for (int i = 0; i < supSet.getObjectCount(); i++) {
-//            ObjectFeature of = (ObjectFeature) supSet.getObject(i);
-//            if (of.getX() >= minX && of.getX() <= maxX && of.getY() >= minY && of.getY() <= maxY) {
-//               addObject(of);
-//            }
-//        }
-//    }
-
-//    public ObjectFeatureOrderedSet(ObjectFeatureSet superSet) {
-//        super (superSet.getLocatorURI());
-//        this.objects = new ArrayList<LocalAbstractObject>();
-//        for (LocalAbstractObject o : superSet.objects) {
-//            addObject(o);
-//        }
-//    }
 
     //****************** Attribute access ******************//
 
@@ -141,10 +94,34 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         return getObjectKey(DimensionObjectKey.class).getDimension(dim);
     }
     
+    /**
+     * Adds the object to the internal list of objects.
+     * If objects are sorted, the new object is inserted into its correct place.
+     * Otherwise it is appended to the end of the list.
+     * @param obj object to be added
+     */
+    @Override
+    public void addObject(ObjectFeature obj) {
+        int idx = objects.size() - 1;
+        
+        if (isFeaturesOrdered()) {
+            // Find the correct place
+            while (idx >= 0) {
+                int res = sortDim.compare(objects.get(idx), obj);
+                if (res <= 0)       // The element at idx is smaller or equal, so insert the new object following it.
+                    break;
+                idx--;
+            }
+        }
+        objects.add(idx + 1, obj);
+    }
+    
     public void orderFeatures(SortDimension sortDim) {
+        if (this.sortDim == sortDim)
+            return;
         synchronized (objects) {
             this.sortDim = sortDim;
-            Collections.sort(objects, new SortComparatorByDimension(sortDim));
+            Collections.sort(objects, sortDim);
         }
     }
     
@@ -156,180 +133,8 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         return (sortDim != null);
     }
     
-    /**
-     * Sorting dimension
-     */
-    public static interface SortDimension extends Serializable {
-        /**
-         * Returns value of the primary sorting dimension.
-         * @param f object whose primary sort dimension value is returned
-         * @return value of dimension
-         */
-        public float getPrimary(DimensionObjectKey.Point f);
-        /**
-         * Returns value of the secondary sorting dimension.
-         * @param f object whose secondary sort dimension value is returned
-         * @return value of dimension
-         */
-        public float getSecondary(DimensionObjectKey.Point f);
-        
-        /**
-         * Index of the primary dimension (e.g. x-axis => 0).
-         * @return index of dimension
-         */
-        public int getPrimaryDimension();
-        /**
-         * Index of the secondary dimension (e.g. x-axis => 0).
-         * @return index of dimension
-         */
-        public int getSecondaryDimension();
-        
-        /**
-         * Create a {@link ObjectFeatureOrderedSet.Window} object that represents the passed rectangular area.
-         * @param minX minimum in x-axis (relative value within the interval [0,1))
-         * @param maxX maximum in x-axis (relative value within the interval [0,1))
-         * @param minY minimum in y-axis (relative value within the interval [0,1))
-         * @param maxY maximum in y-axis (relative value within the interval [0,1))
-         * @return the passed rectangular area
-         */
-        public Window getWindow(float minX, float maxX, float minY, float maxY);
-    }
-    
-    /** Implementation of SortDimension that sorts the features by x-axis and then by y-axis. */
-    public static final SortDimension sortDimensionX = new SortDimension() {
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public float getPrimary(DimensionObjectKey.Point f) {
-            return f.getX();
-        }
-        @Override
-        public float getSecondary(DimensionObjectKey.Point f) {
-            return f.getY();
-        }
-
-        @Override
-        public int getPrimaryDimension() {
-            return 0;
-        }
-
-        @Override
-        public int getSecondaryDimension() {
-            return 1;
-        }
-
-        @Override
-        public Window getWindow(final float minX, final float maxX, final float minY, final float maxY) {
-            return new Window() {
-                @Override
-                public float getPrimaryMin() {
-                    return minX;
-                }
-                @Override
-                public float getPrimaryMax() {
-                    return maxX;
-                }
-                @Override
-                public float getSecondaryMin() {
-                    return minY;
-                }
-                @Override
-                public float getSecondaryMax() {
-                    return maxY;
-                }
-                @Override
-                public String toString() {
-                    return String.format("Window: [%f;%f-%f;%f]", minX, minY, maxX, maxY);
-                }
-            };
-        }
-    };
-    
-    /** Implementation of SortDimension that sorts the features by y-axis and then by x-axis. */
-    public static final SortDimension sortDimensionY = new SortDimension() {
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public float getPrimary(DimensionObjectKey.Point f) {
-            return f.getY();
-        }
-        @Override
-        public float getSecondary(DimensionObjectKey.Point f) {
-            return f.getX();
-        }
-
-        @Override
-        public int getPrimaryDimension() {
-            return 1;
-        }
-
-        @Override
-        public int getSecondaryDimension() {
-            return 0;
-        }
-
-        @Override
-        public Window getWindow(final float minX, final float maxX, final float minY, final float maxY) {
-            return new Window() {
-                @Override
-                public float getPrimaryMin() {
-                    return minY;
-                }
-                @Override
-                public float getPrimaryMax() {
-                    return maxY;
-                }
-                @Override
-                public float getSecondaryMin() {
-                    return minX;
-                }
-                @Override
-                public float getSecondaryMax() {
-                    return maxX;
-                }
-                @Override
-                public String toString() {
-                    return String.format("Window: [%f;%f-%f;%f]", minX, minY, maxX, maxY);
-                }
-            };
-        }
-    };
-    
-    public static class SortComparatorByDimension implements Comparator<ObjectFeature> {
-        private final SortDimension sortDim;
-        
-        public SortComparatorByDimension(SortDimension dim) {
-            sortDim = dim;
-        }
-        
-        @Override
-        public int compare(ObjectFeature o1, ObjectFeature o2) {
-            if (sortDim.getPrimary(o1) < sortDim.getPrimary(o2))
-                return -1;
-            else if (sortDim.getPrimary(o1) > sortDim.getPrimary(o2))
-                return 1;
-            else if (sortDim.getSecondary(o1) < sortDim.getSecondary(o2))
-                return -1;
-            else if (sortDim.getSecondary(o1) > sortDim.getSecondary(o2))
-                return 1;
-            else
-                return 0;
-        }
-    }
-    
     //****************** Windowing access ******************//
     
-    /** 
-     * Interface for encapsulating a rectangular 2-D window in a way that it recognizes primary and secondary ordering
-     * instead of rigid references to x and y axes.
-     */
-    public static interface Window {
-        public float getPrimaryMin();
-        public float getPrimaryMax();
-        public float getSecondaryMin();
-        public float getSecondaryMax();
-    }
-
     /**
      * Iterate over all features within the passed window. 
      * All features having their positions in [minX,maxX) x [minY,maxY) are returned.
@@ -357,14 +162,17 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
             throw new IllegalStateException("This feature set has not had any SortDimension assigned yet.");
 
         ObjectFeature[] cache = new ObjectFeature[getObjectCount()];
+        DimensionObjectKey key = getObjectKey(DimensionObjectKey.class);
         // Fill all matching objects into the cache
         int cnt = 0;
         for (ObjectFeature o : objects) {
-            if (sortDim.getPrimary(o) < wnd.getPrimaryMin()) {
+            float pri = key.convertToRelative(sortDim.getPrimary((DimensionObjectKey.Point)o), sortDim.getPrimaryDimension());
+            float sec = key.convertToRelative(sortDim.getSecondary((DimensionObjectKey.Point)o), sortDim.getSecondaryDimension());
+            if (pri < wnd.getPrimaryMin()) {
                 continue;       // Point is in front of the window
-            } else if (sortDim.getPrimary(o) >= wnd.getPrimaryMax()) {
+            } else if (pri >= wnd.getPrimaryMax()) {
                 break;          // Point is behind the window, so stop
-            } else if (sortDim.getSecondary(o) < wnd.getSecondaryMin() || sortDim.getSecondary(o) >= wnd.getSecondaryMax()) {
+            } else if (sec < wnd.getSecondaryMin() || sec >= wnd.getSecondaryMax()) {
                 continue;       // In the primary range but out of the secondary range, so skip it
             } else {
                 cache[cnt++] = o;   // Point is in window
@@ -373,6 +181,16 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         // Resize the cache, if needed
         return new ArrayResetableIterator<ObjectFeature>( (cache.length > cnt) ? Arrays.copyOf(cache, cnt) : cache );
     }
+
+    /**
+     * Iterate over all possible positions of the window.
+     * @param slidingWnd specification window and its shifts
+     * @return iterator over windows, where the windows are rectangles with relative boundaries
+     * @throws IllegalStateException is thrown if any sorting dimension has not been set yet.
+     */
+    public Iterator<Window> windowIterator(SlidingWindow slidingWnd) throws IllegalStateException {
+        return windowIterator(slidingWnd.getWidth(), slidingWnd.getHeight(), slidingWnd.getShiftX(), slidingWnd.getShiftY());
+    }    
     
     /**
      * Iterate over all possible positions of the window.
@@ -383,11 +201,14 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
      * @return iterator over windows, where the windows are rectangles with relative boundaries
      * @throws IllegalStateException is thrown if any sorting dimension has not been set yet.
      */
-    public Iterator<Window> windowIterator(final int wndWidth, final int wndHeight, final int shiftX, final int shiftY) throws IllegalStateException {
+    protected Iterator<Window> windowIterator(final int wndWidth, final int wndHeight, final int shiftX, final int shiftY) throws IllegalStateException {
         if (sortDim == null)
             throw new IllegalStateException("This feature set has not had any SortDimension assigned yet.");
-        
+
         final DimensionObjectKey objKey = getObjectKey(DimensionObjectKey.class);        
+        
+        if ((shiftX == 0 && objKey.getWidth() > wndWidth) || (shiftY == 0 && objKey.getHeight() > wndHeight))
+            throw new IllegalArgumentException("Shift values must be non-zero!!!");
         
         return new Iterator<Window>() {
             private final float winWidth = objKey.convertToRelative(wndWidth, 0);
@@ -447,6 +268,66 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
         };
     }
 
+    //****************** Text stream I/O ******************//
+
+    /**
+     * Creates a new instance of ObjectFeatureSet from a text stream.
+     * @param stream the text stream to read an object from
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public ObjectFeatureOrderedSet(BufferedReader stream) throws IOException {
+        this(stream, null);
+    }
+
+    /**
+     * Creates a new instance of ObjectFeatureSet from a text stream.
+     * @param stream the text stream to read an object from
+     * @param additionalParameters additional parameters for this meta object
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public ObjectFeatureOrderedSet(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters) throws IOException {
+        super(stream, additionalParameters);
+        
+//        this.sortDim = SortDimension.readImplementation(stream);
+        
+        AbstractObjectKey key = getObjectKey();
+        if (key != null && !(key instanceof DimensionObjectKey))
+            throw new IllegalArgumentException("Incorrect object key class: " + key.getClass().getCanonicalName() + " Required: " + DimensionObjectKey.class.getCanonicalName());
+    }
+
+    @Override
+    protected boolean parseObjectComment(String line) throws IllegalArgumentException {
+        if (super.parseObjectComment(line))
+            return true;
+
+        // Process my private comments
+        if (line.startsWith("#sortDim ")) {
+            try {
+                sortDim = SortDimension.getImplementation(line.substring(9));
+            } catch (NoSuchMethodException ex) {
+                Logger.getLogger(ObjectFeatureOrderedSet.class.getName()).log(Level.SEVERE, null, ex);
+                sortDim = null;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    protected void writeObjectComment(OutputStream stream) throws IOException {
+        super.writeObjectComment(stream);
+        
+        if (sortDim != null) {
+            stream.write("#sortDim ".getBytes());
+            stream.write(sortDim.getImplementationName().getBytes());
+            stream.write('\n');
+        }
+    }
+
+    
     //************ Protected methods of BinarySerializable interface ************//
 
     /**
@@ -458,17 +339,64 @@ public abstract class ObjectFeatureOrderedSet extends ObjectFeatureSet {
      */
     protected ObjectFeatureOrderedSet(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
-//        serializator.readEnum(input, xx);
+        try {
+            sortDim = SortDimension.getImplementation(serializator.readString(input));
+        } catch (NoSuchMethodException ex) {
+            throw new IOException(ex);
+        }
     }
 
-//    @Override
-//    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-//        return super.binarySerialize(output, serializator) + serializator.write(output, xx);
-//    }
-//
-//    @Override
-//    public int getBinarySize(BinarySerializator serializator) {
-//        return super.getBinarySize(serializator) + serializator.getBinarySize(xx);
-//    }
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator) + serializator.write(output, sortDim);
+    }
 
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return super.getBinarySize(serializator) 
+                + serializator.getBinarySize((sortDim == null) ? null : sortDim.getBinarySize(serializator));
+    }
+
+    /**
+     * Sliding window -- used in sequence matching of {@link ObjectFeatureSet feature sets}.
+     *
+     * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+     */
+    public static class SlidingWindow {
+        protected int width;
+        protected int height;
+        protected int shiftX;
+        protected int shiftY;
+
+        public SlidingWindow() {
+            this(80, 60, 40, 30);
+        }
+
+        public SlidingWindow(int width, int height, int shiftX, int shiftY) {
+            this.width = width;
+            this.height = height;
+            this.shiftX = shiftX;
+            this.shiftY = shiftY;
+        }
+
+        public SlidingWindow(int width, int height, float percShiftX, float percShiftY) {
+            this(width, height, (int)(width * percShiftX), (int)(height * percShiftY));
+        }    
+
+        public int getWidth() {
+            return width;
+        }
+
+        public int getHeight() {
+            return height;
+        }
+
+        public int getShiftX() {
+            return shiftX;
+        }
+
+        public int getShiftY() {
+            return shiftY;
+        }    
+    }
 }

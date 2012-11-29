@@ -22,6 +22,12 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
+/**
+ * 
+ * @author xdohnal
+ * @deprecated I do not know the purpose of this class, so I marked it as deprecated.
+ */
+@Deprecated
 public class ObjectFeatureFloatWClustersL2 extends ObjectFeatureFloatWClusters {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;

@@ -122,15 +122,15 @@ public class ObjectFeatureSetSumOfSimilar extends ObjectFeatureSet {
         if (m == 0)
             return MAX_DISTANCE;
 
-        int soucet = 0;
+        int cnt = 0;
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
                 if (getObject(j).getDistance(obj.getObject(i)) <= equalityThreshold)
-                    soucet++;
+                    cnt++;
             }
         }
-        return Math.max(0, n - soucet);
+        return Math.max(0, n - cnt);
     }
 
 }

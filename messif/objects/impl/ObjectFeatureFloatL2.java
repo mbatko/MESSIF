@@ -41,7 +41,8 @@ public class ObjectFeatureFloatL2 extends ObjectFeatureFloat implements BinarySe
 
 
     /** Metric function
-     *      Implements city-block distance measure (so-called L1 metric)
+     *      Implements Euclidean distance (L2 metric).
+     * @return if the vectors are of different length, {@link LocalAbstractObject#MAX_DISTANCE} is returned.
      */
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {

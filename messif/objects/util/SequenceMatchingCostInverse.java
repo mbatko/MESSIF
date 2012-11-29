@@ -5,13 +5,21 @@
 package messif.objects.util;
 
 /**
- *
+ * Approximate costs of a pair of objects is measured as an inverse function of their distance (which must be within
+ * the interval ({@link SequenceMatchingCost#distMatch};{@link SequenceMatchingCost#distMismatch}].
+ * 
+ * The approximate costs is a return value of a continuous function from the interval 
+ * [{@link SequenceMatchingCost#matchExact};{@link SequenceMatchingCost#matchApprox].
+ * 
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  */
 public class SequenceMatchingCostInverse extends SequenceMatchingCost {
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
+    /** The same setting as {@link SequenceMatchingCost#SIFT_DEFAULT} */
+    public static SequenceMatchingCost DEFAULT = new SequenceMatchingCostInverse();
+    
     public SequenceMatchingCostInverse() {
     }
 

@@ -99,7 +99,6 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
                 stream.write(", ".getBytes());
             stream.write(String.valueOf(this.data[i]+127).getBytes());
         }
-
         stream.write('\n');
     }
 
@@ -133,7 +132,7 @@ public abstract class ObjectFeatureByte extends ObjectFeature  implements Binary
 
     @Override
     public int dataHashCode() {
-        return Arrays.hashCode(data);
+        return 97 * super.dataHashCode() + Arrays.hashCode(data);
     }
 
     //****************** Size function ******************
