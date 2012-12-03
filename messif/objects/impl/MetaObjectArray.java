@@ -120,6 +120,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @param objectNames the names of the objects to take from the given {@code objects} map
      */
     public MetaObjectArray(String locatorURI, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
+        super(locatorURI);
         this.objects = new LocalAbstractObject[objectNames.length];
         for (int i = 0; i < objectNames.length; i++)
             this.objects[i] = objects.get(objectNames[i]);
