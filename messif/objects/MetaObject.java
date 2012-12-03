@@ -242,13 +242,13 @@ public abstract class MetaObject extends LocalAbstractObject {
             // Read the object
             return objectClass.getConstructor(BufferedReader.class).newInstance(stream);
         } catch (InstantiationException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream: " + e, e);
         } catch (IllegalAccessException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream: " + e, e);
         } catch (InvocationTargetException e) {
-            throw new IOException("Can't create object from stream: " + e.getCause());
+            throw new IOException("Can't create object from stream: " + e.getCause(), e.getCause());
         } catch (NoSuchMethodException e) {
-            throw new IOException("Can't create object from stream: " + e);
+            throw new IOException("Can't create object from stream: " + e, e);
         }
     }
 

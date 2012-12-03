@@ -77,21 +77,30 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * the correct type of objects must be present in the operation (i.e. the {@link AnswerType}
      * should be set to something above {@link AnswerType#CLEARED_OBJECTS}.
      * 
-     * @param rankingDistanceFunction the distance function used for the ranking
+     * @param rankingDistanceFunction the distance function used for the ranking, 
+     *          if <tt>null</tt>, the natural distance function of the ranking object will be used
      * @param rankingObject the object used for ranking
      * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
      * @param rankInAdd flag whether the {@link #add(java.lang.Object) add} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)
      * @param initialCapacity the initial capacity of the collection
      * @param maximalCapacity the maximal capacity of the collection
-     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
-     * @throws NullPointerException if the ranking distance function is <tt>null</tt>
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid or the ranking distance function is not compatible with the ranking object
+     * @throws NullPointerException if both the ranking distance function and the ranking object are <tt>null</tt>
      */
     public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
         super(initialCapacity, maximalCapacity);
-        if (rankingDistanceFunction == null)
-            throw new NullPointerException();
-        this.rankingDistanceFunction = rankingDistanceFunction;
+        if (rankingDistanceFunction == null) {
+            if (!(rankingObject instanceof DistanceFunction))
+                throw new IllegalArgumentException("Provided distance function is null but the ranking object does not provide it itself");
+            @SuppressWarnings("unchecked")
+            DistanceFunction<? super T> rankingObjectDistanceFunction = (DistanceFunction)rankingObject; // This cast is checked on the next line
+            this.rankingDistanceFunction = rankingObjectDistanceFunction;
+        } else {
+            this.rankingDistanceFunction = rankingDistanceFunction;
+        }
         this.originalDistanceWeight = originalDistanceWeight;
+        if (rankingObject != null && !this.rankingDistanceFunction.getDistanceObjectClass().isInstance(rankingObject))
+            throw new IllegalArgumentException("Ranking collection distance function is not compatible with the given ranking object");
         this.rankingObject = rankingObject;
         this.rankInAdd = rankInAdd;
     }
