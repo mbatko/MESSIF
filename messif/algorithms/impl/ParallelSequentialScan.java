@@ -265,7 +265,7 @@ public class ParallelSequentialScan extends Algorithm implements NavigationDirec
 
     @Override
     public AsynchronousNavigationProcessor<? extends QueryOperation<?>> getNavigationProcessor(QueryOperation<?> operation) {
-        return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>(operation, true, buckets);
+        return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>(operation, false, buckets);
     }
 
 
