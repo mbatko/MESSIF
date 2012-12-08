@@ -177,6 +177,19 @@ public class CophirXmlParser extends DefaultHandler {
     }
 
     /**
+     * Returns the textual data fields parsed from the {@link #wordTagNames} XML tags.
+     * @return the textual data fields
+     */
+    public String[] getTextFields() {
+        String[] texts = new String[wordTagNames.size()];
+        for (int i = 0; i < texts.length; i++) {
+            StringBuilder dataString = wordData.get(wordTagNames.get(i));
+            texts[i] = dataString == null ? null : dataString.toString();
+        }
+        return texts;
+    }
+
+    /**
      * Reset the parsed data to that this handler can be reused in additional parsing.
      */
     public void resetObjects() {
@@ -258,10 +271,9 @@ public class CophirXmlParser extends DefaultHandler {
     public void endDocument() throws SAXException {
         try {
             if (wordIndex != null)
-                objects.put(wordObjectName, parseKeyWordsType(stemmer, wordIndex));
+                objects.put(wordObjectName, parseKeyWordsType(getTextFields(), stemmer, wordIndex));
             if (csvObjectName != null)
                 objects.put(csvObjectName, new ObjectString(parseKeyWordsCSV()));
-            wordData.clear();
         } catch (TextConversionException e) {
             throw new SAXException(e);
         }
@@ -357,17 +369,13 @@ public class CophirXmlParser extends DefaultHandler {
 
     /**
      * Parse the keywords descriptor data.
+     * @param texts the texts to parse
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
      * @return a new instance of the {@link ObjectIntMultiVectorJaccard}
      * @throws TextConversionException if there was an error stemming the word
      */
-    private ObjectIntMultiVectorJaccard parseKeyWordsType(Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
-        String[] texts = new String[wordTagNames.size()];
-        for (int i = 0; i < texts.length; i++) {
-            StringBuilder dataString = wordData.get(wordTagNames.get(i));
-            texts[i] = dataString == null ? null : dataString.toString();
-        }
+    public static ObjectIntMultiVectorJaccard parseKeyWordsType(String[] texts, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
         int[][] wordIds = new int[texts.length][];
         Set<String> ignoreWords = new HashSet<String>();
         for (int i = 0; i < texts.length; i++) {

@@ -19,6 +19,7 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -49,6 +50,7 @@ import messif.buckets.storage.IntStorageSearch;
 import messif.buckets.storage.impl.DatabaseStorage;
 import messif.buckets.storage.impl.DatabaseStorage.BinarySerializableColumnConvertor;
 import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
+import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.extraction.Extractor;
@@ -2509,4 +2511,56 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
                 ObjectIntMultiVectorJaccard.class
         );
 
+    /**
+     * Class for distance functions that compute distances on keyword vectors
+     * of two {@link MetaObjectProfiSCT}}s using weighted Cosine distance.
+     */
+    public static class ProfiSCTWeightedCosineDistanceFunction implements DistanceFunction<MetaObjectProfiSCT>, Serializable {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** Weight provider for the first object */
+        private final WeightProvider weightProviderO1;
+        /** Weight provider for the second object */
+        private final WeightProvider weightProviderO2;
+
+        /**
+         * Creates a new instance of weighted Cosine distance function.
+         * @param weightProviderO1 the weight provider for the first object
+         * @param weightProviderO2 the weight provider for the second object
+         * @throws NullPointerException if either {@code weightProviderO1} or {@code weightProviderO2} is <tt>null</tt>
+         */
+        public ProfiSCTWeightedCosineDistanceFunction(WeightProvider weightProviderO1, WeightProvider weightProviderO2) throws NullPointerException {
+            if (weightProviderO1 == null || weightProviderO2 == null)
+                throw new NullPointerException();
+            this.weightProviderO1 = weightProviderO1;
+            this.weightProviderO2 = weightProviderO2;
+        }
+
+        /**
+         * Returns the encapsulated weight provider for the first object.
+         * @return the encapsulated weight provider for the first object
+         */
+        public WeightProvider getWeightProviderO1() {
+            return weightProviderO1;
+        }
+
+        /**
+         * Returns the encapsulated weight provider for the second object.
+         * @return the encapsulated weight provider for the second object
+         */
+        public WeightProvider getWeightProviderO2() {
+            return weightProviderO2;
+        }
+
+        @Override
+        public float getDistance(MetaObjectProfiSCT o1, MetaObjectProfiSCT o2) {
+            return ObjectIntMultiVectorCosine.getWeightedCosineDistance(o1.getKeyWords(), weightProviderO1, o2.getKeyWords(), weightProviderO2);
+        }
+
+        @Override
+        public Class<? extends MetaObjectProfiSCT> getDistanceObjectClass() {
+            return MetaObjectProfiSCT.class;
+        }
+    }
 }

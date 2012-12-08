@@ -19,8 +19,6 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.Locale;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -30,6 +28,7 @@ import messif.objects.nio.BinarySerializator;
  * @author xdohnal
  * @deprecated This is superseded by {@link ObjectFeatureQuantized}
  */
+@Deprecated
 public abstract class ObjectFeatureClustered extends ObjectFeature  implements BinarySerializable {
 
     /** class id for serialization */

@@ -90,7 +90,7 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         if ((this.average < 0) || (this.average > 256))
             throw new NumberFormatException("the first number (average) of HomogeneousTexture must be of type unsigned8: " + this.average);
         this.standardDeviation = Short.parseShort(fields[1]);
-        this.energy = ObjectShortVector.parseShortVector(fields[3]);
+        this.energy = ObjectShortVector.parseShortVector(fields[2]);
         if (fields.length >= 4 && fields[3].length() > 0)
             this.energyDeviation = ObjectShortVector.parseShortVector(fields[3]);
         else

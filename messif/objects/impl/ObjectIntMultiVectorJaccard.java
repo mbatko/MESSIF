@@ -19,8 +19,6 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Map;
-import java.util.Set;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinaryInput;

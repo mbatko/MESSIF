@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import messif.buckets.storage.IntStorageIndexed;
 import messif.objects.LocalAbstractObject;
+import messif.objects.impl.ObjectIntMultiVector.WeightProvider;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -215,7 +216,7 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
         /** Weight for combining the keywords distance with the visual descriptors distance */
         private final Float keywordsWeight;
         /** Internal keyword weight provider based on tf-idf */
-        private final ObjectIntMultiVector.WeightProvider kwWeightProvider;
+        private final WeightProvider kwWeightProvider;
 
 
         //****************** Constructor ******************//
@@ -228,12 +229,12 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
          * @param object the source metaobject from which to get the data
          * @param keywordsWeight the weight for combining the keywords distance with the visual descriptors distance,
          *          if <tt>null</tt>, only the text distance is used
-         * @param keywordLayerWeights the weights for different layers of keywords (title, etc.)
+         * @param kwWeightProvider the weight provider for different layers of keywords (title, etc.)
          */
-        public MetaObjectProfiSCTiDIMKwDistCosine(MetaObjectProfiSCT object, Float keywordsWeight, float[] keywordLayerWeights) {
+        public MetaObjectProfiSCTiDIMKwDistCosine(MetaObjectProfiSCT object, Float keywordsWeight, WeightProvider kwWeightProvider) {
             super(object);
             this.keywordsWeight = keywordsWeight;
-            this.kwWeightProvider = new DatabaseSupport.KeywordWeightProvider(null, keywordLayerWeights);
+            this.kwWeightProvider = kwWeightProvider;
         }
 
         /**
@@ -296,6 +297,22 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
                 throw new IllegalStateException("Error computing distance between " + this + " and " + obj + ": " + e, e);
             }
         }
+    }
+
+    /**
+     * Returns this object encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}.
+     * @return this object encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}
+     */
+    public MetaObjectProfiSCTiDIMWithTKStrings wrapWithKwStringSerialization() {
+        return new MetaObjectProfiSCTiDIMWithTKStrings(this);
+    }
+
+    /**
+     * Returns this object only with title encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}.
+     * @return this object only with title encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}
+     */
+    public MetaObjectProfiSCTiDIMWithTKStrings wrapWithTitleOnlySerialization() {
+        return new MetaObjectProfiSCTiDIMWithTKStrings(this, getTitle(), null, new ObjectIntMultiVectorJaccard(getKeyWords().getVectorData(0), new int[0]));
     }
 
     /**

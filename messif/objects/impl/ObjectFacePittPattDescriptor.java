@@ -256,11 +256,6 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Mo
         return 1f;
     }
 
-    @Override
-    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
-        return ObjectFacePittPattDescriptor.class;
-    }
-
 
     //****************** External library methods ******************//
 

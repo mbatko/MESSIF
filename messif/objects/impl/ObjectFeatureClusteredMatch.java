@@ -26,6 +26,7 @@ import messif.objects.nio.BinarySerializator;
  * @author xdohnal
  * @deprecated This is superseded by {@link ObjectFeatureQuantized}
  */
+@Deprecated
 public class ObjectFeatureClusteredMatch extends ObjectFeatureClustered {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
