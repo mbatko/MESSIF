@@ -2788,6 +2788,41 @@ public class CoreApplication {
     }
 
     /**
+     * Creates a thread that processes the given action in given time intervals.
+     * Note that the returned thread is not started.
+     * @param repeatEveryModifier the {@link Convert#hmsToMilliseconds hour-minute-second specification} of the time interval
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables environment
+     * @param outputStreams currently opened output streams
+     * @return the created thread
+     */
+    protected Thread createCFActionRepeatEveryThread(String repeatEveryModifier, final PrintStream out, final Properties props, final String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
+        final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
+        final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
+        final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
+        return new Thread("Repeat action " + actionName + " every " + repeatEveryModifier) {
+            @Override
+            public void run() {
+                while (!isInterrupted()) {
+                    try {
+                        sleep(repeatTime);
+                    } catch (InterruptedException ignore) {
+                        break;
+                    }
+                    try {
+                        if (!controlFileExecuteAction(out, props, actionName, variablesCopy, outputStreamsCopy, false))
+                            break;
+                    } catch (InvocationTargetException e) {
+                        throw new InternalError("Exception thrown even though it should not have been thrown: " + e);
+                    }
+                }
+            }
+        };
+    }
+
+    /**
      * This method reads and executes one action (with name actionName) from the control file (props).
      * For a full explanation of the command syntax see {@link CoreApplication}.
      * 
@@ -2800,7 +2835,7 @@ public class CoreApplication {
      * @return <tt>true</tt> if the action was executed successfully
      * @throws InvocationTargetException if there was an error executing the action while the {@code throwException} is <tt>true</tt>
      */
-    protected boolean controlFileExecuteAction(final PrintStream out, final Properties props, final String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {
+    protected boolean controlFileExecuteAction(PrintStream out, Properties props, String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams, boolean throwException) throws InvocationTargetException {
         // Parse action name and arguments
         List<String> arguments = getCFActionArguments(props, actionName, variables);
         String methodName = arguments.get(0);
@@ -2829,9 +2864,12 @@ public class CoreApplication {
             out.println("Number of repeats specified in action '" + actionName + "' is not a valid non-negative integer");
             return false;
         }
+
+        // Loop variable setup
         String loopVariable = substituteVariables(props.getProperty(actionName + ".loopVariable"), variables);
         if (loopVariable == null)
             loopVariable = actionName;
+        String savedLoopVariableValue = variables.get(loopVariable);
 
         // Postpone action
         if (!postponeCFAction(out, props, actionName, variables))
@@ -2910,9 +2948,14 @@ public class CoreApplication {
             }
         }
 
-        // Remove foreach/repeat value
-        if (foreachValues != null || repeat > 1)
-            variables.remove(actionName);
+        // Restore loop variable value (after nested foreach/repeat)
+        if (foreachValues != null || repeat > 1) {
+            variables.remove(loopVariable + "_iteration");
+            if (savedLoopVariableValue == null)
+                variables.remove(loopVariable);
+            else
+                variables.put(loopVariable, savedLoopVariableValue);
+        }
 
         // Assign variable is requested
         if (assignVariable != null && assignOutput != null)
@@ -2920,31 +2963,13 @@ public class CoreApplication {
 
         // If repeatEvery modifier was specified, start the thread
         String repeatEveryModifier = props.getProperty(actionName + ".repeatEvery");
-        if (repeatEveryModifier != null && !repeatEveryThreads.containsKey(actionName)) {
+        if (repeatEveryModifier != null) {
             synchronized (repeatEveryThreads) {
-                final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
-                final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
-                final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
-                Thread repeatEveryThread = new Thread("Repeat action " + actionName + " every " + repeatEveryModifier) {
-                    @Override
-                    public void run() {
-                        while (!isInterrupted()) {
-                            try {
-                                sleep(repeatTime);
-                            } catch (InterruptedException ignore) {
-                                break;
-                            }
-                            try {
-                                if (!controlFileExecuteAction(out, props, actionName, variablesCopy, outputStreamsCopy, false))
-                                    break;
-                            } catch (InvocationTargetException e) {
-                                throw new InternalError("Exception thrown even though it should not have been thrown: " + e);
-                            }
-                        }
-                    }
-                };
-                repeatEveryThreads.put(actionName, repeatEveryThread);
-                repeatEveryThread.start();
+                if (!repeatEveryThreads.containsKey(actionName)) {
+                    Thread repeatEveryThread = createCFActionRepeatEveryThread(repeatEveryModifier, out, props, actionName, variables, outputStreams);
+                    repeatEveryThreads.put(actionName, repeatEveryThread);
+                    repeatEveryThread.start();
+                }
             }
         }
 

@@ -105,7 +105,7 @@ public class RankedSortedNoThresholdCollection extends RankedSortedCollection {
      * @param iterator the iterator on objects to add to the collection
      */
     public RankedSortedNoThresholdCollection(LocalAbstractObject referenceObject, Iterator<? extends LocalAbstractObject> iterator) {
-        this(referenceObject, referenceObject, iterator);
+        this(LocalAbstractObject.trivialDistanceFunction, referenceObject, iterator);
     }
 
     /**
@@ -115,7 +115,7 @@ public class RankedSortedNoThresholdCollection extends RankedSortedCollection {
      * @param objectProvider the provider of objects to add to the collection
      */
     public RankedSortedNoThresholdCollection(LocalAbstractObject referenceObject, ObjectProvider<? extends LocalAbstractObject> objectProvider) {
-        this(referenceObject, referenceObject, objectProvider);
+        this(LocalAbstractObject.trivialDistanceFunction, referenceObject, objectProvider);
     }
 
     /**

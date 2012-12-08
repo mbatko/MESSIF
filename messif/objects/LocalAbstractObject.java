@@ -58,7 +58,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class LocalAbstractObject extends AbstractObject implements DistanceFunction<LocalAbstractObject> {
+public abstract class LocalAbstractObject extends AbstractObject {
 
     /** Class serial id for serialization */
     private static final long serialVersionUID = 4L;
@@ -85,6 +85,24 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
 
     /** Global counter for saving distance computations by using precomputed */
     protected static final StatisticCounter counterPrecomputedDistanceSavings = StatisticCounter.getStatistics("DistanceComputations.Savings");
+
+
+    //****************** Trivial distance function ******************//
+
+    /**
+     * Trivial distance function that for any {@link LocalAbstractObject} returns
+     * the call to {@link #getDistance(messif.objects.LocalAbstractObject)} method
+     */
+    public static final DistanceFunction<LocalAbstractObject> trivialDistanceFunction = new DistanceFunction<LocalAbstractObject>() {
+        @Override
+        public float getDistance(LocalAbstractObject o1, LocalAbstractObject o2) {
+            return o1.getDistance(o2);
+        }
+        @Override
+        public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
+            return LocalAbstractObject.class;
+        }
+    };
 
 
     //****************** Constructors ******************//
@@ -483,29 +501,17 @@ public abstract class LocalAbstractObject extends AbstractObject implements Dist
     }
 
     /**
-     * Returns the distance between object {@code o1} and object {@code o2}.
-     * Simple implementation using {@link #getDistance(messif.objects.LocalAbstractObject)}.
-     */
-    @Override
-    public float getDistance(LocalAbstractObject o1, LocalAbstractObject o2) {
-        return o1.getDistance(o2);
-    }
-
-    @Override
-    public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
-        return LocalAbstractObject.class;
-    }
-
-    /**
      * Returns whether the given object is distance compatible with the
      * distance function of this object. If object {@code o} is <tt>null</tt>,
      * <tt>false</tt> is returned.
+     * Unless overridden, this implementation returns <tt>true</tt> if and only if
+     * this class is the same-as or super-type-of the class of the object {@code o}.
      * @param o the object to check
      * @return <tt>true</tt> if the distance between this object and the given object
      *      can be computed
      */
     public boolean isDistanceCompatible(LocalAbstractObject o) {
-        return getDistanceObjectClass().isInstance(o);
+        return getClass().isInstance(o);
     }
 
 

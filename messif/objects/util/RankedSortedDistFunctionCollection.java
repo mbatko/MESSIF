@@ -87,14 +87,11 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid or the ranking distance function is not compatible with the ranking object
      * @throws NullPointerException if both the ranking distance function and the ranking object are <tt>null</tt>
      */
+    @SuppressWarnings("unchecked")
     public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
         super(initialCapacity, maximalCapacity);
         if (rankingDistanceFunction == null) {
-            if (!(rankingObject instanceof DistanceFunction))
-                throw new IllegalArgumentException("Provided distance function is null but the ranking object does not provide it itself");
-            @SuppressWarnings("unchecked")
-            DistanceFunction<? super T> rankingObjectDistanceFunction = (DistanceFunction)rankingObject; // This cast is checked on the next line
-            this.rankingDistanceFunction = rankingObjectDistanceFunction;
+            this.rankingDistanceFunction = (DistanceFunction)LocalAbstractObject.trivialDistanceFunction; // This cast IS checked on the next line
         } else {
             this.rankingDistanceFunction = rankingDistanceFunction;
         }
@@ -147,7 +144,7 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * @throws NullPointerException if the ranking object is <tt>null</tt> 
      */
     public static RankedSortedDistFunctionCollection<LocalAbstractObject> create(LocalAbstractObject rankingObject, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
-        return new RankedSortedDistFunctionCollection<LocalAbstractObject>(rankingObject, rankingObject, originalDistanceWeight, rankInAdd, initialCapacity, maximalCapacity);
+        return new RankedSortedDistFunctionCollection<LocalAbstractObject>(LocalAbstractObject.trivialDistanceFunction, rankingObject, originalDistanceWeight, rankInAdd, initialCapacity, maximalCapacity);
     }
 
 
