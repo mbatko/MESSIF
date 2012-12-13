@@ -197,7 +197,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
      * @return the next processing item in the queue or <tt>null</tt> if the queue is empty
      * @throws InterruptedException if the waiting for the next item in the queue has been interrupted
      */
-    protected synchronized T getNextProcessingItem() throws InterruptedException {
+    protected synchronized T getNextProcessingItem(boolean isAsynchronous) throws InterruptedException {
         T processingItem = processingItems.poll();
         while (processingItem == null) {
             if (queueClosed)
@@ -221,7 +221,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
     @Override
     @SuppressWarnings("unchecked")
     public final boolean processStep() throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
-        T processingItem = getNextProcessingItem();
+        T processingItem = getNextProcessingItem(false);
         if (processingItem == null)
             return false;
         O processedOperation;
@@ -237,7 +237,7 @@ public abstract class AbstractNavigationProcessor<O extends AbstractOperation, T
 
     @Override
     public final Callable<O> processStepAsynchronously() throws InterruptedException {
-        final T processingItem = getNextProcessingItem();
+        final T processingItem = getNextProcessingItem(true);
         if (processingItem == null)
             return null;
         return new Callable<O>() {
