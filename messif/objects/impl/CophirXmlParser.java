@@ -415,8 +415,8 @@ public class CophirXmlParser extends DefaultHandler {
         int len = fileName.length() - 3;
         int pad = len - 1;
 
-        for (int i = 0; i < 6; i++) {
-            if (i % 3 == 0) {
+        for (int i = 0; i < len; i++) {
+            if (i % 3 == 0 && i < 6) {
                 fileName.insert(0, '/');
                 pad++;
             }
