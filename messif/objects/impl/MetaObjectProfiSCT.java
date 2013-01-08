@@ -60,17 +60,17 @@ import messif.objects.extraction.Extractors;
 import messif.objects.extraction.MultiExtractor;
 import messif.objects.impl.ObjectIntMultiVector.SortedDataIterator;
 import messif.objects.impl.ObjectIntMultiVector.WeightProvider;
-import messif.objects.text.Stemmer;
-import messif.objects.text.TextConversion;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.CachingSerializator;
-import messif.objects.text.WordExpander;
-import messif.objects.text.TextConversionException;
+import messif.objects.text.Stemmer;
 import messif.objects.text.StringFieldDataProvider;
+import messif.objects.text.TextConversion;
+import messif.objects.text.TextConversionException;
+import messif.objects.text.WordExpander;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
@@ -1038,7 +1038,9 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
             map.put("binobj", new BinarySerializableColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, defaultBinarySerializator));
             if (addTextStreamColumn)
                 map.put(getTextStreamColumnName(useLinkTable), getTextStreamColumnConvertor(stemmer, wordIndex, useLinkTable));
-            map.put("locator", DatabaseStorage.getLocatorColumnConvertor(MetaObjectProfiSCT.class));
+            @SuppressWarnings("unchecked")
+            ColumnConvertor<MetaObjectProfiSCT> locatorConvertor = (ColumnConvertor)DatabaseStorage.locatorColumnConvertor;
+            map.put("locator", locatorConvertor);
             map.put("color_layout", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorLayoutType"));
             map.put("color_structure", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "ColorStructureType"));
             map.put("edge_histogram", new DatabaseStorage.MetaObjectTextStreamColumnConvertor<MetaObjectProfiSCT>(MetaObjectProfiSCT.class, "EdgeHistogramType"));
@@ -1394,7 +1396,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         public MetaObjectProfiSCT locatorToObject(String locator, String searchWords, WordExpander expander) throws ExtractorException {
             return locatorToObject(locator, false, searchWords, expander);
         }
-        
+
         /**
          * Returns the object with given {@code locator}.
          * The object is retrieved from the database.
@@ -2397,7 +2399,7 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
          * Java native serialization method.
          * @param in the stream to deserialize this object from
          * @throws IOException if there was an error reading from the stream {@code in}
-         * @throws ClassNotFoundException if an unknown class was encountered in the stream 
+         * @throws ClassNotFoundException if an unknown class was encountered in the stream
          */
         private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
             in.defaultReadObject();
