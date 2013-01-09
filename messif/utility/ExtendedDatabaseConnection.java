@@ -250,6 +250,35 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
     }
 
     /**
+     * Executes a data modification SQL command (i.e. INSERT, UPDATE or DELETE).
+     * The returned value is the first auto-generated column if {@code generatedKeys}
+     * is <tt>true</tt> or the number of affected rows {@link PreparedStatement#getUpdateCount()} if available.
+     * @param sql the SQL command to execute
+     * @param returnGeneratedKeys the flag whether to retrieve the keys generated automatically
+     *          by the database (e.g. when inserting)
+     * @param parameters the values for the parameters in the SQL statement;
+     *          there must be one value for every ? in the SQL statement
+     * @return the first auto-generated column or the number of affected rows
+     * @throws NoSuchElementException if the SQL command does not return any row
+     * @throws SQLException if there was a problem parsing or executing the SQL command
+     */
+    protected final Object executeDataManipulation(String sql, boolean returnGeneratedKeys, Object... parameters) throws NoSuchElementException, SQLException {
+        PreparedStatement stmt = prepareAndExecute(null, sql, returnGeneratedKeys, parameters);
+        try {
+            if (returnGeneratedKeys) {
+                ResultSet rs = stmt.getGeneratedKeys();
+                if (!rs.next())
+                    throw new NoSuchElementException("No data for " + Arrays.toString(parameters) + " found");
+                return rs.getObject(1);
+            } else {
+                return stmt.getUpdateCount();
+            }
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
      * Creates a map of key-value pairs from a given result set.
      * The keys are read from the result set's {@code keyColumn} and
      * values from the {@code valueColumn}.
@@ -366,6 +395,22 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
             return super.executeSingleValue(sql, parameters);
         }
 
+        /**
+        * Executes a data modification SQL command (i.e. INSERT, UPDATE or DELETE).
+        * The returned value is the first auto-generated column if {@code generatedKeys}
+        * is <tt>true</tt> or the number of affected rows {@link PreparedStatement#getUpdateCount()} if available.
+        * @param sql the SQL command to execute
+        * @param returnGeneratedKeys the flag whether to retrieve the keys generated automatically
+        *          by the database (e.g. when inserting)
+        * @param parameters the values for the parameters in the SQL statement;
+        *          there must be one value for every ? in the SQL statement
+        * @return the first auto-generated column or the number of affected rows
+        * @throws NoSuchElementException if the SQL command does not return any row
+        * @throws SQLException if there was a problem parsing or executing the SQL command
+        */
+        public Object executeDataManipulationSQL(String sql, boolean returnGeneratedKeys, Object... parameters) throws NoSuchElementException, SQLException {
+            return super.executeDataManipulation(sql, returnGeneratedKeys, parameters);
+        }
     }
 
 }
