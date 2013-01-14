@@ -52,18 +52,23 @@ public class AlgorithmRMIServer extends Thread {
     /** Encapsulated algorithm */
     private final Algorithm algorithm;
 
+    /** Flag whether to clear surplus data on returned {@link Clearable} objects */
+    private final boolean clearSurplusData;
+
     /**
      * Creates a new instance of AlgorithmRMIServer listening on the specified port.
      * @param algorithm the algorithm to encapsulate
      * @param port the TCP port of the RMI service
+     * @param clearSurplusData flag whether to clear surplus data on returned {@link Clearable} objects
      * @throws NullPointerException if the specified algorithm is <tt>null</tt>
      * @throws IOException if the RMI service cannot be opened on the specified port
      */
-    public AlgorithmRMIServer(Algorithm algorithm, int port) throws NullPointerException, IOException {
+    public AlgorithmRMIServer(Algorithm algorithm, int port, boolean clearSurplusData) throws NullPointerException, IOException {
         super("RMIServerThread");
         if (algorithm == null)
             throw new NullPointerException("Algorithm cannot be null");
         this.algorithm = algorithm;
+        this.clearSurplusData = clearSurplusData;
         socket = ServerSocketChannel.open();
         socket.socket().bind(new InetSocketAddress(port));
         socket.configureBlocking(true);
@@ -116,7 +121,7 @@ public class AlgorithmRMIServer extends Thread {
                                 }
                                 try {
                                     Object retVal = MethodInstantiator.getMethod(algorithmClass, methodName, false, false, null, methodArguments).invoke(algorithm, methodArguments);
-                                    if (retVal instanceof Clearable)
+                                    if (clearSurplusData && retVal instanceof Clearable)
                                         ((Clearable)retVal).clearSurplusData();
                                     out.writeUnshared(retVal);
                                 } catch (InvocationTargetException e) {

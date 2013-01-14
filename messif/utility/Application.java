@@ -51,7 +51,7 @@ public class Application extends DistributedApplication {
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port" })
+    @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port", "flag whether to clear surplus data (defaults to true)" })
     public boolean rmiStart(PrintStream out, String... args) {
         if (algorithm == null) {
             out.println("No running algorithm is selected");
@@ -67,9 +67,13 @@ public class Application extends DistributedApplication {
             return false;
         }
 
+        boolean clearSurplusData = true;
+        if (args.length >= 3 && args[2].equalsIgnoreCase("false"))
+            clearSurplusData = false;
+        
         // Create RMI service
         try {
-            AlgorithmRMIServer rmiServer = new AlgorithmRMIServer(algorithm, port);
+            AlgorithmRMIServer rmiServer = new AlgorithmRMIServer(algorithm, port, clearSurplusData);
             rmiServers.add(rmiServer);
             rmiServer.start();
             return true;
