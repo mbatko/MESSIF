@@ -16,6 +16,8 @@
  */
 package messif.operations;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.RankedAbstractMetaObject;
@@ -204,5 +206,24 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
      */
     public RankedAbstractObject addToAnswer(LocalAbstractObject object) {
         return addToAnswer(object, LocalAbstractObject.MAX_DISTANCE);
+    }
+
+    /**
+     * Creates a new ranking single-query operation of the specified class.
+     * @param <E> the class of the operation that should be created
+     * @param operationClass the class of the operation that should be created
+     * @param queryObject the query object for the operation
+     * @param arguments arguments supplied to the constructor; they should match the types of getConstructorArguments(operationClass)
+     * @return a new instance of operation
+     * @throws NoSuchMethodException if either the {@code operationClass} is <tt>null</tt> or the class is not annotated using {@link AbstractOperation.OperationName}
+     * @throws IllegalArgumentException if the argument count or their types don't match the specified operation class constructor
+     * @throws InvocationTargetException if there was an exception in the operation's constructor
+     */
+    public static <E extends RankingSingleQueryOperation> E createOperation(Class<E> operationClass, LocalAbstractObject queryObject, Object... arguments) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
+        // Add query object to the arguments
+        Object[] args = new Object[arguments.length + 1];
+        args[0] = queryObject;
+        System.arraycopy(arguments, 0, args, 1, arguments.length);
+        return createOperation(operationClass, arguments);
     }
 }
