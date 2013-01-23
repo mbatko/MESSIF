@@ -244,7 +244,7 @@ public abstract class FaceKey extends AbstractObjectKey {
 
         // Translate to face center and rotate
         g.translate(getCenterX(), getCenterY());
-        g.rotate(getRollAngle() * Math.PI / 180);
+        g.rotate(-getRollAngle() * Math.PI / 180.0);
 
         // Draw oval
         Stroke origStroke = g.getStroke();
