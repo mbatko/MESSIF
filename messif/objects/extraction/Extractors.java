@@ -47,6 +47,17 @@ import messif.utility.ExternalProcessInputStream;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public abstract class Extractors {
+    /** Suffix for the external extractor temp file. If <tt>null</tt>, no temp file is created */
+    private static String externalExtractorTempFileSuffix;
+
+    /**
+     * Set the global external extractor temp file suffix.
+     * If <tt>null</tt>, the external extractor temp file creation is disabled
+     * @param suffix the new suffix
+     */
+    public static void setExternalExtractorTempFileSuffix(String suffix) {
+        externalExtractorTempFileSuffix = suffix;
+    }
 
     /**
      * Returns a type-safe cast of a given extractor instance.
@@ -252,9 +263,20 @@ public abstract class Extractors {
         command = Convert.substituteVariables(command, externalCmdVariableSubstitution, 1, 2, dataSource.getParameterMap());
         if (fileAsArgument) {
             Object dataFile = dataSource.getDataSource();
-            if (!(dataFile instanceof File))
-                throw new IOException("External extractor requires file");
-            extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
+            if (!(dataFile instanceof File)) {
+                if (externalExtractorTempFileSuffix == null)
+                    throw new IOException("External extractor requires file - use messif.objects.extraction.Extractors.setExternalExtractorTempFileSuffix to enable automatic temp file creation");
+                // External extractor requires file, but the data sources is not a file - store the data into a temporary file
+                final File tempFile = dataSource.pipeToTemporaryFile("externalExtractorTempFile_", externalExtractorTempFileSuffix, null);
+                return new BufferedInputStream(new ExternalProcessInputStream(Runtime.getRuntime().exec(String.format(command, tempFile.getAbsoluteFile()))) {
+                    @Override
+                    protected void onExit(int processExitCode) {
+                        tempFile.delete();
+                    }
+                });
+            } else {
+                extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
+            }
         } else {
             extractorProcess = Runtime.getRuntime().exec(command);
             OutputStream os = extractorProcess.getOutputStream();

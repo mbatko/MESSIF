@@ -299,6 +299,11 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
         return ret;
     }
 
+    @Override
+    public String toString() {
+        return "ExtendedDatabaseConnection for " + dbConnUrl;
+    }
+
 
     //****************** Public wrapper ******************//
 

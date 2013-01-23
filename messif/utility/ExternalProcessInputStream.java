@@ -68,6 +68,28 @@ public class ExternalProcessInputStream extends InputStream {
     }
 
     /**
+     * Returns whether the given exit code is considered successful.
+     * @param processExitCode the exit code to check
+     * @return <tt>true</tt> if the encapsulated process has exited successfully or 
+     *      <tt>false</tt> if the exit code is not successful
+     */
+    protected boolean isSuccessExitCode(int processExitCode) {
+        for (int i = 0; i < successExitCodes.length; i++) {
+            if (processExitCode == successExitCodes[i])
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Method called when the encapsulated process terminates.
+     * Note that this method need not be called if the input stream reading is interrupted.
+     * @param processExitCode the exit code returned by the process
+     */
+    protected void onExit(int processExitCode) {
+    }
+
+    /**
      * Returns whether the encapsulated process has exited (<tt>true</tt>) or
      * it is still running (<tt>false</tt>).
      * @param waitForExit flag whether to wait for the process to exit (used when input streams are finished)
@@ -85,13 +107,12 @@ public class ExternalProcessInputStream extends InputStream {
                     return false;
                 }
             int processExitCode = process.exitValue();
+            onExit(processExitCode);
             synchronized (this) {
                 if (!exited) { // The success codes were not searched yet
                     exited = true;
-                    for (int i = 0; i < successExitCodes.length; i++) {
-                        if (processExitCode == successExitCodes[i])
-                            return true;
-                    }
+                    if (isSuccessExitCode(processExitCode))
+                        return true;
                     // Exit code is not one of the successful, create exception
                     StringBuilder error = new StringBuilder("External extractor returned ").append(processExitCode).append(": ");
                     error = Convert.readStringData(process.getErrorStream(), error);

@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -388,6 +389,44 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
 
         // Close the input stream, since all data was read
         close();
+    }
+
+    /**
+     * Output all data from this data source to the given {@code file}.
+     * <p>
+     * Note that the given file is overwritten if exists and this data
+     * source is closed after this method is used.
+     * </p>
+     * 
+     * @param file the file to which to write the data
+     * @throws IOException if there was an error reading from this data source or writing to the output stream
+     */
+    public void pipeToFile(File file) throws IOException {
+        FileOutputStream out = new FileOutputStream(file);
+        try {
+            pipe(out);
+        } finally {
+            out.close();
+        }
+    }
+    /**
+     * Output all data from this data source to a automatically generated temporary file.
+     * The name of the file is generated using {@link File#createTempFile(java.lang.String, java.lang.String, java.io.File)}.
+     * <p>
+     * Note that this data source is closed after this method is used.
+     * </p>
+     * 
+     * @param prefix the prefix string to be used in generating the file's name
+     * @param suffix the suffix string to be used in generating the file's name
+     * @param directory the directory in which the file is to be created, or
+     *          <code>null</code> if the default temporary-file directory is to be used
+     * @return the path of the created temporary file
+     * @throws IOException if there was an error reading from this data source or writing to the output stream
+     */
+    public File pipeToTemporaryFile(String prefix, String suffix, File directory) throws IOException {
+        File file = File.createTempFile(prefix, suffix, directory);
+        pipeToFile(file);
+        return file;
     }
 
     @Override
