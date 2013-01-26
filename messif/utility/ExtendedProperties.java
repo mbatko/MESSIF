@@ -57,13 +57,13 @@ import javax.sql.DataSource;
  * <li>Factory method and constructor property getters</li>
  * <li>Database connection property getter.</li>
  * </ul>
- * 
+ *
  * <p>
  * In addition, a caching facility is provided if the
  * {@link #getProperties(java.lang.String) factory method} is used, i.e.
  * the same {@code ExtendedProperties} instance is returned for the same resource.
  * </p>
- * 
+ *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
@@ -150,7 +150,9 @@ public class ExtendedProperties extends Properties {
         if (ret == null)
             try {
                 ret = new ExtendedProperties();
-                ret.load(new FileInputStream(file));
+                FileInputStream in = new FileInputStream(file);
+                ret.load(in);
+                in.close();
                 cache.put(file, ret);
             } catch (Exception e) {
                 throw new ExtendedPropertiesException("Cannot create properties for file '" + file + "': " + e, e);
@@ -162,8 +164,8 @@ public class ExtendedProperties extends Properties {
     /**
      * Returns a cached instance of ExtendedProperties for the specified class.
      * If there is no instance in the cache yet, create a new one, populate it
-     * from the class's properties and cache it.
-     * 
+     * from the class properties and cache it.
+     *
      * @param clazz the class to load the properties for
      * @return a cached instance of ExtendedProperties for the specified class
      * @throws ExtendedPropertiesException if there was a problem creating properties
@@ -287,25 +289,26 @@ public class ExtendedProperties extends Properties {
 
     /**
      * Populate this properties with the data stored in <code>resourceName</code>.
-     * 
+     *
      * @param loader the class loader to use to access the resource
      * @param resourceName the name of a resource to load
      * @return <tt>false</tt> if the resource was not found
      * @throws IOException if an error occurred when reading from the property file
-     * @throws IllegalArgumentException if the property file contains a malformed Unicode escape sequence
+     * @throws IllegalArgumentException if the property file contains a malformed unicode escape sequence
      */
     public boolean load(ClassLoader loader, String resourceName) throws IOException, IllegalArgumentException {
         InputStream in = loader.getResourceAsStream(resourceName);
         if (in == null) // Resource was not found
             return false;
         load(in);
+        in.close();
         return true;
     }
 
     /**
      * Populate this properties with the data stored in another {@link Properties properties}.
      *
-     * @param properties the propertries to load
+     * @param properties the properties to load
      * @param prefix if <tt>null</tt>, all keys from the <code>properties</code>
      *          are copied; otherwise, only the keys that starts with the prefix
      *          are copied without the prefix
@@ -405,7 +408,7 @@ public class ExtendedProperties extends Properties {
      * The message is then formatted according to {@link MessageFormat#format}.
      * @param key the hashtable key of the message
      * @param defaultValue a default value if the property <code>key</code> is <tt>null</tt>
-     * @param parameters an array of objects to be formatted and substituted 
+     * @param parameters an array of objects to be formatted and substituted
      * @return a formatted message
      * @throws IllegalArgumentException if a parameter in the <code>parameters</code> array is not of the type expected by the format element(s) that use it
      */
@@ -443,7 +446,7 @@ public class ExtendedProperties extends Properties {
      * @param key the hashtable key
      * @param defaultValue a default value if the property <code>key</code> is <tt>null</tt>
      * @return an integer value from the given property
-     * @throws ExtendedPropertiesException if the property's value is not a valid integer
+     * @throws ExtendedPropertiesException if the property value is not a valid integer
      */
     public int getIntProperty(String key, int defaultValue) throws ExtendedPropertiesException {
         String value = getProperty(key);
@@ -457,14 +460,14 @@ public class ExtendedProperties extends Properties {
     /**
      * Returns an integer value from the given property.
      * If there is no value for the key, the supplied default value is returned.
-     * The returned value's range is checked. To impose a required check,
+     * The returned value range is checked. To impose a required check,
      * supply a default value outside the checked range.
      * @param key the hashtable key
      * @param defaultValue a default value if the property <code>key</code> is <tt>null</tt>
      * @param minValue
      * @param maxValue
      * @return an integer value from the given property
-     * @throws ExtendedPropertiesException if the property's value is not a valid integer or it is out of range
+     * @throws ExtendedPropertiesException if the property value is not a valid integer or it is out of range
      */
     public int getIntProperty(String key, int defaultValue, int minValue, int maxValue) throws ExtendedPropertiesException {
         int value = getIntProperty(key, defaultValue);
@@ -479,7 +482,7 @@ public class ExtendedProperties extends Properties {
      *
      * @param key the hashtable key
      * @return an boolean value from the given property
-     * @throws ExtendedPropertiesException if the property's value is not a valid integer
+     * @throws ExtendedPropertiesException if the property value is not a valid integer
      */
     public boolean getRequiredBoolProperty(String key) throws ExtendedPropertiesException {
         String value = getRequiredProperty(key);
@@ -497,7 +500,7 @@ public class ExtendedProperties extends Properties {
      * @param key the hashtable key
      * @param defaultValue a default value if the property <code>key</code> is <tt>null</tt>
      * @return an boolean value from the given property
-     * @throws ExtendedPropertiesException if the property's value is not a valid integer
+     * @throws ExtendedPropertiesException if the property value is not a valid integer
      */
     public boolean getBoolProperty(String key, boolean defaultValue) throws ExtendedPropertiesException {
         String value = getProperty(key);
@@ -526,10 +529,12 @@ public class ExtendedProperties extends Properties {
         if (count < 0) {
             List<String> ret = new ArrayList<String>();
             int i = 1;
-            String lastProp = getProperty(key + i++);
+            String lastProp = getProperty(key + i);
+            i++;
             while (lastProp != null) {
                 ret.add(lastProp);
-                lastProp = getProperty(key + i++);
+                lastProp = getProperty(key + i);
+                i++;
             }
             return ret.toArray(new String[ret.size()]);
         } else {
@@ -549,7 +554,7 @@ public class ExtendedProperties extends Properties {
      * are tried until the last one is found.
      * @param key the hashtable key (index number will be appended)
      * @return an array of property values
-     * @throws ExtendedPropertiesException if the property's value is not a non-negative integer
+     * @throws ExtendedPropertiesException if the property value is not a non-negative integer
      */
     public String[] getMultiProperty(String key) throws ExtendedPropertiesException {
         return getMultiProperty(key, getIntProperty(key, -1, -1, Integer.MAX_VALUE));
@@ -615,13 +620,13 @@ public class ExtendedProperties extends Properties {
     //****************** Class property getters ******************//
 
     /**
-     * Returns a generics-safe class from the given property.
+     * Returns a generic-safe class from the given property.
      * @param <E> the superclass of the returned class
      * @param key the hashtable key
      * @param required if <tt>true</tt> the property must exist (and <tt>null</tt> will be never returned)
-     * @param checkClass the superclass of the returned class for the generics check
-     * @return a generics-safe class from the given property
-     * @throws ExtendedPropertiesException if the property was not found or the class with the property's value cannot be resolved
+     * @param checkClass the superclass of the returned class for the generic check
+     * @return a generic-safe class from the given property
+     * @throws ExtendedPropertiesException if the property was not found or the class with the property value cannot be resolved
      */
     public <E> Class<E> getClassProperty(String key, boolean required, Class<E> checkClass) throws ExtendedPropertiesException {
         String className = required?getRequiredProperty(key):getProperty(key);
@@ -639,7 +644,7 @@ public class ExtendedProperties extends Properties {
      * @param key the hashtable key
      * @param required if <tt>true</tt> the property must exist (and <tt>null</tt> will be never returned)
      * @return a class from the given property
-     * @throws ExtendedPropertiesException if the property was not found or the class with the property's value cannot be resolved
+     * @throws ExtendedPropertiesException if the property was not found or the class with the property value cannot be resolved
      */
     public Class<?> getClassProperty(String key, boolean required) throws ExtendedPropertiesException {
         String className = required?getRequiredProperty(key):getProperty(key);
@@ -801,17 +806,17 @@ public class ExtendedProperties extends Properties {
     //****************** Network property getters ******************//
 
     /**
-     * Returns an inet address from the given property.
-     * <p> 
+     * Returns an {@link InetAddress} from the given property.
+     * <p>
      * The property value can either be a machine name or a textual
      * representation of its IP address. If a literal IP address is
      * supplied, only the validity of the address format is checked.
      * </p>
-     * 
+     *
      * @param key the hashtable key
      * @param required if <tt>true</tt> the property must exist (and <tt>null</tt> will be never returned)
-     * @return an inet address from the given property
-     * @throws ExtendedPropertiesException if the property was not found or the class with the property's value cannot be resolved
+     * @return an {@link InetAddress} from the given property
+     * @throws ExtendedPropertiesException if the property was not found or the class with the property value cannot be resolved
      */
     public InetAddress getInetAddressProperty(String key, boolean required) throws ExtendedPropertiesException {
         String inetAddress = required?getRequiredProperty(key):getProperty(key);
@@ -829,7 +834,7 @@ public class ExtendedProperties extends Properties {
      * Returns a data source using either JNDI or {@link DriverManager} using the
      * URL specified in the value of the property <code>key</code>. If the URL
      * starts with "java:", JNDI is looked up, otherwise the driver manager is used
-     * (the driver for the url must be registered in advance).
+     * (the driver for the URL must be registered in advance).
      * @param key the hashtable key
      * @return an established database connection
      * @throws ExtendedPropertiesException if the specified key is not found
