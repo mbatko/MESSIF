@@ -88,13 +88,13 @@ public class ObjectUnsignedByteVectorL2 extends ObjectUnsignedByteVector {
         if (objdata.length != data.length)
             throw new IllegalArgumentException("Cannot compute distance on different vector dimensions (" + data.length + ", " + objdata.length + ")");
         
-        float powSum = 0;
+        double powSum = 0;
         for (int i = 0; i < data.length; i++) {
-            float dif = (data[i] - objdata[i]);
+            double dif = (double) (data[i] - objdata[i]);
             powSum += dif * dif;
         }
         
-        return ((float)Math.sqrt(powSum));
+        return (float)Math.sqrt(powSum);
     }
 
 

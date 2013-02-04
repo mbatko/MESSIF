@@ -161,7 +161,7 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
             throw new IllegalArgumentException("Distance function requires " + rankingDistanceFunction.getDistanceObjectClass() + " but " + object.getClass() + " was given (using AnswerType.NODATA_OBJECTS?)");
 
         // This cast is sufficiently checked on the previous line - we only require object compatible with the distance function
-        RankedAbstractObject rankedObject = rankObject(answerType, object, distance * originalDistanceWeight + rankingDistanceFunction.getDistance(rankingObject, (T)object), objectDistances);
+        RankedAbstractObject rankedObject = rankObject(answerType, object, getNewDistance(distance, (T)object), objectDistances);
         return super.add(rankedObject) ? rankedObject : null;
     }
 
@@ -222,4 +222,16 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
     public boolean isRankingInAdd() {
         return rankInAdd;
     }
+    
+    /**
+     * Given the original distance and the object, this method returns the
+     *  new distance according to which the object should be indexed.
+     * @param origDistance original query-object distance
+     * @param object data object corresponding to this distance
+     * @return new distance to be used by this collection
+     */
+    protected float getNewDistance(float origDistance, T object) {
+        return origDistance * originalDistanceWeight + rankingDistanceFunction.getDistance(rankingObject, object);
+    }    
+        
 }
