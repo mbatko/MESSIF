@@ -225,12 +225,12 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
     
     /**
      * Given the original distance and the object, this method returns the
-     *  new distance according to which the object should be indexed.
+     * new distance according to which the object should be ranked.
      * @param origDistance original query-object distance
      * @param object data object corresponding to this distance
      * @return new distance to be used by this collection
      */
-    protected float getNewDistance(float origDistance, T object) {
+    protected final float getNewDistance(float origDistance, T object) {
         return origDistance * originalDistanceWeight + rankingDistanceFunction.getDistance(rankingObject, object);
     }    
         
