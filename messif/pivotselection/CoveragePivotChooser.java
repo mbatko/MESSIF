@@ -26,7 +26,6 @@ import messif.buckets.BucketFilterAfterAdd;
 import messif.buckets.BucketFilterAfterRemove;
 import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AbstractObjectList;
 
@@ -226,7 +225,7 @@ public class CoveragePivotChooser extends AbstractPivotChooser implements Serial
 
         final int objectCount;
 
-        final Map<UniqueID,Integer> objectToIndex;
+        final Map<LocalAbstractObject,Integer> objectToIndex;
 
         final float[][] distances;
 
@@ -238,9 +237,9 @@ public class CoveragePivotChooser extends AbstractPivotChooser implements Serial
             objectCount = objectList.size();
 
             // Initialize the map
-            objectToIndex = new HashMap<UniqueID,Integer>();
+            objectToIndex = new HashMap<LocalAbstractObject,Integer>();
             for (int i = 0; i < objectCount; i++)
-                objectToIndex.put(objectList.get(i).getObjectID(), i);
+                objectToIndex.put(objectList.get(i), i);
 
             // Initalize the distances
             distances = new float[objectCount][objectCount];
@@ -253,8 +252,8 @@ public class CoveragePivotChooser extends AbstractPivotChooser implements Serial
         }
 
         float getDistance(LocalAbstractObject obj1, LocalAbstractObject obj2) {
-            return getDistance(objectToIndex.get(obj1.getObjectID()),
-                               objectToIndex.get(obj2.getObjectID()));
+            return getDistance(objectToIndex.get(obj1),
+                               objectToIndex.get(obj2));
         }
 
         float getDistance(int index1, int index2) {

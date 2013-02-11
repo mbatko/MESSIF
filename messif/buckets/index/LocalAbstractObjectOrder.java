@@ -20,13 +20,10 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.operations.AnswerType;
 import messif.operations.QueryOperation;
-import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.operations.query.GetObjectByLocatorOperation;
-import messif.operations.query.GetObjectQueryOperation;
 import messif.operations.query.GetObjectsByLocatorPrefixOperation;
 import messif.operations.query.GetObjectsByLocatorsOperation;
 
@@ -39,8 +36,6 @@ import messif.operations.query.GetObjectsByLocatorsOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObject, LocalAbstractObject>, Serializable {
-    /** Order defined by object IDs */
-    UNIQUE_ID,
     /** Order defined by object locator URIs */
     LOCATOR,
     /** Order defined by object data hash codes */
@@ -51,14 +46,12 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     @Override
     public int indexCompare(LocalAbstractObject o1, LocalAbstractObject o2) {
         switch (this) {
-            case UNIQUE_ID:
-                return o1.compareTo(o2);
             case LOCATOR:
                 return o1.getLocatorURI().compareTo(o2.getLocatorURI());
             case DATA:
                 int cmp = o1.dataHashCode() - o2.dataHashCode();
                 if (cmp == 0 && !o1.dataEquals(o2))
-                    cmp = o1.compareTo(o2);     // Order object by their uniqueID
+                    cmp = o1.getObjectKey().compareTo(o2.getObjectKey()); // Order object by their keys
                 return cmp;
             case KEY:
                 return o1.getObjectKey().compareTo(o2.getObjectKey());
@@ -76,45 +69,6 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     public LocalAbstractObject extractKey(LocalAbstractObject object) {
         return object;
     }
-
-    /** Index order defined by object IDs */
-    public static final OperationIndexComparator<UniqueID> uniqueIDComparator = new OperationIndexComparator<UniqueID>() {
-        /** Class serial id for serialization. */
-        private static final long serialVersionUID = 25102L;
-
-        @Override
-        public int indexCompare(UniqueID o1, LocalAbstractObject o2) {
-            return compare(o1, o2);
-        }
-
-        @Override
-        public int compare(UniqueID o1, UniqueID o2) {
-            return o1.compareTo(o2);
-        }
-
-        @Override
-        public UniqueID extractKey(LocalAbstractObject object) {
-            return object.getObjectID();
-        }
-
-        @Override
-        public QueryOperation<?> createIndexOperation(Collection<? extends UniqueID> ids) {
-            if (ids.size() == 1)
-                return new GetObjectQueryOperation(ids.iterator().next(), AnswerType.ORIGINAL_OBJECTS);
-            else
-                return new GetAllObjectsQueryOperation(AnswerType.ORIGINAL_OBJECTS);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj.getClass() == this.getClass();
-        }
-
-        @Override
-        public int hashCode() {
-            return getClass().hashCode();
-        }
-    };
 
     /** Index order defined by object locators */
     public static final OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
@@ -253,21 +207,6 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     };
 
     //****************** Search wrappers ******************//
-
-    /**
-     * Search the specified {@code index} for the object with given ID.
-     * @param <T> type of objects stored in the index
-     * @param index the index to search
-     * @param objectID the object ID to search for
-     * @return the object or <tt>null</tt> if it was not found in the index
-     * @throws IllegalStateException if there was a problem reading objects from the index
-     */
-    public static <T extends LocalAbstractObject> T searchIndexByObjectID(Index<T> index, UniqueID objectID) throws IllegalStateException {
-        Search<T> search = index.search(uniqueIDComparator, objectID);
-        if (!search.next())
-            return null;
-        return search.getCurrentObject();
-    }
 
     /**
      * Search the specified {@code index} for the object with given locator.

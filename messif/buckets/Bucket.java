@@ -21,10 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.buckets.split.SplitPolicy;
-import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
-import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
@@ -131,16 +129,6 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
     //****************** Deletion of objects ******************//
 
     /**
-     * Delete object with the specified ID from this bucket.
-     * 
-     * @param objectID the ID of the object to delete
-     * @return the object deleted from this bucket
-     * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-     * @throws BucketStorageException if the object cannot be deleted from the bucket
-     */
-    public abstract LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException;
-
-    /**
      * Delete all objects from this bucket that are {@link messif.objects.LocalAbstractObject#dataEquals data-equals} to
      * the specified object. If <code>deleteLimit</code> is greater than zero, only the first <code>deleteLimit</code> 
      * data-equal objects found are deleted.
@@ -185,36 +173,6 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
      */
     public final int deleteObject(LocalAbstractObject object) throws BucketStorageException {
         return deleteObject(object, 0);
-    }
-
-    /**
-     * Delete multiple objects with specified IDs.
-     * 
-     * This method can be overridden if there is more efficient implementation
-     * available at the storage level.
-     *
-     * @param objectIDs List of object IDs to be deleted
-     * @param removeDeletedIDs 
-     * @return list of objects that were delete from this bucket
-     * @throws BucketStorageException if the object cannot be deleted from the bucket
-     */
-    public AbstractObjectList<LocalAbstractObject> deleteObjects(Collection<? extends UniqueID> objectIDs, boolean removeDeletedIDs) throws BucketStorageException {
-        // Prepare return list
-        AbstractObjectList<LocalAbstractObject> rtv = new AbstractObjectList<LocalAbstractObject>(objectIDs.size());
-
-        // Enumerate deleted objects and delete one by one
-        Iterator<? extends UniqueID> iterator = objectIDs.iterator();
-        while (iterator.hasNext()) {
-            try {
-                rtv.add(deleteObject(iterator.next()));
-                if (removeDeletedIDs)
-                    iterator.remove();
-            } catch (NoSuchElementException ignore) {
-                // Ignore the IDs that were not found
-            }
-        }
-        
-        return rtv;
     }
 
     /**
@@ -308,15 +266,6 @@ public abstract class Bucket implements ObjectProvider<LocalAbstractObject> {
 
 
     //****************** Object access ******************//
-
-    /**
-     * Retrieves an object with the specified ID from this bucket.
-     *
-     * @param objectID the ID of the object to retrieve
-     * @return object an object with the specified ID
-     * @throws NoSuchElementException if there is no object with the specified ID in this bucket
-     */
-    public abstract LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException;
 
     /**
      * Retrieve an object with the specified locator from this bucket.

@@ -62,6 +62,6 @@ public class RemoteAbstractObject extends AbstractObject {
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
     public LocalAbstractObject getLocalAbstractObject() throws IllegalStateException {
-        return bucket.getObject(this);
+        return bucket.getObject(this.getObjectKey());
     }
 }
