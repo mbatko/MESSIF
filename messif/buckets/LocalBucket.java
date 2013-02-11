@@ -24,7 +24,6 @@ import messif.buckets.index.ModifiableIndex;
 import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.Search;
 import messif.buckets.index.SearchAbstractObjectIterator;
-import messif.objects.UniqueID;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
@@ -427,18 +426,6 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     @Override
-    public synchronized LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
-        // Search for objects with the specified ID
-        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
-
-        // If object is found, delete and return it
-        if (!search.next())
-            throw new NoSuchElementException("There is no object with ID: " + objectID);
-        deleteObject(search);
-        return search.getCurrentObject();
-    }
-
-    @Override
     public synchronized int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException {
         return deleteObjects(getModifiableIndex().search(LocalAbstractObjectOrder.DATA, object), deleteLimit);
     }
@@ -481,22 +468,6 @@ public abstract class LocalBucket extends Bucket implements Serializable {
             count++;
         }
         return count;
-    }
-
-    @Override
-    public synchronized LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
-        // Search for objects with the specified ID
-        ModifiableSearch<LocalAbstractObject> search = getModifiableIndex().search(LocalAbstractObjectOrder.uniqueIDComparator, objectID);
-
-        // If object is found, delete and return it
-        if (!search.next())
-            throw new NoSuchElementException("There is no object with ID: " + objectID);
-
-        // Update statistics
-        if (StatisticRefCounter.isEnabledGlobally())
-            counterBucketRead.add(this);
-
-        return search.getCurrentObject();
     }
 
     @Override

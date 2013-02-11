@@ -28,7 +28,6 @@ import java.util.TreeSet;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
-import messif.objects.UniqueID;
 import messif.utility.SortedCollection;
 
 
@@ -105,16 +104,6 @@ public class AbstractObjectList<E extends AbstractObject> extends ArrayList<E> i
 
     
     /****************** Additional access methods ******************/
-
-    /**
-     * Returns the ID of object at specified position.
-     *
-     * @param index position of object in the list
-     * @return the ID of object at position <code>index</code>
-     */
-    public UniqueID getObjectID(int index) { 
-        return get(index).getObjectID();
-    }
 
     /**
      * Returns an iterator over the elements in this list in proper sequence.

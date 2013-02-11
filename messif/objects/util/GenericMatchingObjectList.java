@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import messif.objects.AbstractObject;
 import messif.objects.ObjectProvider;
-import messif.objects.UniqueID;
 
 
 /**
@@ -84,7 +83,7 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
      * @return a list of objects in the given partition or <tt>null</tt> if
      *      there is no list for the given {@code partId}
      */
-    protected AbstractObjectList<E> getPart(int partId) { 
+    protected final AbstractObjectList<E> getPart(int partId) { 
         return getPart(partId, false); 
     }
 
@@ -154,18 +153,6 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
      */
     public E getObject(int index, int partId) throws NoSuchElementException, IndexOutOfBoundsException {
         return getPart(partId).get(index);
-    }
-
-    /**
-     * Returns the ID of the object at position {@code index} of the partition {@code partId}.
-     * @param index the index of object within the given partition
-     * @param partId the identification of the partition from which to retrieve the object
-     * @return the ID of the object at position {@code index} of the part {@code partId}
-     * @throws NoSuchElementException if the partition {@code partId} is not found
-     * @throws IndexOutOfBoundsException if object {@code index} is invalid
-     */
-    public UniqueID getObjectID(int index, int partId) throws NoSuchElementException, IndexOutOfBoundsException { 
-        return getObject(index, partId).getObjectID();
     }
 
     /**

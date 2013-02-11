@@ -36,7 +36,7 @@ import messif.utility.Clearable;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class AbstractObject extends UniqueID implements Serializable, Clearable, Cloneable {
+public abstract class AbstractObject implements Serializable, Clearable, Cloneable {
 
     /** Class version id for serialization. */
     private static final long serialVersionUID = 4L;
@@ -88,23 +88,10 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @param source the object from which to copy the ID
      */
     protected AbstractObject(AbstractObject source) {
-        super(source);
         if ((source.objectKey == null) || (AbstractObjectKey.class.equals(source.objectKey.getClass())))
             this.objectKey = source.objectKey;
         else
             this.objectKey = new AbstractObjectKey(source.objectKey.getLocatorURI());
-    }
-
-
-    //****************** Object ID ******************//
-
-    /**
-     * Returns the ID of this object
-     * @return the ID of this object
-     */
-    public UniqueID getObjectID() {
-        // It is necessary to create a new instance (this object should not be used directly)
-        return new UniqueID(this);
     }
 
 
@@ -249,7 +236,6 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @throws IOException if there was an I/O error reading from the input
      */
     protected AbstractObject(BinaryInput input, BinarySerializator serializator) throws IOException {
-        super(input, serializator);
         objectKey = serializator.readObject(input, AbstractObjectKey.class);
     }
 
@@ -260,10 +246,8 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @return the number of bytes actually written
      * @throws IOException if there was an I/O error during serialization
      */
-    @Override
     protected int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
-        return super.binarySerialize(output, serializator) +
-               serializator.write(output, objectKey);
+        return serializator.write(output, objectKey);
     }
 
     /**
@@ -271,9 +255,8 @@ public abstract class AbstractObject extends UniqueID implements Serializable, C
      * @param serializator the serializator used to write objects
      * @return size of the binary-serialized version of this object
      */
-    @Override
     protected int getBinarySize(BinarySerializator serializator) {
-        return super.getBinarySize(serializator) + serializator.getBinarySize(objectKey);
+        return serializator.getBinarySize(objectKey);
     }
 
 }
