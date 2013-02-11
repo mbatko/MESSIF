@@ -34,9 +34,8 @@ import messif.buckets.index.ModifiableIndex;
 import messif.netbucket.RemoteBucket;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
-import messif.objects.util.AbstractObjectList;
 import messif.operations.QueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
@@ -50,26 +49,26 @@ import messif.statistics.StatisticCounter;
 public class ReplicationBucket extends LocalBucket {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
-    
+
     /** Statistics counter */
     protected static StatisticCounter distanceComputations = StatisticCounter.getStatistics("DistanceComputations");
-    
+
     protected final ReplicationNetworkBucketDispatcher bucketDispatcher;
     protected final LocalBucket encapsulatedBucket;
     protected final List<RemoteBucket> replicas = new ArrayList<RemoteBucket>();
     protected final AtomicInteger nextReplicaForGet = new AtomicInteger(0); // zero means access local bucket
     protected final ReadWriteLock replicaManipulationLock = new ReentrantReadWriteLock(true);
-    
+
     /** Creates a new instance of ReplicationBucket */
     protected ReplicationBucket(ReplicationNetworkBucketDispatcher bucketDispatcher, LocalBucket encapsulatedBucket) {
         super(Long.MAX_VALUE, Long.MAX_VALUE, 0, false);
         this.encapsulatedBucket = encapsulatedBucket;
         this.bucketDispatcher = bucketDispatcher;
     }
-    
-    
-    /****************** Overrides for all public methods of LocalBucket that simply call the stub ******************/
-    
+
+
+    //****************** Overrides for all public methods of LocalBucket that simply call the stub ******************//
+
     public void createReplica(NetworkNode atNetworkNode) throws BucketStorageException, IllegalStateException {
         replicaManipulationLock.writeLock().lock();
         
@@ -88,7 +87,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.writeLock().unlock();
         }
     }
-    
+
     /** Remove replica of this bucket from given node.
      * @return false if the bucket is not replicated at the node */
     public boolean removeReplica(NetworkNode atNetworkNode) throws IOException {
@@ -110,7 +109,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.writeLock().unlock();
         }
     }
-    
+
     /** Indicate that one of the replica was migrated */
     public void replicaMigrated(NetworkNode origNode, NetworkNode newNode) {
         replicaManipulationLock.writeLock().lock();
@@ -122,7 +121,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.writeLock().unlock();
         }
     }
-    
+
     /** Return set of all network nodes where this bucket has replicas */
     public Set<NetworkNode> getAllReplicaNodes() {
         Set<NetworkNode> retVal = new HashSet<NetworkNode>();
@@ -130,57 +129,58 @@ public class ReplicationBucket extends LocalBucket {
             retVal.add(replicaBucket.getRemoteNetworkNode());
         return retVal;
     }
-    
-    /****************** Overrides for all public methods of LocalBucket that simply call the stub ******************/
-    
+
+
+    //****************** Overrides for all public methods of LocalBucket that simply call the stub ******************//
+
     @Override
     public int getBucketID() {
         return encapsulatedBucket.getBucketID();
     }
-    
+
     @Override
     public int getObjectCount() {
         return encapsulatedBucket.getObjectCount();
     }
-    
+
     @Override
     public long getCapacity() {
         return encapsulatedBucket.getCapacity();
     }
-    
+
     @Override
     public long getSoftCapacity() {
         return encapsulatedBucket.getSoftCapacity();
     }
-    
+
     @Override
     public long getLowOccupation() {
         return encapsulatedBucket.getLowOccupation();
     }
-    
+
     @Override
     public long getOccupation() {
         return encapsulatedBucket.getOccupation();
     }
-    
+
     @Override
     public double getOccupationRatio() {
         return encapsulatedBucket.getOccupationRatio();
     }
-    
+
     @Override
     public boolean isSoftCapacityExceeded() {
         return encapsulatedBucket.isSoftCapacityExceeded();
     }
-    
+
     @Override
     public String toString() {
         return encapsulatedBucket.toString();
     }
-    
-    
-    /****************** Overrides for all manipulation methods of LocalBucket ******************/
-    
+
+
+    //****************** Overrides for all manipulation methods of LocalBucket ******************//
+
     @Override
     public int addObjects(Iterator<? extends LocalAbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
@@ -196,7 +196,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.readLock().unlock();
         }
     }
-    
+
     @Override
     public int addObjects(Collection<? extends LocalAbstractObject> objects) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
@@ -212,7 +212,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.readLock().unlock();
         }
     }
-    
+
     @Override
     public void addObject(LocalAbstractObject object) throws BucketStorageException {
         replicaManipulationLock.readLock().lock();
@@ -226,45 +226,9 @@ public class ReplicationBucket extends LocalBucket {
         }
     }
 
-    @Override
-    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException {
-        replicaManipulationLock.readLock().lock();
-        try {
-            LocalAbstractObject object = encapsulatedBucket.deleteObject(objectID);
-            
-            if (object != null) {
-                // Update all replicas
-                for (RemoteBucket replica : replicas)
-                    replica.deleteObject(objectID);
-            }
-            
-            return object;
-        } finally {
-            replicaManipulationLock.readLock().unlock();
-        }
-    }
 
-    @Override
-    public AbstractObjectList<LocalAbstractObject> deleteObjects(Collection<? extends UniqueID> objectIDs, boolean removeDeletedIDs) throws NoSuchElementException, BucketStorageException {
-        replicaManipulationLock.readLock().lock();
-        try {
-            AbstractObjectList<LocalAbstractObject> objects = encapsulatedBucket.deleteObjects(objectIDs, removeDeletedIDs);
-            
-            if (objects.size() > 0) {
-                // Update all replicas
-                for (RemoteBucket replica : replicas)
-                    replica.deleteObjects(objectIDs, removeDeletedIDs);
-            }
-            
-            return objects;
-        } finally {
-            replicaManipulationLock.readLock().unlock();
-        }
-    }
-    
-    
-    /****************** Overrides for all getter methods of LocalBucket ******************/
-    
+    //****************** Overrides for all getter methods of LocalBucket ******************//    
+
     protected Bucket getOperatingBucket() {
         // Get next replica index (thread safe)
         int index;
@@ -276,7 +240,7 @@ public class ReplicationBucket extends LocalBucket {
         
         return (index == 0)?encapsulatedBucket:replicas.get(index - 1);
     }
-    
+
     @Override
     public int processQuery(QueryOperation query) {
         replicaManipulationLock.readLock().lock();
@@ -296,7 +260,7 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.readLock().unlock();
         }
     }
-    
+
     @Override
     public AbstractObjectIterator<LocalAbstractObject> getAllObjects() {
         replicaManipulationLock.readLock().lock();
@@ -306,17 +270,27 @@ public class ReplicationBucket extends LocalBucket {
             replicaManipulationLock.readLock().unlock();
         }
     }
-    
+
     @Override
-    public LocalAbstractObject getObject(UniqueID objectID) throws NoSuchElementException {
+    public LocalAbstractObject getObject(AbstractObjectKey key) throws NoSuchElementException {
         replicaManipulationLock.readLock().lock();
         try {
-            return encapsulatedBucket.getObject(objectID);
+            return encapsulatedBucket.getObject(key);
         } finally {
             replicaManipulationLock.readLock().unlock();
         }
     }
-    
+
+    @Override
+    public LocalAbstractObject getObject(String locator) throws NoSuchElementException {
+        replicaManipulationLock.readLock().lock();
+        try {
+            return encapsulatedBucket.getObject(locator);
+        } finally {
+            replicaManipulationLock.readLock().unlock();
+        }
+    }
+
     @Override
     public AbstractObjectIterator<LocalAbstractObject> provideObjects() {
         replicaManipulationLock.readLock().lock();

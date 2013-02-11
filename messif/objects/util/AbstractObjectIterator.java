@@ -26,7 +26,6 @@ import messif.buckets.OccupationLowException;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.ObjectProvider;
-import messif.objects.UniqueID;
 
 /**
  * Implementation of an iterator over a collection of {@link AbstractObject abstract objects}.
@@ -57,25 +56,6 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      */
     public abstract E getCurrentObject() throws NoSuchElementException;
 
-    /**
-     * Returns an ID of the object returned by the last call to {@link #next()}.
-     * @return an ID of the object returned by the last call to {@link #next()}.
-     * @throws NoSuchElementException if next() has not been called yet.
-     */
-    public UniqueID getCurrentObjectID() throws NoSuchElementException {
-        return getCurrentObject().getObjectID();
-    }
-
-    /**
-     * Returns an ID of the object returned by a call to {@link #next()}.
-     * That is, the next object is obtained from the iterator via {@link #next()}
-     * and its {@link AbstractObject#getObjectID() ID} is returned.
-     * @return an ID of the object returned by a call to {@link #next()}
-     */
-    public UniqueID nextObjectID() { 
-        return next().getObjectID();
-    }
-
 
     //****************** GetBySomething methods ******************//
 
@@ -92,21 +72,6 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
         skip(position);
         
         return getCurrentObject();
-    }
-
-    /**
-     * Returns the first instance of object, that has the specified ID.
-     *
-     * @param objectID ID of the object that we are searching for
-     * @return the first instance of object, that has the specified objectID
-     * @throws NoSuchElementException if such an object cannot be found.
-     */
-    public E getObjectByID(UniqueID objectID) throws NoSuchElementException {
-        if (objectID == null)
-            throw new NoSuchElementException("Cannot search for null object ID");
-        while (true)
-            if (next().equals(objectID)) // NoSuchElement is thrown automatically here when trying to access an object after the last one.
-                return getCurrentObject();
     }
 
     /**

@@ -24,7 +24,6 @@ import messif.buckets.BucketErrorCode;
 import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectList;
 
@@ -46,10 +45,9 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
 
     private final LocalAbstractObject object;
     private final AbstractObjectList<LocalAbstractObject> objects;
-    private final UniqueID objectID;
     private final String objectLocator;
     private final AbstractObjectKey objectKey;
-    private final boolean deleteObject;
+    private final int deleteObjects;
     private final boolean addResultToOperation;
 
 
@@ -59,13 +57,19 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
      * Creates a new instance of BucketManipulationRequestMessage that requests addition of object to a remote bucket
      */
     public BucketManipulationRequestMessage(LocalAbstractObject object, int remoteBucketID) {
+        this(object, remoteBucketID, -1);
+    }
+
+    /**
+     * Creates a new instance of BucketManipulationRequestMessage that requests addition/removal of object to/from a remote bucket
+     */
+    public BucketManipulationRequestMessage(LocalAbstractObject object, int remoteBucketID, int deleteObjects) {
         super(remoteBucketID);
         this.object = object;
         this.objects = null;
-        this.objectID = null;
         this.objectLocator = null;
         this.objectKey = null;
-        this.deleteObject = false;
+        this.deleteObjects = deleteObjects;
         this.addResultToOperation = false;
     }
 
@@ -76,10 +80,9 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         super(remoteBucketID);
         this.object = null;
         this.objects = new AbstractObjectList<LocalAbstractObject>();
-        this.objectID = null;
         this.objectLocator = null;
         this.objectKey = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
         this.addResultToOperation = false;
 
         while (objects.hasNext())
@@ -89,42 +92,20 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
      */
-    public BucketManipulationRequestMessage(UniqueID remoteObjectID, int remoteBucketID) {
-        this(remoteObjectID, remoteBucketID, false);
-    }
-    
-    /**
-     * Creates a new instance of BucketManipulationRequestMessage that requests retrieval/deletion of object from a remote bucket
-     */
-    public BucketManipulationRequestMessage(UniqueID remoteObjectID, int remoteBucketID, boolean deleteObject) {
-        super(remoteBucketID);
-        this.object = null;
-        this.objects = null;
-        this.objectID = remoteObjectID;
-        this.objectLocator = null;
-        this.objectKey = null;
-        this.deleteObject = deleteObject;
-        this.addResultToOperation = false;
-    }
-
-    /**
-     * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
-     */
     public BucketManipulationRequestMessage(String remoteObjectLocator, int remoteBucketID) {
-        this(remoteObjectLocator, remoteBucketID, false);
+        this(remoteObjectLocator, remoteBucketID, -1);
     }
 
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
      */
-    public BucketManipulationRequestMessage(String remoteObjectLocator, int remoteBucketID, boolean deleteObject) {
+    public BucketManipulationRequestMessage(String remoteObjectLocator, int remoteBucketID, int deleteObjects) {
         super(remoteBucketID);
         this.object = null;
         this.objects = null;
-        this.objectID = null;
         this.objectLocator = remoteObjectLocator;
         this.objectKey = null;
-        this.deleteObject = deleteObject;
+        this.deleteObjects = deleteObjects;
         this.addResultToOperation = false;
     }
     
@@ -135,10 +116,9 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         super(remoteBucketID);
         this.object = null;
         this.objects = null;
-        this.objectID = null;
         this.objectLocator = null;
         this.objectKey = remoteObjectKey;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
         this.addResultToOperation = false;
     }
     
@@ -149,8 +129,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         super(remoteBucketID);
         this.object = null;
         this.objects = null;
-        this.objectID = null;
-        this.deleteObject = false;
+        this.deleteObjects = -1;
         this.objectLocator = null;
         this.objectKey = null;
         this.addResultToOperation = false;
@@ -164,7 +143,17 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         // Get bucket from bucket dispatcher
         LocalBucket bucket = bucketDispatcher.getBucket(bucketID);
 
-        if (object != null) {
+        if (deleteObjects >= 0) {
+            if (object != null) {
+                log.log(Level.INFO, "Deleting from {0} object {1} from {2}", new Object[]{getSender(), object, bucket});
+                bucket.deleteObject(object, deleteObjects);
+                return new BucketManipulationReplyMessage(this, null, true);
+            } else {
+                log.log(Level.INFO, "Deleting from {0} object with locator {1} from {2}", new Object[]{getSender(), objectLocator, bucket});
+                bucket.deleteObject(objectLocator, deleteObjects);
+                return new BucketManipulationReplyMessage(this, null, true);
+            }
+        } else if (object != null) {
             log.log(Level.INFO, "Adding {0} from {1} into {2}", new Object[]{object, getSender(), bucket});
             bucket.addObject(object);
             return new BucketManipulationReplyMessage(this, bucket.isSoftCapacityExceeded() ? BucketErrorCode.SOFTCAPACITY_EXCEEDED : BucketErrorCode.OBJECT_INSERTED);
@@ -172,18 +161,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
             log.log(Level.INFO, "Adding set of {0} objects from {1} into {2}", new Object[]{objects.size(), getSender(), bucket});
             bucket.addObjects(objects);
             return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED);
-        } else if (deleteObject) {
-            if (objectID != null) {
-                log.log(Level.INFO, "Deleting from {0} object {1} from {2}", new Object[]{getSender(), objectID, bucket});
-                return new BucketManipulationReplyMessage(this, bucket.deleteObject(objectID), true);
-            } else {
-                log.log(Level.INFO, "Deleting from {0} object with locator {1} from {2}", new Object[]{getSender(), objectLocator, bucket});
-                bucket.deleteObject(objectLocator, 0);
-                return new BucketManipulationReplyMessage(this, null, true);
-            }
-        } else if (objectID != null) {
-            log.log(Level.INFO, "Returning object {0} from {1} to {2}", new Object[]{objectID, bucket, getSender()});
-            return new BucketManipulationReplyMessage(this, bucket.getObject(objectID));
         } else if (objectLocator != null) {
             log.log(Level.INFO, "Returning object with locator {0} from {1} to {2}", new Object[]{objectLocator, bucket, getSender()});
             return new BucketManipulationReplyMessage(this, bucket.getObject(objectLocator));

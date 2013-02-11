@@ -25,7 +25,6 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.network.NetworkNode;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.QueryOperation;
@@ -149,26 +148,6 @@ public class RemoteBucket extends Bucket implements Serializable {
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */
     @Override
-    public LocalAbstractObject getObject(UniqueID objectID) throws IllegalStateException {
-        // If this remote bucket points is current node, use local bucket
-        if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).getObject(objectID);
-        
-        // Otherwise, send message to remote netnode
-        try {
-            return netbucketDisp.send(new BucketManipulationRequestMessage(objectID, bucketID), remoteNetworkNode).getObject();
-        } catch (IOException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
-        } catch (BucketStorageException e) {
-            throw new IllegalStateException("Network error while getting object " + objectID + " from " + toString(), e);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
-     */
-    @Override
     public LocalAbstractObject getObject(String locator) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -262,20 +241,6 @@ public class RemoteBucket extends Bucket implements Serializable {
     }
 
     @Override
-    public LocalAbstractObject deleteObject(UniqueID objectID) throws NoSuchElementException, BucketStorageException, IllegalStateException {
-        // If this remote bucket points is current node, use local bucket
-        if (isLocalBucket())
-            return netbucketDisp.getBucket(bucketID).deleteObject(objectID);
-        
-        // Otherwise, send message to remote netnode
-        try {
-            return netbucketDisp.send(new BucketManipulationRequestMessage(objectID, bucketID, true), remoteNetworkNode).getObject();
-        } catch (IOException e) {
-            throw new IllegalStateException("Network error while deleting Object (" + objectID + ") from " + toString(), e);
-        }
-    }
-
-    @Override
     public int deleteObject(LocalAbstractObject object, int deleteLimit) throws BucketStorageException, IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
@@ -283,7 +248,7 @@ public class RemoteBucket extends Bucket implements Serializable {
         
         // Otherwise, send message to remote netnode
         try {
-            return netbucketDisp.send(new BucketManipulationRequestMessage(object, bucketID, true), remoteNetworkNode).getChangesCount();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(object, bucketID, deleteLimit), remoteNetworkNode).getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting Object (" + object + ") from " + toString(), e);
         }
@@ -297,7 +262,7 @@ public class RemoteBucket extends Bucket implements Serializable {
         
         // Otherwise, send message to remote netnode
         try {
-            return netbucketDisp.send(new BucketManipulationRequestMessage(locatorURI, bucketID, true), remoteNetworkNode).getChangesCount();
+            return netbucketDisp.send(new BucketManipulationRequestMessage(locatorURI, bucketID, deleteLimit), remoteNetworkNode).getChangesCount();
         } catch (IOException e) {
             throw new IllegalStateException("Network error while deleting object with locator " + locatorURI + " from " + toString(), e);
         }

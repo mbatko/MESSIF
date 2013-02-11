@@ -26,7 +26,6 @@ import messif.buckets.BucketFilterAfterAdd;
 import messif.buckets.BucketFilterAfterRemove;
 import messif.buckets.LocalBucket;
 import messif.objects.LocalAbstractObject;
-import messif.objects.UniqueID;
 import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.AbstractObjectList;
 import messif.utility.SortedCollection;
@@ -138,7 +137,7 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
      */
     protected class PrecomputedDistances {
 
-        Map<UniqueID,Integer> objectToIndex;
+        Map<LocalAbstractObject,Integer> objectToIndex;
 
         float[][] distances;
 
@@ -150,9 +149,9 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
             int objCount = objectList.size();
 
             // Initialize the map
-            objectToIndex = new HashMap<UniqueID,Integer>();
+            objectToIndex = new HashMap<LocalAbstractObject,Integer>();
             for (int i = 0; i < objCount; i++)
-                objectToIndex.put(objectList.get(i).getObjectID(), i);
+                objectToIndex.put(objectList.get(i), i);
 
             // Initalize the distances
             distances = new float[objCount][objCount];
@@ -165,8 +164,8 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
         }
 
         float getDistance(LocalAbstractObject obj1, LocalAbstractObject obj2) {
-            int idx1 = objectToIndex.get(obj1.getObjectID());
-            int idx2 = objectToIndex.get(obj2.getObjectID());
+            int idx1 = objectToIndex.get(obj1);
+            int idx2 = objectToIndex.get(obj2);
             return distances[idx1][idx2];
         }
     }
@@ -380,7 +379,7 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
             else if (radius > o.radius)
                 return 1;
             else
-                return clusteroid.compareTo(clusteroid);
+                return clusteroid.getObjectKey().compareTo(o.clusteroid.getObjectKey());
         }
 
         /**
