@@ -54,6 +54,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     private final String objectLocator;
     private final AbstractObjectKey objectKey;
     private final int deleteObjects;
+    private final boolean addResultToOperation;
     private final int sourceBucketID;
 
 
@@ -76,6 +77,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
+        this.addResultToOperation = false;
         this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
@@ -89,12 +91,13 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = -1;
+        this.addResultToOperation = false;
         this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
 
         while (objects.hasNext())
             this.objects.add(objects.next());
     }
-    
+
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
      */
@@ -112,6 +115,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = remoteObjectLocator;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
+        this.addResultToOperation = false;
         this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
@@ -125,6 +129,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = remoteObjectKey;
         this.deleteObjects = -1;
+        this.addResultToOperation = false;
         this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
@@ -145,6 +150,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.deleteObjects = -1;
         this.objectLocator = null;
         this.objectKey = null;
+        this.addResultToOperation = false;
         this.sourceBucketID = sourceBucketID;
     }
 
