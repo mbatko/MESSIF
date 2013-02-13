@@ -20,7 +20,9 @@ import messif.network.Message;
 import messif.operations.AbstractOperation;
 
 /**
- *
+ * Request message for the {@link DistributedAlgorithm}.
+ * The message contains the operation to process by the distributed algorithm.
+ * 
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
@@ -30,39 +32,46 @@ public class DistAlgRequestMessage extends Message {
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
     
-    /****************** Message extension ******************/
-    protected AbstractOperation operation;
-    public AbstractOperation getOperation() { return operation; }
-    
-    
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of DistAlgRequestMessage */
+    //****************** Attributes ******************//
+
+    /** Operation processed by the algorithm */
+    private AbstractOperation operation;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of DistAlgRequestMessage for the given operation.
+     * @param operation the operation processed by the algorithm
+     */
     public DistAlgRequestMessage(AbstractOperation operation) {
         super();
-        
         this.operation = operation;
     }
 
+    /**
+     * Returns the operation processed by the algorithm.
+     * @return the operation processed by the algorithm
+     */
+    public AbstractOperation getOperation() {
+        return operation;
+    }
 
-    /****************** Cloning ******************/
-    
+
+    //****************** Cloning ******************//
+
     @Override
-    public Object clone() throws CloneNotSupportedException {
+    public DistAlgRequestMessage clone() throws CloneNotSupportedException {
         DistAlgRequestMessage rtv = (DistAlgRequestMessage)super.clone();
-        
         rtv.operation = operation.clone();
-        
         return rtv;
     }
-    
-    
-    /****************** String representation ******************/
-    
+
+
+    //****************** String representation ******************//
+
     @Override
     public String toString() {
         return super.toString() + ": " + operation;
     }
-    
 }
-

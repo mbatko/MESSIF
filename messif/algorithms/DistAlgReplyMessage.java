@@ -21,43 +21,48 @@ import messif.operations.AbstractOperation;
 
 
 /**
- * Reply message for the distributed algorithm - contains the operation.
+ * Reply message for the {@link DistributedAlgorithm}.
+ * The message contains the processed operation as well as the identification
+ * of the message that is being replied to.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 public class DistAlgReplyMessage extends ReplyMessage {
-    
     /** Class version id for serialization */
     private static final long serialVersionUID = 1L;
-    
-    /****************** Message extensions ******************/
-    
+
+    //****************** Attributes ******************//
+
     /** Operation processed by the algorithm */
-    protected final AbstractOperation operation;
-    
-    /** Returns the operation that this message holds */
+    private final AbstractOperation operation;
+
+
+    //****************** Constructors ******************//
+
+    /**
+     * Creates a new instance of DistAlgReplyMessage from the given {@link DistAlgRequestMessage}.
+     * @param request the request message to reply to
+     */
+    public DistAlgReplyMessage(DistAlgRequestMessage request) {
+        super(request);
+        this.operation = request.getOperation();
+    }
+
+    /**
+     * Returns the operation processed by the algorithm.
+     * @return the operation processed by the algorithm
+     */
     public AbstractOperation getOperation() {
         return operation;
     }
-    
-    /****************** Constructors ******************/
-    
-    /** Creates a new instance of DistAlgReplyMessage */
-    public DistAlgReplyMessage(DistAlgRequestMessage request) {
-        super(request);
-        
-        this.operation = request.operation;
-    }
-    
-    
-    /****************** String representation ******************/
-    
+
+
+    //****************** String representation ******************//
+
     @Override
     public String toString() {
         return super.toString() + ": " + operation;
     }
-    
-    
 }

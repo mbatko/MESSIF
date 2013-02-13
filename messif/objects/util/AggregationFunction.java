@@ -40,10 +40,18 @@ public abstract class AggregationFunction implements DistanceFunction<MetaObject
     //****************** Aggregation function evaluation ******************//
 
     /**
-     * Returns the names of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
-     * @return the list of parameter (descriptor) names of the {@link #compute} function
+     * Returns the number of distance parameters (i.e. the descriptor names) for the {@link #compute} function.
+     * @return the number of parameter (descriptor) names of the {@link #compute} function
      */
-    public abstract String[] getParameterNames();
+    public abstract int getParameterCount();
+
+    /**
+     * Returns the name of the {@code index}th distance parameter (i.e. the descriptor name) for the {@link #compute} function.
+     * @param index the index of the parameter for which to get the name
+     * @return the name of the {@code index}th distance parameter (i.e. the descriptor name) for the {@link #compute} function
+     * @throws IndexOutOfBoundsException if the index is smaller than zero or greater than or equal to {@link #getParameterCount()}
+     */
+    public abstract String getParameterName(int index) throws IndexOutOfBoundsException;
 
     /**
      * Returns the maximal distance for the specified parameter of the {@link #compute} function.
@@ -81,18 +89,17 @@ public abstract class AggregationFunction implements DistanceFunction<MetaObject
     public float getDistance(MetaObject object1, MetaObject object2, float[] descriptorDistances) {
         // Allocate descriptor distance if not provided
         if (descriptorDistances == null)
-            descriptorDistances = new float[getParameterNames().length];
+            descriptorDistances = new float[getParameterCount()];
 
         // Compute the array of distances in respective descriptors
-        int paramIndex = 0;
-        for (String descriptorName : getParameterNames()) {
+        for (int paramIndex = 0; paramIndex < getParameterCount(); paramIndex++) {
+            String descriptorName = getParameterName(paramIndex);
             LocalAbstractObject descriptorObject1 = object1.getObject(descriptorName);
             LocalAbstractObject descriptorObject2 = object2.getObject(descriptorName);
 
             if (descriptorObject1 == null || descriptorObject2 == null)
                 descriptorDistances[paramIndex] = getParameterMaximalDistance(paramIndex);
             else descriptorDistances[paramIndex] = descriptorObject1.getDistance(descriptorObject2);
-            paramIndex++;
         }
 
         // Compute overall distance

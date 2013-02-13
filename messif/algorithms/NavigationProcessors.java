@@ -95,6 +95,7 @@ public abstract class NavigationProcessors {
      * @param processor the asynchronous navigation processor that provides the processing steps
      * @throws InterruptedException if the processing thread is interrupted during the processing
      * @throws AlgorithmMethodException if there was an error during the processing
+     * @throws CloneNotSupportedException if there was a need for cloning (due to asynchronous access) but cloning was not supported
      */
     @SuppressWarnings("empty-statement")
     public static <O extends AbstractOperation> void execute(ExecutorService executor, NavigationProcessor<O> processor) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
@@ -123,6 +124,7 @@ public abstract class NavigationProcessors {
      *      <tt>false</tt> if no processing was performed
      * @throws InterruptedException if the processing thread is interrupted during the processing
      * @throws AlgorithmMethodException if there was an error during the processing
+     * @throws CloneNotSupportedException if there was a need for cloning (due to asynchronous access) but cloning was not supported
      */
     public static boolean executeWithCast(ExecutorService executor, Object navigationDirectory, Object operation) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
         if (!(operation instanceof AbstractOperation))
