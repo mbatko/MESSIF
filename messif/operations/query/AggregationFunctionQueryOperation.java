@@ -157,7 +157,7 @@ public class AggregationFunctionQueryOperation extends RankingSingleQueryOperati
         int beforeCount = getAnswerCount();
 
         // Prepare array for subdistances
-        float[] descriptorDistances = isStoringMetaDistances() ? new float[aggregationFunction.getParameterNames().length] : null;
+        float[] descriptorDistances = isStoringMetaDistances() ? new float[aggregationFunction.getParameterCount()] : null;
 
         while (objects.hasNext()) {
             // Get current object

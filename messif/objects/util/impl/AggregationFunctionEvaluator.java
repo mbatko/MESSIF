@@ -232,8 +232,13 @@ public class AggregationFunctionEvaluator extends AggregationFunction {
     }
 
     @Override
-    public String[] getParameterNames() {
-        return variableNames;
+    public int getParameterCount() {
+        return variableNames.length;
+    }
+
+    @Override
+    public String getParameterName(int index) {
+        return variableNames[index];
     }
 
     @Override

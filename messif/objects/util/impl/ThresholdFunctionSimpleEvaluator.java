@@ -114,7 +114,7 @@ public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
                     float value = Float.parseFloat(operand);
                     switch (lastOperator) {
                         case '/':
-                            currentCoeffValue = currentCoeffValue/value;
+                            currentCoeffValue /= value;
                             break;
                         default:
                             currentCoeffValue *= value;
@@ -160,8 +160,13 @@ public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
     }
 
     @Override
-    public String[] getParameterNames() {
-        return variableNames;
+    public int getParameterCount() {
+        return variableNames.length;
+    }
+
+    @Override
+    public String getParameterName(int index) {
+        return variableNames[index];
     }
 
 
@@ -173,7 +178,7 @@ public class ThresholdFunctionSimpleEvaluator extends AggregationFunction {
      */
     @Override
     public String toString() {
-        StringBuffer buf = new StringBuffer("f = ");
+        StringBuilder buf = new StringBuilder("f = ");
         NumberFormat nf = NumberFormat.getNumberInstance();
         nf.setMaximumFractionDigits(5);
         for (int i = Math.min(variableCoeffs.length, variableNames.length) - 1; i >= 0; i--) {
