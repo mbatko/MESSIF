@@ -62,14 +62,6 @@ public class ObjectStringFINLP_Dist extends ObjectString {
         return data.split("\\s+");
     }
     
-    private static int Minimum (int a, int b, int c) {
-        int mi = a;
-        if (b < mi) mi = b;
-        if (c < mi) mi = c;
-
-        return mi;
-    }
-
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
         String[] o1_words = getWords(this);

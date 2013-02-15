@@ -57,13 +57,6 @@ public abstract class ObjectFeature extends LocalAbstractObject implements Dimen
         this.scl = scl;
     }
     
-    public ObjectFeature (float x, float y, float ori, float scl, long [] keys) {
-        this.x = x;
-        this.y = y;
-        this.ori = ori;
-        this.scl = scl;
-    }
-    
     /**
      * Expected format: 
      * #key locator

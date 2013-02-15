@@ -43,9 +43,6 @@ public class ObjectRectangle2D extends LocalAbstractObject implements BinarySeri
     public ObjectRectangle2D() {
     }
 
-    public ObjectRectangle2D(byte[] data) {
-    }
-
     public ObjectRectangle2D (float minx, float miny, float maxx, float maxy) {
         this.minx = minx; this.miny = miny; this.maxx = maxx; this.maxy = maxy;
     }

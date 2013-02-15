@@ -36,7 +36,6 @@ import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.RankingQueryOperation;
-import messif.operations.query.JoinQueryOperation;
 import messif.utility.reflection.ConstructorInstantiator;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
@@ -64,10 +63,10 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
     /** Number of queries to run in parallel over a passed algorithm */
     private int parallelQueries;
     
-    /** Cosntructor for the operation to execute on the remote algorithm */
+    /** Constructor for the operation to execute on the remote algorithm */
     private final ConstructorInstantiator<RankingQueryOperation> operConstructor;
     
-    /** Paramaters to instantiate the operation {@link #operConstructor} */
+    /** Parameters to instantiate the operation {@link #operConstructor} */
     private final Object[] operParams;
 
     //****************** Constructors ******************//
@@ -159,7 +158,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
                                    Class<RankingQueryOperation> queryCls, String... queryParams) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
         super(mu, k, skipSymmetricPairs, answerType);
         
-        algorithm = null;
+        algorithm = alg;
         this.parallelQueries = parallelQueries;
         
         // Prepare parameters first, since they will be converted from Strings to correct type by ConstructorInstantiator below.
@@ -180,7 +179,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
      * 
      * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
-     * The reange query is instantiated from the parameters passed in the constructor.
+     * The range query is instantiated from the parameters passed in the constructor.
      *
      * @param objects the collection of objects on which to evaluateSerially this query
      * @return number of objects satisfying the query
@@ -230,7 +229,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
      * 
      * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
-     * The reange query is instantiated from the parameters passed in the constructor.
+     * The range query is instantiated from the parameters passed in the constructor.
      *
      * @param objects the collection of objects on which to evaluateSerially this query
      * @param alg algorithm to evaluateSerially range queries
@@ -268,7 +267,7 @@ public class RangeJoinQueryOperation extends JoinQueryOperation {
      * The objects found by this evaluation are added to answer of this query via {@link #addToAnswer}.
      * 
      * For each object in the passed iterator, a range query is evaluated on the external index given in a constructor.
-     * The reange query is instantiated from the parameters passed in the constructor.
+     * The range query is instantiated from the parameters passed in the constructor.
      *
      * @param objects the collection of objects on which to evaluateSerially this query
      * @param alg algorithm to evaluateSerially range queries

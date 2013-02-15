@@ -57,7 +57,7 @@ public abstract class SortDimension implements Comparator<ObjectFeature>, Binary
     public abstract int getSecondaryDimension();
 
     /**
-     * Create a {@link ObjectFeatureOrderedSet.Window} object that represents the passed rectangular area.
+     * Create a {@link Window} object that represents the passed rectangular area.
      * @param minX minimum in x-axis (relative value within the interval [0,1))
      * @param maxX maximum in x-axis (relative value within the interval [0,1))
      * @param minY minimum in y-axis (relative value within the interval [0,1))
@@ -96,7 +96,7 @@ public abstract class SortDimension implements Comparator<ObjectFeature>, Binary
     
     /**
      * Factory method for text serialization sake. Implementation name is read from the passed stream, see 
-     * implementations of {@link SortDimension#getImplementationName()) for details.
+     * implementations of {@link SortDimension#getImplementationName()} for details.
      * @param implName name of implementation
      * @return static instance of a known implementation
      * @throws NoSuchMethodException if unknown implementation is read from the stream
@@ -112,7 +112,7 @@ public abstract class SortDimension implements Comparator<ObjectFeature>, Binary
 
     /**
      * Factory method for text serialization sake. Implementation name is read from the passed stream, see 
-     * implementations of {@link SortDimension#getImplementationName()) for details.
+     * implementations of {@link SortDimension#getImplementationName()} for details.
      * @param stream stream with serialized sort dimension implementation
      * @return static instance of a known implementation
      * @throws IOException if unknown implementation is read from the stream
@@ -128,7 +128,7 @@ public abstract class SortDimension implements Comparator<ObjectFeature>, Binary
     
     /**
      * Factory method for text serialization sake. Implementation name is written to the passed stream, see 
-     * implementations of {@link SortDimension#getImplementationName()) for details.
+     * implementations of {@link SortDimension#getImplementationName()} for details.
      * @param stream stream with serialized sort dimension implementation
      * @throws IOException on error during writing
      */

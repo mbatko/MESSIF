@@ -406,10 +406,10 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
     }
 
     /**
-     * Implementation of {@link messif.objects.impl.ObjectIntDualVectorJaccard.WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
+     * Implementation of {@link ObjectIntMultiVector.WeightProvider} that has a single weight for every data array of the {@link ObjectIntMultiVector}
      *  and it ignores a specified list of integers (created from a given list of keywords).
      */
-    public static class MultiWeightIgnoreProviderPixMac extends ObjectIntMultiVectorJaccard.MultiWeightIgnoreProvider {
+    public static class MultiWeightIgnoreProviderPixMac extends ObjectIntMultiVector.MultiWeightIgnoreProvider {
 
         /** Class id for serialization. */
         private static final long serialVersionUID = 51201L;

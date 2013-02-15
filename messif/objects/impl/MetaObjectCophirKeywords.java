@@ -323,8 +323,8 @@ public class MetaObjectCophirKeywords extends MetaObjectArrayWeightedSum impleme
     }
 
     /**
-     * Returns this object only with title encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}.
-     * @return this object only with title encapsulated in {@link MetaObjectProfiSCTiDIMWithTKStrings}
+     * Returns this object only with title encapsulated in {@link MetaObjectCophirKeywordsWithTKStrings}.
+     * @return this object only with title encapsulated in {@link MetaObjectCophirKeywordsWithTKStrings}
      */
     public MetaObjectCophirKeywordsWithTKStrings wrapWithTitleOnlySerialization() {
         Map<String, LocalAbstractObject> objectMap = new HashMap<String, LocalAbstractObject>(getObjectMap());

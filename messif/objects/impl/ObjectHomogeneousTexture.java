@@ -139,12 +139,9 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
     //****************** Distance function ******************//
 
-    private static final int Nray = 128;		// Num of ray
-    private static final int Nview = 180;		// Num of view
     private static final int NUMofFEATURE = 62;
     private static final int Quant_level = 255;
     private static final int RadialDivision = 5;
-    private static final int RadialDivision2  = 3;
     private static final int AngularDivision = 6;
     private static final double[] wm={0.42,1.00,1.00,0.08,1.00};
     private static final double[] wd={0.32,1.00,1.00,1.00,1.00};
@@ -156,7 +153,6 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
 
         //---yjyu - 010217
         int i,m,n,flag;
-        int size2=Nray/2;
         double temp_distance, distance=0;
         int [] RefFeature = new int [NUMofFEATURE];
         int [] QueryFeature = new int [NUMofFEATURE];
@@ -167,12 +163,6 @@ public class ObjectHomogeneousTexture extends LocalAbstractObject implements Bin
         Arrays.fill(QueryFeature,0);
         Arrays.fill(fRefFeature,0);
         Arrays.fill(fQueryFeature,0);
-        
-        double Num_pixel=0;
-        
-        for(i=0;i<Nview;i++)		// # of angular feature channel = 6
-            for(int j=0;j<size2;j++)
-                Num_pixel++;
         
         ObjectHomogeneousTexture castObj = (ObjectHomogeneousTexture)obj;
         RefFeature[0]	= this.average;

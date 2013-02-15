@@ -106,9 +106,8 @@ public class ObjectStringDNASeqDist extends ObjectStringEditDist {
             case 'Y': return 18;
             case 'V': return 19;
             case 'X': return 20;
+            default: return -1;
         }
-
-        return -1;
     }
 
     @Override

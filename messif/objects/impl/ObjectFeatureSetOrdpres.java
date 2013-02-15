@@ -119,9 +119,9 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
     }
 
     /**
-      * Creates a new instance of ObjectFeatureSetOrdpress from a file with
+     * Creates a new instance of ObjectFeatureSetOrdpress from a file with
      * overriding default parameters
-      * @param file text file to read an object from
+     * @param file text file to read an object from
      * @param epsilon  queryFeatureSearchRadius parameter
      * @param limit1   limit1 parameter
      * @param limit2   limit2 parameters
@@ -138,6 +138,13 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
     }
 
 
+    /**
+     * Creates a new instance of ObjectFeatureSetOrdpress loaded from binary input.
+     *
+     * @param input the input to read the ObjectFeatureSet from
+     * @param serializator the serializator used to write objects
+     * @throws IOException if there was an I/O error reading from the buffer
+     */
      public ObjectFeatureSetOrdpres(BinaryInput input, BinarySerializator serializator) throws IOException {
          super (input, serializator);
      }
@@ -211,7 +218,7 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
         // try {
         // FileWriter fstream = new FileWriter("mereni.txt",true);
         // BufferedWriter merenicasu = new BufferedWriter(fstream);
-        float retval = 0;
+        float retval;
         boolean Loguj = false;
         String timeLogString = "";
 
@@ -220,19 +227,14 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
             timeLogString = "start:\t" + System.nanoTime();
         }
 
-        ObjectRectangle2D rect = null;
-        HashMap<String,Object> params = null;
         if (suppData != null) {
-            params = (HashMap<String, Object>)suppData;
+            HashMap<String,Object> params = (HashMap<String, Object>)suppData;
             if (params.containsKey("epsilon"))
                 queryFeatureSearchRadius = (Float) params.get("epsilon");
             if (params.containsKey("limit1"))
                 limit1 = (Integer) params.get ("limit1");
             if (params.containsKey("limit1"))
                 limit2 = (Integer) params.get("limit2");
-            if (params.containsKey("rect")) {
-                rect = (ObjectRectangle2D) params.get("rect");
-            }
         }
         ObjectFeatureSet objSet = (ObjectFeatureSet) obj;
         int objectCount = getObjectCount();
@@ -249,8 +251,7 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
             dists[i] = Float.MAX_VALUE;
         }
 
-        float maxdist, scalemine, scaletheir, theirminx, theirmaxx;
-        float theirminy, theirmaxy;
+        float maxdist, scalemine, scaletheir;
         float theirminxnew, theirmaxxnew, theirminynew, theirmaxynew, theirx, theiry;
         int countinrect = 0;
         
@@ -443,8 +444,7 @@ public class ObjectFeatureSetOrdpres extends ObjectFeatureSet {
         return sum;
     }
 
-    @SuppressWarnings("unchecked")
-    public LinkedHashMap sortHashMapByValues(LinkedHashMap<Integer, Float> passedMap, boolean ascending) {
+    public LinkedHashMap<Integer, Float> sortHashMapByValues(LinkedHashMap<Integer, Float> passedMap, boolean ascending) {
         List<Integer> mapKeys = new ArrayList<Integer>(passedMap.keySet());
         List<Float> mapValues = new ArrayList<Float>(passedMap.values());
         Collections.sort(mapValues);

@@ -166,7 +166,7 @@ public class ObjectFeatureSetSmithWaterman extends ObjectFeatureOrderedSet {
             
             h = Float.NEGATIVE_INFINITY;
             vDiagonal = v[0];
-            for (int j = 1, l = k + 1; j < n; j++, l++) {
+            for (int j = 1; j < n; j++) {
                 ObjectFeature obj2 = it2.next();
                 similarityScore = cost.getCost(obj1, obj2); // matrix[a1[i - 1]][a2[j - 1]];
 

@@ -131,26 +131,6 @@ public abstract class FaceKey extends AbstractObjectKey {
         super(locatorURI);
     }
 
-    public boolean intersect(FaceKey retrievedFaceKey, double threshold) {
-        Rectangle2D retrievedBounds = retrievedFaceKey.getContour().getBounds2D();
-        if(!getContour().intersects(retrievedBounds)){
-            return false;
-        }
-        double thisArea = getBoundingArea(getContour());
-        double otherArea = getBoundingArea(retrievedBounds);
-        double intersection = getBoundingArea(getContour().getBounds2D().createIntersection(retrievedBounds));
-        if(intersection > thisArea || intersection > otherArea){
-            Rectangle2D i = getContour().getBounds2D().createIntersection(retrievedFaceKey.getContour().getBounds2D());
-            throw new Error("Wrong intersection count");
-        }
-        return (2d * intersection / (thisArea + otherArea)) >= threshold;
-    }
-    
-    private double getBoundingArea(Shape s){
-        Rectangle2D rec = s.getBounds2D();
-        return Math.abs(rec.getHeight() * rec.getWidth());        
-    }
-
     //****************** Attribute access ******************//
 
     /**
@@ -217,6 +197,28 @@ public abstract class FaceKey extends AbstractObjectKey {
      * @throws NullPointerException if the {@code feature} parameter is <tt>null</tt>
      */
     public abstract Point2D getLandmarkPosition(FaceLandmark landmark) throws NullPointerException;
+
+
+    //****************** Intersection functions ******************//
+
+    /**
+     * Returns whether this face key has an intersection with the given face key.
+     * @param otherFaceKey the other face key to intersect with
+     * @param threshold the intersection threshold, i.e. the percentage of the intersection area with respect to the face key areas
+     * @return <tt>true</tt> if this face key intersects with the given face key
+     */
+    public boolean intersect(FaceKey otherFaceKey, double threshold) {
+        Rectangle2D thisBoundBox = getContour().getBounds2D();
+        Rectangle2D otherBoundBox = otherFaceKey.getContour().getBounds2D();
+        Rectangle2D intersection = thisBoundBox.createIntersection(otherBoundBox);
+        if (intersection.isEmpty())
+            return false;
+        int thisArea = getWidth() * getHeight();
+        int otherArea = otherFaceKey.getWidth() * otherFaceKey.getHeight();
+        double intersectionArea = intersection.getWidth() * intersection.getHeight();
+        assert intersectionArea <= thisArea && intersectionArea <= otherArea;
+        return (2d * intersectionArea / (thisArea + otherArea)) >= threshold;
+    }
 
 
     //****************** Drawing functions ******************//

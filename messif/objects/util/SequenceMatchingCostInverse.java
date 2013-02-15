@@ -9,7 +9,7 @@ package messif.objects.util;
  * the interval ({@link SequenceMatchingCost#distMatch};{@link SequenceMatchingCost#distMismatch}].
  * 
  * The approximate costs is a return value of a continuous function from the interval 
- * [{@link SequenceMatchingCost#matchExact};{@link SequenceMatchingCost#matchApprox].
+ * [{@link SequenceMatchingCost#matchExact};{@link SequenceMatchingCost#matchApprox}].
  * 
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  */
