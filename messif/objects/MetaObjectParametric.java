@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
-import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;
 import messif.utility.ModifiableParametric;

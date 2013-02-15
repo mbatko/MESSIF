@@ -1274,6 +1274,8 @@ public class CoreApplication {
                     throw new IllegalArgumentException(ex);
                 }
                 break;
+            default:
+                throw new IllegalArgumentException("Unknown answer type: " + answerType);
         }
     }
 

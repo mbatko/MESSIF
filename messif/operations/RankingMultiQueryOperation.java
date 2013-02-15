@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import messif.objects.DistanceFunctionMultiObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;

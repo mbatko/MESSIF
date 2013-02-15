@@ -40,7 +40,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
 
     /** Logger */
     private static final Logger log = Logger.getLogger("netnode.creator");
-    
+
     //****************** Attributes ******************//
 
     private final LocalAbstractObject object;
@@ -48,11 +48,10 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     private final String objectLocator;
     private final AbstractObjectKey objectKey;
     private final int deleteObjects;
-    private final boolean addResultToOperation;
 
 
     //****************** Constructors ******************//
-    
+
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests addition of object to a remote bucket
      */
@@ -70,7 +69,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
-        this.addResultToOperation = false;
     }
 
     /**
@@ -83,7 +81,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = -1;
-        this.addResultToOperation = false;
 
         while (objects.hasNext())
             this.objects.add(objects.next());
@@ -106,9 +103,8 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = remoteObjectLocator;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
-        this.addResultToOperation = false;
     }
-    
+
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
      */
@@ -119,9 +115,8 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = remoteObjectKey;
         this.deleteObjects = -1;
-        this.addResultToOperation = false;
     }
-    
+
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of all objects from a remote bucket
      */
@@ -132,12 +127,11 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.deleteObjects = -1;
         this.objectLocator = null;
         this.objectKey = null;
-        this.addResultToOperation = false;
     }
 
 
     //****************** Perform operation ******************//
-    
+
     @Override
     public BucketManipulationReplyMessage execute(BucketDispatcher bucketDispatcher) throws BucketStorageException {
         // Get bucket from bucket dispatcher
@@ -177,5 +171,5 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     public Class<BucketManipulationReplyMessage> replyMessageClass() {
         return BucketManipulationReplyMessage.class;
     }
-                
+
 }

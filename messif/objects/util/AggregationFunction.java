@@ -57,7 +57,7 @@ public abstract class AggregationFunction implements DistanceFunction<MetaObject
      * Returns the maximal distance for the specified parameter of the {@link #compute} function.
      * This method returns the {@link LocalAbstractObject#MAX_DISTANCE} by default.
      * @param parameterIndex the index of a parameter (corresponds to the index of the
-     *          parameter name as given by {@link #getParameterNames()})
+     *          parameter name as given by {@link #getParameterName(int)})
      * @return the maximal distances for the parameters of the {@link #compute} function
      * @throws IndexOutOfBoundsException if the specified parameter index is not valid
      */
@@ -68,7 +68,7 @@ public abstract class AggregationFunction implements DistanceFunction<MetaObject
     /**
      * Computes the value of the aggregate distance from the provided sub-distances.
      * The <code>distances</code> array items must correspond with the parameter
-     * names as returned by {@link #getParameterNames()}.
+     * names as returned by {@link #getParameterName(int)}.
      * @param distances the distances in respective descriptors
      * @return the aggregate distance
      */

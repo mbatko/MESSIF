@@ -356,7 +356,7 @@ public abstract class MetaObject extends LocalAbstractObject {
 
         // Create first line with semicolon-separated names of classes
         Iterator<Entry<String, LocalAbstractObject>> iterator = objects.entrySet().iterator();
-        for (int i = 0; iterator.hasNext(); i++) {
+        while (iterator.hasNext()) {
             Entry<String, ? extends LocalAbstractObject> entry = iterator.next();
             if (entry.getValue() != null) {
                 objectsToWrite.add(entry.getValue());
