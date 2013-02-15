@@ -61,8 +61,9 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
                 return cmp;
             case KEY:
                 return o1.getObjectKey().compareTo(o2.getObjectKey());
+            default:
+                throw new InternalError("Compare method is not implemented for order " + this);
         }
-        throw new InternalError("Compare method is not implemented for order " + this);
     }
 
     @Override

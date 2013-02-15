@@ -17,7 +17,6 @@
 package messif.operations;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.RankedAbstractMetaObject;
@@ -96,7 +95,7 @@ public abstract class RankingSingleQueryOperation extends RankingQueryOperation 
     protected RankingSingleQueryOperation(LocalAbstractObject queryObject, AnswerType answerType, boolean storeMetaDistances) throws IllegalArgumentException {
         super(answerType);
         this.queryObject = queryObject;
-        this.storeMetaDistances = false;
+        this.storeMetaDistances = storeMetaDistances;
     }
 
     /**

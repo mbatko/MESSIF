@@ -21,7 +21,6 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
-import messif.operations.OperationErrorCode;
 import messif.operations.RankingSingleQueryOperation;
 import messif.utility.ErrorCode;
 

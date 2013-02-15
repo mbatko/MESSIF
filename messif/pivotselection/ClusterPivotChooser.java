@@ -79,7 +79,7 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
         // Initially, create a cluster for each object
         Map<Integer,Cluster> clusters = new HashMap<Integer,Cluster>();
         for (int i = 0; i < objectList.size(); i++)
-            clusters.put(i, new Cluster(i, objectList.get(i), pd));
+            clusters.put(i, new Cluster(i, objectList.get(i)));
 
         // Initialize the queue of clusters to merge
         SortedCollection<Pair> queue = new SortedCollection<Pair>();
@@ -205,15 +205,15 @@ public class ClusterPivotChooser extends AbstractPivotChooser implements Seriali
          * Create a new Cluster containing just the passed object.
          * @param id identification of the cluster
          * @param object single object that forms the cluster
-         * @param pd cache of precomputed distances between all pairs of objects
          */
-        public Cluster(int id, LocalAbstractObject object, PrecomputedDistances pd) {
+        public Cluster(int id, LocalAbstractObject object) {
             this.id = id;
             this.objects = new AbstractObjectList<LocalAbstractObject>();
             this.objects.add(object);
             this.clusteroid = object;
             this.radius = 0f;
             //computeDiameter(pd);
+            // @param pd cache of precomputed distances between all pairs of objects
         }
 
         /**

@@ -285,7 +285,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * By default, the original threshold distance is used.
      * If the {@code useOriginalThresholdDistance} is <tt>false</tt>, the threshold
      * distance is always {@link LocalAbstractObject#MAX_DISTANCE} if {@code ignoreThresholdDistance}
-     * is <tt>true</tt>. Or the threshold is computed from the first {@computeSize} objects.
+     * is <tt>true</tt>. Or the threshold is computed from the first {@code computeSize} objects.
      * @param useOriginalThresholdDistance the flag whether the operation answer collection computes the threshold distance
      * @param ignoreThresholdDistance the flag whether the operation ignores answer threshold distance completely
      * @param computeSize the number of candidate objects to compute the threshold distance to;
@@ -309,7 +309,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
      * Set the given operation {@link #getAnswerThreshold() answer threshold distance} computation.
      * If the {@code useOriginalThresholdDistance} is <tt>false</tt>, the threshold
      * distance is always {@link LocalAbstractObject#MAX_DISTANCE} if {@code ignoreThresholdDistance}
-     * is <tt>true</tt>. Or the threshold is computed from the first {@computeSize} objects.
+     * is <tt>true</tt>. Or the threshold is computed from the first {@code computeSize} objects.
      * @param <T> the type of the operation to set the flag for
      * @param operation the operation to set the flag for
      * @param useOriginalThresholdDistance the flag whether the operation answer collection computes the threshold distance

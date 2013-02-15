@@ -17,7 +17,6 @@
 package messif.operations.query;
 
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.util.AggregationFunction;
 import messif.operations.AbstractOperation;
 import messif.operations.RankingQueryOperation;

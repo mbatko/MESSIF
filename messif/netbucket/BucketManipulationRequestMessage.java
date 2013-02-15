@@ -50,8 +50,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     private final String objectLocator;
     private final AbstractObjectKey objectKey;
     private final boolean deleteObject;
-    private final boolean addResultToOperation;
-
+    
 
     //****************** Constructors ******************//
     
@@ -66,7 +65,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObject = false;
-        this.addResultToOperation = false;
     }
 
     /**
@@ -80,7 +78,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObject = false;
-        this.addResultToOperation = false;
 
         while (objects.hasNext())
             this.objects.add(objects.next());
@@ -104,7 +101,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObject = deleteObject;
-        this.addResultToOperation = false;
     }
 
     /**
@@ -125,7 +121,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = remoteObjectLocator;
         this.objectKey = null;
         this.deleteObject = deleteObject;
-        this.addResultToOperation = false;
     }
     
     /**
@@ -139,7 +134,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = remoteObjectKey;
         this.deleteObject = false;
-        this.addResultToOperation = false;
     }
     
     /**
@@ -153,7 +147,6 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.deleteObject = false;
         this.objectLocator = null;
         this.objectKey = null;
-        this.addResultToOperation = false;
     }
 
 

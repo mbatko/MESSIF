@@ -181,7 +181,7 @@ public class MethodThreadList {
      * @throws NoSuchElementException if a parameter with the argClass class was not found
      * @throws Exception if there was an exception during execution of any of the methods
      */
-    public <E> List<E> getAllMethodsArgument(Class<E> argClass) throws Exception {
+    public <E> List<E> getAllMethodsArgument(Class<E> argClass) throws NoSuchElementException, Exception {
         synchronized (methodFinishedList) {
             // Prepare return array
             List<E> rtv = new ArrayList<E>(methodFinishedList.size());
@@ -205,7 +205,7 @@ public class MethodThreadList {
      * @throws NoSuchElementException if a parameter with the argClass class was not found
      * @throws Exception if there was an exception during execution of any of the methods
      */
-    public List<Object> getAllMethodsArgument(int position) throws Exception {
+    public List<Object> getAllMethodsArgument(int position) throws NoSuchElementException, Exception {
         synchronized (methodFinishedList) {
             // Prepare return array
             List<Object> rtv = new ArrayList<Object>(methodFinishedList.size());

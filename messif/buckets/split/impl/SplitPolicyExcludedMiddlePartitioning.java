@@ -19,7 +19,6 @@ package messif.buckets.split.impl;
 import messif.buckets.split.SplitPolicy;
 import messif.objects.BallRegion;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.ObjectMatcher;
 
 /**
  * This class an excluded-middle ball-partitioning policy for bucket splitting.
