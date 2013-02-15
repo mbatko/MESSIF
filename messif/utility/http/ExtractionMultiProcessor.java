@@ -24,7 +24,6 @@ import java.util.Iterator;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.extraction.ExtractorException;
-import messif.objects.extraction.Extractors;
 import messif.objects.extraction.MultiExtractor;
 import messif.utility.reflection.InstantiatorSignature;
 import messif.utility.reflection.NoSuchInstantiatorException;

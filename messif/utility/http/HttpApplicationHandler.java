@@ -21,7 +21,6 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -127,7 +126,7 @@ public class HttpApplicationHandler implements HttpHandler {
      * <li>{@link AbstractOperation} - the {@link OperationProcessor} is created</li>
      * <li>{@link LocalAbstractObject} - the {@link ExtractionProcessor} is created</li>
      * <li>{@link RankedSortedCollection} - the {@link InstantiatorProcessor} is created</li>
-     * <li>{@link Collection} - the {@link ExtractionListProcessor} is created</li>
+     * <li>{@link Iterator} - the {@link ExtractionMultiProcessor} is created</li>
      * <li>otherwise - the {@link ValueProcessor} is created</li>
      * </ul>
      * </p>
