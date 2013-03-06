@@ -56,26 +56,27 @@ public final class StatisticTimer extends Statistics<StatisticTimer> {
 
     //****************** CPU time support ******************//
 
-    /** User/system CPU time measurement bean */
+    /** User/system CPU time measurement bean (disabled by default) */
     private static ThreadMXBean threadMXBean;
-    static {
-        setupCPUTime(true);
-    }
 
     /**
      * Initialization method for computing CPU times.
-     * @param enable 
+     * @param enable flag whether to enable (<tt>true</tt>) the CPU times or disable them (<tt>false</tt>)
+     * @return <tt>true</tt> if the CPU times have been enabled
      */
-    public static void setupCPUTime(boolean enable) {
+    public static boolean setupCPUTime(boolean enable) {
         if (enable) {
             threadMXBean = ManagementFactory.getThreadMXBean();
             if (threadMXBean.isThreadCpuTimeSupported()) {
                 threadMXBean.setThreadCpuTimeEnabled(true);
+                return true;
             } else {
                 threadMXBean = null;
+                return false;
             }
         } else {
             threadMXBean = null;
+            return false;
         }
     }
 

@@ -22,8 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import messif.buckets.BucketErrorCode;
-import messif.objects.util.AbstractObjectList;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectList;
 import messif.operations.AbstractOperation;
 
 /**
