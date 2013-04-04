@@ -95,24 +95,40 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
 
     //****************** Update methods *************//
 
+    /**
+     * {@inheritDoc}
+     * Category is added with {@link #UNKNOWN_CONFIDENCE unknown confidence}.
+     */
     @Override
-    public ClassificationWithConfidenceBase<C> add(C category) {
-        return (ClassificationWithConfidenceBase<C>)super.add(category);
+    public final ClassificationWithConfidenceBase<C> add(C category) {
+        return add(category, UNKNOWN_CONFIDENCE);
     }
 
+    /**
+     * {@inheritDoc}
+     * Categories are added with {@link #UNKNOWN_CONFIDENCE unknown confidence}.
+     */
     @Override
-    public ClassificationWithConfidenceBase<C> addAll(Iterator<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
-        return (ClassificationWithConfidenceBase<C>)super.addAll(categories, ignoreIncompatibleCategory);
+    public final ClassificationWithConfidenceBase<C> addAll(Iterator<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
+        return addAll(categories, UNKNOWN_CONFIDENCE, ignoreIncompatibleCategory);
     }
 
+    /**
+     * {@inheritDoc}
+     * Categories are added with {@link #UNKNOWN_CONFIDENCE unknown confidence}.
+     */
     @Override
-    public ClassificationWithConfidenceBase<C> addAll(Iterable<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
-        return (ClassificationWithConfidenceBase<C>)super.addAll(categories, ignoreIncompatibleCategory);
+    public final ClassificationWithConfidenceBase<C> addAll(Iterable<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
+        return addAll(categories, UNKNOWN_CONFIDENCE, ignoreIncompatibleCategory);
     }
 
+    /**
+     * {@inheritDoc}
+     * Categories are added with {@link #UNKNOWN_CONFIDENCE unknown confidence}.
+     */
     @Override
-    public ClassificationWithConfidenceBase<C> addArray(Object array, boolean ignoreIncompatibleCategory) throws ClassCastException, IllegalArgumentException {
-        return (ClassificationWithConfidenceBase<C>)super.addArray(array, ignoreIncompatibleCategory);
+    public final ClassificationWithConfidenceBase<C> addArray(Object array, boolean ignoreIncompatibleCategory) throws ClassCastException, IllegalArgumentException {
+        return addArray(array, UNKNOWN_CONFIDENCE, ignoreIncompatibleCategory);
     }
 
     /**
@@ -124,12 +140,14 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @throws IllegalArgumentException if the confidence is not within the bounds
      */
     public ClassificationWithConfidenceBase<C> add(C category, float confidence) throws IllegalArgumentException {
-        if (lowestConfidence < highestConfidence) {
-            if (confidence < lowestConfidence || confidence > highestConfidence)
-                throw new IllegalArgumentException("Confidence " + confidence + " is not within [" + lowestConfidence + ";" + highestConfidence + "]");
-        } else {
-            if (confidence > lowestConfidence || confidence < highestConfidence)
-                throw new IllegalArgumentException("Confidence " + confidence + " is not within [" + highestConfidence + ";" + lowestConfidence + "]");
+        if (confidence != UNKNOWN_CONFIDENCE) {
+            if (lowestConfidence < highestConfidence) {
+                if (confidence < lowestConfidence || confidence > highestConfidence)
+                    throw new IllegalArgumentException("Confidence " + confidence + " is not within [" + lowestConfidence + ";" + highestConfidence + "]");
+            } else {
+                if (confidence > lowestConfidence || confidence < highestConfidence)
+                    throw new IllegalArgumentException("Confidence " + confidence + " is not within [" + highestConfidence + ";" + lowestConfidence + "]");
+            }
         }
         if (category != null)
             confidenceMap.put(category, confidence);
@@ -146,7 +164,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible categories
      *          from the iterator (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      */
     public ClassificationWithConfidenceBase<C> addAll(Iterator<?> categories, float confidence, boolean ignoreIncompatibleCategory) throws ClassCastException {
         while (categories.hasNext())
@@ -164,7 +182,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible categories
      *          from the iterator (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      */
     public ClassificationWithConfidenceBase<C> addAll(Iterable<?> categories, float confidence, boolean ignoreIncompatibleCategory) throws ClassCastException {
         return addAll(categories.iterator(), confidence, ignoreIncompatibleCategory);
@@ -175,7 +193,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      *
      * @param classification the classification with which to update this one
      * @return this instance to allow chaining
-     * @throws IllegalArgumentException if the confidence is not withing the bounds
+     * @throws IllegalArgumentException if the confidence is not within the bounds
      */
     public ClassificationWithConfidenceBase<C> addAll(ClassificationWithConfidence<C> classification) throws IllegalArgumentException {
         for (C category : classification)
@@ -193,7 +211,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible categories
      *          from the array (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      * @throws IllegalArgumentException if the object {@code array} is not a static array
      */
     public ClassificationWithConfidenceBase<C> addArray(Object array, float confidence, boolean ignoreIncompatibleCategory) throws ClassCastException, IllegalArgumentException {
@@ -229,7 +247,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      * @param category the category for which to update the confidence
      * @param confidence the new confidence value
      * @return <tt>true</tt> if this classification was modified
-     * @throws IllegalArgumentException if the confidence is not withing the bounds
+     * @throws IllegalArgumentException if the confidence is not within the bounds
      */
     public boolean updateConfidence(C category, float confidence) throws IllegalArgumentException {
         if (isUpdatingConfidence(getConfidence(category), confidence)) {
@@ -245,7 +263,7 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
      *
      * @param classification the classification with which to update this one
      * @return <tt>true</tt> if this classification was modified
-     * @throws IllegalArgumentException if the confidence is not withing the bounds
+     * @throws IllegalArgumentException if the confidence is not within the bounds
      */
     public boolean updateAllConfidences(ClassificationWithConfidence<C> classification) throws IllegalArgumentException {
         boolean ret = false;

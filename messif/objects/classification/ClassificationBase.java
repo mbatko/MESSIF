@@ -118,17 +118,17 @@ public class ClassificationBase<C> implements Classification<C>, Serializable {
      * If the object cannot be cast and {@code ignoreIncompatibleCategory} is <tt>true</tt>,
      * a <tt>null</tt> is returned.
      * @param object the object to cast
-     * @param ignoreIncompatible flag whether to silently ignore incompatible object (<tt>true</tt>) or
+     * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible object (<tt>true</tt>) or
      *          throw a {@link ClassCastException} (<tt>false</tt>)
      * @return the type-safe category cast from the given object or
      *          <tt>null</tt> if it is not compatible and {@code ignoreIncompatibleCategory} is <tt>true</tt>
-     * @throws ClassCastException if the object is not compatible with this classification's categories
+     * @throws ClassCastException if the object is not compatible with this classification categories
      */
     @SuppressWarnings("unchecked")
-    protected C castToStored(Object object, boolean ignoreIncompatible) throws ClassCastException {
+    protected C castToStored(Object object, boolean ignoreIncompatibleCategory) throws ClassCastException {
         if (object == null || storedClass.isInstance(object))
             return (C)object;
-        if (ignoreIncompatible)
+        if (ignoreIncompatibleCategory)
             return null;
         throw new ClassCastException("Cannot cast " + object.getClass() + " to " + storedClass.getName());
     }
@@ -139,14 +139,14 @@ public class ClassificationBase<C> implements Classification<C>, Serializable {
      * and <tt>null</tt> items are silently ignored.
      *
      * @param categories an iterator over the categories to add
-     * @param ignoreIncompatible flag whether to silently ignore incompatible objects
+     * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible objects
      *          from the iterator (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      */
-    public ClassificationBase<C> addAll(Iterator<?> categories, boolean ignoreIncompatible) throws ClassCastException {
+    public ClassificationBase<C> addAll(Iterator<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
         while (categories.hasNext())
-            add(castToStored(categories.next(), ignoreIncompatible));
+            add(castToStored(categories.next(), ignoreIncompatibleCategory));
         return this;
     }
 
@@ -156,13 +156,13 @@ public class ClassificationBase<C> implements Classification<C>, Serializable {
      * and <tt>null</tt> items are silently ignored.
      *
      * @param categories an {@link Iterable} over the categories to add
-     * @param ignoreIncompatible flag whether to silently ignore incompatible objects
+     * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible objects
      *          from the iterator (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      */
-    public ClassificationBase<C> addAll(Iterable<?> categories, boolean ignoreIncompatible) throws ClassCastException {
-        return addAll(categories.iterator(), ignoreIncompatible);
+    public ClassificationBase<C> addAll(Iterable<?> categories, boolean ignoreIncompatibleCategory) throws ClassCastException {
+        return addAll(categories.iterator(), ignoreIncompatibleCategory);
     }
 
     /**
@@ -174,7 +174,7 @@ public class ClassificationBase<C> implements Classification<C>, Serializable {
      * @param ignoreIncompatibleCategory flag whether to silently ignore incompatible categories
      *          from the array (<tt>true</tt>) or throw a {@link ClassCastException} (<tt>false</tt>)
      * @return this instance to allow chaining
-     * @throws ClassCastException if there was an object incompatible with this classification's categories
+     * @throws ClassCastException if there was an object incompatible with this classification categories
      * @throws IllegalArgumentException if the object {@code array} is not a static array
      */
     public ClassificationBase<C> addArray(Object array, boolean ignoreIncompatibleCategory) throws ClassCastException, IllegalArgumentException {

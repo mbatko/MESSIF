@@ -71,9 +71,10 @@ public abstract class Classifications {
 
     /**
      * Converts the given object to classification with confidence.
-     * If the object is already a classification, is is returned as type-safe cast.
+     * If the object is a classification with confidence, is is returned as type-safe cast.
      * If the object is instance of the {@code categoriesClass}, a static array, or an {@link Iterable}
-     * it is encapsulated into {@link ClassificationBase}. Note that the objects from
+     * it is encapsulated into {@link ClassificationWithConfidenceBase} and populated with
+     * the respective objects and the given {@code confidence}. Note that the objects from
      * the {@link Iterable} and static arrays are type-checked to be compatible with {@code C}
      * and <tt>null</tt> items are silently ignored.
      *
@@ -90,8 +91,7 @@ public abstract class Classifications {
         if (object == null) {
             return null;
         } else if (object instanceof ClassificationWithConfidence) {
-            return new ClassificationWithConfidenceBase<C>(categoriesClass, lowestConfidence, highestConfidence).
-                    addAll((ClassificationWithConfidence<C>)castToClassification(object, categoriesClass));
+            return (ClassificationWithConfidence<C>)castToClassification(object, categoriesClass);
         } else if (object instanceof Classification) { // It is not a classification with confidence, so the confidence is added
             return new ClassificationWithConfidenceBase<C>(categoriesClass, lowestConfidence, highestConfidence).
                     addAll(castToClassification(object, categoriesClass), confidence, false);
