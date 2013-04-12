@@ -53,7 +53,7 @@ public class Application extends DistributedApplication {
      */
     @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port", "flag whether to clear surplus data (defaults to true)" })
     public boolean rmiStart(PrintStream out, String... args) {
-        if (hasAlgorithm()) {
+        if (!hasAlgorithm()) {
             out.println("No running algorithm is selected");
             return false;
         }
@@ -151,7 +151,7 @@ public class Application extends DistributedApplication {
      */
     @ExecutableMethod(description = "shows information about RMI services for the current algorithm", arguments = {})
     public boolean rmiInfo(PrintStream out, String... args) {
-        if (hasAlgorithm()) {
+        if (!hasAlgorithm()) {
             out.println("No running algorithm is selected");
             return false;
         }
