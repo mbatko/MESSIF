@@ -350,13 +350,14 @@ public class ExtendedProperties extends Properties {
      * @param variableRegex regular expression that matches variables
      * @param variableRegexGroup parenthesis group within regular expression
      *          that holds the variable name
-     * @param defaultValueRegexGroup parenthesis group within regular expression
-     *          that holds the default value for a variable that is not present
-     *          in the <code>variables</code> map
+     * @param flagsRegexpGroup parenthesis group within regular expression
+     *          that holds flags:
+     *          ":defaultValue" the default value for a variable that is not present in the <code>variables</code> map,
+     *          "!" the value is required
      * @param variables the variable names with their values
      * @throws NullPointerException if the <code>properties</code> is null
      */
-    public void load(Properties properties, String prefix, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String,String> variables) throws NullPointerException {
+    public void load(Properties properties, String prefix, Pattern variableRegex, int variableRegexGroup, int flagsRegexpGroup, Map<String,String> variables) throws NullPointerException {
         Enumeration<?> names = properties.propertyNames();
         while (names.hasMoreElements()) {
             String name = (String)names.nextElement();
@@ -364,7 +365,7 @@ public class ExtendedProperties extends Properties {
                 continue;
             String value = properties.getProperty(name);
             if (variables != null)
-                value = Convert.substituteVariables(value, variableRegex, variableRegexGroup, defaultValueRegexGroup, variables);
+                value = Convert.substituteVariables(value, variableRegex, variableRegexGroup, flagsRegexpGroup, variables);
             setProperty((prefix == null)?name:name.substring(prefix.length()), value);
         }
     }

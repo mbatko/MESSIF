@@ -451,4 +451,9 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
         openDataSourceAnonymous(dataSource);
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + " for " + (dataSource == null ? "input stream" : dataSource);
+    }
+
 }

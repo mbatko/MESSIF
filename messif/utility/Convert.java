@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Reader;
+import java.lang.ref.Reference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -89,6 +90,10 @@ public abstract class Convert {
             Object instance = namedInstances.get(string);
             if (instance != null) {
                 // Return named object as-is
+                if (type.isInstance(instance))
+                    return type.cast(instance);
+                instance = expandReferencedInstances(instance);
+                // Return named object as-is after the expansion
                 if (type.isInstance(instance))
                     return type.cast(instance);
                 else if (instance instanceof Iterator) // Try iterator
@@ -221,6 +226,22 @@ public abstract class Convert {
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Cannot create instance of " + clazz + " for data '" + classAndData.substring(separatorPos + 1) + "': " + e.getCause(), e.getCause());
         }
+    }
+
+    /**
+     * Expand {@link ThreadLocal} and {@link Reference} instances to their referees.
+     * If the given instance is <tt>null</tt> or a non-expandable data type, it is returned as-is.
+     * @param instance the instance to expand
+     * @return the expanded instance
+     */
+    public static Object expandReferencedInstances(Object instance) {
+        // Expand thread-local variable
+        if (instance instanceof ThreadLocal)
+            instance = ((ThreadLocal<?>)instance).get();
+        // Expand variable references 
+        while (instance instanceof Reference)
+            instance = ((Reference<?>)instance).get();
+        return instance;
     }
 
     /**
@@ -577,7 +598,7 @@ public abstract class Convert {
      */
     @SuppressWarnings("unchecked")
     public static <E> Class<E> getClassForName(String name, Class<E> checkClass) throws ClassNotFoundException {
-        Class rtv = Class.forName(name);
+        Class<?> rtv = Class.forName(name);
         if (checkClass.isAssignableFrom(rtv))
             return (Class<E>)rtv; // This cast IS checked on the previous line
         throw new ClassNotFoundException("Class '" + name + "' is not subclass of " + checkClass.getName());
@@ -1149,13 +1170,15 @@ public abstract class Convert {
      * @param variableRegex regular expression that matches variables
      * @param variableRegexGroup parenthesis group within regular expression
      *          that holds the variable name
-     * @param defaultValueRegexGroup parenthesis group within regular expression
-     *          that holds the default value for a variable that is not present
-     *          in the <code>variables</code> map
+     * @param flagsRegexpGroup parenthesis group within regular expression
+     *          that holds flags:
+     *          ":defaultValue" the default value for a variable that is not present in the <code>variables</code> map,
+     *          "!" the value is required
      * @param variables the variable names with their values
      * @return the original string with all variables replaced
+     * @throws IllegalArgumentException if there was a required variable that has no value 
      */
-    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int defaultValueRegexGroup, Map<String, ?> variables) {
+    public static String substituteVariables(String string, Pattern variableRegex, int variableRegexGroup, int flagsRegexpGroup, Map<String, ?> variables) throws IllegalArgumentException {
         // Check null strings
         if (string == null)
             return null;
@@ -1166,12 +1189,25 @@ public abstract class Convert {
         
         // Find every occurance of pattern in string
         while (matcher.find()) {
+            // Backslashed match found
+            if (string.charAt(matcher.start()) == '\\') {
+                matcher.appendReplacement(sb, string.substring(matcher.start() + 1, matcher.end()));
+                continue;
+            }
+
             // Get variable with the name from the matched pattern group
             Object value = variables.get(matcher.group(variableRegexGroup));
 
             // Set the default value if specified
-            if (value == null && defaultValueRegexGroup > 0)
-                value = matcher.group(defaultValueRegexGroup);
+            if (value == null && flagsRegexpGroup > 0) {
+                String flag = matcher.group(flagsRegexpGroup);
+                if (flag != null) {
+                    if (flag.startsWith(":"))
+                        value = flag.substring(1);
+                    else if (flag.startsWith("!"))
+                        throw new IllegalArgumentException("Variable " + matcher.group(variableRegexGroup) + " is required but no value has been provided");
+                }
+            }
 
             // Do the replacement, if variable is not found, the variable placeholder is removed
             matcher.appendReplacement(sb, value != null ? Matcher.quoteReplacement(value.toString()) : "");

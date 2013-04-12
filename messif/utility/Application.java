@@ -34,7 +34,7 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 public class Application extends DistributedApplication {
 
     /** List of RMI services for algorithms */
-    protected List<AlgorithmRMIServer> rmiServers = new ArrayList<AlgorithmRMIServer>();
+    private final List<AlgorithmRMIServer> rmiServers = new ArrayList<AlgorithmRMIServer>();
 
     /**
      * Creates an RMI service for the current algorithm.
@@ -53,7 +53,7 @@ public class Application extends DistributedApplication {
      */
     @ExecutableMethod(description = "create RMI service for the current algorithm", arguments = { "TCP port", "flag whether to clear surplus data (defaults to true)" })
     public boolean rmiStart(PrintStream out, String... args) {
-        if (algorithm == null) {
+        if (!hasAlgorithm()) {
             out.println("No running algorithm is selected");
             return false;
         }
@@ -73,7 +73,7 @@ public class Application extends DistributedApplication {
         
         // Create RMI service
         try {
-            AlgorithmRMIServer rmiServer = new AlgorithmRMIServer(algorithm, port, clearSurplusData);
+            AlgorithmRMIServer rmiServer = new AlgorithmRMIServer(getAlgorithm(), port, clearSurplusData);
             rmiServers.add(rmiServer);
             rmiServer.start();
             return true;
@@ -103,7 +103,7 @@ public class Application extends DistributedApplication {
         Iterator<AlgorithmRMIServer> iterator = rmiServers.iterator();
         while (iterator.hasNext()) {
             AlgorithmRMIServer rmiServer = iterator.next();
-            if (algorithm == rmiServer.getAlgorithm()) {
+            if (getAlgorithm() == rmiServer.getAlgorithm()) {
                 rmiServer.interrupt();
                 iterator.remove();
             }
@@ -151,14 +151,14 @@ public class Application extends DistributedApplication {
      */
     @ExecutableMethod(description = "shows information about RMI services for the current algorithm", arguments = {})
     public boolean rmiInfo(PrintStream out, String... args) {
-        if (algorithm == null) {
+        if (!hasAlgorithm()) {
             out.println("No running algorithm is selected");
             return false;
         }
 
         int count = 0;
         for (AlgorithmRMIServer rmiServer : rmiServers) {
-            if (algorithm == rmiServer.getAlgorithm()) {
+            if (getAlgorithm() == rmiServer.getAlgorithm()) {
                 out.println("RMI service is started at port " + rmiServer.getPort());
                 count++;
             }
