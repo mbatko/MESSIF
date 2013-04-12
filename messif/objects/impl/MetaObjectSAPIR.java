@@ -111,38 +111,13 @@ public abstract class MetaObjectSAPIR extends MetaObject implements BinarySerial
 
     /** Creates a new instance of MetaObjectSAPIR */
     public MetaObjectSAPIR(BufferedReader stream, Set<String> restrictNames) throws IOException {
-        // Keep reading the lines while they are comments, then read the first line of the object
-        String line = readObjectComments(stream);
-
-        // The line should have format "URI;name1;class1;name2;class2;..." and URI can be skipped (including the semicolon)
-        String[] uriNamesClasses = line.split(";");
-
-        // Skip the first name if the number of elements is odd
-        int i = uriNamesClasses.length % 2;
-
-        // If the URI locator is used (and it is not set from the previous - this is the old format)
-        if (i == 1) {
-            if ((getObjectKey() == null) && (uriNamesClasses[0].length() > 0))
-                setObjectKey(new AbstractObjectKey(uriNamesClasses[0]));
-        }
-
-        for (; i < uriNamesClasses.length; i += 2) {
-            // Check restricted names
-            if (restrictNames != null && !restrictNames.contains(uriNamesClasses[i]))
-                readObject(stream, uriNamesClasses[i+1]); // Read the object, but skip it
-            else if ("ColorLayoutType".equals(uriNamesClasses[i]))
-                colorLayout = readObject(stream, ObjectColorLayout.class);
-            else if ("ColorStructureType".equals(uriNamesClasses[i]))
-                colorStructure = readObject(stream, ObjectShortVectorL1.class);
-            else if ("EdgeHistogramType".equals(uriNamesClasses[i]))
-                edgeHistogram = readObject(stream, ObjectVectorEdgecomp.class);
-            else if ("HomogeneousTextureType".equals(uriNamesClasses[i]))
-                homogeneousTexture = readObject(stream, ObjectHomogeneousTexture.class);
-            else if ("ScalableColorType".equals(uriNamesClasses[i]))
-                scalableColor = readObject(stream, ObjectIntVectorL1.class);
-            else if ("Location".equals(uriNamesClasses[i]))
-                location = readObject(stream, ObjectGPSCoordinate.class);
-        }
+        Map<String, LocalAbstractObject> objects = readObjects(stream, restrictNames, readObjectsHeader(stream), new HashMap<String, LocalAbstractObject>());
+        this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
+        this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");
+        this.edgeHistogram = (ObjectVectorEdgecomp)objects.get("EdgeHistogramType");
+        this.homogeneousTexture = (ObjectHomogeneousTexture)objects.get("HomogeneousTextureType");
+        this.scalableColor = (ObjectIntVectorL1)objects.get("ScalableColorType");
+        this.location = (ObjectGPSCoordinate)objects.get("Location");
     }
 
     /** Creates a new instance of MetaObjectSAPIR */
