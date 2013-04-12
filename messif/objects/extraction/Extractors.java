@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -60,6 +61,31 @@ public abstract class Extractors {
     }
 
     /**
+     * Converts a plain {@link Extractor} to {@link MultiExtractor}.
+     * The returned multi-extractor iterator will return the single object 
+     * returned by the encapsulated extractor.
+     * @param <T> the class of objects the extractor creates
+     * @param extractor the plain extractor to wrap
+     * @return converted multi-extractor instance
+     */
+    public static <T extends LocalAbstractObject> MultiExtractor<T> extractorToMultiExtractor(final Extractor<? extends T> extractor) {
+        return new MultiExtractor<T>() {
+            @Override
+            public Iterator<T> extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                return Collections.singleton(extractor.extract(dataSource)).iterator();
+            }
+            @Override
+            public Class<? extends T> getExtractedClass() {
+                return extractor.getExtractedClass();
+            }
+            @Override
+            public String toString() {
+                return "MultiExtractor wrapping " + extractor.toString();
+            }
+        };
+    }
+
+    /**
      * Returns a type-safe cast of a given extractor instance.
      * @param <T> the class of objects the extractor creates
      * @param extractorInstance the instance to cast
@@ -81,17 +107,24 @@ public abstract class Extractors {
     /**
      * Returns a type-safe cast of a given multi-extractor instance.
      * @param <T> the class of objects the multi-extractor creates
-     * @param multiExtractorInstance the instance to cast
+     * @param object the instance to cast
      * @param extractedClass the class of objects the multi-extractor creates
+     * @param allowPlainExtractor flag whether to require the object to be {@link MultiExtractor} (<tt>false</tt>), or
+     *          also {@link Extractor} is allowed and converted via {@link #extractorToMultiExtractor}
      * @return a cast multi-extractor
      * @throws ClassCastException if the specified {@code multiExtractorInstance} is not an {@link MultiExtractor} or it extracts an incompatible class
      */
-    public static <T extends LocalAbstractObject> MultiExtractor<T> castToMultiExtractor(Object multiExtractorInstance, Class<? extends T> extractedClass) throws ClassCastException {
-        if (multiExtractorInstance == null)
+    @SuppressWarnings("unchecked")
+    public static <T extends LocalAbstractObject> MultiExtractor<T> castToMultiExtractor(Object object, Class<? extends T> extractedClass, boolean allowPlainExtractor) throws ClassCastException {
+        if (object == null)
             return null;
 
-        @SuppressWarnings("unchecked")
-        MultiExtractor<T> extractor = (MultiExtractor<T>)multiExtractorInstance; // This cast IS checked on the next line
+        MultiExtractor<T> extractor;
+        if (allowPlainExtractor && object instanceof Extractor) {
+            extractor = extractorToMultiExtractor((Extractor<T>)object); // This cast IS checked in the following
+        } else {
+            extractor = (MultiExtractor<T>)object; // This cast IS checked in the following
+        }
         if (!extractedClass.isAssignableFrom(extractor.getExtractedClass()))
             throw new ClassCastException("MultiExtractor " + extractor + " does not provide " + extractedClass);
         return extractor;
@@ -241,7 +274,7 @@ public abstract class Extractors {
     }
 
     /** Regular expression for parsing question-mark enclosed variables */
-    private static final Pattern externalCmdVariableSubstitution = Pattern.compile("\\?([^?]+?)(?::([^?]+))?\\?", Pattern.MULTILINE);
+    private static final Pattern externalCmdVariableSubstitution = Pattern.compile("\\?([^?]+?)([:!][^?]*)?\\?", Pattern.MULTILINE);
 
     /**
      * Calls an external extractor command and returns its output.

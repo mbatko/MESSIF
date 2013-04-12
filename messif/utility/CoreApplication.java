@@ -37,6 +37,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.text.DecimalFormat;
+import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -119,7 +121,9 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  &lt;actionName&gt;.loopVariable = &lt;variable name&gt;
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
- *  &lt;actionName&gt;.postponeUntil = hh:mm:ss</pre>
+ *  &lt;actionName&gt;.postponeUntil = hh:mm:ss
+ *  &lt;actionName&gt;.description = &lt;any text with variable expansion&gt;
+ *  &lt;actionName&gt;.descriptionAfter = &lt;any text with variable expansion&gt;</pre>
  * <ul>
  * <li>&lt;actionName&gt; is a user specified name for the action which can be referred from other
  *                    actions (&lt;otherActionName1&gt; &lt;otherActionName2&gt;) or command line parameter <i>[action]</i>.</li>
@@ -159,6 +163,10 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * <li><i>postponeUntil</i> parameter is optional and allows to postpone the action until the specified
  *  time. The whole execution of the control file is paused. If the specified time is in the past,
  *  this parameter is ignored. Note that the postponeUntil is working within one day.</li>
+ * <li><i>description</i> parameter is optional and allows print the specified text before
+ *  the respective action is executed.</li>
+ * <li><i>descriptionAfter</i> parameter is optional and allows print the specified text after
+ *  the respective action is executed.</li>
  * </ul>
  * <p>
  * All parameters, method name and output file are subject to variable expansion.
@@ -192,28 +200,28 @@ public class CoreApplication {
     protected static final Logger log = Logger.getLogger("application");
 
     /** Currently running algorithm */
-    protected Algorithm algorithm = null;
+    private Algorithm algorithm = null;
 
     /** List of running algorithms */
-    protected List<Algorithm> algorithms = new ArrayList<Algorithm>();
+    private final List<Algorithm> algorithms = new ArrayList<Algorithm>();
 
     /** Last executed operation */
-    protected AbstractOperation lastOperation = null;
+    private AbstractOperation lastOperation = null;
 
     /** Regular expression for binding {@link messif.statistics.OperationStatistics} in every {@link #operationExecute} call */
-    protected String bindOperationStatsRegexp = null;
+    private String bindOperationStatsRegexp = null;
 
     /** Internal list of methods that can be executed */
-    protected final MethodExecutor methodExecutor;
+    private final MethodExecutor methodExecutor;
 
     /** List of currently created named instances */
-    protected final Map<String, Object> namedInstances = new HashMap<String, Object>();
+    private final Map<String, Object> namedInstances = new HashMap<String, Object>();
 
     /** List of asynchronous threads for "repeatEvery" actions */
-    protected final Map<String, Thread> repeatEveryThreads = new HashMap<String, Thread>();
+    private final Map<String, Thread> repeatEveryThreads = new HashMap<String, Thread>();
 
     /** Socket used for command communication */
-    protected ServerSocketChannel cmdSocket;
+    private ServerSocketChannel cmdSocket;
 
     /**
      * Create new instance of CoreApplication.
@@ -285,6 +293,39 @@ public class CoreApplication {
         if (ret > maxValue)
             throw new NumberFormatException("Number '" + ret + "' is not less than or equal to " + maxValue);
         return ret;
+    }
+
+    /**
+     * Returns the socket used for command communication.
+     * @return the socket used for command communication
+     */
+    protected final ServerSocketChannel getCmdSocket() {
+        return cmdSocket;
+    }
+
+    /**
+     * Returns the currently selected running algorithm.
+     * @return the currently selected running algorithm
+     */
+    protected final Algorithm getAlgorithm() {
+        return algorithm;
+    }
+
+    /**
+     * Returns whether there is a running algorithm.
+     * @return <tt>true</tt> if there is a running algorithm
+     */
+    protected final boolean hasAlgorithm() {
+        return algorithm != null;
+    }
+
+    /**
+     * Adds the given algorithm to the list of running algorithms and select it as the current running algorithm.
+     * @param algorithm the algorithm to add
+     */
+    void addAlgorithm(Algorithm algorithm) {
+        this.algorithm = algorithm;
+        this.algorithms.add(algorithm);
     }
 
 
@@ -1153,130 +1194,130 @@ public class CoreApplication {
     }
 
     /**
-     * Print the given answer interator to the output.
-     * <p>
-     * Optional string arguments are accepted:
-     *   <ul>
-     *     <li>number of results to display (defaults to all)</li>
-     *     <li>number of results to skip from the beginning (defaults to 0)</li>
-     *   </ul>
-     * </p>
+     * Returns static array with five elements that contains:
+     * the given answer object as-is,
+     * the {@link AbstractObject} from the answer object,
+     * the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
+     * the distance,
+     * the meta-object sub-distance for the given {@code subAnswerInder}
+     * 
+     * @param answerObject the answer object from a query operation (e.g. {@link AbstractObject}, {@link RankedAbstractObject}, or {@link RankedAbstractMetaObject})
+     * @param subAnswerIndex the index of the sub-distance to get from the {@link RankedAbstractMetaObject}
+     * @return a static array with the five formatting elements of the answer object
+     */
+    private Object[] parseAnswerObject(Object answerObject, Integer subAnswerIndex) {
+        Object[] params = new Object[5]; // Format consists of answerObject itself, abstract object, locator, distance, and meta subdistance
+        params[0] = answerObject;
+        if (answerObject instanceof RankedAbstractObject) {
+            RankedAbstractObject castObject = (RankedAbstractObject)answerObject;
+            params[1] = castObject.getObject();
+            params[2] = castObject.getObject().getLocatorURI();
+            params[3] = castObject.getDistance();
+            if (subAnswerIndex != null && answerObject instanceof RankedAbstractMetaObject) {
+                params[4] = ((RankedAbstractMetaObject)answerObject).getSubDistance(subAnswerIndex);
+            }
+        } else if (answerObject instanceof AbstractObject) {
+            params[1] = answerObject;
+            params[2] = ((AbstractObject)answerObject).getLocatorURI();
+        }
+        return params;
+    }
+
+    /**
+     * Internal method that prints the last operation answer to the output.
      * 
      * @param subAnswerIndex the index of the sub-answer to display (if <tt>null</tt> the whole answer is used)
      * @param out a stream where the application writes information for the user
-     * @param optArgs additional optional arguments for the display
-     * @param optArgIndex the index of the first optional argument
+     * @param args additional optional arguments for the display
+     * @param argIndex the index of the first optional argument
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */  
-    private boolean operationAnswer(Integer subAnswerIndex, PrintStream out, int optArgIndex, String... optArgs) {
-        QueryOperation<?> operation = null;
+    private boolean operationAnswer(Integer subAnswerIndex, PrintStream out, int argIndex, String[] args) {
+        QueryOperation<?> operation;
         try {
             operation = (QueryOperation<?>)lastOperation;
         } catch (ClassCastException ignore) {
+            operation = null;
         }
         if (operation == null) {
             out.println("The operationAnswer method must be called after some QueryOperation was executed");
             return false;
         }
 
-        // The next optional argument is the separator (defaults to newline)
-        String separator = (optArgs.length > optArgIndex)?optArgs[optArgIndex]:System.getProperty("line.separator");
-        optArgIndex++;
-
         // The next optional argument is the type of output (defaults to All)
-        char answerType = (optArgs.length > optArgIndex && optArgs[optArgIndex].length() > 0) ? Character.toUpperCase(optArgs[optArgIndex].charAt(0)) : 'A';
-        optArgIndex++;
+        String answerFormatString = (args.length > argIndex && args[argIndex].length() > 0) ? args[argIndex] : "All";
+        argIndex++;
+
+        // The next optional argument is the separator (defaults to newline)
+        String separator = (args.length > argIndex) ? args[argIndex] : System.getProperty("line.separator");
+        argIndex++;
+
+        // The next optional argument is a locale (defaults to system default locale)
+        Locale locale = (args.length > argIndex) ? new Locale(args[argIndex]) : Locale.getDefault();
+        argIndex++;
 
         // The next optional argument is the maximal number of results to display (all results are displayed if not specified)
         int maxCount;
         try {
-            maxCount = retrieveIntArgument(optArgs, optArgIndex, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
-            optArgIndex++;
+            maxCount = retrieveIntArgument(args, argIndex, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
+            argIndex++;
         } catch (NumberFormatException e) {
-            out.println("Invalid number of objects to display: " + optArgs[optArgIndex]);
+            out.println("Invalid number of objects to display: " + args[argIndex]);
             return false;
         }
 
         // The next optional argument is the number results to skip before the actual answer is displayed (defaults to zero)
         int skipCount;
         try {
-            skipCount = retrieveIntArgument(optArgs, optArgIndex, 0, 0, Integer.MAX_VALUE);
-            optArgIndex++;
+            skipCount = retrieveIntArgument(args, argIndex, 0, 0, Integer.MAX_VALUE);
+            argIndex++;
         } catch (NumberFormatException e) {
-            out.println("Invalid number of objects to skip: " + optArgs[optArgIndex]);
+            out.println("Invalid number of objects to skip: " + args[argIndex]);
             return false;
         }
 
-        // Display output
-        Iterator<?> answerIterator;
-        if (answerType == 'O' || answerType == 'L') {
-            answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswerObjects();
-        } else {
-            answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswer();
+        // Prepare message format for the output
+        MessageFormat answerFormat;
+        switch (Character.toUpperCase(answerFormatString.charAt(0))) {
+            case 'A':
+                answerFormat = new MessageFormat("{0}", locale);
+                break;
+            case 'O':
+                answerFormat = new MessageFormat("{1}", locale);
+                break;
+            case 'L':
+                answerFormat = new MessageFormat("{2}", locale);
+                break;
+            case 'D':
+                answerFormat = new MessageFormat("{3}: {2}", locale);
+                break;
+            case 'S':
+                answerFormat = new MessageFormat("{2}: {3}", locale);
+                break;
+            case 'M':
+                answerFormat = new MessageFormat("{2}: {4}", locale);
+                break;
+            case 'W':
+                out.println("Use operationAnswerRawObjects method instead of operationAnswer to print raw objects");
+                return false;
+            default:
+                answerFormat = new MessageFormat(answerFormatString, locale);
+                break;
         }
+
+        // Display output
+        Iterator<?> answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswer();
         while (skipCount-- > 0 && answerIterator.hasNext())
             answerIterator.next();
         while (answerIterator.hasNext() && maxCount-- > 0) {
-            printOperationAnswer(answerIterator.next(), answerType, subAnswerIndex, out);
+            Object[] parsedAnswerObject = parseAnswerObject(answerIterator.next(), subAnswerIndex);
+            out.print(answerFormat.format(parsedAnswerObject));
             if (answerIterator.hasNext() && maxCount > 0)
                 out.print(separator);
         }
         out.println();
 
         return true;
-    }
-
-    /**
-     * Print the given answer object to the out stream.
-     * 
-     * @param answerObject the answer object to print (e.g. {@link AbstractObject} or {@link RankedAbstractObject})
-     * @param answerType the display type of the answer - see {@link #printOperationAnswer(java.lang.Object, char, java.io.PrintStream)}
-     * @param subAnswerIndex the index of the sub-answer to display (if <tt>null</tt> the whole answer is used)
-     * @param out a stream where the application writes information for the user
-     */
-    private void printOperationAnswer(Object answerObject, char answerType, Integer subAnswerIndex, PrintStream out) {
-        switch (answerType) {
-            case 'A':
-            case 'O':
-                out.print(answerObject);
-                break;
-            case 'L':
-                out.print(((AbstractObject)answerObject).getLocatorURI());
-                break;
-            case 'D':
-                RankedAbstractObject rankedAnswerObject = (RankedAbstractObject)answerObject;
-                out.print(rankedAnswerObject.getDistance());
-                out.print(": ");
-                out.print(rankedAnswerObject.getObject().getLocatorURI());
-                break;
-            case 'S':
-                rankedAnswerObject = (RankedAbstractObject)answerObject;
-                out.print(rankedAnswerObject.getObject().getLocatorURI());
-                out.print(": ");
-                out.print(rankedAnswerObject.getDistance());
-                break;
-            case 'M':
-                RankedAbstractMetaObject rankedAnswerMetaObject = (RankedAbstractMetaObject)answerObject;
-                out.print(rankedAnswerMetaObject.getObject().getLocatorURI());
-                out.print(": ");
-                out.print(subAnswerIndex == null ? rankedAnswerMetaObject.getDistance() : rankedAnswerMetaObject.getSubDistance(subAnswerIndex));
-                break;
-            case 'W':
-                try {
-                    if (answerObject instanceof RankedAbstractObject) {
-                        ((LocalAbstractObject) ((RankedAbstractObject) answerObject).getObject()).write(out);
-                    } else {
-                        ((LocalAbstractObject) answerObject).write(out);
-                    }
-                } catch (IOException ex) {
-                    throw new IllegalArgumentException(ex);
-                } catch (ClassCastException ex) {
-                    throw new IllegalArgumentException(ex);
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown answer type: " + answerType);
-        }
     }
 
     /**
@@ -1293,11 +1334,22 @@ public class CoreApplication {
      * <p>
      * The following optional arguments are accepted:
      *   <ul>
-     *     <li>objects separator (defaults to newline)</li>
-     *     <li>result type - can be 'All' = display everything,
-     *            'Objects' = displays just objects, 'Locators' = display just locators,
-     *             or 'DistanceLocators' = display format 'distance: locator',
-     *             or 'WriteRawData' = write the objects by {@link LocalAbstractObject#write(java.io.OutputStream) }</li>
+     *     <li>result formating type (defaults to All) can be
+     *       <ul>
+     *          <li>All = display everything,</li>
+     *          <li>Objects = displays just objects,</li>
+     *          <li>Locators = display just locators,</li>
+     *          <li>DistanceLocators = display format "distance: locator",</li>
+     *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
+     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *              the given answer object as-is,
+     *              the {@link AbstractObject} from the answer object,
+     *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
+     *              the distance.</li>
+     *       </ul>
+     *     </li>
+     *     <li>results separator (defaults to newline)</li>
+     *     <li>language locale code for formating (defaults to system language)</li>
      *     <li>number of results to display (defaults to all)</li>
      *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
@@ -1306,7 +1358,7 @@ public class CoreApplication {
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; operationAnswer , Locators
+     * MESSIF &gt;&gt;&gt; operationAnswer DistanceLocators , en
      * </pre>
      * </p>
      * 
@@ -1334,10 +1386,24 @@ public class CoreApplication {
      * The following arguments are accepted:
      *   <ul>
      *     <li>zero-based index of the sub-answer to show (required argument)</li>
-     *     <li>objects separator (defaults to newline)</li>
-     *     <li>result type - can be 'All' = display everything,
-     *            'Objects' = displays just objects, 'Locators' = display just locators,
-     *             or 'DistanceLocators' = display format 'distance: locator'</li>
+     *     <li>result formating type (defaults to All) can be
+     *       <ul>
+     *          <li>All = display everything,</li>
+     *          <li>Objects = displays just objects,</li>
+     *          <li>Locators = display just locators,</li>
+     *          <li>DistanceLocators = display format "distance: locator",</li>
+     *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
+     *          <li>MetaObjectLocatorDistances = display format "locator: metaobject-subdistance",</li>
+     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *              the given answer object as-is,
+     *              the {@link AbstractObject} from the answer object,
+     *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
+     *              the distance,
+     *              the respective sub-distance if the meta-object distances were stored.</li>
+     *       </ul>
+     *     </li>
+     *     <li>results separator (defaults to newline)</li>
+     *     <li>language locale code for formating (defaults to system language)</li>
      *     <li>number of results to display (defaults to all)</li>
      *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
@@ -1346,7 +1412,7 @@ public class CoreApplication {
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; operationSubAnswer 1 , Locators
+     * MESSIF &gt;&gt;&gt; operationSubAnswer 1 Locators
      * </pre>
      * </p>
      * 
@@ -1364,6 +1430,46 @@ public class CoreApplication {
             return false;
         }
         return operationAnswer(subAnswerIndex, out, 2, args);
+    }
+
+    /**
+     * Write the raw objects (using {@link LocalAbstractObject#write}) from the answer of the last executed query operation.
+     * Specifically, the answer of the operation created by last call to
+     * {@link #operationExecute} or {@link #operationBgExecute} is written.
+     * Note that the operation might be still running if the {@link #operationBgExecute} was
+     * used and thus the results might not be complete. Use {@link #operationWaitBg}
+     * to wait for background operations to finish.
+     * <p>
+     * If the last operation was not {@link messif.operations.QueryOperation query} operation,
+     * this method will fail.
+     * </p>
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationAnswerRawObjects
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args no arguments required
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws IOException if some of the objects failed to write themselves to output
+     * @throws ClassCastException if the operation did not provide {@link LocalAbstractObject}s in its answer
+     */  
+    @ExecutableMethod(description = "list sub-answer objects retrieved by the last executed query operation", arguments = {"sub-answer index to show", "objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
+    public boolean operationAnswerRawObjects(PrintStream out, String... args) throws IOException, ClassCastException {
+        Iterator<AbstractObject> it;
+        try {
+            it = ((QueryOperation<?>)lastOperation).getAnswerObjects();
+        } catch (Exception ignore) {
+            out.println("The operationAnswerRawObjects method must be called after some QueryOperation was executed");
+            return false;
+        }
+        while (it.hasNext()) {
+            ((LocalAbstractObject)it.next()).write(out);
+        }
+        return true;
     }
 
 
@@ -1882,6 +1988,29 @@ public class CoreApplication {
     //****************** Named instances ******************//
 
     /**
+     * Returns the stored named instance with the given name.
+     * @param name the name of the instance to get
+     * @return the stored named instance or <tt>null</tt>
+     */
+    protected final Object getNamedInstance(String name) {
+        return namedInstances.get(name);
+    }
+
+    /**
+     * Add the given named instance to the internal storage.
+     * @param name the name of the instance to add
+     * @param instance the instance to add
+     * @param replace flag whether to replace existing instance with the given one (<tt>true</tt>) or not
+     * @return <tt>true</tt> if the instance was successfully added or <tt>false</tt> if there was an instance with this name and replace was <tt>false</tt>
+     */
+    protected final boolean addNamedInstance(String name, Object instance, boolean replace) {
+        if (!replace && namedInstances.containsKey(name))
+            return false;
+        namedInstances.put(name, instance);
+        return true;
+    }
+
+    /**
      * Creates a new named instance.
      * An argument specifying the signature of a constructor, a factory method or a static field
      * is required. Additional argument specifies the name for the instance (defaults to
@@ -2039,7 +2168,7 @@ public class CoreApplication {
             Object value = namedInstances.get(args[1]);
             if (value == null) // Named instance not accessed directly, try instantiation
                 value = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
-            out.println(value);
+            out.println(Convert.expandReferencedInstances(value));
             return true;
         } catch (NoSuchInstantiatorException e) {
             out.println("Error creating named instance for " + args[1] + ": " + e);
@@ -2627,7 +2756,7 @@ public class CoreApplication {
     /****************** Control file command functions ******************/
 
     /** Pattern that match variables in control files */
-    private static final Pattern variablePattern = Pattern.compile("(?:<|\\$\\{)([^>}]+?)(?::-?([^>}]+))?(?:>|\\})", Pattern.MULTILINE);
+    private static final Pattern variablePattern = Pattern.compile("(?:\\\\?<|\\$\\{)([^>}]+?)([:!]-?[^>}]*)?(?:>|\\})", Pattern.MULTILINE);
 
     /**
      * Returns the value with substituted variables.
@@ -2705,6 +2834,10 @@ public class CoreApplication {
         try {
             String fileName = substituteVariables(props.getProperty(actionName + ".outputFile"), variables);
             if (fileName != null && fileName.length() > 0) {
+                if (outputStreams == null) {
+                    out.println("Cannot set outputFile for action '" + actionName + "' - output files are disabled in this context");
+                    return null;
+                }
                 if (assignOutput != null)
                     out.println("WARNING: Action '" + actionName + "' has both the 'outputFile' and the 'assign' parameters defined. Using outputFile.");
                 PrintStream outputStream = outputStreams.get(fileName);
@@ -2832,6 +2965,44 @@ public class CoreApplication {
      * @param props the properties with actions
      * @param actionName the name of the action to execute
      * @param variables the current variables environment
+     * @param arguments the list of arguments parsed from the configuration file
+     * @return <tt>true</tt> if the action was executed successfully
+     * @throws NoSuchMethodException if there was no method for the given action
+     * @throws InvocationTargetException if there was an error executing the action while the {@code throwException} is <tt>true</tt>
+     */
+    protected boolean controlFileExecuteMethod(PrintStream out, Properties props, String actionName, Map<String,String> variables, List<String> arguments) throws NoSuchMethodException, InvocationTargetException {
+        // SPECIAL! Method propertiesOpen is called with additional arguments
+        if (arguments.get(0).equals("propertiesOpen"))
+            return propertiesOpen(out,
+                    arguments.get(1), // fileName
+                    (arguments.size() > 2)?arguments.get(2):actionName, // name
+                    (arguments.size() > 3)?arguments.get(3):null, // prefix
+                    (arguments.size() > 4)?Convert.stringToMap(arguments.get(4)):variables
+            );
+        // SPECIAL! Method propertiesCreate is called differently
+        if (arguments.get(0).equals("propertiesCreate"))
+            return propertiesCreate(out,
+                    props,
+                    actionName, // instance name
+                    actionName + '.', // prefix
+                    variables
+            );
+        // Normal method
+        Object rtv = methodExecutor.execute(out, arguments.toArray(new String[arguments.size()]));
+        out.flush();
+        if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue())
+            return false;
+        return true;
+    }
+
+    /**
+     * This method reads and executes one action (with name actionName) from the control file (props).
+     * For a full explanation of the command syntax see {@link CoreApplication}.
+     * 
+     * @param out the stream to write the output to
+     * @param props the properties with actions
+     * @param actionName the name of the action to execute
+     * @param variables the current variables environment
      * @param outputStreams currently opened output streams
      * @param throwException flag whether to throw the {@link InvocationTargetException} when an action encounters error instead of handling it
      * @return <tt>true</tt> if the action was executed successfully
@@ -2848,6 +3019,7 @@ public class CoreApplication {
 
         // Read description (variable substition in description is done during the repeat)
         String description = props.getProperty(actionName + ".description");
+        String descriptionAfter = props.getProperty(actionName + ".descriptionAfter");
 
         // Read the assign parameter and set the output stream
         String assignVariable = substituteVariables(props.getProperty(actionName + ".assign"), variables);
@@ -2903,27 +3075,8 @@ public class CoreApplication {
                             return false; // Stop execution of block if there was an error
                         }
                 } else try {
-                    Object rtv;
-                    // SPECIAL! Method propertiesOpen is called with additional arguments
-                    if (methodName.equals("propertiesOpen"))
-                        rtv = propertiesOpen(out,
-                                arguments.get(1), // fileName
-                                (arguments.size() > 2)?arguments.get(2):actionName, // name
-                                (arguments.size() > 3)?arguments.get(3):null, // prefix
-                                (arguments.size() > 4)?Convert.stringToMap(arguments.get(4)):variables
-                        );
-                    // SPECIAL! Method propertiesCreate is called differently
-                    else if (methodName.equals("propertiesCreate"))
-                        rtv = propertiesCreate(out,
-                                props,
-                                actionName, // instance name
-                                actionName + '.', // prefix
-                                variables
-                        );
-                    else // Normal method
-                        rtv = methodExecutor.execute(outputStream, arguments.toArray(new String[arguments.size()]));
-                    outputStream.flush();
-                    if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue()) {
+                    // Execute "normal" method
+                    if (!controlFileExecuteMethod(outputStream, props, actionName, variables, arguments)) {
                         if (assignOutput != null)
                             out.print(assignOutput.toString());
                         out.println("Action '" + actionName + "' failed - control file execution was terminated");
@@ -2934,10 +3087,14 @@ public class CoreApplication {
                         out.println("Action '" + actionName + "' not found in the control file");
                         return false; // Execution unsuccessful, method/action not found
                     } else
-                        // There was no method for the action, so we try is as a name of block
+                        // There was no method for the action, so we try it as a name of block
                         if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, throwException || repeatUntilExceptionClass != null))
                             return false;
                 }
+
+                // Show descriptionAfter if set
+                if (descriptionAfter != null)
+                    outputStream.println(substituteVariables(descriptionAfter, variables));
             }
         } catch (InvocationTargetException e) {
             // Check whether the repeat-until is not captured

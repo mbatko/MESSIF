@@ -71,8 +71,7 @@ public class DistributedApplication extends CoreApplication {
             }
 
             // Load algorithm from file
-            algorithm = Algorithm.restoreFromFile(args[1]);
-            algorithms.add(algorithm);
+            addAlgorithm(Algorithm.restoreFromFile(args[1]));
 
             // Reset host mapping table
             NetworkNode.resetHostMappingTable();
@@ -102,7 +101,7 @@ public class DistributedApplication extends CoreApplication {
          * @param timeout the time between sending packets in miliseconds
          * @throws SocketException if the sending socket cannot be opened on the specified port
          */
-        public ControllerKeepaliveThread(int localPort, NetworkNode remoteHost, long timeout) throws SocketException {
+        private ControllerKeepaliveThread(int localPort, NetworkNode remoteHost, long timeout) throws SocketException {
             super("thApplicationControllerKeepalive");
             this.socket = new DatagramSocket(localPort);
             this.remoteHost = remoteHost;
@@ -138,18 +137,23 @@ public class DistributedApplication extends CoreApplication {
     }
 
     @Override
+    @SuppressWarnings("UseOfSystemOutOrSystemErr")
     protected boolean parseArguments(String[] args, int argIndex) {
         // Register to central controller
         if (args.length > argIndex && args[argIndex].equalsIgnoreCase("-register")) {
             argIndex++;
-            if (cmdSocket != null)
+            if (getCmdSocket() != null) {
                 try {
-                    new ControllerKeepaliveThread(cmdSocket.socket().getLocalPort(), Convert.stringToType(args[argIndex], NetworkNode.class), 60000).start();
+                    new ControllerKeepaliveThread(getCmdSocket().socket().getLocalPort(), Convert.stringToType(args[argIndex], NetworkNode.class), 60000).start();
                     argIndex++;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    System.err.println("Can't start central controller notification thread: " + e);
+                    return false;
                 }
-            else System.err.println("Can't register if there is no communication interface!");
+            } else {
+                System.err.println("Can't register if there is no communication interface!");
+                return false;
+            }
         }
 
         return super.parseArguments(args, argIndex);
