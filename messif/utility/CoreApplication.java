@@ -1441,8 +1441,6 @@ public class CoreApplication {
             default:
                 answerFormat = new MessageFormat(answerFormatString, locale);
                 break;
-            default:
-                throw new IllegalArgumentException("Unknown answer type: " + answerType);
         }
 
         // Display output
