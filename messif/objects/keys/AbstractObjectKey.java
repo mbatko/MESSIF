@@ -34,14 +34,14 @@ import messif.objects.nio.BinarySerializator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class AbstractObjectKey implements java.io.Serializable, Comparable<AbstractObjectKey>, BinarySerializable {
+public class AbstractObjectKey implements java.io.Serializable, Comparable<AbstractObjectKey>, BinarySerializable, Cloneable {
     /** Class serial id for serialization. */
     private static final long serialVersionUID = 1L;
 
     //************ Attributes ************//
 
     /** The URI locator */
-    private final String locatorURI;
+    private String locatorURI;
 
 
     //************ Constructor ************//
@@ -87,6 +87,7 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
      * @param partIndex zero-based index of the part to return
      * @return the part of the requested index
      * @throws IndexOutOfBoundsException is thrown if the requested index is not present
+     * @throws IllegalArgumentException if the specified keyString, delimiter or partIndex are invalid
      */
     public static String getKeyStringPart(String keyString, String delimiter, int partIndex) throws IndexOutOfBoundsException, IllegalArgumentException {
         if (keyString == null)
@@ -211,6 +212,18 @@ public class AbstractObjectKey implements java.io.Serializable, Comparable<Abstr
         if (locatorURI == null)
             return ((AbstractObjectKey) obj).locatorURI == null;
         return locatorURI.equals(((AbstractObjectKey) obj).locatorURI);
+    }
+
+    /**
+     * Returns a copy of this key with the given locator URI.
+     * @param locatorURI the new locator URI for the key
+     * @return a clone of this key
+     * @throws CloneNotSupportedException if there was an error cloning this object
+     */
+    public AbstractObjectKey clone(String locatorURI) throws CloneNotSupportedException {
+        AbstractObjectKey obj = (AbstractObjectKey)super.clone();
+        obj.locatorURI = locatorURI;
+        return obj;
     }
 
 

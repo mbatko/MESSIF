@@ -132,7 +132,25 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
      * @throws NoSuchElementException if there is no object with the specified locator
      */
     public final E getObjectByLocator(String locatorURI) throws NoSuchElementException {
-        return getObjectByAnyLocator((locatorURI == null)?null:Collections.singleton(locatorURI), false);
+        return getObjectByLocator(locatorURI, false);
+    }
+
+    /**
+     * Returns the first instance of object, that has the specified locator.
+     *
+     * @param locatorURI the locator of the object that we are searching for
+     * @param prefix flag whether the {@code locatorURI} is treated as prefix
+     * @return the first instance of object, that has specified locatorURI
+     * @throws NoSuchElementException if there is no object with the specified locator
+     */
+    public final E getObjectByLocator(String locatorURI, boolean prefix) throws NoSuchElementException {
+        if (!prefix)
+            return getObjectByAnyLocator((locatorURI == null)?null:Collections.singleton(locatorURI), false);
+        while (true) {
+            if (next().getLocatorURI().startsWith(locatorURI)) {// NoSuchElement is thrown automatically here when trying to access an object after the last one.
+                return getCurrentObject();
+            }
+        }
     }
 
     /**

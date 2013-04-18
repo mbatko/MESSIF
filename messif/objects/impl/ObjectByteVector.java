@@ -177,15 +177,13 @@ public abstract class ObjectByteVector extends LocalAbstractObject implements Bi
      * 
      * @param data the vector of byte integers to output
      * @param stream the output stream to write the text to
-     * @param finalSeparator the char written at the end of the vector
      * @throws IOException if there was an I/O error while writing to the stream
      */
-    public static void writeByteHexString(byte[] data, OutputStream stream, char finalSeparator) throws IOException {
+    public static void writeByteHexString(byte[] data, OutputStream stream) throws IOException {
         for (int i = 0; i < data.length; i++) {
             stream.write(Character.forDigit(data[i] >> 4 & 0xf, 16));
             stream.write(Character.forDigit(data[i] & 0xf, 16));
         }        
-        stream.write(finalSeparator);
     }
 
     @Override

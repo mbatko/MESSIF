@@ -17,17 +17,18 @@
 package messif.buckets.index;
 
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.Collection;
+import java.util.HashSet;
 import messif.objects.LocalAbstractObject;
 import messif.objects.UniqueID;
 import messif.objects.keys.AbstractObjectKey;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.operations.query.GetObjectByLocatorOperation;
 import messif.operations.query.GetObjectQueryOperation;
+import messif.operations.query.GetObjectsByLocatorPrefixOperation;
 import messif.operations.query.GetObjectsByLocatorsOperation;
-import messif.operations.QueryOperation;
 
 /**
  * Default orders of {@link LocalAbstractObject} based on attributes.
@@ -77,7 +78,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     }
 
     /** Index order defined by object IDs */
-    public static OperationIndexComparator<UniqueID> uniqueIDComparator = new OperationIndexComparator<UniqueID>() {
+    public static final OperationIndexComparator<UniqueID> uniqueIDComparator = new OperationIndexComparator<UniqueID>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25102L;
 
@@ -116,7 +117,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
     };
 
     /** Index order defined by object locators */
-    public static OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
+    public static final OperationIndexComparator<String> locatorToLocalObjectComparator = new OperationIndexComparator<String>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25103L;
 
@@ -154,8 +155,48 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
     };
 
+    /** Index order defined by object locator prefixes */
+    public static final OperationIndexComparator<String> locatorPrefixToLocalObjectComparator = new OperationIndexComparator<String>() {
+        /** Class serial id for serialization. */
+        private static final long serialVersionUID = 25104L;
+
+        @Override
+        public int indexCompare(String o1, LocalAbstractObject o2) {
+            return compare(o1, o2.getLocatorURI());
+        }
+
+        @Override
+        public int compare(String o1, String o2) {
+            if (o2.startsWith(o1))
+                return 0;
+            return o1.compareTo(o2);
+        }
+
+        @Override
+        public String extractKey(LocalAbstractObject object) {
+            return object.getLocatorURI();
+        }
+
+        @Override
+        public QueryOperation<?> createIndexOperation(Collection<? extends String> locators) {
+            if (locators.size() != 1)
+                throw new UnsupportedOperationException("Prefix locator operation works only on one locator");
+            return new GetObjectsByLocatorPrefixOperation(locators.iterator().next());
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj.getClass() == this.getClass();
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
+        }
+    };
+
     /** Index order defined by object keys */
-    public static IndexComparator<AbstractObjectKey, LocalAbstractObject> keyToLocalObjectComparator = new IndexComparator<AbstractObjectKey, LocalAbstractObject>() {
+    public static final IndexComparator<AbstractObjectKey, LocalAbstractObject> keyToLocalObjectComparator = new IndexComparator<AbstractObjectKey, LocalAbstractObject>() {
         /** Class serial id for serialization. */
         private static final long serialVersionUID = 25104L;
 
@@ -189,7 +230,7 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
      * Index order defined by the object itself via {@link Comparable} interface.
      * Note that the compare methods can throw {@link ClassCastException}s.
      */
-    public static IndexComparator<Comparable, Object> trivialObjectComparator = new IndexComparator<Comparable, Object>() {
+    public static final IndexComparator<Comparable<?>, Object> trivialObjectComparator = new IndexComparator<Comparable<?>, Object>() {
         private static final long serialVersionUID = 25105L;
 
         @SuppressWarnings("unchecked")
@@ -199,8 +240,8 @@ public enum LocalAbstractObjectOrder implements IndexComparator<LocalAbstractObj
         }
 
         @Override
-        public Comparable extractKey(Object object) {
-            return (Comparable)object;
+        public Comparable<?> extractKey(Object object) {
+            return (Comparable<?>)object;
         }
 
         @SuppressWarnings("unchecked")

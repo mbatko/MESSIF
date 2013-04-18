@@ -107,6 +107,7 @@ public abstract class LocalAbstractObjectAutoImpl extends LocalAbstractObject {
     @Override
     protected void writeData(OutputStream stream) throws IOException {
         writeAttributesToStream(stream, getAttributesSeparator(), getArrayItemsSeparator(), this, getDataFields());
+        stream.write('\n');
     }
 
 

@@ -206,8 +206,15 @@ public abstract class Extractors {
                         object = localFactory.create(dataSource.getBufferedReader());
                     else
                         object = localFactory.create(dataSource.getRequiredParameter(dataParameter, String.class));
-                    if (locatorParameter != null)
-                        object.setObjectKey(new AbstractObjectKey(dataSource.getRequiredParameter(locatorParameter).toString()));
+                    if (locatorParameter != null) {
+                        String locator = dataSource.getRequiredParameter(locatorParameter).toString();
+                        AbstractObjectKey key = object.getObjectKey();
+                        try {
+                            object.setObjectKey(key == null ? new AbstractObjectKey(locator) : key.clone(locator));
+                        } catch (CloneNotSupportedException e) {
+                            throw new ExtractorException("Cannot set object locator", e);
+                        }
+                    }
                     return object;
                 } catch (InvocationTargetException e) {
                     if (e.getCause() instanceof IOException)

@@ -67,6 +67,7 @@ import messif.objects.util.StreamGenericAbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
+import messif.operations.RankingSingleQueryOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
 import messif.utility.reflection.ConstructorInstantiator;
@@ -947,6 +948,39 @@ public class CoreApplication {
     }
 
     /**
+     * Show the {@link AbstractObject#getLocatorURI() locatorURI} of the query object of the last executed operation.
+     * Note that a {@link RankingSingleQueryOperation} must have been executed prior to calling this method.
+     * Optionally, the argument specifies text written after the locator (defaults to new line).
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationQueryObjectLocator :
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args optional suffix to write
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
+    @ExecutableMethod(description = "show the locator of the last executed query operation", arguments = {})
+    public boolean operationQueryObjectLocator(PrintStream out, String... args) {
+        if (!(lastOperation instanceof RankingSingleQueryOperation)) {
+            out.println("A single-query ranking operation needed, but have " + lastOperation == null ? null : lastOperation.getClass().getName());
+            return false;
+        }
+        LocalAbstractObject queryObject = ((RankingSingleQueryOperation)lastOperation).getQueryObject();
+        String locator = queryObject == null ? null : queryObject.getLocatorURI();
+        if (args.length > 1) {
+            out.print(locator);
+            out.print(args[1]);
+        } else {
+            out.println(locator);
+        }
+        return true;
+    }
+
+    /**
      * Show argument of the last executed operation.
      * Specifically, the argument of the operation created by the last call to
      * {@link #operationPrepare}, {@link #operationExecute}, or {@link #operationBgExecute}
@@ -1175,7 +1209,8 @@ public class CoreApplication {
             // Prepare arguments
             String[] stringArgs = args.clone();
             stringArgs[2] = null;
-            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), true, 2, namedInstances);
+            // Note that the output is added as "out" named instance temporarily
+            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), true, 2, getExtendedNamedInstances("out", out, false));
             methodArgs[0] = lastOperation;
 
             // Execute method
@@ -2011,11 +2046,28 @@ public class CoreApplication {
     }
 
     /**
+     * Returns a copy of the current named instances with the given value set for the given key.
+     * If key is <tt>null</tt>, no modifications to the named instances are made.
+     * @param key the name for the new named instance
+     * @param value the new named instance
+     * @param replaceExisting flag whether to replace the instance if it already exists
+     * @return a copy of the current named instances map
+     */
+    protected final Map<String, Object> getExtendedNamedInstances(String key, Object value, boolean replaceExisting) {
+        Map<String, Object> ret = new HashMap<String, Object>(namedInstances);
+        if (replaceExisting || !ret.containsKey(key)) {
+            ret.put(key, value);
+        }
+        return ret;
+    }
+
+    /**
      * Creates a new named instance.
      * An argument specifying the signature of a constructor, a factory method or a static field
      * is required. Additional argument specifies the name for the instance (defaults to
      * name of the action where this is specified). If the instance already exists,
      * this method fails (use {@link #namedInstanceReplace namedInstanceReplace} instead.
+     * Note that a "lastOperation" temporary named instance is available during the instantiation.
      *
      * <p>
      * Example of usage for constructor, factory method and static field:
@@ -2050,6 +2102,7 @@ public class CoreApplication {
      * An argument specifying the signature of a constructor, a factory method or a static field
      * is required. Additional argument specifies the name for the instance (defaults to
      * name of the action where this is specified).
+     * Note that a "lastOperation" temporary named instance is available during the instantiation.
      * <p>
      * Example of usage for constructor, factory method and static field:
      * <pre>
@@ -2072,7 +2125,7 @@ public class CoreApplication {
         }
             
         try {
-            Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+            Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", lastOperation, true));
             namedInstances.put(args[2], instance);
             return true;
         } catch (NoSuchInstantiatorException e) {
