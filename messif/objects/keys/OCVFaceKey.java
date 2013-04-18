@@ -93,6 +93,12 @@ public class OCVFaceKey extends FaceKey {
     }
 
     @Override
+    public String getFaceIdentifierLocatorURI() {
+        String currentLocator = getLocatorURI();
+        return currentLocator.substring(currentLocator.length() - 3);
+    }
+
+    @Override
     public int getCenterX() {
         return x + width/2;
     }

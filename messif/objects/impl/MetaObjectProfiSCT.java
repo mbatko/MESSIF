@@ -390,11 +390,10 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
      * descriptor {@link LocalAbstractObject} is loaded.
      *
      * @param stream the stream from which the data are read
-     * @param haveStringWords flag whether the data contains two lines of strings with title and keywords
-     * @param haveConvertedWords flag whether the data contains two lines of integer vectors with title and keywords identifiers
+     * @param setEmptyAdditionalInfo flag whether to set the additional info data (rights, territories, added, and archiveID) to empty values
      * @throws IOException if there was an error reading the data from the stream
      */
-    public MetaObjectProfiSCT(BufferedReader stream, boolean haveStringWords, boolean haveConvertedWords) throws IOException {
+    public MetaObjectProfiSCT(BufferedReader stream, boolean setEmptyAdditionalInfo) throws IOException {
         // Keep reading the lines while they are comments, then read the first line of the object
         readObjectCommentsWithoutData(stream);
         colorLayout = new ObjectColorLayout(stream);
@@ -402,6 +401,27 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         edgeHistogram = new ObjectVectorEdgecomp(stream);
         scalableColor = new ObjectIntVectorL1(stream);
         regionShape = new ObjectXMRegionShape(stream);
+        if (!setEmptyAdditionalInfo) {
+            rights = Rights.EMPTY;
+            territories = EnumSet.noneOf(Territory.class);
+            added = 0;
+            archiveID = 0;
+        }
+    }
+
+    /**
+     * Creates a new instance of MetaObjectProfiSCT from the given text stream.
+     * The stream may contain the '#...' lines with object key and/or precomputed distances
+     * and a mandatory line for each descriptor name, from which the respective
+     * descriptor {@link LocalAbstractObject} is loaded.
+     *
+     * @param stream the stream from which the data are read
+     * @param haveStringWords flag whether the data contains two lines of strings with title and keywords
+     * @param haveConvertedWords flag whether the data contains two lines of integer vectors with title and keywords identifiers
+     * @throws IOException if there was an error reading the data from the stream
+     */
+    public MetaObjectProfiSCT(BufferedReader stream, boolean haveStringWords, boolean haveConvertedWords) throws IOException {
+        this(stream, false);
         rights = Rights.valueOfWithEmpty(stream.readLine());
         territories = Territory.stringToTerritories(stream.readLine());
         String line = stream.readLine();

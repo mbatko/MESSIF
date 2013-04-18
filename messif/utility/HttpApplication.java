@@ -488,7 +488,7 @@ public class HttpApplication extends Application {
                 handleThrowable(exchange, e.getCause());
             } catch (IOException e) {
                 throw e;
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 handleThrowable(exchange, e);
             }
         }
@@ -540,6 +540,9 @@ public class HttpApplication extends Application {
          * @throws NullPointerException if the given {@code throwable} was <tt>null</tt>
          */
         private void handleThrowable(HttpExchange exchange, Throwable throwable) throws IOException, NullPointerException {
+            // Unwrap the basic cause
+            while (throwable.getCause() != null)
+                throwable = throwable.getCause();
             byte[] outBuffer = throwable.toString().getBytes(charset);
             exchange.sendResponseHeaders(ERROR_CODE_INTERNAL_ERROR, outBuffer.length);
             OutputStream response = exchange.getResponseBody();

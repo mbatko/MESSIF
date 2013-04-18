@@ -167,6 +167,15 @@ public class PittPattFaceKey extends FaceKey {
     }
 
     @Override
+    public String getFaceIdentifierLocatorURI() {
+        String currentLocator = getLocatorURI();
+        int dotPos = currentLocator.lastIndexOf('.');
+        if (dotPos == -1)
+            return "";
+        return currentLocator.substring(dotPos - 2, dotPos);
+    }
+
+    @Override
     public int getCenterX() {
         return centerX;
     }

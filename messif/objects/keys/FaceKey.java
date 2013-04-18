@@ -143,6 +143,30 @@ public abstract class FaceKey extends AbstractObjectKey {
     }
 
     /**
+     * Returns the face identifier from the locatorURI as specified by the respective face key implementation.
+     * @return 
+     */
+    public String getFaceIdentifierLocatorURI() {
+        return "";
+    }
+
+    @Override
+    public final FaceKey clone(String locatorURI) throws CloneNotSupportedException {
+        return clone(locatorURI, true);
+    }
+
+    /**
+     * Returns a copy of this key with the given locator URI.
+     * @param locatorURI the new locator URI for the key
+     * @param preserveFaceLocatorExcension if <tt>true</tt>, the given locator URI is extended with the original face identifier
+     * @return a clone of this key
+     * @throws CloneNotSupportedException if there was an error cloning this object
+     */
+    public FaceKey clone(String locatorURI, boolean preserveFaceLocatorExcension) throws CloneNotSupportedException {
+        return (FaceKey)super.clone(preserveFaceLocatorExcension ? locatorURI + getFaceIdentifierLocatorURI() : locatorURI);
+    }
+
+    /**
      * Returns the x-coordinate (in pixels) of the face center point
      * in the {@link #getSourceImageLocatorURI() source image}.
      * @return the x-coordinate of the face center point

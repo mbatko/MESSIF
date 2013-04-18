@@ -217,7 +217,8 @@ public class ObjectFacePittPattDescriptor extends ObjectByteVector implements Mo
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        writeByteHexString(data, stream, '\n');
+        writeByteHexString(data, stream);
+        stream.write('\n');
     }
 
 

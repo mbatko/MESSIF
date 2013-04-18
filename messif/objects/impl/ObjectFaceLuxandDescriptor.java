@@ -109,7 +109,8 @@ public class ObjectFaceLuxandDescriptor extends ObjectByteVector {
 
     @Override
     protected void writeData(OutputStream stream) throws IOException {
-        writeByteHexString(data, stream, '\n');
+        writeByteHexString(data, stream);
+        stream.write('\n');
     }
 
 
