@@ -99,6 +99,27 @@ public class RankedSortedDistFunctionMultiCollection<T extends AbstractObject> e
     }
 
     /**
+     * Constructs an empty collection with the specified initial and maximal capacity.
+     * If this collection is used during a query processing, the {@code rankInAdd}
+     * should be set to <tt>false</tt>. If the collection is used as post-ranking,
+     * the {@code rankInAdd} probably needs to be set to <tt>true</tt>, however
+     * the correct type of objects must be present in the operation (i.e. the {@link AnswerType}
+     * should be set to something above {@link AnswerType#CLEARED_OBJECTS}.
+     * 
+     * @param rankingDistanceFunction the distance function used for the ranking
+     * @param rankingObjects an iterator over the objects used for ranking
+     * @param originalDistanceWeight the weight of the original distance (if zero, the original distance is ignored)
+     * @param rankInAdd flag whether the {@link #add(java.lang.Object) add} method computes the rank (<tt>true</tt>) or adds the ranked objects as-is (<tt>false</tt>)
+     * @param initialCapacity the initial capacity of the collection
+     * @param maximalCapacity the maximal capacity of the collection
+     * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
+     * @throws NullPointerException if the ranking distance function is <tt>null</tt>
+     */
+    public RankedSortedDistFunctionMultiCollection(DistanceFunctionMultiObject<? super T> rankingDistanceFunction, AbstractObjectIterator<T> rankingObjects, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity, boolean dummyParam) throws IllegalArgumentException, NullPointerException {
+        this(rankingDistanceFunction, (T[]) new AbstractObjectList<T>(rankingObjects).toArray(new AbstractObject [0]), originalDistanceWeight, rankInAdd, initialCapacity, maximalCapacity);
+    }
+    
+    /**
      * Constructs an empty collection.
      * The initial capacity of the collection is set to 16 and maximal capacity
      * is not limited.

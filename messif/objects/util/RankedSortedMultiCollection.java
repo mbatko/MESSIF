@@ -84,7 +84,7 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
         
         @Override
         public int compare(RankedAbstractObject o1, RankedAbstractObject o2) {
-            return Float.compare(((RankedAbstractMetaObject) o1).getSubDistances()[distanceIndex], ((RankedAbstractMetaObject) o2).getSubDistances()[distanceIndex]);
+            return Float.compare(((RankedAbstractMetaObject) o1).getSubDistance(distanceIndex), ((RankedAbstractMetaObject) o2).getSubDistance(distanceIndex));
         }
     }
 
@@ -129,7 +129,7 @@ public class RankedSortedMultiCollection extends RankedSortedCollection implemen
     
     @Override
     public boolean add(RankedAbstractObject e) throws IllegalArgumentException {
-        if (!(e instanceof RankedAbstractMetaObject) || ((RankedAbstractMetaObject)e).getSubDistances().length != sublists.length)
+        if (!(e instanceof RankedAbstractMetaObject) || ((RankedAbstractMetaObject)e).getSubDistancesCount() != sublists.length)
             throw new IllegalArgumentException("Multi collection can only process RankedAbstractMetaObject with " + sublists.length + " meta distances");
         boolean rtv = super.add(e);
         for (int j = 0; j < sublists.length; j++)
