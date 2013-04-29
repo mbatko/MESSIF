@@ -26,11 +26,10 @@ import messif.objects.MetaObjectParametric;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializable;
 import messif.objects.nio.BinarySerializator;
-import messif.utility.Parametric;
 
 /**
  * This class represents a meta object that encapsulates MPEG7 descriptors for shape and color
- * with optional data stored via the {@link Parametric} interface.
+ * with optional data stored via the {@link messif.utility.Parametric} interface.
  * The descriptors are ColorLayout, ColorStructure, ScalableColor, EdgeHistogram, and RegionShape.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz

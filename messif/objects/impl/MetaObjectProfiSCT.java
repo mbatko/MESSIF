@@ -53,6 +53,9 @@ import messif.buckets.storage.impl.DatabaseStorage.ColumnConvertor;
 import messif.objects.DistanceFunction;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.classification.ClassificationException;
+import messif.objects.classification.Classifier;
+import messif.objects.classification.text.KeywordClassification;
 import messif.objects.extraction.Extractor;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
@@ -75,6 +78,8 @@ import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
 import messif.utility.ExtendedDatabaseConnection;
+import messif.utility.ModifiableParametric;
+import messif.utility.Parametric;
 
 /**
  * Special meta object that stores only the objects required for the Profi search.
@@ -2583,6 +2588,96 @@ public class MetaObjectProfiSCT extends MetaObject implements StringFieldDataPro
         @Override
         public Class<? extends MetaObjectProfiSCT> getDistanceObjectClass() {
             return MetaObjectProfiSCT.class;
+        }
+    }
+
+    /**
+     * Provides a {@link Classifier} that processes list of ranked abstract objects and provides keyword classification
+     * with words belonging to the object locator URI with the respective confidence based on the ranking distance.
+     */
+    public static class DatabaseKeywordClassifier extends ExtendedDatabaseConnection implements Classifier<Iterator<? extends RankedAbstractObject>, String> {
+        /** Class id for serialization. */
+        private static final long serialVersionUID = 1L;
+
+        /** SQL command to retrieve word links */
+        private final String objectLocatorToWordSQL;
+        /** Prepared SQL command to retrieve word links */
+        private PreparedStatement getObjectWordLinks;
+        /** Name of the parameter to put the original word {@link Map} into when classifying */
+        private final String originalWordMapParameterName;
+        /** Name of the parameter to put the original locator-distance pairs into when classifying */
+        private final String originalDistanceParameterName;
+
+        /**
+         * Creates a database word conversion classifier.
+         *
+         * @param dbConnUrl the database connection URL (e.g. "jdbc:mysql://localhost/somedb")
+         * @param dbConnInfo additional parameters of the connection (e.g. "user" and "password")
+         * @param dbDriverClass class of the database driver to use (can be <tt>null</tt> if the driver is already registered)
+         * @param objectLocatorToWordSQL the SQL command used to transform the object locator URI (SQL command parameter) to associated words (the returned result-set first column)
+         * @param originalWordMapParameterName the name of the parameter to put the original word {@link Map} into when classifying
+         * @param originalDistanceParameterName the name of the parameter to put the original locator-distance pairs into when classifying
+         * @throws IllegalArgumentException if the connection url is <tt>null</tt> or the driver class cannot be registered
+         * @throws SQLException if there was a problem connecting to the database
+         */
+        public DatabaseKeywordClassifier(String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String objectLocatorToWordSQL, String originalWordMapParameterName, String originalDistanceParameterName) throws IllegalArgumentException, SQLException {
+            super(dbConnUrl, dbConnInfo, dbDriverClass);
+            this.objectLocatorToWordSQL = objectLocatorToWordSQL;
+            this.originalWordMapParameterName = originalWordMapParameterName;
+            this.originalDistanceParameterName = originalDistanceParameterName;
+            getObjectWordLinks = getConnection().prepareStatement(objectLocatorToWordSQL);
+        }
+
+        @Override
+        public Class<? extends String> getCategoriesClass() {
+            return String.class;
+        }
+
+        @Override
+        public KeywordClassification<String> classify(Iterator<? extends RankedAbstractObject> objects, Parametric parameters) throws ClassificationException {
+            KeywordClassification<String> ret = new KeywordClassification<String>(String.class, LocalAbstractObject.MAX_DISTANCE, LocalAbstractObject.MIN_DISTANCE);
+            Map<String, List<String>> originalWordMap = new LinkedHashMap<String, List<String>>();
+            Map<String, Float> originalDistance = new LinkedHashMap<String, Float>();
+            try {
+                synchronized (objectLocatorToWordSQL) {
+                    while (objects.hasNext()) {
+                        RankedAbstractObject object = objects.next();
+                        String objectLocator = object.getObject().getLocatorURI();
+                        getObjectWordLinks = prepareAndExecute(getObjectWordLinks, objectLocatorToWordSQL, false, objectLocator);
+
+                        ResultSet rs = getObjectWordLinks.getResultSet();
+                        List<String> originalWords = new ArrayList<String>();
+                        while (rs.next()) {
+                            String word = rs.getString(1);
+                            originalWords.add(word);
+                            ret.updateConfidence(word, object.getDistance());
+                        }
+                        originalWordMap.put(objectLocator, originalWords);
+                        originalDistance.put(objectLocator, object.getDistance());
+                        rs.close();
+                    }
+                    if (parameters instanceof ModifiableParametric && originalWordMapParameterName != null)
+                        ((ModifiableParametric)parameters).setParameter(originalWordMapParameterName, originalWordMap);
+                    if (parameters instanceof ModifiableParametric && originalDistanceParameterName != null)
+                        ((ModifiableParametric)parameters).setParameter(originalDistanceParameterName, originalDistance);
+                }
+            } catch (SQLException e) {
+                throw new ClassificationException("Error reading keywords from the database", e);
+            }
+
+            return ret;
+        }
+
+        /**
+         * Returns the original word {@link Map} stored by this classifier in the given parameters.
+         * @param parameters the parameters to get the original word map from
+         * @return the original word map or <tt>null</tt> if no word map was stored in the parameters
+         */
+        @SuppressWarnings("unchecked")
+        public Map<String, List<String>> getOriginalWordMap(Parametric parameters) {
+            if (originalWordMapParameterName == null || parameters == null)
+                return null;
+            return parameters.getParameter(originalWordMapParameterName, Map.class);
         }
     }
 }
