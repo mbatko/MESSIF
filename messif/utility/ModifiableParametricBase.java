@@ -16,28 +16,40 @@
  */
 package messif.utility;
 
+import java.util.Map;
+
 /**
- * Extension of the {@link Parametric} interface that support modifications.
+ * Basic implementation of the {@link ModifiableParametric} interface on encapsulated {@link Map}.
+ * Note that this class can be used as wrapper for {@link Map}.
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public interface ModifiableParametric extends Parametric {
-    /**
-     * Set an additional parameter with the given {@code name} to the given {@code value}.
-     * Note that the previous value is <em>replaced</em> with the new one.
-     * @param name the name of the additional parameter to set
-     * @param value the new value for the parameter
-     * @return the previous value of the parameter {@code name} or <tt>null</tt> if it was not set
-     */
-    public Object setParameter(String name, Object value);
+public class ModifiableParametricBase extends ParametricBase implements ModifiableParametric {
+    /** Class serial id for serialization */
+    private static final long serialVersionUID = 1L;
+
+    /** Encapsulated {@link Map} that provides the parameter values */
+    private final Map<String, Object> map;
 
     /**
-     * Removes an additional parameter with the given {@code name}.
-     * @param name the name of the additional parameter to remove
-     * @return the value of the parameter {@code name} that was removed or <tt>null</tt> if it was not set
+     * Creates a new instance of ModifiableParametricBase backed-up by the given map with parameters.
+     * @param map the map that provides the parameter values
      */
-    public Object removeParameter(String name);
+    public ModifiableParametricBase(Map<String, Object> map) {
+        super(map);
+        this.map = map;
+    }
+
+    @Override
+    public Object setParameter(String name, Object value) {
+        return map.put(name, value);
+    }
+
+    @Override
+    public Object removeParameter(String name) {
+        return map.remove(name);
+    }
 
 }

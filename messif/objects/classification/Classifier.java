@@ -16,6 +16,8 @@
  */
 package messif.objects.classification;
 
+import messif.utility.Parametric;
+
 /**
  * Establish a basic interface for classifiers.
  * The given object is {@link #classify(java.lang.Object) classified}
@@ -35,16 +37,13 @@ public interface Classifier<T, C> {
     /**
      * Classifies the given {@code object} into zero, one, or several categories {@code C}.
      * @param object the object to classify
+     * @param parameters additional parameters for the classification;
+     *          the values for the parameters are specific to a given classifier
+     *          implementation and can be updated during the process if they are {@link messif.utility.ModifiableParametric}
      * @return a set of categories the object belongs to
      * @throws ClassificationException if there was an error classifying the object
      */
-    public Classification<C> classify(T object) throws ClassificationException;
-
-    /**
-     * Returns the class of instances that are classified by this classifier.
-     * @return the class of instances that are classified
-     */
-    public Class<? extends T> getClassifiedClass();
+    public Classification<C> classify(T object, Parametric parameters) throws ClassificationException;
 
     /**
      * Returns the class of instances that represent the classification categories (classes).

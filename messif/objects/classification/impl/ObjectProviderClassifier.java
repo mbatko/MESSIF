@@ -23,6 +23,7 @@ import messif.objects.classification.Classification;
 import messif.objects.classification.ClassificationException;
 import messif.objects.classification.Classifier;
 import messif.objects.util.RankedAbstractObject;
+import messif.utility.Parametric;
 
 /**
  * Implementation of a classifier that computes the classification using a {@link ObjectProvider provider}
@@ -53,7 +54,7 @@ public class ObjectProviderClassifier<C> implements Classifier<LocalAbstractObje
     }
 
     @Override
-    public Classification<C> classify(final LocalAbstractObject object) throws ClassificationException {
+    public Classification<C> classify(final LocalAbstractObject object, Parametric parameters) throws ClassificationException {
         final Iterator<? extends LocalAbstractObject> iterator = classifiedObjects.provideObjects();
         return classifier.classify(new Iterator<RankedAbstractObject>() {
             @Override
@@ -68,17 +69,12 @@ public class ObjectProviderClassifier<C> implements Classifier<LocalAbstractObje
             public void remove() {
                 throw new UnsupportedOperationException("Not supported.");
             }
-        });
+        }, parameters);
     }
 
     @Override
     public Class<? extends C> getCategoriesClass() {
         return classifier.getCategoriesClass();
-    }
-
-    @Override
-    public Class<? extends LocalAbstractObject> getClassifiedClass() {
-        return LocalAbstractObject.class;
     }
 
 }

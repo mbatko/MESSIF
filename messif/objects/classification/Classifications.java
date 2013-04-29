@@ -16,6 +16,11 @@
  */
 package messif.objects.classification;
 
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Comparator;
+import messif.utility.SortedCollection;
+
 /**
  * Utility methods for classifications.
  *
@@ -104,4 +109,64 @@ public abstract class Classifications {
         }
         return null;
     }
+
+    /**
+     * Returns the classification method of the given classifier.
+     * @param classifier the classifier to get the classification method for
+     * @return the classification method of the given classifier
+     * @throws NullPointerException if the given classifier is <tt>null</tt> 
+     */
+    public static Method getClassifierClassifyMethod(Classifier<?, ?> classifier) throws NullPointerException {
+        for (Method method : classifier.getClass().getMethods()) {
+            if (method.getName().equals("classify")) {
+                Class<?>[] methodArgTypes = method.getParameterTypes();
+                if (methodArgTypes.length == 2)
+                    return method;
+            }
+        }
+        throw new InternalError("This should never happen - class that implements the Classifier interface MUST have a 'classify' method");
+    }
+
+    /**
+     * Returns a {@link Comparator} for sorting categories of the given {@link Classification} according to confidences.
+     * The ordering is from the lowest confidence to the highest as specified by the classification.
+     * @param <C> the class of instances that represent the classification categories
+     * @param classification the classification the categories of which to sort
+     * @return an instance of the category sorting comparator
+     */
+    public static <C> Comparator<C> getCategoriesConfidenceComparator(final ClassificationWithConfidence<C> classification) {
+        final int order = classification.getLowestConfidence() <= classification.getHighestConfidence() ? 1 : -1;
+        return new Comparator<C>() {
+            @Override
+            public int compare(C o1, C o2) {
+                return order * Float.compare(classification.getConfidence(o1), classification.getConfidence(o2));
+            }
+        };
+    }
+
+    /**
+     * Returns all categories of the given classification sorted by the given comparator.
+     * @param <C> the class of instances that represent the classification categories
+     * @param classification the classification the categories of which to sort
+     * @param comparator the comparator to use for sorting categories
+     * @return a sorted collection of all categories
+     */
+    public static <C> Collection<C> getSortedCategories(ClassificationWithConfidence<C> classification, Comparator<? super C> comparator) {
+        SortedCollection<C> ret = new SortedCollection<C>(classification.size(), comparator);
+        for (C c : classification)
+            ret.add(c);
+        return ret;
+    }
+
+    /**
+     * Returns all categories of the given classification sorted by confidences.
+     * The ordering is from the lowest confidence to the highest as specified by the classification.
+     * @param <C> the class of instances that represent the classification categories
+     * @param classification the classification the categories of which to sort
+     * @return a sorted collection of all categories
+     */
+    public static <C> Collection<C> getSortedCategories(ClassificationWithConfidence<C> classification) {
+        return getSortedCategories(classification, getCategoriesConfidenceComparator(classification));
+    }
+
 }

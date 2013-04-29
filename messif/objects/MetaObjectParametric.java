@@ -44,7 +44,7 @@ import messif.utility.ParametricBase;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class MetaObjectParametric extends MetaObject implements ModifiableParametric<Serializable> {
+public abstract class MetaObjectParametric extends MetaObject implements ModifiableParametric {
     /** Class id for serialization. */
     private static final long serialVersionUID = 1L;
 
@@ -153,11 +153,15 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
         return Collections.unmodifiableMap(additionalParameters);
     }
 
+    /**
+     * @inheritDoc
+     * @throws ClassCastException if the given value is not {@link Serializable}
+     */
     @Override
-    public void setParameter(String name, Serializable value) {
+    public Serializable setParameter(String name, Object value) throws ClassCastException {
         if (additionalParameters == null)
             additionalParameters = new HashMap<String, Serializable>();
-        additionalParameters.put(name, value);
+        return additionalParameters.put(name, (Serializable)value);
     }
 
     @Override

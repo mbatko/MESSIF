@@ -60,10 +60,10 @@ public class ParametricRankedObjectDistanceClassifier<C> implements Classifier<I
     }
 
     @Override
-    public ClassificationWithConfidence<C> classify(Iterator<? extends RankedAbstractObject> iterator) throws ClassificationException {
+    public ClassificationWithConfidence<C> classify(Iterator<? extends RankedAbstractObject> iterator, Parametric parameters) throws ClassificationException {
         ClassificationWithConfidenceBase<C> ret = new ClassificationWithConfidenceBase<C>(categoriesClass, LocalAbstractObject.MAX_DISTANCE, LocalAbstractObject.MIN_DISTANCE);
         while (iterator.hasNext())
-            ret.updateAllConfidences(getClassification(iterator.next()));
+            ret.updateAllConfidences(getClassification(iterator.next(), parameters));
         return ret;
     }
 
@@ -73,22 +73,19 @@ public class ParametricRankedObjectDistanceClassifier<C> implements Classifier<I
      * must implement the {@link Parametric} interface.
      * Note also that the rank of the object is used as the confidence.
      * @param object the ranked object for which to get the classification
+     * @param parameters additional parameters for the classification;
+     *          the values for the parameters are specific to a given classifier
+     *          implementation and can be updated during the process if they are {@link messif.utility.ModifiableParametric}
      * @return the classification of the given ranked object or <tt>null</tt> if
      *      the parameter is <tt>null</tt> or cannot be converted to classification
      */
-    protected ClassificationWithConfidence<C> getClassification(RankedAbstractObject object) {
+    protected ClassificationWithConfidence<C> getClassification(RankedAbstractObject object, Parametric parameters) {
         return Classifications.convertToClassificationWithConfidence(
             ((Parametric)object.getObject()).getParameter(categoriesParameterName),
             categoriesClass,
             object.getDistance(),
             LocalAbstractObject.MAX_DISTANCE, LocalAbstractObject.MIN_DISTANCE
         );
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public Class<? extends Iterator<RankedAbstractObject>> getClassifiedClass() {
-        return (Class)Iterator.class;
     }
 
     @Override

@@ -22,11 +22,11 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.classification.Classifier;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.RankingQueryOperation;
-import messif.operations.query.KNNQueryOperation;
+import messif.operations.query.ApproxKNNQueryOperation;
 import messif.utility.Parametric;
 
 /**
- * Implementation of a classifier by k-nearest neighbors operation.
+ * Implementation of a classifier by approximate k-nearest neighbors operation.
  * The classification of an object is inferred from its most similar objects.
  * The actual classification is computed from the retrieved nearest neighbors
  * by a given {@link Classifier}.
@@ -37,7 +37,7 @@ import messif.utility.Parametric;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class KNNOperationClassifier<C> extends RankingQueryOperationClassifier<C> {
+public class ApproxKNNOperationClassifier<C> extends RankingQueryOperationClassifier<C> {
 
     /** Number of nearest neighbors to retrieve */
     private final int k;
@@ -49,18 +49,18 @@ public class KNNOperationClassifier<C> extends RankingQueryOperationClassifier<C
      * @param algorithm the algorithm that supplies the similar objects
      * @param executedOperationParameter the name of the parameter to put the executed operation into when classifying
      */
-    public KNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, Algorithm algorithm, String executedOperationParameter) {
+    public ApproxKNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, Algorithm algorithm, String executedOperationParameter) {
         super(classifier, algorithm, executedOperationParameter);
         this.k = k;
     }
 
     @Override
     protected RankingQueryOperation createOperation(LocalAbstractObject object) {
-        return new KNNQueryOperation(object, k);
+        return new ApproxKNNQueryOperation(object, k);
     }
 
     @Override
-    public KNNQueryOperation getExecutedOperation(Parametric parameters) {
-        return (KNNQueryOperation)super.getExecutedOperation(parameters);
+    public ApproxKNNQueryOperation getExecutedOperation(Parametric parameters) {
+        return (ApproxKNNQueryOperation)super.getExecutedOperation(parameters);
     }
 }

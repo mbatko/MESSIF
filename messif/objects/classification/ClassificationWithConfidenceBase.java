@@ -20,7 +20,6 @@ import java.lang.reflect.Array;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 /**
@@ -300,22 +299,19 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
 
     @Override
     public String toString() {
-        if (confidenceMap == null || confidenceMap.isEmpty())
-            return "[]";
+        Iterator<C> iterator = iterator();
         StringBuilder str = new StringBuilder();
         str.append("[");
-        Iterator<Entry<C, Float>> iterator = confidenceMap.entrySet().iterator();
-        do { // Iterator has at least one item - see isEmpty check above
-            Map.Entry<C, Float> entry = iterator.next();
-            str.append(entry.getKey());
-            if (entry.getValue() != null && !entry.getValue().isInfinite())
-                str.append('(').append(entry.getValue()).append(')');
+        while (iterator.hasNext()) {
+            C category = iterator.next();
+            str.append(category);
+            float confidence = getConfidence(category);
+            if (confidence != UNKNOWN_CONFIDENCE)
+                str.append('(').append(confidence).append(')');
 
             if (iterator.hasNext())
                 str.append(", ");
-            else
-                break;
-        } while (true); // No need to check again for hasNext
+        }
         str.append("]");
         return str.toString();
     }

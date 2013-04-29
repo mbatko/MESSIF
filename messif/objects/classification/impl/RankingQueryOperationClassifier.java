@@ -28,6 +28,8 @@ import messif.objects.util.RankedAbstractObject;
 import messif.operations.RankingQueryOperation;
 import messif.operations.data.DeleteOperation;
 import messif.operations.data.InsertOperation;
+import messif.utility.ModifiableParametric;
+import messif.utility.Parametric;
 
 /**
  * Abstract implementation of a classifier that executes a {@link RankingQueryOperation}
@@ -46,22 +48,28 @@ public abstract class RankingQueryOperationClassifier<C> implements UpdatableCla
     private final Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier;
     /** Algorithm that supplies the similar objects */
     private final Algorithm algorithm;
+    /** Name of the parameter to put the executed operation into when classifying */
+    private final String executedOperationParameter;
 
     /**
      * Creates a new kNN classifier.
      * @param classifier the classifier used to compute the object classification
      * @param algorithm the algorithm that supplies the similar objects
+     * @param executedOperationParameter the name of the parameter to put the executed operation into when classifying
      */
-    public RankingQueryOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, Algorithm algorithm) {
+    public RankingQueryOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, Algorithm algorithm, String executedOperationParameter) {
         this.classifier = classifier;
         this.algorithm = algorithm;
+        this.executedOperationParameter = executedOperationParameter;
     }
 
     @Override
-    public Classification<C> classify(LocalAbstractObject object) throws ClassificationException {
+    public Classification<C> classify(LocalAbstractObject object, Parametric parameters) throws ClassificationException {
         try {
             RankingQueryOperation op = algorithm.executeOperation(createOperation(object));
-            return classifier.classify(op.getAnswer());
+            if (parameters instanceof ModifiableParametric && executedOperationParameter != null)
+                ((ModifiableParametric)parameters).setParameter(executedOperationParameter, op);
+            return classifier.classify(op.getAnswer(), parameters);
         } catch (AlgorithmMethodException e) {
             throw new ClassificationException("There was an error executing KNN query", e.getCause());
         } catch (NoSuchMethodException e) {
@@ -105,9 +113,15 @@ public abstract class RankingQueryOperationClassifier<C> implements UpdatableCla
         return classifier.getCategoriesClass();
     }
 
-    @Override
-    public Class<? extends LocalAbstractObject> getClassifiedClass() {
-        return LocalAbstractObject.class;
+    /**
+     * Returns the executed operation stored by this classifier in the given parameters.
+     * @param parameters the parameters to get the executed operation from
+     * @return the executed operation or <tt>null</tt> if no operation was stored in the parameters
+     */
+    public RankingQueryOperation getExecutedOperation(Parametric parameters) {
+        if (executedOperationParameter == null || parameters == null)
+            return null;
+        return parameters.getParameter(executedOperationParameter, RankingQueryOperation.class);
     }
 
 }
