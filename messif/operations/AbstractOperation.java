@@ -22,17 +22,17 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.UUID;
-import messif.utility.ErrorCode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import messif.buckets.index.IndexComparator;
 import messif.utility.Clearable;
 import messif.utility.Convert;
+import messif.utility.ErrorCode;
 import messif.utility.ModifiableParametric;
 import messif.utility.ParametricBase;
 
@@ -56,7 +56,7 @@ import messif.utility.ParametricBase;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class AbstractOperation implements Serializable, Cloneable, Clearable, ModifiableParametric<Serializable> {
+public abstract class AbstractOperation implements Serializable, Cloneable, Clearable, ModifiableParametric {
     /** class id for serialization */
     private static final long serialVersionUID = 2L;
 
@@ -166,11 +166,15 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         return Collections.unmodifiableMap(additionalParameters);
     }
 
+    /**
+     * @inheritDoc
+     * @throws ClassCastException if the given value is not {@link Serializable}
+     */
     @Override
-    public void setParameter(String name, Serializable value) {
+    public Serializable setParameter(String name, Object value) {
         if (additionalParameters == null)
             additionalParameters = new HashMap<String, Serializable>();
-        additionalParameters.put(name, value);
+        return additionalParameters.put(name, (Serializable)value);
     }
 
     /**

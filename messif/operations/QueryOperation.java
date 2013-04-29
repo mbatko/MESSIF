@@ -53,7 +53,7 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
     //****************** Attributes ******************//
 
     /** Types of objects this query operation will return */
-    protected final AnswerType answerType;
+    private AnswerType answerType;
 
 
     //****************** Constructors ******************//
@@ -152,6 +152,17 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      */
     public AnswerType getAnswerType() {
         return answerType;
+    }
+
+    /**
+     * Set the type of objects this operation stores in its answer.
+     * Note that the answer type can be set before the operation is executed.
+     * @param answerType the type of objects this operation stores in its answer
+     */
+    public void setAnswerType(AnswerType answerType) {
+        if (getAnswerCount() > 0)
+            throw new IllegalStateException("Cannot set answer type after the operation has been executed");
+        this.answerType = answerType;
     }
 
     /**

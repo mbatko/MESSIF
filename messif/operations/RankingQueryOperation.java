@@ -357,7 +357,7 @@ public abstract class RankingQueryOperation extends QueryOperation<RankedAbstrac
                 insert(thresholdDistances, distance, pos < 0 ? -(pos + 1) : pos);
             }
         }
-        return answer.add(answerType, object, distance, objectDistances);
+        return answer.add(getAnswerType(), object, distance, objectDistances);
     }
 
     /**

@@ -282,7 +282,7 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
         RankedJoinObject rankedObject;
         try {
             // Create the ranked object encapsulation
-            rankedObject = new RankedJoinObject(answerType.update(leftObject), answerType.update(rightObject), distance);
+            rankedObject = new RankedJoinObject(getAnswerType().update(leftObject), getAnswerType().update(rightObject), distance);
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }

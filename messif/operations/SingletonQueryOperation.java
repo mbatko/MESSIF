@@ -151,7 +151,7 @@ public abstract class SingletonQueryOperation extends QueryOperation<AbstractObj
         try {
             if (object == null)
                 return false;
-            answer = answerType.update(object);
+            answer = getAnswerType().update(object);
             return true;
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);

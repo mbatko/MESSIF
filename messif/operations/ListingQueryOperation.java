@@ -153,7 +153,7 @@ public abstract class ListingQueryOperation extends QueryOperation<AbstractObjec
         try {
             if (object == null)
                 return false;
-            return answer.add(answerType.update(object));
+            return answer.add(getAnswerType().update(object));
         } catch (CloneNotSupportedException e) {
             throw new IllegalArgumentException(e);
         }
