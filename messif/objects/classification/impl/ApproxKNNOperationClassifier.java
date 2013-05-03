@@ -21,6 +21,7 @@ import messif.algorithms.Algorithm;
 import messif.objects.LocalAbstractObject;
 import messif.objects.classification.Classifier;
 import messif.objects.util.RankedAbstractObject;
+import messif.operations.Approximate;
 import messif.operations.RankingQueryOperation;
 import messif.operations.query.ApproxKNNQueryOperation;
 import messif.utility.Parametric;
@@ -41,22 +42,42 @@ public class ApproxKNNOperationClassifier<C> extends RankingQueryOperationClassi
 
     /** Number of nearest neighbors to retrieve */
     private final int k;
+    /** Type of the local approximation parameter used. */
+    private final Approximate.LocalSearchType localSearchType;
+    /**
+     * Value of the local approximation parameter. 
+     * Its interpretation depends on the value of {@link #localSearchType}.
+     */
+    private final int localSearchParam;
+    /**
+     * Radius for which the answer is guaranteed as correct.
+     * It is specified in the constructor and can influence the level of approximation.
+     * An algorithm evaluating this query can also change this value, so it can
+     * notify about the guarantees of evaluation.
+     */
+    private final float radiusGuaranteed;
 
     /**
      * Creates a new kNN classifier.
      * @param classifier the classifier used to compute the object classification
      * @param k the number of nearest neighbors to retrieve
+     * @param localSearchParam local search parameter - typically approximation parameter
+     * @param localSearchType type of the local search parameter
+     * @param radiusGuaranteed radius within which the answer is required to be guaranteed as correct
      * @param algorithm the algorithm that supplies the similar objects
      * @param executedOperationParameter the name of the parameter to put the executed operation into when classifying
      */
-    public ApproxKNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, Algorithm algorithm, String executedOperationParameter) {
+    public ApproxKNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, int localSearchParam, Approximate.LocalSearchType localSearchType, float radiusGuaranteed, Algorithm algorithm, String executedOperationParameter) {
         super(classifier, algorithm, executedOperationParameter);
         this.k = k;
+        this.localSearchParam = localSearchParam;
+        this.localSearchType = localSearchType;
+        this.radiusGuaranteed = radiusGuaranteed;
     }
 
     @Override
     protected RankingQueryOperation createOperation(LocalAbstractObject object) {
-        return new ApproxKNNQueryOperation(object, k);
+        return new ApproxKNNQueryOperation(object, k, localSearchParam, localSearchType, radiusGuaranteed);
     }
 
     @Override

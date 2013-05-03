@@ -1118,7 +1118,7 @@ public abstract class Convert {
         if (destinationMap == null)
             destinationMap = new HashMap<K, V>();
         for (Map.Entry<? extends K, ?> entry : sourceMap.entrySet()) {
-            Object value = entry.getKey();
+            Object value = entry.getValue();
             if (value != null && valuesClass.isInstance(value))
                 destinationMap.put(entry.getKey(), (V)value); // This cast IS checked on the previous line
         }
