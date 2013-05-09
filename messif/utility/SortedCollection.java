@@ -17,6 +17,7 @@
 package messif.utility;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -468,7 +469,7 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
     public boolean add(T e) {
         return add(e, binarySearch(e, 0, size - 1, false));
     }
-    
+
     /**
      * Adds the specified element to this list given an index on which the object should be stored.
      * Use carefully - this method does not check, if the order of the objects is preserved.
@@ -567,10 +568,9 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
         int indexTo = indexFrom + number; //final index (exclusive)
         if (indexTo < size)
             System.arraycopy(items, indexTo, items, indexFrom, size - indexTo);
-        for (int i = size - number; i < size; i++) {
-            items[i] = null; // Let gc do its work
+        for (int i = 0; i < number; i++) {
+            items[--size] = null; // Let gc do its work
         }
-        size -= number;
         return true;
     }
     
