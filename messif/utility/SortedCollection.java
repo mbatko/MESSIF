@@ -17,6 +17,7 @@
 package messif.utility;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -204,16 +205,22 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
     }
 
     /**
-     * Set the maximal capacity of this collection.
+     * Set the maximal capacity of this collection. The new capacity cannot be smaller then its {@link #size}.
      * @param capacity the new collection maximal capacity (zero or negative value means unlimited capacity)
      */
     protected void setMaximalCapacity(int capacity) {
-        if (!isEmpty())
-            throw new IllegalStateException("Maximal collection capacity can be set only on empty collection");
-        if (capacity <= 0)
+        if (capacity < size)
+            throw new IllegalStateException("Maximal collection capacity cannot be smaller than collection actual size");
+        if (capacity <= 0) {
             this.capacity = UNLIMITED_CAPACITY;
-        else
+        } else {
             this.capacity = capacity;
+            if (items.length > capacity) {
+                Object[] newItems = new Object[capacity];
+                System.arraycopy(items, 0, newItems, 0, size);
+                items = newItems;
+            }
+        }
     }
 
     /**
@@ -302,6 +309,18 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
         return first;
     }
 
+    /**
+     * Removes the specified number of top elements of this collection according to the order
+     * specified by the comparator.
+     * @param count number of objects to be removed
+     * @throws NoSuchElementException if less then specified number of objects is stored
+     */
+    public void removeFirstN(int count) throws NoSuchElementException {
+        if (size < count)
+            throw new NoSuchElementException();
+        removeAll(0, count);
+    }
+    
 
     // *********************     Queue   implementation   ***************** //
     
@@ -535,25 +554,85 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
         return true;
     }
 
-
+    /**
+     * Removes from this collection the specified number of elements starting at the specified position. If less than 
+     *  specified number of objects is stored, then the collection is cleared.
+     * @param indexFrom index of the first element to removed (inclusive)
+     * @param number number of objects to be removed from this collection
+     * @return <tt>false</tt> if the objects were not removed (e.g. because there is no object with this index)
+     */
+    protected boolean removeAll(int indexFrom, int number) {
+        if (indexFrom < 0 || indexFrom >= size || number <= 0)
+            return false;
+        modCount++;
+        int indexTo = indexFrom + number; //final index (exclusive)
+        if (indexTo < size)
+            System.arraycopy(items, indexTo, items, indexFrom, size - indexTo);
+        for (int i = 0; i < number; i++) {
+            items[--size] = null; // Let gc do its work
+        }
+        return true;
+    }
+    
     //****************** Bulk modification methods ******************//
 
     /**
+     * Add all of the elements provided by the specified iterator.
+     * The elements are added according the to order defined by the comparator. If the specified
+     *  collection is of type {@link SortedCollection} over the same type, then it is assumed that
+     *  it is ordered by the same comparator and these lists are effectively merged.
+     * @param it iterator iterating over all elements to be added to this list
+     * @return <tt>true</tt> if this list changed as a result of the call
+     * @throws NullPointerException if the specified iterator is null
+     */
+    public boolean addAll(Iterator<? extends T> it) {
+	boolean ret = false;
+        while (it.hasNext())
+            if (add(it.next()))
+                ret = true;
+        return ret;
+    }
+    
+    /**
      * Add all of the elements in the specified collection to this list.
-     * The elements are added according the to order defined by the comparator.
+     * The elements are added according the to order defined by the comparator. If the specified
+     *  collection is of type {@link SortedCollection} over the same type, then it is assumed that
+     *  it is ordered by the same comparator and these lists are effectively merged.
      * @param c collection containing elements to be added to this list
      * @return <tt>true</tt> if this list changed as a result of the call
      * @throws NullPointerException if the specified collection is null
      */
     @Override
     public boolean addAll(Collection<? extends T> c) {
-	boolean ret = false;
-        for (T item : c)
-            if (add(item))
-                ret = true;
-        return ret;
+        if (c instanceof SortedCollection) {
+            return addAllSortedArray(((SortedCollection) c).items, c.size());
+        }
+        return addAll(c.iterator());
     }
 
+    /**
+     * Add all of the elements in the specified array to this list assuming that the
+     *  items of the {@code array} are ordered according to the same {@link #comparator} as
+     *  this collection. If capacity would be exceeded, no data is added anf false is returned.
+     * @param array array of objects ordered according to the same {@link #comparator} as this collection
+     * @param size number of elements from the array to be added to this collection (the rest is ignored)
+     * @param c collection containing elements to be added to this list
+     * @return <tt>true</tt> if this list changed as a result of the call; false if, e.g., the resulting collection
+     *  should exceed the capacity (in this case no data from {@code array} is added.
+     * @throws NullPointerException if the specified array is null
+     */
+    protected boolean addAllSortedArray(Object[] array, int size) {
+        // if the inserted array does not fit to this collections capacity
+        if (this.size + size > capacity) {
+            return false;
+        }
+        Object [] newArray = new Object[size + this.size];
+        mergeSort((T[]) this.items, 0, this.size, (T[]) array, 0, size, comparator, (T[]) newArray, 0, newArray.length);
+        this.items = newArray;
+        this.size = newArray.length;
+        return true;
+    }
+    
     /**
      * Removes all of this collection's elements that are also contained in the
      * specified collection. After this call returns, this collection will contain
@@ -753,10 +832,10 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
          * during iteration and throws ConcurrentModificationException.
          * @throws ConcurrentModificationException if the collection was modified while iterating
          */
-	private void checkForComodification() throws ConcurrentModificationException {
+        private void checkForComodification() throws ConcurrentModificationException {
 	    if (modCount != expectedModCount)
-		throw new ConcurrentModificationException();
-	}
+                throw new ConcurrentModificationException();
+        }
     }
 
 }
