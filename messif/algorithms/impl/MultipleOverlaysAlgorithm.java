@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.algorithms.NavigationDirectory;
@@ -82,6 +83,10 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
      * @param operationsThreadPool new thread pool (or null)
      */
     public void setOperationsThreadPool(int algorithmIndex, ExecutorService operationsThreadPool) {
+        if ((algorithmIndex >= algorithms.size()) || (algorithmIndex < 0)) {
+            log.log(Level.WARNING, "trying to set thread pool for a non-existing sub-algorithm index ''{0}''", algorithmIndex);
+            return;
+        }
         algorithms.get(algorithmIndex).setOperationsThreadPool(operationsThreadPool);
     }
 
