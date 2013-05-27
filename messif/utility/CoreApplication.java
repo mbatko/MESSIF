@@ -3056,7 +3056,7 @@ public class CoreApplication {
                 if (foreachValues != null) {
                     variables.put(loopVariable, foreachValues[i]);
                     variables.put(loopVariable + "_iteration", Integer.toString(i));
-                } else if (repeat > 1) {
+                } else if (props.containsKey(actionName + ".repeat")) {
                     variables.put(loopVariable, Integer.toString(i + 1));
                     variables.put(loopVariable + "_iteration", Integer.toString(i));
                 }
@@ -3108,7 +3108,7 @@ public class CoreApplication {
         }
 
         // Restore loop variable value (after nested foreach/repeat)
-        if (foreachValues != null || repeat > 1) {
+        if (foreachValues != null || props.containsKey(actionName + ".repeat")) {
             variables.remove(loopVariable + "_iteration");
             if (savedLoopVariableValue == null)
                 variables.remove(loopVariable);
