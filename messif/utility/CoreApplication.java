@@ -3161,7 +3161,7 @@ public class CoreApplication {
         }
 
         // Restore loop variable value (after nested foreach/repeat)
-        if (foreachValues != null || repeat > 1) {
+        if (foreachValues != null || props.containsKey(actionName + ".repeat")) {
             variables.remove(loopVariable + "_iteration");
             if (savedLoopVariableValue == null)
                 variables.remove(loopVariable);
