@@ -158,18 +158,21 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @param readHomogenousObjects flag whether to read list of homogenous objects
      *          (i.e. the header is the count and the class name), or a heterogenous header
      *          (i.e. the header is a semi-colon separated list of object names and classes)
+     * @param objectClass if not <tt>null</tt> value provided, it will override the object class
+     *          in the header (note that this will be used only if read homogenous objects is <tt>true</tt>)
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
-    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects) throws IOException {
+    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects, Class<? extends LocalAbstractObject> objectClass) throws IOException {
         String[] header = readObjectsHeader(stream);
         if (readHomogenousObjects) {
             int count;
-            Class<? extends LocalAbstractObject> objectClass;
             try {
                 count = Integer.parseInt(header[0]);
-                objectClass = Convert.getClassForName(header[1], LocalAbstractObject.class);
+                if (objectClass == null) {
+                    objectClass = Convert.getClassForName(header[1], LocalAbstractObject.class);
+                }
             } catch (IndexOutOfBoundsException e) {
                 throw new IOException("Can't create object from stream: object count and class expected but '" + Arrays.toString(header) + "' found");
             } catch (NumberFormatException e) {
@@ -188,12 +191,28 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * Note that a header must contain also the object names even though they are not
      * stored and used by the array.
      * @param stream the text stream to read the objects from
+     * @param readHomogenousObjects flag whether to read list of homogenous objects
+     *          (i.e. the header is the count and the class name), or a heterogenous header
+     *          (i.e. the header is a semi-colon separated list of object names and classes)
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     */
+    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects) throws IOException {
+        this(stream, readHomogenousObjects, null);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream with header.
+     * Note that a header must contain also the object names even though they are not
+     * stored and used by the array.
+     * @param stream the text stream to read the objects from
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
     public MetaObjectArray(BufferedReader stream) throws IOException {
-        this(stream, false);
+        this(stream, false, null);
     }
 
 
