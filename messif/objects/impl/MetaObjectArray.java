@@ -270,12 +270,12 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
     }
 
     @Override
-    public Collection<LocalAbstractObject> getObjects() {
+    public Collection<? extends LocalAbstractObject> getObjects() {
         return Arrays.asList(objects);
     }
 
     @Override
-    public Map<String, LocalAbstractObject> getObjectMap() {
+    public Map<String, ? extends LocalAbstractObject> getObjectMap() {
         Map<String, LocalAbstractObject> ret = new LinkedHashMap<String, LocalAbstractObject>(objects.length);
         for (int i = 0; i < objects.length; i++) {
             if (objects[i] != null)

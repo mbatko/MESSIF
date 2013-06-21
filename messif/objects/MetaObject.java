@@ -183,7 +183,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * Returns a collection of all the encapsulated objects.
      * @return a collection of all the encapsulated objects
      */
-    public Collection<LocalAbstractObject> getObjects() {
+    public Collection<? extends LocalAbstractObject> getObjects() {
         Collection<LocalAbstractObject> objects = new ArrayList<LocalAbstractObject>(getObjectCount());
         for (String string : getObjectNames()) {
             objects.add(getObject(string));
@@ -195,7 +195,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * Returns a collection of all the encapsulated objects associated with their symbolic names.
      * @return a map with symbolic names as keys and the respective encapsulated objects as values
      */
-    public Map<String, LocalAbstractObject> getObjectMap() {
+    public Map<String, ? extends LocalAbstractObject> getObjectMap() {
         Map<String, LocalAbstractObject> ret = new HashMap<String, LocalAbstractObject>(getObjectCount());
         for (String name : getObjectNames())
             ret.put(name, getObject(name));
@@ -344,6 +344,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * Utility method for writing a metaobject header to a given text stream.
      * Note that only non-null objects are written.
      *
+     * @param <T> the type of objects stored in the map
      * @param stream the stream to write the header and encapsulated objects to
      * @param objects the objects the header of which to write
      * @return returns a collection of objects the header of which was written to the stream
@@ -351,13 +352,13 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #readObjectsHeader(java.io.BufferedReader)
      * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
      */
-    protected final Collection<LocalAbstractObject> writeObjectsHeader(OutputStream stream, Map<String, LocalAbstractObject> objects) throws IOException {
-        Collection<LocalAbstractObject> objectsToWrite = new ArrayList<LocalAbstractObject>(objects.size());
+    protected final <T extends LocalAbstractObject> Collection<T> writeObjectsHeader(OutputStream stream, Map<String, T> objects) throws IOException {
+        Collection<T> objectsToWrite = new ArrayList<T>(objects.size());
 
         // Create first line with semicolon-separated names of classes
-        Iterator<Entry<String, LocalAbstractObject>> iterator = objects.entrySet().iterator();
+        Iterator<Entry<String, T>> iterator = objects.entrySet().iterator();
         while (iterator.hasNext()) {
-            Entry<String, ? extends LocalAbstractObject> entry = iterator.next();
+            Entry<String, T> entry = iterator.next();
             if (entry.getValue() != null) {
                 objectsToWrite.add(entry.getValue());
                 // Write object name and class
@@ -383,7 +384,7 @@ public abstract class MetaObject extends LocalAbstractObject {
      * @see #readObjectsHeader(java.io.BufferedReader)
      * @see #readObjects(java.io.BufferedReader, java.util.Collection, java.lang.String[], java.util.Map)
      */
-    protected final void writeObjects(OutputStream stream, Collection<LocalAbstractObject> objects) throws IOException {
+    protected final void writeObjects(OutputStream stream, Collection<? extends LocalAbstractObject> objects) throws IOException {
         // Write a line for every object from the list (skip the comments)
         for (LocalAbstractObject object : objects)
             object.write(stream, false);
