@@ -114,7 +114,7 @@ public class MetaObjectShapeAndColor extends MetaObject implements BinarySeriali
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
      */
-    public MetaObjectShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects) {
+    public MetaObjectShapeAndColor(String locatorURI, Map<String, ? extends LocalAbstractObject> objects) {
         super(locatorURI);
         this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
         this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);

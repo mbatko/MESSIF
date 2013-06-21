@@ -125,7 +125,7 @@ public class MetaObjectPixMacShapeAndColor extends MetaObject implements BinaryS
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects map of objects with the {@link #descriptorNames} as keys
      */
-    public MetaObjectPixMacShapeAndColor(String locatorURI, Map<String, LocalAbstractObject> objects) {
+    public MetaObjectPixMacShapeAndColor(String locatorURI, Map<String, ? extends LocalAbstractObject> objects) {
         super(locatorURI);
         this.colorLayout = (ObjectColorLayout)objects.get("ColorLayoutType");
         this.colorStructure = (ObjectShortVectorL1)objects.get("ColorStructureType");

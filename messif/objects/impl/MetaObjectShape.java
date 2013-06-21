@@ -101,7 +101,7 @@ public class MetaObjectShape extends MetaObject implements BinarySerializable {
      * @param locatorURI locator of the metaobject (and typically all of the passed objects)
      * @param objects a map of named objects from which to get the internal objects of the MetaObjectShapeAndColor
      */
-    public MetaObjectShape(String locatorURI, Map<String, LocalAbstractObject> objects) {
+    public MetaObjectShape(String locatorURI, Map<String, ? extends LocalAbstractObject> objects) {
         super(locatorURI);
         this.edgeHistogram = (ObjectVectorEdgecomp)objects.get(descriptorNames[0]);
         this.regionShape = (ObjectXMRegionShape)objects.get(descriptorNames[1]);

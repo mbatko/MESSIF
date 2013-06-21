@@ -140,7 +140,7 @@ public class MetaObjectPixMacSCT extends MetaObject implements BinarySerializabl
      * @param attractiveness value of the attractiveness
      * @param credits number of credits
      */
-    public MetaObjectPixMacSCT(String locatorURI, Map<String, LocalAbstractObject> objects, short attractiveness, byte credits) {
+    public MetaObjectPixMacSCT(String locatorURI, Map<String, ? extends LocalAbstractObject> objects, short attractiveness, byte credits) {
         super(locatorURI);
         this.colorLayout = (ObjectColorLayout)objects.get(descriptorNames[0]);
         this.colorStructure = (ObjectShortVectorL1)objects.get(descriptorNames[1]);
