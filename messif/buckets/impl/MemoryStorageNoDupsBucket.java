@@ -89,7 +89,7 @@ public class MemoryStorageNoDupsBucket extends OrderedLocalBucket<LocalAbstractO
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      */
     public MemoryStorageNoDupsBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, 0);
     }
 
 

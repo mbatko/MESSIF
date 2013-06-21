@@ -573,7 +573,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     public static <T extends AbstractOperation> Constructor<T> getAnnotatedConstructor(Class<? extends T> operationClass, int argumentsCount) throws NoSuchMethodException {
         // Ignore the classes that are not annotated by OperationName
         if (operationClass == null || !operationClass.isAnnotationPresent(OperationName.class))
-            throw new NoSuchMethodException("Class " + operationClass.getName() + " cannot be created automatically, because the annotation is missing");
+            throw new NoSuchMethodException("Cannot create " + operationClass + " automatically, because the annotation is missing");
 
         // Remember the constructor with smallest number of arguments if nArguments == -1
         int minimalConstructorArgs = Integer.MAX_VALUE;

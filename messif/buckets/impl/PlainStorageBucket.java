@@ -54,7 +54,7 @@ public final class PlainStorageBucket extends LocalBucket {
      * @param index the index to encapsulate
      */
     public PlainStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, ModifiableIndex<LocalAbstractObject> index) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, occupationAsBytes ? 0 : index.size());
         this.index = index;
     }
 

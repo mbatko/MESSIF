@@ -95,9 +95,10 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
+     * @throws AlgorithmMethodException if there was a problem executing an operation on the algorithm
      */
-    public AlgorithmStorageBucket(Algorithm algorithm, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+    public AlgorithmStorageBucket(Algorithm algorithm, long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) throws AlgorithmMethodException {
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, occupationAsBytes ? 0 : algorithm.getObjectCount());
         this.algorithm = algorithm;
     }
 
@@ -147,16 +148,21 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
         if (parameters == null)
             throw new IllegalArgumentException("No parameters were specified");
 
-        // Check the "algorithm" parameter
+        // Create algorithm to encapsulate
+        Algorithm alg;
         try {
-            Algorithm alg = (Algorithm)parameters.get("algorithm");
-            if (alg != null)
-                return new AlgorithmStorageBucket(alg, capacity, softCapacity, lowOccupation, occupationAsBytes);
+            alg = (Algorithm)parameters.get("algorithm");
         } catch (ClassCastException e) {
             throw new IllegalArgumentException("The parameter map contains key 'algorithm', but it is not an instance of Algorithm");
         }
-                
-        return new AlgorithmStorageBucket(createAlgorithmFromParams(parameters), capacity, softCapacity, lowOccupation, occupationAsBytes);
+        if (alg == null)
+            alg = createAlgorithmFromParams(parameters);
+
+        try {
+            return new AlgorithmStorageBucket(alg, capacity, softCapacity, lowOccupation, occupationAsBytes);
+        } catch (AlgorithmMethodException e) {
+            throw new IllegalArgumentException("Cannot execute operation on the algorithm: " + e, e);
+        }            
     }    
 
     /**

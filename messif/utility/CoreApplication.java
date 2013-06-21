@@ -948,6 +948,50 @@ public class CoreApplication {
     }
 
     /**
+     * Show the {@link ErrorCode} returned by the last executed operation.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationErrorCode
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
+    @ExecutableMethod(description = "show error code returned by the last executed operation", arguments = {})
+    public boolean operationErrorCode(PrintStream out, String... args) {
+        out.println(lastOperation == null ? ErrorCode.NOT_SET : lastOperation.getErrorCode());
+        return true;
+    }
+
+    /**
+     * Show the number of objects returned by the last executed operation.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationObjectCount
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args this method has no arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */    
+    @ExecutableMethod(description = "show number of objects returned by the last executed operation", arguments = {})
+    public boolean operationObjectCount(PrintStream out, String... args) {
+        if (lastOperation instanceof QueryOperation) {
+            out.println(((QueryOperation<?>)lastOperation).getAnswerCount());
+        } else {
+            out.println("Object count is available only for query operations");
+        }
+        return true;
+    }
+
+    /**
      * Show the {@link AbstractObject#getLocatorURI() locatorURI} of the query object of the last executed operation.
      * Note that a {@link RankingSingleQueryOperation} must have been executed prior to calling this method.
      * Optionally, the argument specifies text written after the locator (defaults to new line).
@@ -2695,7 +2739,7 @@ public class CoreApplication {
             separator = separator.replace("SPACE", " ");
         if (lastSeparator.equals("NEWLINE"))
             lastSeparator = null;
-        else
+        else if (separator != null)
             lastSeparator = separator.replace("SPACE", " ");
 
         // Print first value
@@ -3213,9 +3257,18 @@ public class CoreApplication {
         Properties props = new Properties();
         try {
             InputStream stream;
-            if (args[1].equals("-"))
+            if (args[1].equals("-")) {
                 stream = System.in;
-            else stream = new FileInputStream(args[1]);
+            } else {
+                try {
+                    stream = new FileInputStream(args[1]);
+                } catch (FileNotFoundException e) {
+                    // Try to read the properties from class path
+                    stream = getClass().getResourceAsStream(args[1]);
+                    if (stream == null)
+                        throw e;
+                }
+            }
             props.load(stream);
             stream.close();
         } catch (FileNotFoundException e) {

@@ -271,12 +271,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
 
     @Override
     public Collection<LocalAbstractObject> getObjects() {
-        Collection<LocalAbstractObject> ret = new ArrayList<LocalAbstractObject>(objects.length);
-        for (int i = 0; i < objects.length; i++) {
-            if (objects[i] != null)
-                ret.add(objects[i]);
-        }
-        return ret;
+        return Arrays.asList(objects);
     }
 
     @Override

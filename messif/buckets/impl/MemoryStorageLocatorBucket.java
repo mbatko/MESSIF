@@ -72,7 +72,7 @@ public class MemoryStorageLocatorBucket extends OrderedLocalBucket<String> imple
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
      */
     public MemoryStorageLocatorBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, 0);
     }
 
 

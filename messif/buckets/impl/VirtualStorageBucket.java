@@ -65,7 +65,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
      * @param index the index to encapsulate
      */
     public VirtualStorageBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, ModifiableOrderedIndex<C, LocalAbstractObject> index) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, occupationAsBytes ? 0 : index.size());
         this.index = index;
     }
 

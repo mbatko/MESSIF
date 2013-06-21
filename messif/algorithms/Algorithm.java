@@ -55,6 +55,7 @@ import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
+import messif.operations.query.GetObjectCountOperation;
 import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticObject;
@@ -178,6 +179,23 @@ public abstract class Algorithm implements Serializable {
      */
     public Class<? extends LocalAbstractObject> getObjectClass() {
         return LocalAbstractObject.class;
+    }
+
+    /**
+     * Returns the number of objects currently stored in the algorithm.
+     * This is (by default) done by executing the {@link GetObjectCountOperation}
+     * but can be overridden if a more efficient method is available.
+     * If the number of objects is unknown, -1 is returned.
+     * 
+     * @return the number of objects currently stored in the algorithm
+     * @throws AlgorithmMethodException if there was an error during the execution
+     */
+    public int getObjectCount() throws AlgorithmMethodException {
+        try {
+            return executeOperation(new GetObjectCountOperation()).getAnswerCount();
+        } catch (NoSuchMethodException ignore) {
+            return -1;
+        }
     }
 
     /**

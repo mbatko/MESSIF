@@ -75,7 +75,7 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     /** Flag if the occupation is stored as bytes or object count */
     private final boolean occupationAsBytes;
     /** Actual bucket occupation in either bytes or object count (see occupationAsBytes flag) */
-    private long occupation = 0;
+    private long occupation;
 
 
     //****************** Filter attributes ******************//
@@ -99,12 +99,14 @@ public abstract class LocalBucket extends Bucket implements Serializable {
      * @param softCapacity maximal soft capacity of the bucket
      * @param lowOccupation a minimal occupation for deleting objects - cannot be lowered
      * @param occupationAsBytes flag whether the occupation (and thus all the limits) are in bytes or number of objects
+     * @param occupation the actual bucket occupation in either bytes or object count (see occupationAsBytes flag)
      */
-    protected LocalBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes) {
+    protected LocalBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, long occupation) {
         // Set limits
         this.capacity = capacity;
         this.softCapacity = softCapacity;
         this.lowOccupation = lowOccupation;
+        this.occupation = occupation;
         
         // Set flag
         this.occupationAsBytes = occupationAsBytes;
@@ -172,22 +174,6 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     //****************** Bucket limit methods ******************//
 
     /**
-     * Set param "low occupeation" for thsi bucket
-     * @param lowOccupation new low occupation.
-     */
-    public void setLowOccupation(long lowOccupation) {
-        this.lowOccupation = lowOccupation;
-    }
-
-    /**
-     * Set new soft capacity for this bucket
-     * @param softCapacity new soft capacity param
-     */
-    public void setSoftCapacity(long softCapacity) {
-        this.softCapacity = softCapacity;
-    }
-
-    /**
      * Returns the maximal capacity of this bucket.
      * This limit cannot be exceeded.
      *
@@ -208,14 +194,30 @@ public abstract class LocalBucket extends Bucket implements Serializable {
     }
 
     /**
+     * Set the soft capacity of this bucket.
+     * @param softCapacity the new soft capacity of this bucket
+     */
+    public void setSoftCapacity(long softCapacity) {
+        this.softCapacity = softCapacity;
+    }
+
+    /**
      * Returns the minimal occupation of this bucket. 
-     * Whenever a deletion of an object is tried, that would result in undeflow,
+     * Whenever a deletion of an object is tried, that would result in underflow,
      * an OccupationLowException exception is thrown.
      *
      * @return the minimal occupation of this bucket
      */
     public long getLowOccupation() {
         return lowOccupation;
+    }
+
+    /**
+     * Set the minimal occupation of this bucket.
+     * @param lowOccupation the new minimal occupation for this bucket
+     */
+    public void setLowOccupation(long lowOccupation) {
+        this.lowOccupation = lowOccupation;
     }
 
 

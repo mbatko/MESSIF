@@ -140,7 +140,7 @@ public class MetaObjectArrayWeightedSum extends MetaObjectArray {
     @Override
     public float getMaxDistance() {
         float weightSum = 1; // This is a safeguard to overcome possible normalization excesses
-        for (int i = 0; i < objects.length; i++)
+        for (int i = 0; i < getObjectCount(); i++)
             weightSum += getWeight(i);
         return weightSum;
     }
@@ -150,11 +150,11 @@ public class MetaObjectArrayWeightedSum extends MetaObjectArray {
         float rtv = 0;
         MetaObjectArray castObj = (MetaObjectArray)obj;
 
-        for (int i = 0; i < objects.length; i++) {
+        for (int i = 0; i < getObjectCount(); i++) {
             float weight = getWeight(i);
             if (weight <= 0)
                 continue;
-            float distance = implementationGetDistance(objects[i], castObj.objects[i], distThreshold / weight);
+            float distance = implementationGetDistance(getObject(i), castObj.getObject(i), distThreshold / weight);
             if (metaDistances != null)
                 metaDistances[i] = distance;
             if (distance != UNKNOWN_DISTANCE)

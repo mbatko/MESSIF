@@ -114,7 +114,7 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      * @param diskStorage the object storage for this bucket
      */
     private DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, DiskStorage<LocalAbstractObject> diskStorage) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, 0);
         objects = new LongStorageIndex<AbstractObjectKey, LocalAbstractObject>(diskStorage, LocalAbstractObjectOrder.keyToLocalObjectComparator);
     }
 

@@ -110,7 +110,7 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @param diskStorage the object storage for this bucket
      */
     private DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, DiskStorage<LocalAbstractObject> diskStorage) {
-        super(capacity, softCapacity, lowOccupation, occupationAsBytes);
+        super(capacity, softCapacity, lowOccupation, occupationAsBytes, occupationAsBytes ? diskStorage.getFile().length() : diskStorage.size());
         objects = diskStorage;
     }
 
