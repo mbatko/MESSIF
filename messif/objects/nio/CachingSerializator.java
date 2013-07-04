@@ -90,7 +90,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
         this.notCachedClasses = new HashSet<Class<? extends BinarySerializable>>();
 
         // Fill the predefined data
-        for (Class selClass : cachedClasses) {
+        for (Class<?> selClass : cachedClasses) {
             try {
                 if (Modifier.isAbstract(selClass.getModifiers()))
                     throw new IllegalArgumentException("Cannot cache class '" + selClass.getName() + "' because it is abstract");
@@ -230,8 +230,8 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
             return false;
         if (!super.equals(obj))
             return false;
-        CachingSerializator castObj = (CachingSerializator)obj;
-        for (Class<?> cachedClass : cachedClasses.keySet())
+        CachingSerializator<?> castObj = (CachingSerializator<?>)obj;
+        for (Class<? extends BinarySerializable> cachedClass : cachedClasses.keySet())
             if (!castObj.cachedClasses.containsKey(cachedClass))
                 return false;
         return true;

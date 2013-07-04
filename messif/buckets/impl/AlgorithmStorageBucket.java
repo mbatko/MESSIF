@@ -29,28 +29,28 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
-import messif.buckets.BucketStorageException;
-import messif.buckets.index.IndexComparator;
-import messif.buckets.index.ModifiableSearch;
-import messif.objects.AbstractObject;
-import messif.objects.LocalAbstractObject;
-import messif.operations.data.DeleteOperation;
-import messif.operations.data.InsertOperation;
-import messif.operations.QueryOperation;
 import messif.buckets.Addible;
 import messif.buckets.Bucket;
 import messif.buckets.BucketDispatcher;
+import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.buckets.Removable;
 import messif.buckets.StorageFailureException;
+import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableIndex;
+import messif.buckets.index.ModifiableSearch;
 import messif.buckets.index.OperationIndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.split.SplitPolicy;
 import messif.buckets.split.SplittableAlgorithm;
+import messif.objects.AbstractObject;
+import messif.objects.LocalAbstractObject;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
+import messif.operations.data.DeleteOperation;
+import messif.operations.data.InsertOperation;
 import messif.operations.query.GetAllObjectsQueryOperation;
 import messif.utility.Convert;
 import messif.utility.reflection.ConstructorInstantiator;
@@ -458,10 +458,10 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
      * @throws UnsupportedOperationException if the specified query is not supported by the encapsulated algorithm
      */
     @Override
-    public int processQuery(QueryOperation query) throws UnsupportedOperationException {
+    public int processQuery(QueryOperation<?> query) throws UnsupportedOperationException {
         int beforeCount = query.getAnswerCount();
         try {
-            QueryOperation clonedQuery = query.clone(true);
+            QueryOperation<?> clonedQuery = query.clone(true);
             clonedQuery.clearSurplusData();
             algorithm.executeOperation(clonedQuery);
             return query.getAnswerCount() - beforeCount;
@@ -509,7 +509,8 @@ public class AlgorithmStorageBucket extends LocalBucket implements ModifiableInd
                 // Bucket for the specified algorithm doesn't exist yet, create a AlgorithmStorageBucket wrapper
                 Map<String, Object> params = new HashMap<String, Object>();
                 params.put("algorithm", alg);
-                bucketMap.put(alg, bucket = (AlgorithmStorageBucket)bucketCreator.createBucket(AlgorithmStorageBucket.class, params));
+                bucket = (AlgorithmStorageBucket)bucketCreator.createBucket(AlgorithmStorageBucket.class, params);
+                bucketMap.put(alg, bucket);
             }
 
             currentMovedObject = object;

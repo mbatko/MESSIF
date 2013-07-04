@@ -156,7 +156,7 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
      * @return a new instance of the {@link IndexComparator} or <tt>null</tt> if the specified parameters does not contain a comparator specification
      * @throws IllegalArgumentException if there was an error creating comparator - see the encapsulated exception for details
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static IndexComparator<?, LocalAbstractObject> createComparator(Map<String, Object> parameters) throws IllegalArgumentException {
         try {
             String comparatorInstance = Convert.getParameterValue(parameters, "comparatorInstance", String.class, null);
@@ -199,11 +199,11 @@ public final class VirtualStorageBucket<C> extends OrderedLocalBucket<C> {
         if (comparator == null) {
             throw new IllegalArgumentException("Cannot create index for null comparator");
         } else if (storage instanceof IntStorage) {
-            return new IntStorageIndex((IntStorage)storage, comparator);
+            return new IntStorageIndex<T, LocalAbstractObject>((IntStorage)storage, comparator);
         } else if (storage instanceof LongStorage) {
-            return new LongStorageIndex((LongStorage)storage, comparator);
+            return new LongStorageIndex<T, LocalAbstractObject>((LongStorage)storage, comparator);
         } else {
-            return new AddressStorageIndex(storage, comparator);
+            return new AddressStorageIndex<T, LocalAbstractObject>(storage, comparator);
         }
     }
 }

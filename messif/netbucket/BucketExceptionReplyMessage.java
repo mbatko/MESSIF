@@ -44,7 +44,7 @@ public class BucketExceptionReplyMessage extends BucketReplyMessage {
      * @param bucketException the exception to pass back to the originator
      * @throws NullPointerException if the <code>bucketException</code> is <tt>null</tt>
      */
-    public BucketExceptionReplyMessage(BucketRequestMessage message, BucketStorageException bucketException) throws NullPointerException {
+    public BucketExceptionReplyMessage(BucketRequestMessage<?> message, BucketStorageException bucketException) throws NullPointerException {
         super(message);
         if (bucketException == null)
             throw new NullPointerException();
@@ -58,7 +58,7 @@ public class BucketExceptionReplyMessage extends BucketReplyMessage {
      * @param runtimeException the exception to pass back to the originator
      * @throws NullPointerException if the <code>runtimeException</code> is <tt>null</tt>
      */
-    public BucketExceptionReplyMessage(BucketRequestMessage message, RuntimeException runtimeException) throws NullPointerException {
+    public BucketExceptionReplyMessage(BucketRequestMessage<?> message, RuntimeException runtimeException) throws NullPointerException {
         super(message);
         if (runtimeException == null)
             throw new NullPointerException();

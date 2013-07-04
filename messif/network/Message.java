@@ -16,15 +16,15 @@
  */
 package messif.network;
 
-import messif.statistics.OperationStatistics;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.ListIterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.concurrent.atomic.AtomicLong;
+import messif.statistics.OperationStatistics;
 import messif.statistics.Statistics;
 
 /**
@@ -71,7 +71,7 @@ public abstract class Message implements Serializable, Cloneable {
     protected final List<NavigationElement> navigationPath = new ArrayList<NavigationElement>();
 
     /** Actual navigation element */
-    protected NavigationElement actualNavigationElement = new NavigationElement();
+    private NavigationElement actualNavigationElement = new NavigationElement();
 
 
     //****************** Constructors ******************//
@@ -95,7 +95,7 @@ public abstract class Message implements Serializable, Cloneable {
         for (NavigationElement element : originalMessage.navigationPath)
             navigationPath.add(new NavigationElement(element));
         
-        actualNavigationElement = new NavigationElement(originalMessage.actualNavigationElement);
+        actualNavigationElement = new NavigationElement(originalMessage.getActualNavigationElement());
     }
 
     /**
@@ -219,13 +219,21 @@ public abstract class Message implements Serializable, Cloneable {
     }
 
     /**
+     * Returns the actual navigation element.
+     * @return the actual navigation element
+     */
+    NavigationElement getActualNavigationElement() {
+        return actualNavigationElement;
+    }
+
+    /**
      * Add a statistic to the actual navigation element and bind it to some global statistic.
      * @param name the name of a global statistic
      * @param asName the name of the new bound statistic
      * @return the bound statistic of the actual navigation element
      * @throws InstantiationException if the statistic with the specified name was not found in global statistics
      */
-    public Statistics registerBoundStat(String name, String asName) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name, String asName) throws InstantiationException {
         return setNavigationPathStatistics().registerBoundStat(name, asName);
     }
 
@@ -237,7 +245,7 @@ public abstract class Message implements Serializable, Cloneable {
      * @return the bound statistic of the actual navigation element
      * @throws InstantiationException if the statistic with the specified name was not found in global statistics
      */
-    public Statistics registerBoundStat(String name) throws InstantiationException {
+    public Statistics<?> registerBoundStat(String name) throws InstantiationException {
         return registerBoundStat(name, "NavigationElement." + name);
     }
 

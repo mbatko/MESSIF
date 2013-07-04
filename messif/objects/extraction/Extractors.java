@@ -576,7 +576,7 @@ public abstract class Extractors {
             );
         } else if (extractorType.equals("constructor")) {
             try {
-                Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
+                Class<?> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
                 return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
             } catch (InvocationTargetException e) {
                 throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
@@ -585,7 +585,7 @@ public abstract class Extractors {
             }
         } else if (extractorType.equals("method")) {
             try {
-                Class<? extends Extractor> extractorClass = properties.getClassProperty(key + ".methodClass", true, Extractor.class);
+                Class<?> extractorClass = properties.getClassProperty(key + ".methodClass", true, Extractor.class);
                 Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
                 return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
             } catch (InvocationTargetException e) {

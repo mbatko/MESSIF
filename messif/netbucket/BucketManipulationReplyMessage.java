@@ -38,7 +38,7 @@ public class BucketManipulationReplyMessage extends BucketReplyMessage {
     protected final BucketErrorCode errorCode;
     protected final LocalAbstractObject object;
     protected final AbstractObjectList<LocalAbstractObject> objects;
-    protected final QueryOperation query;
+    protected final QueryOperation<?> query;
     
     //****************** Attribute access methods ******************//
 
@@ -54,7 +54,7 @@ public class BucketManipulationReplyMessage extends BucketReplyMessage {
         return errorCode;
     }
 
-    public QueryOperation getQuery() {
+    public QueryOperation<?> getQuery() {
         return query;
     }
 
@@ -75,14 +75,14 @@ public class BucketManipulationReplyMessage extends BucketReplyMessage {
         this.objects = null;
         this.query = null;
     }
-    
+
     /**
      * Creates a new instance of BucketManipulationReplyMessage for getting object
      */
     public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, LocalAbstractObject object) {
         this(message, object, false);
     }
-     
+
     /**
      * Creates a new instance of BucketManipulationReplyMessage for getting object
      */
@@ -108,7 +108,7 @@ public class BucketManipulationReplyMessage extends BucketReplyMessage {
     /**
      * Creates a new instance of BucketManipulationReplyMessage for getting
      */
-    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, Collection<? extends LocalAbstractObject> objects, QueryOperation query) {
+    public BucketManipulationReplyMessage(BucketManipulationRequestMessage message, Collection<? extends LocalAbstractObject> objects, QueryOperation<?> query) {
         super(message);
         errorCode = null;
         object = null;

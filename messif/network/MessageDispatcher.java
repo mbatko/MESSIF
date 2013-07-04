@@ -39,6 +39,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -103,7 +104,7 @@ public class MessageDispatcher implements Receiver, Serializable {
      * Returns a broadcast group address for all message dispatchers.
      * @return a broadcast group address
      */
-    private final static InetAddress InitBroadcastGroup() { // initializer
+    private static InetAddress InitBroadcastGroup() { // initializer
         try { return InetAddress.getByName("230.0.0.1"); } catch (UnknownHostException e) { return null; }
     }
 
@@ -450,7 +451,7 @@ public class MessageDispatcher implements Receiver, Serializable {
      */
     public void sendMessage(Message msg) throws IOException {
         // Send method
-        msg.actualNavigationElement.setSender(getNetworkNode());
+        msg.getActualNavigationElement().setSender(getNetworkNode());
         send(msg);
     }
 
@@ -729,7 +730,7 @@ public class MessageDispatcher implements Receiver, Serializable {
             return;
         
         // Report unknown message
-        log.warning("Received " + msg.getClass().getSimpleName() + " (id="+msg.messageID+"@"+msg.getOriginalSender()+") '" + msg.navigationPath + "' was not accepted by any receiver");
+        log.log(Level.WARNING, "Received {0} (id={1}@{2}) ''{3}'' was not accepted by any receiver", new Object[]{msg.getClass().getSimpleName(), msg.messageID, msg.getOriginalSender(), msg.navigationPath});
     }
 
     /**

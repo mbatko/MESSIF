@@ -39,7 +39,7 @@ import messif.objects.impl.MetaObjectMap;
 public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<MetaObjectMap> {
 
     /** Particular iterators */
-    protected Map<String, StreamGenericAbstractObjectIterator> subObjectIterators = new HashMap<String, StreamGenericAbstractObjectIterator>();
+    protected Map<String, StreamGenericAbstractObjectIterator<?>> subObjectIterators = new HashMap<String, StreamGenericAbstractObjectIterator<?>>();
 
     /** Instance of a next object. This is needed for implementing reading objects from a stream */
     protected MetaObjectMap nextObject;
@@ -139,7 +139,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
 
     @Override
     public void close() throws IOException {
-        for (StreamGenericAbstractObjectIterator stream : subObjectIterators.values()) {
+        for (StreamGenericAbstractObjectIterator<?> stream : subObjectIterators.values()) {
             stream.close();
         }
         this.nextObject = null;
@@ -168,14 +168,14 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
         // call "next" on all subObjectIterators that were used to construct meta object last time
         if (gapAppeared) {
             for (String name : nextObject.getObjectNames()) {
-                StreamGenericAbstractObjectIterator iterator = subObjectIterators.get(name);
+                StreamGenericAbstractObjectIterator<?> iterator = subObjectIterators.get(name);
                 if (iterator.hasNext())
                     iterator.next();
                 else subObjectIterators.remove(name).close();
             }
         } else {
-            for (Iterator<Map.Entry<String, StreamGenericAbstractObjectIterator>> itEntry = subObjectIterators.entrySet().iterator(); itEntry.hasNext(); ) {
-                Map.Entry<String, StreamGenericAbstractObjectIterator> entry = itEntry.next();
+            for (Iterator<Map.Entry<String, StreamGenericAbstractObjectIterator<?>>> itEntry = subObjectIterators.entrySet().iterator(); itEntry.hasNext(); ) {
+                Map.Entry<String, StreamGenericAbstractObjectIterator<?>> entry = itEntry.next();
                 if (entry.getValue().hasNext()) {
                     entry.getValue().next();
                 } else {
@@ -189,7 +189,7 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
         String currentLocator = null;
         Map<String, LocalAbstractObject> objects = new HashMap<String, LocalAbstractObject>();
         gapAppeared = false;
-        for (Map.Entry<String, StreamGenericAbstractObjectIterator> entry : subObjectIterators.entrySet()) {
+        for (Map.Entry<String, StreamGenericAbstractObjectIterator<?>> entry : subObjectIterators.entrySet()) {
             LocalAbstractObject currentSubObject = entry.getValue().getCurrentObject();
             if (currentSubObject.getLocatorURI() == null) {
                 throw new IllegalStateException("empty locator not relevant for StreamMetaObjectMapIterator; " +
@@ -225,11 +225,12 @@ public class StreamsMetaObjectMapIterator extends AbstractStreamObjectIterator<M
 
         // partition the top objects according to their locator
         Map<String, Map<String, LocalAbstractObject>> locatorObjectsMap = new HashMap<String, Map<String, LocalAbstractObject>>();
-        for (Map.Entry<String, StreamGenericAbstractObjectIterator> entry : subObjectIterators.entrySet()) {
+        for (Map.Entry<String, StreamGenericAbstractObjectIterator<?>> entry : subObjectIterators.entrySet()) {
             LocalAbstractObject currentSubObject = entry.getValue().getCurrentObject();
             Map<String, LocalAbstractObject> currentLocatorMap = locatorObjectsMap.get(currentSubObject.getLocatorURI());
             if (currentLocatorMap == null) {
-                locatorObjectsMap.put(currentSubObject.getLocatorURI(), currentLocatorMap = new HashMap<String, LocalAbstractObject>());
+                currentLocatorMap = new HashMap<String, LocalAbstractObject>();
+                locatorObjectsMap.put(currentSubObject.getLocatorURI(), currentLocatorMap);
             }
             currentLocatorMap.put(entry.getKey(), currentSubObject);
         }

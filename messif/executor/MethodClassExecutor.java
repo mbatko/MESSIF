@@ -247,7 +247,7 @@ public class MethodClassExecutor extends MethodExecutor {
     @Override
     protected Method getMethod(Object[] arguments) throws NoSuchMethodException {
         try {
-            Class diffClass = arguments[differentiateByArgNo].getClass();
+            Class<?> diffClass = arguments[differentiateByArgNo].getClass();
             Method rtv = getMethod(diffClass, true);
             if (rtv == null)
                 throw new NoSuchMethodException("Method for '" + diffClass.getName() + "' was not found");

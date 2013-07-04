@@ -278,7 +278,7 @@ public class ReplicationBucket extends LocalBucket {
     }
     
     @Override
-    public int processQuery(QueryOperation query) {
+    public int processQuery(QueryOperation<?> query) {
         replicaManipulationLock.readLock().lock();
         try {
             StatisticCounter threadDistComp = OperationStatistics.getOpStatisticCounter("DistanceComputations");

@@ -115,6 +115,7 @@ public class RankedSortedDistFunctionMultiCollection<T extends AbstractObject> e
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid
      * @throws NullPointerException if the ranking distance function is <tt>null</tt>
      */
+    @SuppressWarnings("unchecked")
     public RankedSortedDistFunctionMultiCollection(DistanceFunctionMultiObject<? super T> rankingDistanceFunction, AbstractObjectIterator<T> rankingObjects, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity, boolean dummyParam) throws IllegalArgumentException, NullPointerException {
         this(rankingDistanceFunction, (T[]) new AbstractObjectList<T>(rankingObjects).toArray(new AbstractObject [0]), originalDistanceWeight, rankInAdd, initialCapacity, maximalCapacity);
     }

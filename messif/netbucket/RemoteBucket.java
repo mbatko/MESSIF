@@ -60,7 +60,7 @@ public class RemoteBucket extends Bucket implements Serializable {
     protected final int bucketID;
 
     /** Remote node on which the bucket resides */
-    protected NetworkNode remoteNetworkNode;
+    private NetworkNode remoteNetworkNode;
 
     /** Network storage (bucket) dispatcher to which this remote bucket is associated */
     protected final NetworkBucketDispatcher netbucketDisp;
@@ -318,7 +318,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      * @throws IllegalStateException if there was an error communicating with the remote bucket dispatcher
      */      
     @Override
-    public int processQuery(QueryOperation query) throws IllegalStateException {
+    public int processQuery(QueryOperation<?> query) throws IllegalStateException {
         // If this remote bucket points is current node, use local bucket
         if (isLocalBucket())
             return netbucketDisp.getBucket(bucketID).processQuery(query);
@@ -345,6 +345,7 @@ public class RemoteBucket extends Bucket implements Serializable {
      *          argument; <code>false</code> otherwise
      */
     @Override
+    @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
     public boolean equals(Object obj) {
 	if (!(obj instanceof RemoteBucket)) return false;
 	return (((RemoteBucket)obj).bucketID == bucketID) && ((RemoteBucket)obj).remoteNetworkNode.equals(remoteNetworkNode);

@@ -324,7 +324,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @throws IllegalArgumentException if the column names and column convertors do not match
      * @throws SQLException if there was a problem connecting to the database
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public DatabaseStorage(Class<? extends T> storedObjectsClass, String dbConnUrl, Properties dbConnInfo, String dbDriverClass, String tableName, String primaryKeyColumn, Map<String, ColumnConvertor<T>> columns) throws IllegalArgumentException, SQLException {
         this(storedObjectsClass, dbConnUrl, dbConnInfo, dbDriverClass, tableName, primaryKeyColumn,
                 columns.keySet().toArray(new String[columns.size()]),
@@ -390,9 +390,12 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
     private T toValue(ResultSet resultSet) throws SQLException, BucketStorageException {
         T ret = null;
         int col = 2; // First column is primary key (and getObject is numbered from 1)
-        for (int i = 0; i < columnConvertors.length; i++)
-            if (columnConvertors[i].isConvertFromColumnUsed())
-                ret = columnConvertors[i].convertFromColumnValue(ret, resultSet.getObject(col++));
+        for (int i = 0; i < columnConvertors.length; i++) {
+            if (columnConvertors[i].isConvertFromColumnUsed()) {
+                ret = columnConvertors[i].convertFromColumnValue(ret, resultSet.getObject(col));
+                col++;
+            }
+        }
         return ret;
     }
 
@@ -744,6 +747,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         }
 
         @Override
+        @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
         public AbstractSearch<C, T> clone() throws CloneNotSupportedException {
             try {
                 DatabaseStorageSearch<C> ret = (DatabaseStorageSearch<C>)super.clone(); // This cast IS checked, because it is cloning
@@ -1243,6 +1247,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
      * @param <T> the class of object for which to get the locator column convertor
      * @param convertFromColumn flag whether this column convertor is used (<tt>true</tt>)
      *          or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+     * @param forceReplaceLocator flag whether to replace the object key by this convertor even if the key is already set
      * @param convertToColumn flag whether this column convertor is used (<tt>true</tt>)
      *          or should be skipped (<tt>false</tt>) when the object is stored into the storage
      * @return a column convertor

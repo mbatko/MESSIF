@@ -72,7 +72,7 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
         protected Statistics<?> getNextMatching() {
             // Search for next statistic
             while (iterator.hasNext()) {
-                Statistics stat = iterator.next();
+                Statistics<?> stat = iterator.next();
                 
                 // If its name matches specified regular expression
                 if (stat.getName().matches(regexp))
@@ -95,7 +95,7 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
                 throw new NoSuchElementException();
 
             // Save current next object that will be returned later
-            Statistics rtv = nextObject;
+            Statistics<?> rtv = nextObject;
             nextObject = getNextMatching();
             return rtv;
         }
@@ -155,8 +155,8 @@ class StatisticsList extends AbstractCollection<Statistics<?>> implements Serial
      * Removes given statistic.
      * @return the removed statistic or null, if it does not exist
      */
-    public Statistics remove(String name) {
-        Statistics stat = statistics.remove(name);
+    public Statistics<?> remove(String name) {
+        Statistics<?> stat = statistics.remove(name);
         if (stat != null)
             stat.unbind();
         return stat;

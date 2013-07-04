@@ -35,7 +35,7 @@ import messif.objects.UniqueID;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap<Integer,AbstractObjectList<E>> implements Serializable, ObjectProvider {
+public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap<Integer,AbstractObjectList<E>> implements Serializable, ObjectProvider<E> {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -98,7 +98,7 @@ public class GenericMatchingObjectList<E extends AbstractObject> extends TreeMap
      * @return a list of objects in the given partition or <tt>null</tt> if
      *      there is no list for the given {@code partId} and {@code allocateNewIfMissing} is <tt>false</tt>
      */
-    protected AbstractObjectList<E> getPart(int partId, boolean allocateNewIfMissing) {
+    protected final AbstractObjectList<E> getPart(int partId, boolean allocateNewIfMissing) {
         // Try to get the part partId
         AbstractObjectList<E> part = get(partId);
         

@@ -36,14 +36,14 @@ class ReplyReceiverList implements Receiver {
     //****************** Attributes ******************//
 
     /** List of receivers currently registered */
-    protected Map<Message, ReplyReceiver> receivers;
+    private Map<Message, ReplyReceiver<?>> receivers;
 
 
     //****************** Constructors ******************//
 
     /** Creates a new instance of ReplyReceiverList */
-    public ReplyReceiverList() {
-        this.receivers = new HashMap<Message, ReplyReceiver>();
+    ReplyReceiverList() {
+        this.receivers = new HashMap<Message, ReplyReceiver<?>>();
     }
 
 
@@ -80,8 +80,8 @@ class ReplyReceiverList implements Receiver {
      * @param receiver the receiver to remove
      * @return <tt>true</tt> if the receiver was in the list (and thus was removed)
      */
-    synchronized boolean deregisterReceiver(ReplyReceiver receiver) {
-        Iterator<ReplyReceiver> iter = receivers.values().iterator();
+    synchronized boolean deregisterReceiver(ReplyReceiver<?> receiver) {
+        Iterator<ReplyReceiver<?>> iter = receivers.values().iterator();
         while (iter.hasNext())
             if (receiver == iter.next()) {
                 iter.remove();
@@ -96,7 +96,7 @@ class ReplyReceiverList implements Receiver {
     @Override
     public synchronized boolean acceptMessage(Message msg, boolean allowSuperclass) {
         // Get reply receiver for this message (Message hashcode & equals is ID driven)
-        ReplyReceiver receiver = receivers.get(msg);
+        ReplyReceiver<?> receiver = receivers.get(msg);
         if (receiver == null)
             return false;
         

@@ -34,7 +34,7 @@ public class BucketReplyMessage extends ReplyMessage {
      * Creates a new instance of BucketReplyMessage.
      * @param message the original message this message is response to
      */
-    protected BucketReplyMessage(BucketRequestMessage message) {
+    protected BucketReplyMessage(BucketRequestMessage<?> message) {
         super(message);
     }
 

@@ -16,14 +16,6 @@
  */
 package messif.algorithms;
 
-import messif.netcreator.Startable;
-import messif.network.MessageDispatcher;
-import messif.network.NavigationElement;
-import messif.network.NetworkNode;
-import messif.operations.AbstractOperation;
-import messif.statistics.OperationStatistics;
-import messif.statistics.StatisticCounter;
-import messif.statistics.StatisticRefCounter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,9 +28,17 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Level;
+import messif.netcreator.Startable;
 import messif.network.Message;
+import messif.network.MessageDispatcher;
+import messif.network.NavigationElement;
+import messif.network.NetworkNode;
 import messif.network.ReplyMessage;
 import messif.network.ReplyReceiver;
+import messif.operations.AbstractOperation;
+import messif.statistics.OperationStatistics;
+import messif.statistics.StatisticCounter;
+import messif.statistics.StatisticRefCounter;
 import messif.statistics.Statistics;
 
 /**
@@ -192,8 +192,8 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      * @return collection of registered statistics
      * @throws InstantiationException
      */
-    protected Collection<Statistics> setupMessageStatistics(Message msg) throws InstantiationException {
-        Collection<Statistics> registeredStats = new ArrayList<Statistics>();
+    protected Collection<Statistics<?>> setupMessageStatistics(Message msg) throws InstantiationException {
+        Collection<Statistics<?>> registeredStats = new ArrayList<Statistics<?>>();
         registeredStats.add(msg.registerBoundStat("DistanceComputations"));
         registeredStats.add(msg.registerBoundStat("DistanceComputations.Savings"));
         //registeredStats.add(msg.registerBoundStat("BlockReads"));
@@ -205,10 +205,10 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      * Unbind given statistics.
      * @param stats set of stats to unbind
      */
-    protected void deregisterMessageStatistics(Collection<Statistics> stats) {
+    protected void deregisterMessageStatistics(Collection<Statistics<?>> stats) {
         if (stats == null)
             return;
-        for (Statistics statistics : stats) {
+        for (Statistics<?> statistics : stats) {
             statistics.unbind();
         }
     }
@@ -248,8 +248,8 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
      * @return array of additional parameters that are needed for operation execution
      */
     @Override
-    protected Class[] getExecutorParamClasses() {
-        return new Class[] { AbstractOperation.class, DistAlgRequestMessage.class };
+    protected Class<?>[] getExecutorParamClasses() {
+        return new Class<?>[] { AbstractOperation.class, DistAlgRequestMessage.class };
     }
 
 
@@ -448,8 +448,10 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
             for (Iterator<NavigationElement> it = reply.getPathElements(); it.hasNext(); i++) {
                 NavigationElement el = it.next();
                 Map<NetworkNode, OperationStatistics> positionMap = nodesMap.get(i);
-                if (positionMap == null)
-                    nodesMap.put(i, positionMap = new HashMap<NetworkNode, OperationStatistics>());
+                if (positionMap == null) {
+                    positionMap = new HashMap<NetworkNode, OperationStatistics>();
+                    nodesMap.put(i, positionMap);
+                }
                 
                 NetworkNode node = el.getSender();
                 OperationStatistics actualNodeStatistics = positionMap.get(node);

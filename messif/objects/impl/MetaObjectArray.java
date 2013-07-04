@@ -182,7 +182,8 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
             }
             this.objects = readObjects(stream, count, objectClass);
         } else {
-            this.objects = readObjects(stream, null, header, new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);            
+            Collection<LocalAbstractObject> values = readObjects(stream, null, header, new LinkedHashMap<String, LocalAbstractObject>()).values();
+            this.objects = values.toArray(new LocalAbstractObject[values.size()]);
         }
     }
 
@@ -294,7 +295,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @return an array filled with {@code count} {@code clazz} elements
      */
     protected static Class<? extends LocalAbstractObject>[] createClassArray(int count, Class<? extends LocalAbstractObject> clazz) {
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked","rawtypes"})
         Class<? extends LocalAbstractObject>[] classes = new Class[count];
         for (int i = 0; i < classes.length; i++)
             classes[i] = clazz;

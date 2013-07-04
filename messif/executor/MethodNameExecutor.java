@@ -121,7 +121,7 @@ public class MethodNameExecutor extends MethodExecutor {
      * @param methodPrototype the prototype of the methods to search for
      * @return the map of methods using the respective method's name as a key
      */
-    protected Map<String, Method> createRegisteredMethods(Class classToSearch, boolean staticOnly, Class<?>[] methodPrototype) {
+    protected final Map<String, Method> createRegisteredMethods(Class<?> classToSearch, boolean staticOnly, Class<?>[] methodPrototype) {
         // Finish recursion
         if (classToSearch == null || classToSearch == Object.class)
             return new HashMap<String, Method>();

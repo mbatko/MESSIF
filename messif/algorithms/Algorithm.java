@@ -955,7 +955,7 @@ public abstract class Algorithm implements Serializable {
      * @param algorithmClass the class of an algorithm for which to get constructors
      * @return all annotated constructors of the provided algorithm class
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked","rawtypes"})
     public static <E extends Algorithm> Constructor<E>[] getAnnotatedConstructorsArray(Class<? extends E> algorithmClass) {
         return getAnnotatedConstructors(algorithmClass).toArray(new Constructor[0]);
     }

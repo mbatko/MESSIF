@@ -19,8 +19,8 @@ package messif.netbucket;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import messif.buckets.BucketStorageException;
 import messif.buckets.BucketDispatcher;
+import messif.buckets.BucketStorageException;
 import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.network.MessageDispatcher;
@@ -152,7 +152,7 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
      * @param msg the bucket request message to process
      * @throws IOException if there was an error processing the message
      */
-    protected void receive(BucketRequestMessage msg) throws IOException {
+    protected void receive(BucketRequestMessage<?> msg) throws IOException {
         try {
             messageDisp.replyMessage(msg.execute(this));
         } catch (RuntimeException e) {

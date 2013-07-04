@@ -19,9 +19,9 @@ package messif.buckets.index.impl;
 import java.io.Serializable;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
-import messif.buckets.storage.Address;
 import messif.buckets.index.Lock;
 import messif.buckets.index.Lockable;
+import messif.buckets.storage.Address;
 import messif.buckets.storage.Storage;
 
 /**
@@ -97,11 +97,11 @@ public class AddressStorageIndex<K, T> extends AbstractArrayIndex<K, T> implemen
      * @param size the size of new array
      * @return a new array with the specified size
      */
-    @SuppressWarnings("unchecked")
-    private final Address<T>[] createArray(int size) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Address<T>[] createArray(int size) {
         return new Address[size];
     }
-    
+
     @Override
     public int size() {
         return index.length;

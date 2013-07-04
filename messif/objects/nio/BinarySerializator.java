@@ -506,7 +506,7 @@ public abstract class BinarySerializator {
      * @return the number of bytes written
      * @throws IOException if there was an I/O error
      */
-    public int write(BinaryOutput output, Enum enumInstance) throws IOException {
+    public int write(BinaryOutput output, Enum<?> enumInstance) throws IOException {
         return write(output, enumInstance == null ? -1 : enumInstance.ordinal());
     }
 
@@ -913,7 +913,7 @@ public abstract class BinarySerializator {
      * @return an {@link Enum} read from the input
      * @throws IOException if there was an I/O error
      */
-    public final <E extends Enum> E readEnum(BinaryInput input, Class<E> enumClass) throws IOException {
+    public final <E extends Enum<?>> E readEnum(BinaryInput input, Class<E> enumClass) throws IOException {
         int ordinal = readInt(input);
         if (ordinal == -1)
             return null;
@@ -976,7 +976,7 @@ public abstract class BinarySerializator {
      * @throws IOException if there was an I/O error
      * @throws IllegalArgumentException if the constructor or the factory method has a wrong prototype
      */
-    protected static Object readObject(BinaryInput input, BinarySerializator serializator, Constructor constructor, Method factoryMethod) throws IOException, IllegalArgumentException {
+    protected static Object readObject(BinaryInput input, BinarySerializator serializator, Constructor<?> constructor, Method factoryMethod) throws IOException, IllegalArgumentException {
         try {
             if (factoryMethod != null) {// If factory method provided
                 return factoryMethod.invoke(null, input, serializator);
@@ -1336,7 +1336,7 @@ public abstract class BinarySerializator {
      * @param enumInstance the enum to get the size for
      * @return the size of the binary-serialized enum
      */
-    public int getBinarySize(Enum enumInstance) {
+    public int getBinarySize(Enum<?> enumInstance) {
         return 4;
     }
 
