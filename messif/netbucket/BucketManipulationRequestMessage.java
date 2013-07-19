@@ -29,7 +29,13 @@ import messif.objects.util.AbstractObjectList;
 
 
 /**
- *
+ * NetworkBucketDispatcher message that can request several operations to be performed with 
+ *  the specified bucket: <ul>
+ *  <li>add given objects,</li> 
+ *  <li>add ALL objects from a specified local bucket</li>
+ *  <li>remove objects (by locator or equal),</li>
+ *  <li>find and return stored objects (specified by locator, key or return ALL objects).</li>
+ * </ul>
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
@@ -48,6 +54,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
     private final String objectLocator;
     private final AbstractObjectKey objectKey;
     private final int deleteObjects;
+    private final int sourceBucketID;
 
 
     //****************** Constructors ******************//
@@ -69,6 +76,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
+        this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
     /**
@@ -81,11 +89,12 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = null;
         this.deleteObjects = -1;
+        this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
 
         while (objects.hasNext())
             this.objects.add(objects.next());
     }
-
+    
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of object from a remote bucket
      */
@@ -103,6 +112,7 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = remoteObjectLocator;
         this.objectKey = null;
         this.deleteObjects = deleteObjects;
+        this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
     /**
@@ -115,18 +125,27 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         this.objectLocator = null;
         this.objectKey = remoteObjectKey;
         this.deleteObjects = -1;
+        this.sourceBucketID = BucketDispatcher.UNASSIGNED_BUCKET_ID;
     }
 
     /**
      * Creates a new instance of BucketManipulationRequestMessage that requests retrieval of all objects from a remote bucket
      */
     public BucketManipulationRequestMessage(int remoteBucketID) {
+        this(remoteBucketID, BucketDispatcher.UNASSIGNED_BUCKET_ID);
+    }
+    
+    /**
+     * Creates a new instance of BucketManipulationRequestMessage that requests addition of ALL object from specified bucket.
+     */
+    public BucketManipulationRequestMessage(int remoteBucketID, int sourceBucketID) {
         super(remoteBucketID);
         this.object = null;
         this.objects = null;
         this.deleteObjects = -1;
         this.objectLocator = null;
         this.objectKey = null;
+        this.sourceBucketID = sourceBucketID;
     }
 
 
@@ -154,6 +173,11 @@ public class BucketManipulationRequestMessage extends BucketRequestMessage<Bucke
         } else if (objects != null) {
             log.log(Level.INFO, "Adding set of {0} objects from {1} into {2}", new Object[]{objects.size(), getSender(), bucket});
             bucket.addObjects(objects);
+            return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED);
+        } else if (sourceBucketID != BucketDispatcher.UNASSIGNED_BUCKET_ID) {
+            LocalBucket sourceBucket = bucketDispatcher.getBucket(sourceBucketID);
+            log.log(Level.INFO, "Adding ALL {0} objects from bucket {1} into bucket {2}", new Object[]{sourceBucket.getObjectCount(), sourceBucketID, bucket});
+            bucket.addObjects(sourceBucket.getAllObjects());
             return new BucketManipulationReplyMessage(this, BucketErrorCode.OBJECT_INSERTED);
         } else if (objectLocator != null) {
             log.log(Level.INFO, "Returning object with locator {0} from {1} to {2}", new Object[]{objectLocator, bucket, getSender()});
