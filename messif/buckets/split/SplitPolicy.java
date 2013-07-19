@@ -34,6 +34,8 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.ObjectMatcher;
 
 /**
+ * WARNING: NOT IDEAL MODIFICATIONS APPLIED TO THIS CLASS.
+ * 
  * This class defines an abstract policy for bucket splitting.
  *
  * The policy is fully defined by the internal parameters, e.g. a policy for ball partitioning
