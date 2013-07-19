@@ -356,6 +356,37 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
         };
     }
 
+    /**
+     * Returns an iterator on a single object.
+     * @param <T> the class of the object returned by the iterator
+     * @param object the object returned by the iterator
+     * @return an iterator on a single object
+     */
+    public static <T extends LocalAbstractObject> AbstractObjectIterator<T> emptyIterator() {
+        return new AbstractObjectIterator<T>() {
+            
+            @Override
+            public T getCurrentObject() throws NoSuchElementException {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public T next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Not supported on singleton iterator");
+            }
+        };
+    }
+    
     //****************** Other iterator methods ******************//
 
     /**

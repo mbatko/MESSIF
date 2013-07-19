@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import messif.buckets.BucketDispatcher;
-import messif.buckets.BucketStorageException;
+import messif.buckets.BucketErrorCode;
 import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
+import messif.buckets.split.SplitPolicy;
+import messif.buckets.split.SplitResult;
 import messif.network.MessageDispatcher;
 import messif.network.NetworkNode;
 import messif.network.ThreadInvokingReceiver;
@@ -183,7 +185,7 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
     }
 
 
-    //****************** Bucket creation/removal ******************//
+    //****************** Bucket creation/removal/manipulation ******************//
 
     /**
      * Creates a bucket on a remote network node.
@@ -197,6 +199,37 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
         return send(new BucketCreateRequestMessage(), atNetworkNode).getRemoteBucket(this);
     }
 
+    /**
+     * Creates a bucket on a remote network node with default class and params is created 
+     *  but with specified capacity and soft capacity.
+     * @param atNetworkNode the network node at which to create a bucket
+     * @param capacity capacity of the new bucket
+     * @param softCapacity soft capacity of the new bucket
+     * @return a remote bucket encapsulation on the new bucket
+     * @throws BucketStorageException if the bucket cannot be created on the remote network node
+     * @throws IOException if there was an error communicating with the remote node
+     */
+    public RemoteBucket createRemoteBucket(NetworkNode atNetworkNode, long capacity, long softCapacity) throws IOException, BucketStorageException {
+        // Send message to "atNetworkNode" to create the bucket there
+        return send(new BucketCreateRequestMessage(capacity, softCapacity), atNetworkNode).getRemoteBucket(this);
+    }
+    
+    /**
+     * Creates a bucket on a remote network node.
+     * @param atNetworkNode the network node at which to create a bucket
+     * @param storageClass storage class
+     * @param storageClassParams parameters of the new storage
+     * @param capacity capacity of the new bucket
+     * @param softCapacity soft capacity of the new bucket
+     * @return a remote bucket encapsulation on the new bucket
+     * @throws BucketStorageException if the bucket cannot be created on the remote network node
+     * @throws IOException if there was an error communicating with the remote node
+     */
+    public RemoteBucket createRemoteBucket(NetworkNode atNetworkNode, Class<? extends LocalBucket> storageClass, Map<String, Object> storageClassParams, long capacity, long softCapacity) throws IOException, BucketStorageException {
+        // Send message to "atNetworkNode" to create the bucket there
+        return send(new BucketCreateRequestMessage(storageClass, storageClassParams, capacity, softCapacity), atNetworkNode).getRemoteBucket(this);
+    }
+    
     /**
      * Removes a bucket on a remote network node.
      * @param remoteBucket the bucket to remove
@@ -212,4 +245,33 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
         }
     }
 
+    /**
+     * Splits a given bucket on the remote node creating the new buckets in situ.
+     * @param remoteBucket bucket to split
+     * @param policy split policy according to which the bucket is to be split
+     * @param whoStays Identification of a partition whose objects stay in the split bucket
+     * @return the message that contains various output values
+     * @throws BucketStorageException if the bucket cannot be created on the remote network node
+     * @throws IOException if there was an error communicating with the remote node
+     */
+    public SplitResult splitBucket(RemoteBucket remoteBucket, SplitPolicy policy, int whoStays) throws BucketStorageException, IOException {
+        return send(new BucketSplitRequestMessage(remoteBucket.getBucketID(), policy, whoStays), remoteBucket.getRemoteNetworkNode());
+    }
+
+    /**
+     * Copies all objects from the {@code sourceRemoteBucket} to the {@code remoteBucket} on their network node.
+     *  Nothing is done if the remote nodes of thee two buckets are not identical. 
+     * @param remoteBucket specification of the destination bucket
+     * @param sourceRemoteBucket specification of the source bucket 
+     * @return False is returned if the remote nodes of thee two buckets are not identical or the insertion did no work for any reason
+     * @throws BucketStorageException if the data could not have been copied on the remote node
+     * @throws IOException if there was an error communicating with the remote node
+     */
+    public boolean copyAllObjects(RemoteBucket remoteBucket, RemoteBucket sourceRemoteBucket) throws IOException, BucketStorageException {
+        if (! remoteBucket.getRemoteNetworkNode().equals(sourceRemoteBucket.getRemoteNetworkNode())) {
+            return false;
+        }
+        return send(new BucketManipulationRequestMessage(remoteBucket.getBucketID(), sourceRemoteBucket.getBucketID()), remoteBucket.getRemoteNetworkNode()).getErrorCode() == BucketErrorCode.OBJECT_INSERTED;
+    }
+    
 }
