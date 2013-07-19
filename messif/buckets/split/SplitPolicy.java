@@ -16,6 +16,8 @@
  */
 package messif.buckets.split;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -32,6 +34,8 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.ObjectMatcher;
 
 /**
+ * WARNING: NOT IDEAL MODIFICATIONS APPLIED TO THIS CLASS.
+ * 
  * This class defines an abstract policy for bucket splitting.
  *
  * The policy is fully defined by the internal parameters, e.g. a policy for ball partitioning
@@ -49,8 +53,12 @@ import messif.objects.util.ObjectMatcher;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> {
+public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject>, Serializable {
 
+    /** Class serial id for serialization */
+    private static final long serialVersionUID = 46511001L;
+    
+    
     //****************** Attributes ******************
 
     /** The table of annotated parameters of this split policy */
@@ -79,6 +87,20 @@ public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> 
         }
     }
 
+    /**
+     * Updates the field with annotated parameters.
+     * @throws SecurityException 
+     */    
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        for (Field field : getClass().getDeclaredFields()) {
+            ParameterField fieldAnnotation = field.getAnnotation(ParameterField.class);
+            if (fieldAnnotation != null) {
+                parameters.get(fieldAnnotation.value()).setField(field);
+            }
+        }
+    }
+     
 
     /**
      * Returns the group (partition) to which the whole ball region belongs.
@@ -287,9 +309,13 @@ public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> 
     }
 
     /** This class defines a policy parameter */
-    private static class Parameter {
+    private static class Parameter implements Serializable {
+
+        /** Class serial id for serialization */
+        private static final long serialVersionUID = 4651001L;
+        
         /** The field of this policy that holds the parameter */
-        private final Field field;
+        private transient Field field;
         /** Locked flag */
         private boolean locked = false;
         /** Filled flag */
@@ -303,6 +329,10 @@ public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject> 
             this.field = field;
             field.setAccessible(true);
         }
-    }
+
+        private void setField(Field field) {
+            this.field = field;
+        }
+    }    
 
 }
