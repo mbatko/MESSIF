@@ -332,6 +332,7 @@ public abstract class SplitPolicy implements ObjectMatcher<LocalAbstractObject>,
 
         private void setField(Field field) {
             this.field = field;
+            field.setAccessible(true);
         }
     }    
 
