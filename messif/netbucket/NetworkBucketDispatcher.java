@@ -102,13 +102,21 @@ public class NetworkBucketDispatcher extends BucketDispatcher {
         startReceiving();
     }
 
+    /**
+     * Deserialize and start receiving messages.
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        startReceiving();
+    }
+    
     @Override
     public void finalize() throws Throwable {
         stopReceiving();
         super.finalize();
     }
 
-
+    
     //****************** Messaging inicialization methods ******************//
 
     /**
