@@ -17,6 +17,8 @@
 package messif.netbucket;
 
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.buckets.BucketDispatcher;
 
 /**
@@ -29,6 +31,9 @@ public class BucketRemoveRequestMessage extends BucketRequestMessage<BucketRemov
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    /** Logger */
+    private static final Logger log = Logger.getLogger("netnode.creator");
+    
     //****************** Constructor ******************//
     
     /**
@@ -45,6 +50,7 @@ public class BucketRemoveRequestMessage extends BucketRequestMessage<BucketRemov
     public BucketRemoveReplyMessage execute(BucketDispatcher bucketDispatcher) {
         try {
             bucketDispatcher.removeBucket(bucketID);
+            log.log(Level.INFO, "Removing bucket ID {0} (request from {1})", new Object[]{bucketID, getSender()});
             return new BucketRemoveReplyMessage(this,  true);
         } catch (NoSuchElementException ignore) {
             return new BucketRemoveReplyMessage(this, false);
