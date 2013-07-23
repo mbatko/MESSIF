@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,7 +64,7 @@ public class BucketDispatcher implements Serializable {
     //****************** Bucket dispatcher data ******************//
 
     /** The buckets maintained by this dispatcher organized in hashtable with bucket IDs as keys */
-    private final Map<Integer,LocalBucket> buckets = new HashMap<Integer,LocalBucket>();
+    private final Map<Integer,LocalBucket> buckets = new ConcurrentHashMap<Integer,LocalBucket>();
 
     /** Maximal number of buckets maintained by this dispatcher */
     private final int maxBuckets;
@@ -484,7 +485,8 @@ public class BucketDispatcher implements Serializable {
      */
     public LocalBucket getBucket(int bucketID) throws NoSuchElementException {
         LocalBucket rtv = buckets.get(bucketID); 
-        if (rtv == null) throw new NoSuchElementException("Bucket ID " + bucketID + " doesn't exist.");
+        if (rtv == null) 
+            throw new NoSuchElementException("Bucket ID " + bucketID + " doesn't exist.");
         
         return rtv;
     }

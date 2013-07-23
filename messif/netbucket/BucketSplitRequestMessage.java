@@ -18,6 +18,8 @@ package messif.netbucket;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.buckets.Bucket;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.BucketStorageException;
@@ -37,6 +39,9 @@ public class BucketSplitRequestMessage extends BucketRequestMessage<BucketSplitR
     /** Class serial id for serialization */
     private static final long serialVersionUID = 4651101L;
 
+    /** Logger */
+    private static final Logger log = Logger.getLogger("netnode.creator");
+    
     //****************** Attributes ******************//
 
     /** Split policy for given bucket */
@@ -78,6 +83,8 @@ public class BucketSplitRequestMessage extends BucketRequestMessage<BucketSplitR
     public BucketSplitReplyMessage execute(BucketDispatcher bucketDispatcher) throws RuntimeException, BucketStorageException {
         List<Bucket> newBuckets = new ArrayList<Bucket>(splitPolicy.getPartitionsCount());
         LocalBucket bucketToSplit = bucketDispatcher.getBucket(bucketID);        
+        log.log(Level.INFO, "Requesting split of bucket ID {0} (request from {1})", new Object[]{bucketID, getSender()});
+        
         int objectsMoved = bucketToSplit.split(splitPolicy, newBuckets, bucketDispatcher, whoStays);
         
         return new BucketSplitReplyMessage(this, newBuckets, objectsMoved);
