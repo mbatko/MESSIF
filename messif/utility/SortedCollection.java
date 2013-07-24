@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 
 /**
  * Implementation of a sorted collection.
@@ -33,7 +34,7 @@ import java.util.NoSuchElementException;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class SortedCollection<T> extends SortedArrayData<T, T> implements QueueTopRemove<T>, Serializable, Cloneable {
+public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<T>, Serializable, Cloneable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
