@@ -1,3 +1,4 @@
+   
 /*
  *  This file is part of MESSIF library.
  *
@@ -19,17 +20,14 @@ package messif.buckets.index.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.storage.StorageSearch;
-import messif.buckets.index.impl.LongStorageMemoryIndex.KeyAddressPair;
+import messif.buckets.index.impl.LongStorageMemoryIndexStdSer.KeyAddressPair;
 import messif.buckets.index.Lock;
 import messif.buckets.index.Lockable;
 import messif.buckets.storage.LongAddress;
@@ -51,10 +49,10 @@ import messif.utility.SortedArrayData;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressPair<K>> implements ModifiableOrderedIndex<K, T>, Serializable {
+public class LongStorageMemoryIndexStdSer<K, T> extends SortedArrayData<K, KeyAddressPair<K>> implements ModifiableOrderedIndex<K, T>, Serializable {
 
     /** Class serial id for serialization. */
-    private static final long serialVersionUID = 102303L;
+    private static final long serialVersionUID = 102302L;
 
 
     //****************** Attributes ******************//
@@ -76,7 +74,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
      * @param storage the storage to associate with this index
      * @param comparator the comparator imposing natural order of this index
      */
-    public LongStorageMemoryIndex(DiskStorage<T> storage, IndexComparator<K, T> comparator) {
+    public LongStorageMemoryIndexStdSer(DiskStorage<T> storage, IndexComparator<K, T> comparator) {
         this.storage = storage;
         this.comparator = comparator;
         this.index = new ArrayList<KeyAddressPair<K>>();
@@ -108,38 +106,6 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         storage = null;
     }
 
-    
-    // **********************    (De)serialization methods     ************************** //
-    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
-        out.writeObject(storage);
-        out.writeObject(comparator);
-        out.writeInt(index.size());
-        for (KeyAddressPair<K> keyAddressPair : index) {
-            out.writeObject(keyAddressPair.key);
-            out.writeLong(keyAddressPair.position);
-        }
-    }
-
-    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
-        storage = (DiskStorage<T>) in.readObject();
-        Field comparatorField;
-        try {
-            comparatorField = LongStorageMemoryIndex.class.getField("comparator");
-            comparatorField.setAccessible(true);
-            comparatorField.set(this, (IndexComparator<K, T>) in.readObject());
-        } catch (NoSuchFieldException ex) {
-            throw new IOException(ex);
-        } catch (SecurityException ex) {
-            throw new IOException(ex);
-        } catch (IllegalAccessException ex) {
-            throw new IOException(ex);
-        }
-        int indexSize = in.readInt();
-        index = new ArrayList<KeyAddressPair<K>>(indexSize);
-        for (int i = 0; i < indexSize; i++) {
-            index.add(new KeyAddressPair<K>((K) in.readObject(), in.readLong()));
-        }
-    }
 
     // ******************     Comparator methods      ****************** //
 
@@ -463,7 +429,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
                 throw new IllegalStateException();
             }
 
-            LongStorageMemoryIndex.this.remove(lastRet);
+            LongStorageMemoryIndexStdSer.this.remove(lastRet);
             if (lastRet < cursor) {
                 cursor--;
             }
@@ -560,7 +526,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
                 throw new IllegalStateException();
             }
 
-            LongStorageMemoryIndex.this.remove(lastRet);
+            LongStorageMemoryIndexStdSer.this.remove(lastRet);
             if (lastRet < cursor) {
                 cursor--;
             }
@@ -593,6 +559,5 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
             this.position = position;
         }
     }
-
-
+    
 }
