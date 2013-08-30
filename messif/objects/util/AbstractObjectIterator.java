@@ -386,6 +386,39 @@ public abstract class AbstractObjectIterator<E extends AbstractObject> implement
             }
         };
     }
+
+    /**
+     * Returns an AbstractObjectItator created over a standard iterator.
+     * @param <T> the class of the object returned by the iterator
+     * @param iterator the standard iterator
+     * @return an enhanced iterator over the data provided by the standard iterator
+     */
+    public static <T extends LocalAbstractObject> AbstractObjectIterator<T> getIterator(final Iterator<T> iterator) {
+        return new AbstractObjectIterator<T>() {
+            private T currentObject = null;
+            @Override
+            public T getCurrentObject() throws NoSuchElementException {
+                if (currentObject == null)
+                    throw new NoSuchElementException();
+                return currentObject;
+            }
+
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public T next() {
+                return (currentObject = iterator.next());
+            }
+
+            @Override
+            public void remove() {
+                iterator.remove();
+            }
+        };
+    }
     
     //****************** Other iterator methods ******************//
 
