@@ -23,8 +23,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.ModifiableOrderedIndex;
@@ -124,7 +122,7 @@ public class LongStorageMemoryIndex<K, T> extends SortedArrayData<K, KeyAddressP
         storage = (DiskStorage<T>) in.readObject();
         Field comparatorField;
         try {
-            comparatorField = LongStorageMemoryIndex.class.getField("comparator");
+            comparatorField = LongStorageMemoryIndex.class.getDeclaredField("comparator");
             comparatorField.setAccessible(true);
             comparatorField.set(this, (IndexComparator<K, T>) in.readObject());
         } catch (NoSuchFieldException ex) {
