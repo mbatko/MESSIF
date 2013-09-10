@@ -184,6 +184,18 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
         this(file, null);
     }
 
+    /**
+     * Create new instance of ExtractorDataSource as a copy of another ExtractorDataSource.
+     * @param dataSource the data source to copy from
+     * @throws IOException if there was an error opening the data source
+     */
+    public ExtractorDataSource(ExtractorDataSource dataSource) throws IOException {
+        super(dataSource.getParameterMap());
+        this.dataSource = dataSource.getDataSource();
+        this.locator = dataSource.getLocator();
+        openDataSourceAnonymous(this.dataSource);
+    }
+
 
     //****************** Content parameter factory method *************//
 
