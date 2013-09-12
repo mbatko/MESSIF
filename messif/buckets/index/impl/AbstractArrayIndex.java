@@ -345,7 +345,7 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             if (currentKey >= getKeyCount())
                 return null;
             int newPos = binarySearch(getKey(currentKey++), 0, size() - 1, true);
-            cursor = (newPos < 0) ? maxIndex : newPos;
+            cursor = (newPos < 0) ? maxIndex + 1 : newPos;
             return super.readNext();
         }
 
@@ -354,8 +354,8 @@ public abstract class AbstractArrayIndex<K, T> extends SortedArrayData<K, T> imp
             if (currentKey <= 0)
                 return null;
             int newPos = binarySearch(getKey(--currentKey), 0, size() - 1, true);
-            cursor = (newPos < 0) ? minIndex : newPos;
-            return super.readNext();
+            cursor = (newPos < 0) ? minIndex - 1 : newPos;
+            return super.readPrevious();
         }
 
         @Override
