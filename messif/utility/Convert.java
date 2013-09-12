@@ -931,7 +931,7 @@ public abstract class Convert {
     }
 
     /** Internal patter for {@link #trimAndUnquote} and {@link #splitBySpaceWithQuotes} methods */
-    private static final Pattern quoteMatchingPattern = Pattern.compile("\\G\\s*(?:([^\\s'\"]+)|'([^']*)'|\"([^\"]*)\")(\\s*)");
+    private static final Pattern quoteMatchingPattern = Pattern.compile("\\G\\s*(?:'((?:[^'\\\\]|\\\\.)*)'|\"((?:[^\"\\\\]|\\\\.)*)\"|(\\S+))(\\s*)");
 
     /**
      * Removes quotes from the given string (double or single).
