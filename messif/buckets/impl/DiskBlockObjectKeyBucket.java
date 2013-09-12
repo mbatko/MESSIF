@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
-import messif.objects.LocalAbstractObject;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
 import messif.buckets.OrderedLocalBucket;
@@ -28,6 +27,7 @@ import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.impl.LongStorageIndex;
 import messif.buckets.storage.impl.DiskStorage;
+import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.MultiClassSerializator;
@@ -79,7 +79,7 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      * @throws IOException if there was a problem opening or creating the bucket file
      */
     public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file) throws IOException {
-        this(capacity, softCapacity, lowOccupation, file, 16*1024, false, false, new MultiClassSerializator<LocalAbstractObject>(LocalAbstractObject.class));
+        this(capacity, softCapacity, lowOccupation, file, 0, false, 0, new MultiClassSerializator<>(LocalAbstractObject.class));
     }
 
     /**
@@ -92,13 +92,13 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      * @param file the file where the bucket will be stored
      * @param bufferSize the size of the buffer used for I/O operations
      * @param directBuffers flag whether to use the {@link java.nio.ByteBuffer#allocateDirect(int) direct buffers}
-     * @param memoryMap flag whether to use memory-mapped I/O
+     * @param asyncThreads the maximal number of threads to use (for asynchronous reading)
      * @param serializator the {@link BinarySerializator binary serializator} used to store objects
      * @throws IOException if there was a problem opening or creating the bucket file
      */
-    public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, boolean memoryMap, BinarySerializator serializator) throws IOException {
-        this(capacity, softCapacity, lowOccupation, true, new DiskStorage<LocalAbstractObject>(
-                LocalAbstractObject.class, file, false, bufferSize, directBuffers, memoryMap, 0, capacity,
+    public DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, int asyncThreads, BinarySerializator serializator) throws IOException {
+        this(capacity, softCapacity, lowOccupation, true, new DiskStorage<>(
+                LocalAbstractObject.class, file, false, bufferSize, directBuffers, asyncThreads, 0, capacity,
                 serializator
         ));
     }
@@ -115,7 +115,7 @@ public class DiskBlockObjectKeyBucket extends OrderedLocalBucket<AbstractObjectK
      */
     private DiskBlockObjectKeyBucket(long capacity, long softCapacity, long lowOccupation, boolean occupationAsBytes, DiskStorage<LocalAbstractObject> diskStorage) {
         super(capacity, softCapacity, lowOccupation, occupationAsBytes, 0);
-        objects = new LongStorageIndex<AbstractObjectKey, LocalAbstractObject>(diskStorage, LocalAbstractObjectOrder.keyToLocalObjectComparator);
+        objects = new LongStorageIndex<>(diskStorage, LocalAbstractObjectOrder.keyToLocalObjectComparator);
     }
 
     @Override

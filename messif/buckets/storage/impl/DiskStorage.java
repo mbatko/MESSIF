@@ -19,16 +19,29 @@ package messif.buckets.storage.impl;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
@@ -36,18 +49,15 @@ import messif.buckets.CapacityFullException;
 import messif.buckets.StorageFailureException;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
-import messif.buckets.index.Lock;
-import messif.buckets.index.Lockable;
 import messif.buckets.storage.LongAddress;
 import messif.buckets.storage.LongStorageIndexed;
 import messif.buckets.storage.LongStorageSearch;
 import messif.buckets.storage.ReadonlyStorageException;
+import messif.objects.nio.AsynchronousFileChannelInputStream;
+import messif.objects.nio.AsynchronousFileChannelOutputStream;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
-import messif.objects.nio.FileChannelOutputStream;
 import messif.objects.nio.CachingSerializator;
-import messif.objects.nio.FileChannelInputStream;
-import messif.objects.nio.MappedFileChannelInputStream;
 import messif.objects.nio.MultiClassSerializator;
 import messif.utility.Convert;
 
@@ -56,13 +66,13 @@ import messif.utility.Convert;
  * The objects in this storage are stored in a file in the order
  * of insertion. The address is the position within the file.
  * Objects are serialized using the provided {@link BinarySerializator}.
- * 
+ *
  * @param <T> the class of objects stored in this storage
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializable {
+public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -76,92 +86,84 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     /** The prefix for auto-generated filenames */
     public static final String FILENAME_PREFIX = "disk_storage_";
-
     /** The suffix for auto-generated filenames */
     public static final String FILENAME_SUFFIX = ".ds";
-
     /** Ratio of {@link #deletedFragments} to {@link #objectCount} when the {@link #compactData()} is executed */
     protected static final float COMPACTING_FRAGMENTATION_RATIO = 0.5f;
-
     /** Header flag constant for indication whether the file was correctly closed */
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
+    /** Default number of asynchronous threads */
+    protected static final int DEFAULT_ASYNC_THREADS = 32;
+    /** Default size of the reading buffer */
+    protected static final int DEFAULT_BUFFER_SIZE = 16*1024;
 
 
     //****************** Attributes ******************//
 
     /** Buffer sizes for read/write operations */
-    protected final int bufferSize;
-
+    private final int bufferSize;
     /** Allocate the buffers for read/write operations as {@link ByteBuffer#allocateDirect direct} */
-    protected final boolean bufferDirect;
-
+    private final boolean bufferDirect;
     /** The number of objects currently stored in the file */
-    protected transient int objectCount;
-
+    private transient int objectCount;
     /** The number of bytes currently stored in the file (excluding headers) */
-    protected transient long fileOccupation;
-
+    private transient long fileOccupation;
     /** The number of deleted objects - the file space fragmentation is the ratio between this and objectCount */
-    protected transient int deletedFragments;
-
+    private transient int deletedFragments;
     /** The file with data */
-    protected final File file;
-
+    private final File file;
     /** The channel on the file with data */
-    private transient FileChannel fileChannel;
-
+    private transient AsynchronousFileChannel fileChannel;
     /** The position in the file where this storage starts (the real data starts at startPosition + headerSize) */
     protected final long startPosition;
-
     /** The maximal length of the file */
-    protected final long maximalLength;
-
+    private final long maximalLength;
     /** Serializator responsible for storing (and restoring) binary objects in the file */
-    protected final BinarySerializator serializator;
-
+    private final BinarySerializator serializator;
     /** Class of objects that the this storage works with */
-    protected final Class<? extends T> storedObjectsClass;
-
+    private final Class<? extends T> storedObjectsClass;
     /** Number of items that reference this disk storage */
     private int references = 0;
-
-    /** Stream for reading data */
-    protected transient WeakReference<BufferInputStream> inputStream;
-
+    /** Maximal number of input streams to use (for asynchronous reading) */
+    private final int inputStreamCount;
+    /** Queue of prepared buffer streams for (asynchronous) reading */
+    private transient BlockingDeque<SoftReference<AsynchronousFileChannelInputStream>> inputStreams;
     /** Stream for writing data */
-    protected transient FileChannelOutputStream outputStream;
-
+    private transient AsynchronousFileChannelOutputStream outputStream;
     /** Flag whether the file is modified */
-    protected transient boolean modified;
-
+    private transient boolean modified;
     /** Flag whether the file is readonly */
-    protected transient boolean readonly;
-
-    /** Finalizer thread that writes a modified header */
-    protected transient Thread modifiedThread;
+    private transient boolean readonly;
+    /** Finalize thread that writes a modified header */
+    private transient Thread modifiedThread;
 
 
     //****************** Constructors ******************//
 
     /**
      * Creates a new DiskStreamStorage instance.
-     * 
+     *
      * @param storedObjectsClass the class of objects that the new storage will work with
      * @param file the file in which to create the bucket
      * @param readonly if <tt>true</tt>, the storage will be opened in read-only mode (e.g. the store method will throw an exception)
      * @param bufferSize the size of the buffer used for reading/writing
      * @param bufferDirect the bucket is either direct (<tt>true</tt>) or array-backed (<tt>false</tt>)
-     * @param memoryMap flag whether to use memory-mapped I/O
+     * @param asyncThreads the maximal number of threads to use (for asynchronous reading)
      * @param startPosition the position in the file where this storage starts
      * @param maximalLength the maximal length of the file
      * @param serializator the object responsible for storing (and restoring) binary objects
      * @throws IOException if there was an error opening the bucket file
      */
-    public DiskStorage(Class<? extends T> storedObjectsClass, File file, boolean readonly, int bufferSize, boolean bufferDirect, boolean memoryMap, long startPosition, long maximalLength, BinarySerializator serializator) throws IOException {
+    public DiskStorage(Class<? extends T> storedObjectsClass, File file, boolean readonly, int bufferSize, boolean bufferDirect, int asyncThreads, long startPosition, long maximalLength, BinarySerializator serializator) throws IOException {
         this.storedObjectsClass = storedObjectsClass;
         this.file = file;
-        this.bufferSize = ((memoryMap)?-1:1)*Math.abs(bufferSize);
+        if (bufferSize < 0)
+            throw new IllegalArgumentException("Bufer size must positive");
+        this.bufferSize = bufferSize == 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
         this.bufferDirect = bufferDirect;
+        if (asyncThreads < 0)
+            throw new IllegalArgumentException("Number of asynchronous threads must positive");
+        this.inputStreamCount = asyncThreads == 0 ? DEFAULT_ASYNC_THREADS : asyncThreads;
         this.startPosition = startPosition;
         this.maximalLength = maximalLength;
         this.serializator = serializator;
@@ -177,11 +179,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @param file the file in which to create the bucket
      * @throws IOException if there was an error opening the bucket file
      */
+    @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
     public DiskStorage(final DiskStorage<? extends T> copyAttributesDiskStorage, File file) throws IOException {
         this.storedObjectsClass = copyAttributesDiskStorage.storedObjectsClass;
         this.file = file;
         this.bufferSize = copyAttributesDiskStorage.bufferSize;
         this.bufferDirect = copyAttributesDiskStorage.bufferDirect;
+        this.inputStreamCount = copyAttributesDiskStorage.inputStreamCount;
         this.startPosition = copyAttributesDiskStorage.startPosition;
         this.maximalLength = copyAttributesDiskStorage.maximalLength;
         this.serializator = copyAttributesDiskStorage.serializator;
@@ -189,6 +193,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     }
 
     @Override
+    @SuppressWarnings("FinalizeNotProtected")
     public void finalize() throws Throwable {
         if (modifiedThread != null) {
             try {
@@ -209,7 +214,14 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
 
     //****************** Factory method ******************//
-    
+
+    /**
+     * Increment the number of references to this storage by one.
+     */
+    private void incrementReferences() {
+        references++;
+    }
+
     /**
      * Creates a new disk storage. The additional parameters are specified in the parameters map with
      * the following recognized key names:
@@ -220,7 +232,6 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      *   <li><em>cacheClasses</em> - comma-separated list of classes that will be cached for fast serialization</li>
      *   <li><em>bufferSize</em> - the size of the buffers used for I/O operations</li>
      *   <li><em>directBuffer</em> - flag controlling whether to use faster direct buffers for I/O operations</li>
-     *   <li><em>memoryMap</em> - flag controlling whether to use memory-mapped I/O</li>
      *   <li><em>readOnly</em> - if <tt>true</tt>, the storage file must be a valid storage file and the storage will support only read operations</li>
      *   <li><em>startPosition</em> - the position (in bytes) of the first block of the data within the <em>file</em></li>
      *   <li><em>maximalLength</em> - the maximal length (in bytes) of the data written to <em>file</em> by this storage</li>
@@ -228,7 +239,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      *              and this created instance is used in subsequent calls</li>
      *   <li><em>serializator</em> - instance of the serializator that is used (overrides any cacheClasses settings)</li>
      * </ul>
-     * 
+     *
      * @param <T> the class of objects that the new storage will work with
      * @param storedObjectsClass the class of objects that the new storage will work with
      * @param parameters list of named parameters (see above)
@@ -238,11 +249,11 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      */
     public static <T> DiskStorage<T> create(Class<T> storedObjectsClass, Map<String, Object> parameters) throws IOException, InstantiationException {
         boolean oneStorage = Convert.getParameterValue(parameters, "oneStorage", Boolean.class, false);
-        
+
         if (oneStorage) {
             DiskStorage<T> storage = castToDiskStorage(storedObjectsClass, Convert.getParameterValue(parameters, "storage", DiskStorage.class, null));
             if (storage != null) {
-                storage.references++;
+                storage.incrementReferences();
                 return storage;
             }
         }
@@ -250,9 +261,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         // Read the parameters
         File file = Convert.getParameterValue(parameters, "file", File.class, null);
         Class[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
-        int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, 16384);
+        int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, DEFAULT_BUFFER_SIZE);
         boolean directBuffer = Convert.getParameterValue(parameters, "directBuffer", Boolean.class, false);
-        boolean memoryMap = Convert.getParameterValue(parameters, "memoryMap", Boolean.class, false);
+        int asyncThreads = Convert.getParameterValue(parameters, "asyncThreads", Integer.class, DEFAULT_ASYNC_THREADS);
         boolean readOnly = Convert.getParameterValue(parameters, "readOnly", Boolean.class, false);
         long startPosition = Convert.getParameterValue(parameters, "startPosition", Long.class, 0L);
         long maximalLength = Convert.getParameterValue(parameters, "maximalLength", Long.class, Long.MAX_VALUE);
@@ -276,15 +287,15 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         if (parameters != null && parameters.containsKey("serializator"))
             serializator = (BinarySerializator)parameters.get("serializator");
         else if (cacheClasses == null)
-            serializator = new MultiClassSerializator<T>(storedObjectsClass);
+            serializator = new MultiClassSerializator<>(storedObjectsClass);
         else
-            serializator = new CachingSerializator<T>(storedObjectsClass, cacheClasses);
+            serializator = new CachingSerializator<>(storedObjectsClass, cacheClasses);
         // Store serializator into map for further use
         if (parameters != null)
             parameters.put("serializator", serializator);
 
         // Finally, create the storage
-        DiskStorage<T> storage = new DiskStorage<T>(storedObjectsClass, file, readOnly, bufferSize, directBuffer, memoryMap, startPosition, maximalLength, serializator);
+        DiskStorage<T> storage = new DiskStorage<>(storedObjectsClass, file, readOnly, bufferSize, directBuffer, asyncThreads, startPosition, maximalLength, serializator);
 
         // Save the created storage for subsequent calls
         if (oneStorage && parameters != null)
@@ -296,7 +307,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     /**
      * Cast the provided object to {@link DiskStorage} with generic typing.
      * The objects stored in the storage must be of the same type as the <code>storageObjectsClass</code>.
-     * 
+     *
      * @param <E> the class of objects stored in the storage
      * @param storageObjectsClass the class of objects stored in the storage
      * @param object the storage instance
@@ -315,6 +326,62 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     }
 
 
+    //****************** Internal methods for reading/writing from file channel ******************//
+
+    /**
+     * Opens an asynchronous file channel on the given file.
+     * @param file the file to open
+     * @param readonly the flag whether to open the file as read-only
+     * @param asyncThreads the maximal number of threads to use for asynchronous reading
+     * @return an opened asynchronous file channel
+     * @throws IOException if there was an error opening the file
+     */
+    private static AsynchronousFileChannel openFileChannel(File file, boolean readonly, int asyncThreads) throws IOException {
+        Set<? extends OpenOption> options;
+        if (readonly)
+            options = Collections.singleton(StandardOpenOption.READ);
+        else
+            options = new HashSet<>(Arrays.asList(StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE));
+        return AsynchronousFileChannel.open(file.toPath(), options, asyncThreads > 0 ? Executors.newFixedThreadPool(asyncThreads) : null);
+    }
+
+    /**
+     * Internal method that allows synchronous read from an asynchronous file channel.
+     * @param fileChannel the file channel to read from
+     * @param buffer the buffer to store the read data to
+     * @param position the position in the file channel to read from
+     * @return the number of bytes read into the buffer
+     * @throws IOException if there was an error reading the data
+     */
+    private static int readFromFileChannel(AsynchronousFileChannel fileChannel, ByteBuffer buffer, long position) throws IOException {
+        try {
+            return fileChannel.read(buffer, position).get();
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        } catch (InterruptedException e) {
+            throw new InterruptedIOException(e.getMessage());
+        }
+    }
+
+    /**
+     * Internal method that allows synchronous write to an asynchronous file channel.
+     * @param fileChannel the file channel to write to
+     * @param buffer the buffer to read the written data from
+     * @param position the position in the file channel to write to
+     * @return the number of bytes written from the buffer
+     * @throws IOException if there was an error writing the data
+     */
+    private static int writeToFileChannel(AsynchronousFileChannel fileChannel, ByteBuffer buffer, long position) throws IOException {
+        try {
+            return fileChannel.write(buffer, position).get();
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        } catch (InterruptedException e) {
+            throw new InterruptedIOException(e.getMessage());
+        }
+    }
+
+
     //****************** Header functions ******************//
 
     /** The size of the header - must match the {@link #writeHeader} and {@link #readHeader} methods */
@@ -324,14 +391,14 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * Write header information to the file.
      * The {@link #objectCount}, {@link #fileOccupation} and {@link #deletedFragments}
      * are stored. The write is two-phase, with synchronized flag for opened/closed file.
-     * 
+     *
      * @param fileChannel the file channel to write the header to
      * @param position the position in the file channel to write the header to
-     * @param flags the flags accompanied with the bucket; 
+     * @param flags the flags accompanied with the bucket;
      *          currently only "opened/closed" flag is used to resolve validity of the header
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected synchronized void writeHeader(FileChannel fileChannel, long position, int flags) throws IOException {
+    protected synchronized void writeHeader(AsynchronousFileChannel fileChannel, long position, int flags) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(headerSize);
         buffer.putLong(serialVersionUID);
         buffer.putLong(maximalLength);
@@ -341,13 +408,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         buffer.putInt(objectCount);
         buffer.putInt(deletedFragments);
         buffer.flip();
-        fileChannel.write(buffer, position);
+        writeToFileChannel(fileChannel, buffer, position);
         if ((flags & FLAG_CLOSED) == FLAG_CLOSED) {
             // Replace flag with closed bit
             buffer.putInt(20, flags); // !!!! WARNING !!!! Don't forget to change the position here !!!!
             buffer.rewind();
             fileChannel.force(true);
-            fileChannel.write(buffer, position);
+            writeToFileChannel(fileChannel, buffer, position);
             modified = false;
         } else {
             modified = true;
@@ -356,6 +423,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             if (modifiedThread == null) {
                 modifiedThread = new Thread() {
                     @Override
+                    @SuppressWarnings("FinalizeCalledExplicitly")
                     public void run() {
                         try {
                             DiskStorage.this.finalize();
@@ -373,16 +441,16 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * Read header information from the file.
      * The {@link #objectCount}, {@link #fileOccupation} and {@link #deletedFragments}
      * variables are replaced by the values from the header.
-     * 
+     *
      * @param fileChannel the file channel to read the header from
      * @param position the position in the file channel to read the header from
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected synchronized void readHeader(FileChannel fileChannel, long position) throws IOException {
+    protected synchronized void readHeader(AsynchronousFileChannel fileChannel, long position) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(headerSize);
 
         // Read header bytes
-        fileChannel.read(buffer, position);
+        readFromFileChannel(fileChannel, buffer, position);
         buffer.flip();
 
         try {
@@ -430,36 +498,33 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * Reconstruct header information by seeking through the whole file.
      * The {@link #objectCount}, {@link #fileOccupation} and {@link #deletedFragments}
      * variables are replaced by the reconstructed values.
-     * 
+     *
      * @param fileChannel the file channel to read the header from
      * @param position the position in the file channel to read the header from
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected synchronized void reconstructHeader(FileChannel fileChannel, long position) throws IOException {
+    protected synchronized void reconstructHeader(AsynchronousFileChannel fileChannel, long position) throws IOException {
         log.log(Level.INFO, "Rebuilding header of disk storage in file {0}", file.getAbsolutePath());
 
         // Reset header values
         objectCount = 0;
         fileOccupation = 0;
         deletedFragments = 0;
-
-        // Read all objects (by seeking)
-        BufferInputStream reader = new FileChannelInputStream(bufferSize, bufferDirect, fileChannel, position, maximalLength);
-        try {
-            // End iterating once a "null" object is found
-            for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
-                if (objectSize > 0) {
-                    objectCount++;
-                } else {
-                    // Negative size means deleted object
-                    deletedFragments++;
+        try (BufferInputStream reader = new AsynchronousFileChannelInputStream(bufferSize, bufferDirect, fileChannel, position, maximalLength)) {
+            try {
+                // End iterating once a "null" object is found
+                for (int objectSize = serializator.skipObject(reader, false); objectSize != 0; objectSize = serializator.skipObject(reader, false)) {
+                    if (objectSize > 0) {
+                        objectCount++;
+                    } else {
+                        // Negative size means deleted object
+                        deletedFragments++;
+                    }
                 }
+                fileOccupation = reader.getPosition() - headerSize - 4; // Ignore last object size (integer) read
+            } catch (EOFException ignore) {
+                fileOccupation = reader.getPosition() - headerSize; // The file end encountered
             }
-            fileOccupation = reader.getPosition() - headerSize - 4; // Ignore last object size (integer) read
-        } catch (EOFException ignore) {
-            fileOccupation = reader.getPosition() - headerSize; // The file end encountered
-        } finally {
-            reader.close();
         }
     }
 
@@ -469,7 +534,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * to a new temporary file. The new file is then renamed to the original one.
      * Note that this operation is thread safe and it is also compatible with multiple
      * searches running on the file concurrently.
-     * 
+     *
      * @throws IOException if there was a problem with reading or writing the data
      */
     // FIXME: this operation WILL break indexes built on this storage
@@ -478,7 +543,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             return;
         if (startPosition != 0) // Compacting is not yet implemented on one-storage, sorry
             return;
-            
+
         File compactFile = new File(file.getParentFile(), file.getName() + ".compact");
         log.log(Level.INFO, "Compacting disk storage in file {0}", file.getAbsolutePath());
 
@@ -488,29 +553,25 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
 
         // Open compact file
-        FileChannel compactChan = new RandomAccessFile(compactFile, "rw").getChannel();
-        long newPos;
+        AsynchronousFileChannel compactChan = openFileChannel(compactFile, false, 0);
+        long position;
         try {
-            BufferInputStream reader = openInputStream();
-            try {
+            try (BufferInputStream reader = openInputStream()) {
                 writeHeader(compactChan, startPosition, 0);
-                compactChan.position(headerSize);
+                position = headerSize;
 
                 // Read all objects and write them to the compact channel
                 ByteBuffer writeBuffer = bufferDirect ? ByteBuffer.allocateDirect(bufferSize) : ByteBuffer.allocate(bufferSize);
                 for (int objectSize = serializator.objectToBuffer(reader, writeBuffer, bufferSize); objectSize != 0; objectSize = serializator.objectToBuffer(reader, writeBuffer, bufferSize)) {
                     writeBuffer.flip();
-                    compactChan.write(writeBuffer);
+                    position += writeToFileChannel(compactChan, writeBuffer, position);
                     writeBuffer.compact();
                 }
                 // Write remaining data if any (this should never happen, since these are file channels)
                 writeBuffer.flip();
                 while (writeBuffer.remaining() > 0)
-                    compactChan.write(writeBuffer);
-            } finally {
-                reader.close();
+                    position += writeToFileChannel(compactChan, writeBuffer, position);
             }
-            newPos = compactChan.position() - headerSize;
         } finally {
             compactChan.close();
         }
@@ -520,14 +581,14 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             return;
         } else {
             // Update file statistics
-            fileOccupation = newPos;
+            fileOccupation = position - headerSize;
             deletedFragments = 0;
             modified = true;
         }
 
         // Reopen file channel
         fileChannel.close();
-        fileChannel = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
+        fileChannel = openFileChannel(file, readonly, inputStreamCount);
     }
 
     /**
@@ -546,48 +607,66 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @return the created input stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BufferInputStream openInputStream() throws IOException {
+    protected AsynchronousFileChannelInputStream openInputStream() throws IOException {
         if (log.isLoggable(Level.FINE)) {
             // Measure time
             long time = System.currentTimeMillis();
-            BufferInputStream ret;
 
             // Create the input stream (copied below!)
-            if (bufferSize < 0)
-                ret = new MappedFileChannelInputStream(getFileChannel(), startPosition + headerSize, maximalLength);
-            else
-                ret = new FileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
+            AsynchronousFileChannelInputStream ret = new AsynchronousFileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
 
             // Report time
             time = System.currentTimeMillis() - time;
             log.log(Level.FINE, "Disk storage {0} opened with {1} bytes buffered in {2}ms", new Object[]{ret.getClass().getName(), ret.bufferedSize(), time});
             return ret;
         } else {
-            // Create the input stream (copied above!)
-            if (bufferSize < 0)
-                return new MappedFileChannelInputStream(getFileChannel(), startPosition + headerSize, maximalLength);
-            else
-                return new FileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
+            return new AsynchronousFileChannelInputStream(bufferSize, bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
         }
     }
 
     /**
      * Retrieves an input stream for this storage's file.
+     * Note that it is imperative to return the taken input stream back via {@link #returnInputStream}.
      * @param position the position on which to set the input stream
      * @return the prepared input stream
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected BufferInputStream getInputStream(long position) throws IOException {
-        BufferInputStream stream = (inputStream == null)?null:inputStream.get();
-        if (stream == null || (outputStream != null && outputStream.isDirty())) {
-            if (outputStream != null)
-                outputStream.flush();
-            stream = openInputStream();
-            inputStream = new WeakReference<BufferInputStream>(stream);
+    protected AsynchronousFileChannelInputStream takeInputStream(long position) throws IOException {
+        // Need to store all objects currently in the store buffer, so that they are visible to the input stream
+        if (outputStream != null && outputStream.isDirty()) {
+            outputStream.flush();
         }
 
-        stream.setPosition(position);
-        return stream;
+        // Take one stream from the queue, wait if there are none
+        AsynchronousFileChannelInputStream stream;
+        try {
+            stream = inputStreams == null ? null : inputStreams.takeFirst().get();
+        } catch (InterruptedException e) {
+            throw new InterruptedIOException(e.getMessage());
+        }
+
+        // Set position and return the stream
+        try {
+            // If the stream is not initialized (due to the soft reference), prepare it
+            if (stream == null)
+                stream = openInputStream();
+
+            stream.setPosition(position);
+            return stream;
+        } catch (IOException | RuntimeException e) {
+            // Return an empty placeholder into the queue on error
+            inputStreams.offer(new SoftReference<AsynchronousFileChannelInputStream>(null));
+            throw e;
+        }
+    }
+
+    /**
+     * Return the taken stream back into the waiting queue.
+     * @param stream the stream to return
+     * @see #takeInputStream(long)
+     */
+    protected void returnInputStream(AsynchronousFileChannelInputStream stream) {
+        inputStreams.offerFirst(new SoftReference<>(stream));
     }
 
     /**
@@ -601,7 +680,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             writeHeader(getFileChannel(), startPosition, 0);
 
         // Open output stream
-        outputStream = new FileChannelOutputStream(Math.abs(bufferSize), bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
+        outputStream = new AsynchronousFileChannelOutputStream(Math.abs(bufferSize), bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
         outputStream.setPosition(startPosition + headerSize + fileOccupation);
     }
 
@@ -611,7 +690,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @return the current file channel
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected final FileChannel getFileChannel() throws IOException {
+    protected final AsynchronousFileChannel getFileChannel() throws IOException {
         if (fileChannel != null)
             return fileChannel;
 
@@ -620,7 +699,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
             boolean fileExists = file.length() > startPosition;
 
             // Open the channel (if the file does not exist and readonly is true, IOException is thrown, otherwise the file is created)
-            fileChannel = new RandomAccessFile(file, readonly?"r":"rw").getChannel();
+            fileChannel = openFileChannel(file, readonly, inputStreamCount);
+
+            // Create thread buffer placeholders
+            inputStreams = new LinkedBlockingDeque<>(inputStreamCount);
+            for (int i = 0; i < inputStreamCount; i++) {
+                inputStreams.add(new SoftReference<AsynchronousFileChannelInputStream>(null));
+            }
 
             // Read the occupation and number of objects
             if (fileExists) {
@@ -640,7 +725,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     /**
      * Flushes this storage and forces any buffered data to be written out.
-     * 
+     *
      * @param syncPhysical if <tt>true</tt> then also the file is flushed
      *          to be sure the data are really written to disk
      * @throws IOException if there was an I/O error
@@ -649,7 +734,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         if (outputStream != null) {
             if (outputStream.isDirty())
                 synchronized (this) {
-                    inputStream = null;
+                    for (SoftReference<?> inputStreamRef : inputStreams) {
+                        inputStreamRef.clear();
+                    }
                     outputStream.flush();
                 }
             if (syncPhysical)
@@ -681,35 +768,6 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
         }
     }
 
-    /**
-     * Internal class that provides an implementation of the {@link Lock} interface.
-     */
-    private class DiskStorageLock implements Lock {
-        /** Locking reference on the buffered data */
-        private final BufferInputStream streamReference;
-
-        /**
-         * Creates a new instance of DiskStorageLock.
-         * @throws IOException if there was an error acquiring the buffered data
-         */
-        private DiskStorageLock() throws IOException {
-            this.streamReference = getInputStream(startPosition + headerSize);
-        }
-
-        @Override
-        public void unlock() {
-        }
-    }
-
-    @Override
-    public synchronized Lock lock(boolean blocking) throws IllegalStateException {
-        try {
-            return new DiskStorageLock();
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot initialize disk storage search", e);
-        }
-    }
-
 
     //****************** Serialization ******************//
 
@@ -719,7 +777,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
      * @throws IOException if there was an I/O error during deserialization
      * @throws ClassNotFoundException if there was an unknown object in the stream
      */
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {        
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         // Proceed with standard deserialization first
         in.defaultReadObject();
 
@@ -778,7 +836,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
                 openOutputStream();
 
             // Remember address
-            LongAddress<T> address = new LongAddress<T>(this, outputStream.getPosition());
+            LongAddress<T> address = new LongAddress<>(this, outputStream.getPosition());
 
             // Write object
             fileOccupation += serializator.write(outputStream, object);
@@ -798,7 +856,12 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     public synchronized void remove(long position) throws BucketStorageException {
         try {
             // Remove the object at given position - the size of the object is retrieved by the skip
-            remove(position, serializator.skipObject(getInputStream(position), false));
+            AsynchronousFileChannelInputStream stream = takeInputStream(position);
+            try {
+                remove(position, serializator.skipObject(stream, false));
+            } finally {
+                returnInputStream(stream);
+            }
         } catch (IOException e) {
             throw new StorageFailureException("Disk storage cannot remove object from position " + position, e);
         }
@@ -838,11 +901,115 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
     }
 
     @Override
-    public synchronized T read(long position) throws BucketStorageException {
+    public T read(long position) throws BucketStorageException {
         try {
-            return serializator.readObject(getInputStream(position), storedObjectsClass);
+            AsynchronousFileChannelInputStream stream = takeInputStream(position);
+            try {
+                return serializator.readObject(stream, storedObjectsClass);
+            } finally {
+                returnInputStream(stream);
+            }
         } catch (IOException e) {
             throw new StorageFailureException("Disk storage cannot read object from position " + position, e);
+        }
+    }
+
+    /**
+     * Read multiple objects asynchronously stored at the specified addresses in this storage.
+     * Note that the method returns immediately and the read is started in the asynchronous threads.
+     * The iterator will block until some objects are provided by the asynchronous read.
+     * The objects in the iterator <em>will not</em> be necessarily returned in the order
+     * of the given positions. If there is an I/O error during the asynchronous read,
+     * the iterator will thrown {@link IllegalStateException} exception with the encapsulated error.
+     *
+     * @param positions the addresses of the objects to read
+     * @return a blocking iterator of the objects retrieved
+     */
+    public Iterator<T> read(long... positions) {
+        return new AsyncReadIterator(positions);
+    }
+
+    /**
+     * Internal class implementing the asynchronous read iterator.
+     * @see #read(long[])
+     */
+    private class AsyncReadIterator extends Thread implements Iterator<T>, AsynchronousFileChannelInputStream.AsynchronousReadCallback {
+        /** Array of positions in the storage from which to read the objects */
+        private final long[] positions;
+        /** Internal queue used for storing the retrieved objects */
+        private final BlockingQueue<T> queue;
+        /** Number of objects returned by the iterator so far */
+        private int returnedCount;
+        /** Asynchronous operation exception that is returned in nearest call to {@link #next()} */
+        private Throwable exc;
+
+        /**
+         * Creates a new asynchronous read iterator.
+         * @param positions the array of positions in the storage from which to read the objects
+         */
+        @SuppressWarnings("CallToThreadStartDuringObjectConstruction")
+        private AsyncReadIterator(long... positions) {
+            this.positions = positions;
+            this.queue = new ArrayBlockingQueue<>(positions.length);
+            start();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return returnedCount < positions.length;
+        }
+
+        @Override
+        public T next() throws IllegalStateException, NoSuchElementException {
+            if (exc != null)
+                throw new IllegalStateException("There was an error in asynchronous reading: " + exc, exc);
+            if (!hasNext())
+                throw new NoSuchElementException();
+            try {
+                T ret = queue.take();
+                returnedCount++;
+                return ret;
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("Interrupted during waiting for another object to be asynchronously read", e);
+            }
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("Asynchronous read iterator cannot remove objects");
+        }
+
+        @Override
+        public void run() {
+            for (long position : positions) {
+                try {
+                    // Takend input stream is returned in the complete/fail handler
+                    takeInputStream(position).readAsynchronously(this);
+                } catch (IOException e) {
+                    if (this.exc == null)
+                        this.exc = e;
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public void completed(AsynchronousFileChannelInputStream input) {
+            try {
+                queue.add(serializator.readObject(input, storedObjectsClass));
+            } catch (IOException e) {
+                if (this.exc == null)
+                    this.exc = e;
+            } finally {
+                returnInputStream(input);
+            }
+        }
+
+        @Override
+        public void failed(AsynchronousFileChannelInputStream input, Throwable exc) {
+            if (this.exc == null)
+                this.exc = exc;
+            returnInputStream(input);
         }
     }
 
@@ -856,29 +1023,28 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
     @Override
     public LongStorageSearch<T> search() throws IllegalStateException {
-        return new DiskStorageSearch<Object>(null, Collections.emptyList());
+        return new DiskStorageSearch<>(null, Collections.emptyList());
     }
 
     @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, Collection<? extends C> keys) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, keys);
+        return new DiskStorageSearch<>(comparator, keys);
     }
 
     @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C key) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, Collections.singletonList(key));
+        return new DiskStorageSearch<>(comparator, Collections.singletonList(key));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <C> LongStorageSearch<T> search(IndexComparator<? super C, ? super T> comparator, C from, C to) throws IllegalStateException {
-        return new DiskStorageSearch<C>(comparator, from, to);
+        return new DiskStorageSearch<>(comparator, from, to);
     }
 
     /**
-     * Implements the basic search in the memory storage.
+     * Implements the basic search in the disk storage.
      * All objects in the storage are searched from the first one to the last.
-     * 
+     *
      * @param <C> the type the boundaries used by the search
      */
     private class DiskStorageSearch<C> extends AbstractSearch<C, T> implements LongStorageSearch<T> {
@@ -949,7 +1115,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Lockable, Serializ
 
         @Override
         public LongAddress<T> getCurrentObjectAddress() {
-            return new LongAddress<T>(DiskStorage.this, getCurrentObjectLongAddress());
+            return new LongAddress<>(DiskStorage.this, getCurrentObjectLongAddress());
         }
 
         @Override
