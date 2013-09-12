@@ -68,7 +68,7 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @throws IOException if there was a problem opening or creating the bucket file
      */
     public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file) throws IOException {
-        this(capacity, softCapacity, lowOccupation, file, 16*1024, false, false, new MultiClassSerializator<LocalAbstractObject>(LocalAbstractObject.class));
+        this(capacity, softCapacity, lowOccupation, file, 0, false, 0, new MultiClassSerializator<>(LocalAbstractObject.class));
     }
 
     /**
@@ -81,13 +81,13 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
      * @param file the file where the bucket will be stored
      * @param bufferSize the size of the buffer used for I/O operations
      * @param directBuffers flag whether to use the {@link java.nio.ByteBuffer#allocateDirect(int) direct buffers}
-     * @param memoryMap flag whether to use memory-mapped I/O
+     * @param asyncThreads the maximal number of threads to use (for asynchronous reading)
      * @param serializator the {@link BinarySerializator binary serializator} used to store objects
      * @throws IOException if there was a problem opening or creating the bucket file
      */
-    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, boolean memoryMap, BinarySerializator serializator) throws IOException {
-        this(capacity, softCapacity, lowOccupation, true,  new DiskStorage<LocalAbstractObject>(
-                LocalAbstractObject.class, file, false, bufferSize, directBuffers, memoryMap, 0, capacity,
+    public DiskBlockBucket(long capacity, long softCapacity, long lowOccupation, File file, int bufferSize, boolean directBuffers, int asyncThreads, BinarySerializator serializator) throws IOException {
+        this(capacity, softCapacity, lowOccupation, true,  new DiskStorage<>(
+                LocalAbstractObject.class, file, false, bufferSize, directBuffers, asyncThreads, 0, capacity,
                 serializator
         ));
     }
