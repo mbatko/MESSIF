@@ -185,6 +185,7 @@ public class AsynchronousFileChannelInputStream extends BufferInputStream {
     private final CompletionHandler<Integer, AsynchronousReadCallback> readAsyncCompletionHandler = new CompletionHandler<Integer, AsynchronousReadCallback>() {
         @Override
         public void completed(Integer bytesRead, AsynchronousReadCallback handler) {
+            byteBuffer.flip();
             try {
                 if (bytesRead == -1)
                     throw new EOFException("Cannot read more bytes - end of file encountered");
@@ -196,6 +197,7 @@ public class AsynchronousFileChannelInputStream extends BufferInputStream {
         }
         @Override
         public void failed(Throwable exc, AsynchronousReadCallback handler) {
+            byteBuffer.flip();
             handler.failed(AsynchronousFileChannelInputStream.this, exc);
         }
     };
@@ -207,6 +209,7 @@ public class AsynchronousFileChannelInputStream extends BufferInputStream {
      * @throws NonReadableChannelException if this channel was not opened for reading
      */
     public void readAsynchronously(AsynchronousReadCallback handler) throws IllegalArgumentException, NonReadableChannelException {
+        byteBuffer.compact(); // Note that the buffer flipping is done in the completion handler
         fileChannel.read(byteBuffer, position, handler, readAsyncCompletionHandler);
     }
 
