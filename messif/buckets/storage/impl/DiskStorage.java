@@ -93,7 +93,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     /** Header flag constant for indication whether the file was correctly closed */
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
     /** Default number of asynchronous threads */
-    protected static final int DEFAULT_ASYNC_THREADS = 32;
+    protected static final int DEFAULT_ASYNC_THREADS = 64;
     /** Default size of the reading buffer */
     protected static final int DEFAULT_BUFFER_SIZE = 16*1024;
 
@@ -588,7 +588,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
         // Reopen file channel
         fileChannel.close();
-        fileChannel = openFileChannel(file, readonly, inputStreamCount);
+        fileChannel = openFileChannel(file, readonly, 0);
     }
 
     /**
@@ -655,7 +655,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
             return stream;
         } catch (IOException | RuntimeException e) {
             // Return an empty placeholder into the queue on error
-            inputStreams.offer(new SoftReference<AsynchronousFileChannelInputStream>(null));
+            if (inputStreams != null) {
+                inputStreams.offer(new SoftReference<AsynchronousFileChannelInputStream>(null));
+            }
             throw e;
         }
     }
@@ -699,7 +701,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
             boolean fileExists = file.length() > startPosition;
 
             // Open the channel (if the file does not exist and readonly is true, IOException is thrown, otherwise the file is created)
-            fileChannel = openFileChannel(file, readonly, inputStreamCount);
+            fileChannel = openFileChannel(file, readonly, 0);
 
             // Create thread buffer placeholders
             inputStreams = new LinkedBlockingDeque<>(inputStreamCount);
