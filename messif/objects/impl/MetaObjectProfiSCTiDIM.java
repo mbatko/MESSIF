@@ -338,6 +338,21 @@ public class MetaObjectProfiSCTiDIM extends MetaObjectProfiSCT {
             super(object);
         }
 
+        public MetaObjectProfiSCTiDIMWithTKStrings(MetaObjectProfiSCT object, boolean clearKeywords) {
+            super(object);
+            if (clearKeywords) {
+                String[] x = titleString.split("\\s+");
+                StringBuilder y = new StringBuilder();
+                for (int i = 0; i < x.length; i++) {
+                    if (i > 0)
+                        y.append(" AND ");
+                    y.append(x[i]);
+                }
+                titleString = y.toString();
+                keywordString = null;
+            }
+        }
+
         /**
          * Creates a new instance of MetaObjectProfiSCTiDIMWithTKStrings from the given {@link MetaObjectProfiSCT}.
          * The locator, the attributes and the encapsulated objects from the source {@code object} are
