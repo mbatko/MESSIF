@@ -118,7 +118,7 @@ public class TransactionObject<E> implements Serializable {
         
         synchronized (encapsulatedObject) {
             // Copy all the object attributes
-            for (Class objClass = encapsulatedObject.getClass(); objClass != null; objClass = objClass.getSuperclass())
+            for (Class<?> objClass = encapsulatedObject.getClass(); objClass != null; objClass = objClass.getSuperclass())
                 for (Field objField : objClass.getDeclaredFields())
                     storeField(objField, blocking);
         }
@@ -163,7 +163,7 @@ public class TransactionObject<E> implements Serializable {
                     restoreField(encapsulatedObject.getClass().getDeclaredField(fieldName));
                 } catch (NoSuchFieldException e) {} // ignore (cannot happen)
                 
-            for (TransactionObject tranField : objectEncapsulatedFieldsState.values())
+            for (TransactionObject<?> tranField : objectEncapsulatedFieldsState.values())
                 tranField.rollbackTransaction();
         }
         
@@ -196,7 +196,7 @@ public class TransactionObject<E> implements Serializable {
         // Check if primitive type
         if (!object.getClass().isPrimitive() && !object.getClass().equals(String.class)) {
             // Field is a regular object or array, encapsulate into transaction
-            TransactionObject obj = new TransactionObject<Object>(object);
+            TransactionObject<?> obj = new TransactionObject<Object>(object);
             obj.beginTransaction(blocking);
         } else if (!Modifier.isFinal(modifiers))// Ignore final primitive values
             objectPrimitiveFieldsState.put(name, object);
