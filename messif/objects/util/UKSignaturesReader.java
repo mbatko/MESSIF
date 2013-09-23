@@ -4,29 +4,26 @@
  */
 package messif.objects.util;
 
-import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import messif.objects.LocalAbstractObject;
+import messif.objects.impl.ObjectSignatureSQFD;
 import messif.objects.nio.FileChannelInputStream;
 
 /**
  *
  * @author xnovak8
  */
-public class UKSignaturesReader<E extends LocalAbstractObject> implements Iterator<E> {
+public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
 
     /** Default size of the reading buffer */
-    protected static final int DEFAULT_BUFFER_SIZE = 16*1024;
+    protected static final int DEFAULT_BUFFER_SIZE = 64*1024;
     
     //****************** Attributes ******************//
 
@@ -34,13 +31,11 @@ public class UKSignaturesReader<E extends LocalAbstractObject> implements Iterat
     protected FileChannel channel;
     /** Remembered name of opened file to provide reset capability */
     protected String fileName;
-    /** Instance of a next object. This is needed for implementing reading objects from a stream */
-    protected E nextObject;
-    /** Number of objects read from the stream */
-    protected int objectsRead;
 
     /** Header and directory reader */
     protected FileChannelInputStream headerReader;
+    /** Data reader */
+    protected FileChannelInputStream dataReader;
     
     
     public UKSignaturesReader(String fileName) {
@@ -51,6 +46,10 @@ public class UKSignaturesReader<E extends LocalAbstractObject> implements Iterat
             headerReader.order(ByteOrder.LITTLE_ENDIAN);
             
             readHeader(headerReader);
+            
+            long firstOffset = HEADER_SIZE_BYTES + mSignatures * 8;
+            dataReader = new FileChannelInputStream(DEFAULT_BUFFER_SIZE, false, channel, firstOffset, Long.MAX_VALUE);
+            dataReader.order(ByteOrder.LITTLE_ENDIAN);
         } catch (IOException ex) {
             Logger.getLogger(UKSignaturesReader.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -58,8 +57,13 @@ public class UKSignaturesReader<E extends LocalAbstractObject> implements Iterat
 
     //   ***************      The signatures setting      ************************* //
     
+    public static int HEADER_SIZE_BYTES = 16;
+    public static int MAGIC_NUMBER = 0x1beddeed;
     private int mDim;
-    
+    private int mTypeLength;
+    private int mSignatures;
+    private int mMinSigLen;
+    private int mMaxSigLen;
     
     /**
      * Structure of the head should be:
@@ -72,20 +76,62 @@ public class UKSignaturesReader<E extends LocalAbstractObject> implements Iterat
      */
     protected final void readHeader(FileChannelInputStream header) throws IOException {
         ByteBuffer buffer = header.readInput(16);
-        if (buffer.getInt() != 0x1beddeed) {
-            throw new IOException("The first 4 bytes (Little endian) are expected to be a magic number '0x1beddeed'");
+        if (buffer.getInt() != MAGIC_NUMBER) {
+            throw new IOException("The first 4 bytes (Little endian) are expected to be a magic number '" + MAGIC_NUMBER + "'");
         }
         mDim = buffer.getShort();
-        System.out.println("dimensionality is " + mDim);
-    }
-    
-    
-    public boolean hasNext() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        mTypeLength = buffer.getShort();
+        mSignatures = buffer.getInt();
+        mMinSigLen = buffer.getShort();
+        mMaxSigLen = buffer.getShort();
     }
 
-    public E next() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    
+    /** Instance of a next object. This is needed for implementing reading objects from a stream */
+    protected ObjectSignatureSQFD nextObject;
+    /** Number of objects read from the stream */
+    protected int objectsRead;
+    /** Offset of the previously read object */
+    protected long previousOffset = 0L;
+    
+    protected ObjectSignatureSQFD readNextObject() throws IOException {
+        long nextObjectOffset = headerReader.readInput(8).getLong();
+        int sizeOfNextSignature = (int) (nextObjectOffset - previousOffset);
+        previousOffset = nextObjectOffset;
+        
+        int dataSize = (mDim + 1) * sizeOfNextSignature;
+        ByteBuffer dataBuffer = dataReader.readInput(dataSize * mTypeLength);
+
+        float [] nextData = new float [dataSize];        
+        for (int i = 0; i < dataSize; i++) {
+            nextData [i] = dataBuffer.getFloat();
+        }
+        return new ObjectSignatureSQFD(sizeOfNextSignature, mDim, nextData);
+    }
+    
+    public boolean hasNext() {
+        if (nextObject != null) {
+            return true;
+        }
+        if (objectsRead >= mSignatures) {
+            return false;
+        }
+        try {
+            nextObject = readNextObject();
+            objectsRead ++;
+            return true;
+        } catch (IOException ex) {
+            Logger.getLogger(UKSignaturesReader.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+    }
+
+    public ObjectSignatureSQFD next() {
+        try {
+            return nextObject;
+        } finally {
+            nextObject = null;
+        }
     }
 
     public void remove() {
