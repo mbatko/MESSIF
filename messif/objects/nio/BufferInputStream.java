@@ -20,6 +20,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 
@@ -121,6 +122,29 @@ public class BufferInputStream extends InputStream implements BinaryInput {
         return byteBuffer.limit();
     }
 
+    /**
+     * Retrieves the byte order of the encapsulated buffer.
+     *
+     * <p> The byte order is used when reading or writing multibyte values, and
+     * when creating buffers that are views of this byte buffer.  The order of
+     * a newly-created byte buffer is always {@link ByteOrder#BIG_ENDIAN
+     * BIG_ENDIAN}.  </p>
+     *
+     * @return the byte order of the encapsulated buffer
+     */
+    public final ByteOrder order() {
+        return byteBuffer.order();
+    }
+
+    /**
+     * Modifies the encapsulated buffer's byte order.
+     * @param  bo The new byte order, either {@link ByteOrder#BIG_ENDIAN BIG_ENDIAN} 
+     *   or {@link ByteOrder#LITTLE_ENDIAN LITTLE_ENDIAN}
+     * @return  The encapsulated buffer
+     */
+    public final ByteBuffer order(ByteOrder bo) {
+        return byteBuffer.order(bo);
+    }        
 
     //****************** Implementation of InputStream ******************//
 
