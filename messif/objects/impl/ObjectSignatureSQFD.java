@@ -12,10 +12,11 @@ import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * First version, just VB code rewritten into JAVA
- * @author Andreas, nevelik@gmail.com
+ * Signatures 
+ *
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFloatSQFDist extends ObjectFloatVector {
+public class ObjectSignatureSQFD extends ObjectFloatVector {
     
     /** Class id for serialization. */
     private static final long serialVersionUID = 1021002L;
@@ -49,28 +50,28 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     /**
      * Weights for which the distance was partially precomputed.
      */
-    protected float[] precomputedWeights = defaultWeights;
+    protected float[] precomputedWeights = null;
 
     
     //****************** Constructors ******************//
 
-    public ObjectFloatSQFDist(float[] data) {
+    public ObjectSignatureSQFD(float[] data) {
         super(data);
         this.sumOfWeights = calculateSumOfWeights();
         precomputeSelfDistance();   
     }
 
-    public ObjectFloatSQFDist(String locatorURI, float[] data) {
+    public ObjectSignatureSQFD(String locatorURI, float[] data) {
         super(locatorURI, data);
         this.sumOfWeights = calculateSumOfWeights();
         precomputeSelfDistance();   
     }
 
-    public ObjectFloatSQFDist(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+    public ObjectSignatureSQFD(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
         this(stream, true);
     }
 
-    public ObjectFloatSQFDist(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
+    public ObjectSignatureSQFD(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
         super(stream);
         this.sumOfWeights = calculateSumOfWeights();
         if (precomputeSelfDistance) {
@@ -78,7 +79,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         }
     }
     
-    protected ObjectFloatSQFDist(BinaryInput input, BinarySerializator serializator) throws IOException {
+    protected ObjectSignatureSQFD(BinaryInput input, BinarySerializator serializator) throws IOException {
         super(input, serializator);
         this.sumOfWeights = calculateSumOfWeights();
         precomputeSelfDistance();
@@ -165,10 +166,14 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         return defaultAlpha;
     }
 
-    public float[] getWeights() {
-        return defaultWeights.clone();
+    protected float[] getWeights() {
+        return defaultWeights;
     }
 
+    public float[] getWeightsClone() {
+        return defaultWeights.clone();
+    }
+    
     @Override
     public float getMaxDistance() {
         return 1f;
@@ -178,7 +183,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        ObjectFloatSQFDist other = (ObjectFloatSQFDist)obj;
+        ObjectSignatureSQFD other = (ObjectSignatureSQFD)obj;
         float[] weights = getWeights();
         float alpha = getAlpha();
         
@@ -198,8 +203,8 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         // from symmetry of the matrix use - 2 * wi * aij * wj
         result -= 2 * computePartialResult(other, this, weights, alpha) ;
                 
-        if (result < 0.00000000001) 
-            return 0; // for rounding mistakes
+        if (result < 0.0000000001f) 
+            return 0f; // for rounding mistakes
         return (float)Math.sqrt(result);
     }
 
@@ -224,12 +229,12 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
      * @param alpha parameter of the Gaussian distance/similarity conversion
      * @return partial result of multiplication of corresponding parts of the vectors and matrix
      */
-    protected static float computePartialResult(ObjectFloatSQFDist obj1, ObjectFloatSQFDist obj2, float[] weights, float alpha) {
+    protected static float computePartialResult(ObjectSignatureSQFD obj1, ObjectSignatureSQFD obj2, float[] weights, float alpha) {
         float retVal = 0;
         
         int d = obj1.getClusterDimension() + 1;
         float div = obj1.getSumOfWeights() * obj2.getSumOfWeights();
-        double r = 0;
+        double r;
         for (int i=0; i < obj1.getClusterCount(); i++) {
             for (int j=0; j < obj2.getClusterCount(); j++) {
                 r = 0;
@@ -247,7 +252,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     /**
      * Object that allows to set weights and alpha for SQFD object.
      */
-    public static class ObjectFloatSQFDistWeights extends ObjectFloatSQFDist {
+    public static class ObjectFloatSQFDistWeights extends ObjectSignatureSQFD {
         private static final long serialVersionUID = 1L;
         private final float[] weights ;
         private final float alpha;
@@ -294,7 +299,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
      * Special extension of the {@link ObjectFloatSQFDist} that reads the original CSV data format.
      * It also allows to set the alpha and weights in a static manner, but this MUST be set prior to indexing!
      */
-    public static class ObjectFloatSQFDistOrigData extends ObjectFloatSQFDist {
+    public static class ObjectFloatSQFDistOrigData extends ObjectSignatureSQFD {
         private static final long serialVersionUID = 1L;
         private static float[] weights = defaultWeights;
         private static float alpha = defaultAlpha;
@@ -324,10 +329,15 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         }
 
         @Override
-        public float[] getWeights() {
-            return weights.clone();
+        protected float[] getWeights() {
+            return weights;
         }
 
+        @Override
+        public float[] getWeightsClone() {
+            return weights.clone();
+        }
+        
         public static void setWeights(float[] weights) {
             ObjectFloatSQFDistOrigData.weights = weights.clone();
         }
