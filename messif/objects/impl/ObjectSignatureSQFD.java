@@ -9,13 +9,15 @@ import java.util.Map;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
+import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
 
 /**
- * First version, just VB code rewritten into JAVA
- * @author Andreas, nevelik@gmail.com
+ * Signatures 
+ *
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ObjectFloatSQFDist extends ObjectFloatVector {
+public class ObjectSignatureSQFD extends ObjectFloatVector {
     
     /** Class id for serialization. */
     private static final long serialVersionUID = 1021002L;
@@ -34,7 +36,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     /**
      * Sum of weights needed for every distance computation
      */
-    private final float sumOfWeights;
+    private transient final float sumOfWeights;
     
     /**
      * Partially precomputed distance function (FS1)
@@ -49,40 +51,47 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     /**
      * Weights for which the distance was partially precomputed.
      */
-    protected float[] precomputedWeights = defaultWeights;
+    protected float[] precomputedWeights = null;
 
+    /**
+     * Number of clusters.
+     */
+    protected final int nClusters;
+    
+    /**
+     * Dimensionality of the clusters
+     */
+    protected final int nDim;
     
     //****************** Constructors ******************//
 
-    public ObjectFloatSQFDist(float[] data) {
+    public ObjectSignatureSQFD(int nClusters, int nDim, float[] data) {
         super(data);
+        this.nClusters = nClusters;
+        this.nDim = nDim;
         this.sumOfWeights = calculateSumOfWeights();
         precomputeSelfDistance();   
     }
 
-    public ObjectFloatSQFDist(String locatorURI, float[] data) {
+    public ObjectSignatureSQFD(String locatorURI, int nClusters, int nDim, float[] data) {
         super(locatorURI, data);
+        this.nClusters = nClusters;
+        this.nDim = nDim;
         this.sumOfWeights = calculateSumOfWeights();
         precomputeSelfDistance();   
     }
 
-    public ObjectFloatSQFDist(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
-        this(stream, true);
-    }
-
-    public ObjectFloatSQFDist(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
-        super(stream);
-        this.sumOfWeights = calculateSumOfWeights();
-        if (precomputeSelfDistance) {
-            precomputeSelfDistance();
-        }
-    }
-    
-    protected ObjectFloatSQFDist(BinaryInput input, BinarySerializator serializator) throws IOException {
-        super(input, serializator);
-        this.sumOfWeights = calculateSumOfWeights();
-        precomputeSelfDistance();
-    }
+//    public ObjectSignatureSQFD(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+//        this(stream, true);
+//    }
+//
+//    public ObjectSignatureSQFD(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
+//        super(stream);
+//        this.sumOfWeights = calculateSumOfWeights();
+//        if (precomputeSelfDistance) {
+//            precomputeSelfDistance();
+//        }
+//    }
 
     /**
      * Compute and store self-distance (for default alpha and weights).
@@ -115,7 +124,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         float retVal = 0f;
         int d = getClusterDimension() + 1;
         for (int i = 0; i < getClusterCount(); i++) {
-            retVal += data[2 + i * d];
+            retVal += data[i * d];
         }
         return retVal;
     }
@@ -123,11 +132,11 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
     //****************** Attribute access methods ******************//
 
     public int getClusterCount() {
-        return (int)data[0];
+        return nClusters;
     }
 
     public int getClusterDimension() {
-        return (int)data[1];
+        return nDim;
     }
 
     public float getPrecomputedAlpha() {
@@ -165,10 +174,14 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         return defaultAlpha;
     }
 
-    public float[] getWeights() {
-        return defaultWeights.clone();
+    protected float[] getWeights() {
+        return defaultWeights;
     }
 
+    public float[] getWeightsClone() {
+        return defaultWeights.clone();
+    }
+    
     @Override
     public float getMaxDistance() {
         return 1f;
@@ -178,7 +191,7 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
 
     @Override
     protected float getDistanceImpl(LocalAbstractObject obj, float distThreshold) {
-        ObjectFloatSQFDist other = (ObjectFloatSQFDist)obj;
+        ObjectSignatureSQFD other = (ObjectSignatureSQFD)obj;
         float[] weights = getWeights();
         float alpha = getAlpha();
         
@@ -198,8 +211,8 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
         // from symmetry of the matrix use - 2 * wi * aij * wj
         result -= 2 * computePartialResult(other, this, weights, alpha) ;
                 
-        if (result < 0.00000000001) 
-            return 0; // for rounding mistakes
+        if (result < 0.0000000001f) 
+            return 0f; // for rounding mistakes
         return (float)Math.sqrt(result);
     }
 
@@ -224,112 +237,52 @@ public class ObjectFloatSQFDist extends ObjectFloatVector {
      * @param alpha parameter of the Gaussian distance/similarity conversion
      * @return partial result of multiplication of corresponding parts of the vectors and matrix
      */
-    protected static float computePartialResult(ObjectFloatSQFDist obj1, ObjectFloatSQFDist obj2, float[] weights, float alpha) {
+    protected static float computePartialResult(ObjectSignatureSQFD obj1, ObjectSignatureSQFD obj2, float[] weights, float alpha) {
         float retVal = 0;
         
         int d = obj1.getClusterDimension() + 1;
         float div = obj1.getSumOfWeights() * obj2.getSumOfWeights();
-        double r = 0;
+        double r;
         for (int i=0; i < obj1.getClusterCount(); i++) {
             for (int j=0; j < obj2.getClusterCount(); j++) {
                 r = 0;
                 for (int k=0; k < (d-1); k++) {
-                    float diff = obj1.data[3 + i * d + k] - obj2.data[3 + j * d + k];
+                    float diff = obj1.data[1 + i * d + k] - obj2.data[1 + j * d + k];
                     r += weights[k] * diff * diff;
                 }
                 r = Math.exp((-alpha) * r);
-                retVal += obj1.data[2 + i * d] * obj2.data[2 + j * d] * r / div;
+                retVal += obj1.data[i * d] * obj2.data[j * d] * r / div;
             }
         }
         return retVal;
     }
+
     
-    /**
-     * Object that allows to set weights and alpha for SQFD object.
-     */
-    public static class ObjectFloatSQFDistWeights extends ObjectFloatSQFDist {
-        private static final long serialVersionUID = 1L;
-        private final float[] weights ;
-        private final float alpha;
+    
+    protected ObjectSignatureSQFD(BinaryInput input, BinarySerializator serializator) throws IOException {
+        super(input, serializator);
+        this.nClusters = serializator.readInt(input);
+        this.nDim = serializator.readInt(input);
+        this.precomputedDist = serializator.readFloat(input);
+        this.precomputedAlpha = serializator.readFloat(input);
+        this.precomputedWeights = serializator.readFloatArray(input);
+        this.sumOfWeights = calculateSumOfWeights();
+    }
+    
 
-        public ObjectFloatSQFDistWeights(BufferedReader stream, float[] weights, float alpha) throws EOFException, IOException {
-            super(stream, false);
-            this.weights = weights.clone();
-            this.alpha = alpha;
-        }
-        
-        public ObjectFloatSQFDistWeights(ObjectFloatVector object, float[] weights, float alpha) {
-            super(object.data);
-            this.weights = weights.clone();
-            this.alpha = alpha;
-        }
-
-        @Override
-        public float getAlpha() {
-            return alpha;
-        }
-
-        @Override
-        public float[] getWeights() {
-            return weights.clone();
-        }
-
+    @Override
+    public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
+        return super.binarySerialize(output, serializator)
+               + serializator.write(output, nClusters) + serializator.write(output, nDim)
+               + serializator.write(output, precomputedDist) + serializator.write(output, precomputedAlpha) + serializator.write(output, precomputedWeights) ;
     }
 
-    public static MetaObject replaceSQFDistObject(MetaObject object, String objectName, float[] weights, float alpha) {
-        if (!object.containsObject(objectName))
-            throw new IllegalArgumentException("Object '" + objectName + "' is not in " + object);
-        Map<String, LocalAbstractObject> objects = new HashMap<String, LocalAbstractObject>(object.getObjectMap());
-        objects.put(objectName, new ObjectFloatSQFDistWeights((ObjectFloatVector)objects.get(objectName), weights, alpha));
-        return new MetaObjectMap(object.getLocatorURI(), objects);
+    @Override
+    public int getBinarySize(BinarySerializator serializator) {
+        return  super.getBinarySize(serializator) + 
+               + serializator.getBinarySize(nClusters) + serializator.getBinarySize(nDim)
+               + serializator.getBinarySize(precomputedDist) + serializator.getBinarySize(precomputedAlpha) + serializator.getBinarySize(precomputedWeights) ;
     }
 
-    public static MetaObject replaceSQFDistObject(MetaObject object, String objectName, String weights, float alpha) throws EOFException {
-        if (weights == null || weights.isEmpty() || alpha == 0)
-            return object;
-        return replaceSQFDistObject(object, objectName, parseFloatVector(weights), alpha);
-    }
-
-    /**
-     * Special extension of the {@link ObjectFloatSQFDist} that reads the original CSV data format.
-     * It also allows to set the alpha and weights in a static manner, but this MUST be set prior to indexing!
-     */
-    public static class ObjectFloatSQFDistOrigData extends ObjectFloatSQFDist {
-        private static final long serialVersionUID = 1L;
-        private static float[] weights = defaultWeights;
-        private static float alpha = defaultAlpha;
-
-        public ObjectFloatSQFDistOrigData(BufferedReader stream) throws IOException {
-            this(parseStreamLine(stream));
-        }
-
-        private ObjectFloatSQFDistOrigData(String[] stringData) {
-            super(stringData[0], convertFloatVector(stringData, 1, stringData.length - 1));
-        }
-
-        private static String[] parseStreamLine(BufferedReader stream) throws IOException {
-            String line = stream.readLine();
-            if (line == null)
-                throw new EOFException();
-            return line.replaceAll(",(?=\\d)", ".").split(", ");
-        }
-
-        @Override
-        public float getAlpha() {
-            return alpha;
-        }
-
-        public static void setAlpha(float alpha) {
-            ObjectFloatSQFDistOrigData.alpha = alpha;
-        }
-
-        @Override
-        public float[] getWeights() {
-            return weights.clone();
-        }
-
-        public static void setWeights(float[] weights) {
-            ObjectFloatSQFDistOrigData.weights = weights.clone();
-        }
-    }
+    
 }
