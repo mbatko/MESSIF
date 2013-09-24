@@ -269,12 +269,12 @@ public class LuxandFaceKey extends FaceKey {
 
     @Override
     public int getWidth() {
-        return (int)(width * 0.88);
+        return width;
     }
 
     @Override
     public int getHeight() {
-        return (int)(width * 0.68 * 3f / 2f);
+        return width * 3 / 2;
     }
 
     @Override
