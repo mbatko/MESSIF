@@ -865,7 +865,7 @@ public abstract class Convert {
     public static <T, U extends T> T[] copyGenericArray(U[] original, int offset, int length, Class<T> componentType) throws NegativeArraySizeException {
         T[] copy = createGenericArray(componentType, length);
         if (original != null)
-            System.arraycopy(original, 0, copy, offset, Math.min(original.length - offset, length));
+            System.arraycopy(original, offset, copy, 0, length);
         return copy;
     }
 

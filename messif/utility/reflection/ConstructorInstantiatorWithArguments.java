@@ -105,7 +105,7 @@ public class ConstructorInstantiatorWithArguments<T> extends ConstructorInstanti
      * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
     public ConstructorInstantiatorWithArguments(Class<? extends T> objectClass, String[] arguments, int offset, int length, Map<String, Object> namedInstances) throws NoSuchInstantiatorException {
-        this(objectClass, Convert.copyGenericArray(arguments, offset, length, Object.class), namedInstances);
+        this(objectClass, true, namedInstances, Convert.copyGenericArray(arguments, offset, length, Object.class));
     }
 
     /**
