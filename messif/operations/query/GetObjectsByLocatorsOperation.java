@@ -16,14 +16,14 @@
  */
 package messif.operations.query;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
-import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.RankingSingleQueryOperation;
@@ -31,10 +31,10 @@ import messif.operations.RankingSingleQueryOperation;
 /**
  * This operation returns objects with given locators.
  * 
-  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
-  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
-  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
-*/
+ * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
+ * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
+ * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
+ */
 @AbstractOperation.OperationName("Get objects by locators")
 public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
     /** Class serial id for serialization */
@@ -43,7 +43,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
     //****************** Attributes ******************//
 
     /** The locators of the desired objects */
-    protected final Set<String> locators;
+    private Set<String> locators;
 
 
     //****************** Constructors ******************//
@@ -57,9 +57,9 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      * @param maxAnswerSize the limit for the number of objects kept in this operation's answer
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Answer type", "Limit for number of objects in answer"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerSize) {
+    public GetObjectsByLocatorsOperation(Iterable<?> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType, int maxAnswerSize) {
         super(queryObjectForDistances, answerType, maxAnswerSize);
-        this.locators = (locators == null)?new HashSet<String>():new HashSet<String>(locators);
+        this.locators = objectsToLocatorsCollection(locators);
     }
 
     /**
@@ -70,7 +70,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to", "Answer type"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType) {
+    public GetObjectsByLocatorsOperation(Iterable<?> locators, LocalAbstractObject queryObjectForDistances, AnswerType answerType) {
         this(locators, queryObjectForDistances, answerType, Integer.MAX_VALUE);
     }
 
@@ -81,7 +81,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      * @param queryObjectForDistances the query object to use for computing distances
      */
     @AbstractOperation.OperationConstructor({"The collection of locators", "The object to compute answer distances to"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators, LocalAbstractObject queryObjectForDistances) {
+    public GetObjectsByLocatorsOperation(Iterable<?> locators, LocalAbstractObject queryObjectForDistances) {
         this(locators, queryObjectForDistances, AnswerType.NODATA_OBJECTS, Integer.MAX_VALUE);
     }
 
@@ -90,7 +90,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      * @param locators the collection of locators to search for
      */
     @AbstractOperation.OperationConstructor({"The collection of locators"})
-    public GetObjectsByLocatorsOperation(Collection<String> locators) {
+    public GetObjectsByLocatorsOperation(Iterable<?> locators) {
         this(locators, null);
     }
 
@@ -130,6 +130,34 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      */
     public GetObjectsByLocatorsOperation(LocalAbstractObject queryObjectForDistances, int maxAnswerCount) {
         this(null, queryObjectForDistances, AnswerType.NODATA_OBJECTS, maxAnswerCount);
+    }
+
+
+    //****************** Locators conversion method ******************//
+
+    /**
+     * Converts a collection of objects (either {@link AbstractObject} or {@link String}s)
+     * into a collection of (their) locator URIs.
+     * Note that if the given collection is <tt>null</tt>, an empty set is returned.
+     * For a collection of {@link AbstractObject}s, the method {@link AbstractObject#getLocatorURI()}
+     * is used to extract the locator. Otherwise, the {@link Object#toString()} is
+     * used on the objects to obtain the locator.
+     *
+     * @param objects the iterator of objects to get the locators for
+     * @return a collection of locators from the given collection of objects
+     */
+    public static Set<String> objectsToLocatorsCollection(Iterable<?> objects) {
+        if (objects == null)
+            return Collections.emptySet();
+        Set<String> locators = new HashSet<String>();
+        for (Object object : objects) {
+            if (object instanceof AbstractObject) {
+                locators.add(((AbstractObject)object).getLocatorURI());
+            } else {
+                locators.add(object.toString());
+            }
+        }
+        return locators;
     }
 
 
@@ -183,10 +211,8 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
      * Replace the current locators of this query with the provided collection.
      * @param locators the new collection of locators
      */
-    public void setLocators(Collection<String> locators) {
-        this.locators.clear();
-        if (locators != null)
-            this.locators.addAll(locators);
+    public void setLocators(Iterable<?> locators) {
+        this.locators = objectsToLocatorsCollection(locators);
     }
 
     /**
@@ -239,22 +265,13 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
 
     //****************** Equality driven by operation data ******************//
 
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
     @Override
+    @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
     protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always DeleteOperation or its descendant, because it has only abstract ancestors
+        // The argument obj is always GetObjectsByLocatorsOperation or its descendant, because it has only abstract ancestors
         return locators.equals(((GetObjectsByLocatorsOperation)obj).locators);
     }
 
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
     @Override
     public int dataHashCode() {
         return locators.hashCode();

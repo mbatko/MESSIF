@@ -20,11 +20,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
-import messif.objects.LocalAbstractObject;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
 import messif.buckets.index.ModifiableIndex;
 import messif.buckets.storage.impl.DiskStorage;
+import messif.objects.LocalAbstractObject;
 import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.MultiClassSerializator;
 
@@ -47,13 +47,6 @@ import messif.objects.nio.MultiClassSerializator;
 public class DiskBlockBucket extends LocalBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
-
-    /** The prefix for auto-generated filenames */
-    protected static final String FILENAME_PREFIX = "disk_block_bucket_";
-
-    /** The suffix for auto-generated filenames */
-    protected static final String FILENAME_SUFFIX = ".dbb";
-
 
     //****************** Data storage ******************//
 
