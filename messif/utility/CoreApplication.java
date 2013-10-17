@@ -308,25 +308,70 @@ public class CoreApplication {
      * Returns the currently selected running algorithm.
      * @return the currently selected running algorithm
      */
-    protected final Algorithm getAlgorithm() {
+    Algorithm getAlgorithm() {
         return algorithm;
+    }
+
+    /**
+     * Returns the running algorithm with the specified sequence number.
+     * @param index the zero-based index of the running algorithm
+     * @return the running algorithm with the specified sequence number
+     * @throws IndexOutOfBoundsException if the specified index is not valid
+     */
+    Algorithm getAlgorithm(int index) throws IndexOutOfBoundsException {
+        return algorithms.get(index);
     }
 
     /**
      * Returns whether there is a running algorithm.
      * @return <tt>true</tt> if there is a running algorithm
      */
-    protected final boolean hasAlgorithm() {
+    boolean hasAlgorithm() {
+        return getAlgorithm() != null;
+    }
+
+    /**
+     * Returns the number of running algorithms.
+     * @return the number of running algorithms
+     */
+    int getAlgorithmCount() {
+        return algorithms.size();
+    }
+
+    /**
+     * Set the currently selected running algorithm.
+     * @param algorithm the currently selected running algorithm
+     * @return <tt>true</tt> if the current algorithm was set to a new value or <tt>false</tt> if the current algorithm is <tt>null</tt>
+     */
+    boolean setAlgorithm(Algorithm algorithm) {
+        this.algorithm = algorithm;
         return algorithm != null;
     }
 
     /**
      * Adds the given algorithm to the list of running algorithms and select it as the current running algorithm.
      * @param algorithm the algorithm to add
+     * @return
      */
-    void addAlgorithm(Algorithm algorithm) {
-        this.algorithm = algorithm;
+    boolean addAlgorithm(Algorithm algorithm) {
         this.algorithms.add(algorithm);
+        return setAlgorithm(algorithm);
+    }
+
+    /**
+     * Removes the given algorithm from the list of running algorithms.
+     * @param algorithm the algorithm to remove
+     * @return <tt>true</tt> if the algorithm was successfully removed
+     * @throws Throwable if there was an error finializing the algorithm
+     */
+    boolean removeAlgorithm(Algorithm algorithm) throws Throwable {
+        if (algorithm == null)
+            return false;
+        boolean ret = algorithms.remove(algorithm);
+        if (this.algorithm == algorithm) // If the currently selected algorithm is removed, set it to null (the equality by instance IS correct)
+            this.algorithm = null;
+        algorithm.finalize();
+        return ret;
     }
 
 
@@ -377,9 +422,7 @@ public class CoreApplication {
         Constructor<Algorithm>[] constructors = Algorithm.getAnnotatedConstructorsArray(algorithmClass);
         try {
             // Create a new instance of the algorithm
-            algorithm = ConstructorInstantiator.createInstanceWithStringArgs(constructors, args, 2, args.length - 1, namedInstances);
-            algorithms.add(algorithm);
-            return true;
+            return addAlgorithm(ConstructorInstantiator.createInstanceWithStringArgs(constructors, args, 2, args.length - 1, namedInstances));
         } catch (Exception e) {
             Throwable ex = e;
             while (ex instanceof InvocationTargetException)
@@ -415,10 +458,7 @@ public class CoreApplication {
 
         try {
             // Load algorithm from file
-            algorithm = Algorithm.restoreFromFile(args[1]);
-            algorithms.add(algorithm);
-
-            return true;
+            return addAlgorithm(Algorithm.restoreFromFile(args[1]));
         } catch (IOException e) {
             out.println(e.toString());
         } catch (ClassNotFoundException e) {
@@ -447,9 +487,10 @@ public class CoreApplication {
         }
 
         try {
-            if (algorithm != null) {
+            Algorithm alg = getAlgorithm();
+            if (alg != null) {
                 // Store algorithm to file
-                algorithm.storeToFile(args[1]);
+                alg.storeToFile(args[1]);
                 return true;
             } else out.println("No running algorithm is selected");
         } catch (IOException e) {
@@ -472,15 +513,11 @@ public class CoreApplication {
     @ExecutableMethod(description = "stop current algorithm", arguments = {})
     public boolean algorithmStop(PrintStream out, String... args) {
         try {
-            if (algorithm != null)
-                algorithm.finalize();
+            return removeAlgorithm(getAlgorithm());
         } catch (Throwable e) {
             out.println(e.toString());
-        } finally {
-            algorithms.remove(algorithm);
-            algorithm = null;
+            return false;
         }
-        return true;
     }
 
     /**
@@ -496,15 +533,13 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "stop all algorithms", arguments = {})
     public boolean algorithmStopAll(PrintStream out, String... args) {
-        for (Algorithm alg : algorithms)
+        for (Algorithm alg : algorithms) {
             try {
-                if (alg != null)
-                    alg.finalize();
+                removeAlgorithm(alg);
             } catch (Throwable e) {
                 out.println(e.toString());
             }
-        algorithm = null;
-        algorithms.clear();
+        }
         return true;
     }
 
@@ -522,8 +557,9 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "show info about current algorithm", arguments = {})
     public boolean algorithmInfo(PrintStream out, String... args) {
-        if (algorithm != null) {
-            out.println(algorithm.toString());
+        Algorithm alg = getAlgorithm();
+        if (alg != null) {
+            out.println(alg.toString());
             return true;
         } else out.println("No running algorithm is selected");
         return false;
@@ -573,8 +609,7 @@ public class CoreApplication {
     @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select"})
     public boolean algorithmSelect(PrintStream out, String... args) {
         try {
-            algorithm = algorithms.get(Integer.parseInt(args[1]));
-            return true;
+            return setAlgorithm(algorithms.get(Integer.parseInt(args[1])));
         } catch (IndexOutOfBoundsException ignore) {
         } catch (NumberFormatException ignore) {
         }
@@ -611,7 +646,7 @@ public class CoreApplication {
     public boolean algorithmToNamedInstance(PrintStream out, String... args) {
         Object value;
         if (args.length <= 2) {
-            value = algorithm;
+            value = getAlgorithm();
         } else if (args[2].equalsIgnoreCase("all")) {
             value = algorithms.toArray(new Algorithm[algorithms.size()]);
         } else {
@@ -646,13 +681,14 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "show all operations supported by current algorithm", arguments = {})
     public boolean algorithmSupportedOperations(PrintStream out, String... args) {
-        if (algorithm == null) {
+        Algorithm alg = getAlgorithm();
+        if (alg == null) {
             out.println("No running algorithm is selected");
             return false;
         }
 
         out.println("---------------- Available operations ----------------");
-        for (Class<? extends AbstractOperation> opClass : algorithm.getSupportedOperations())
+        for (Class<? extends AbstractOperation> opClass : alg.getSupportedOperations())
             try {
                 out.println(AbstractOperation.getConstructorDescription(opClass));
             } catch (NoSuchMethodException ex) {
@@ -664,6 +700,24 @@ public class CoreApplication {
 
 
     //****************** Operation command functions ******************//
+
+    /**
+     * Returns the last executed operation.
+     * @return the last executed operation
+     */
+    AbstractOperation getLastOperation() {
+        return lastOperation;
+    }
+
+    /**
+     * Set the last executed operation.
+     * @param lastOperation the executed operation to set
+     * @return <tt>true</tt> if the operation was set to a new value or <tt>false</tt> if the operation is <tt>null</tt>
+     */
+    boolean setLastOperation(AbstractOperation lastOperation) {
+        this.lastOperation = lastOperation;
+        return lastOperation != null;
+    }
 
     /**
      * Creates an operation from the given parameters.
@@ -744,8 +798,7 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "prepare the specified operation", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationPrepare(PrintStream out, String... args) throws InvocationTargetException {
-        lastOperation = createOperation(out, args);
-        return lastOperation != null;
+        return setLastOperation(createOperation(out, args));
     }
 
     /**
@@ -772,7 +825,8 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "execute specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationExecute(PrintStream out, String... args) throws InvocationTargetException, AlgorithmMethodException {
-        if (algorithm == null) {
+        Algorithm alg = getAlgorithm();
+        if (alg == null) {
             out.println("No running algorithm is selected");
             return false;
         }
@@ -783,8 +837,7 @@ public class CoreApplication {
 
         try {
             // Execute operation
-            lastOperation = algorithm.setupStatsAndExecuteOperation(operation, bindOperationStatsRegexp);
-            return true;
+            return setLastOperation(alg.setupStatsAndExecuteOperation(operation, bindOperationStatsRegexp));
         } catch (NoSuchMethodException e) {
             out.println(e.getMessage());
             algorithmSupportedOperations(out, args);
@@ -820,7 +873,8 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "execute on background specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationBgExecute(PrintStream out, String... args) throws InvocationTargetException {       
-        if (algorithm == null) {
+        Algorithm alg = getAlgorithm();
+        if (alg == null) {
             out.println("No running algorithm is selected");
             return false;
         }
@@ -834,7 +888,7 @@ public class CoreApplication {
             OperationStatistics.resetLocalThreadStatistics();
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            algorithm.backgroundExecuteOperation(operation);
+            alg.backgroundExecuteOperation(operation);
             return true;
         } catch (NoSuchMethodException e) {
             out.println(e.getMessage());
@@ -861,15 +915,16 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "wait for all background operations", arguments = {})
     public boolean operationWaitBg(PrintStream out, String... args) throws AlgorithmMethodException {
-        if (algorithm == null) {
+        Algorithm alg = getAlgorithm();
+        if (alg == null) {
             out.println("No running algorithm is selected");
             return false;
         }
 
         try {
-            List<AbstractOperation> waitBackgroundExecuteOperation = algorithm.waitBackgroundExecuteOperation();
+            List<AbstractOperation> waitBackgroundExecuteOperation = alg.waitBackgroundExecuteOperation();
             if (! waitBackgroundExecuteOperation.isEmpty()) {
-                lastOperation = waitBackgroundExecuteOperation.get(0);
+                setLastOperation(waitBackgroundExecuteOperation.get(0));
             }
             if (bindOperationStatsRegexp != null)
                 OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
@@ -902,15 +957,15 @@ public class CoreApplication {
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
     public boolean operationExecuteAgain(PrintStream out, String... args) throws AlgorithmMethodException {
         try {
-            AbstractOperation operation = lastOperation;
-            if (algorithm != null && operation != null) {
+            Algorithm alg = getAlgorithm();
+            AbstractOperation op = getLastOperation();
+            if (alg != null && op != null) {
                 // Reset operation answer if requested
-                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && operation instanceof QueryOperation)
-                    ((QueryOperation)operation).resetAnswer();
+                if (args.length >= 2 && args[1].equalsIgnoreCase("true") && op instanceof QueryOperation)
+                    ((QueryOperation)op).resetAnswer();
 
                 // Execute operation
-                lastOperation = algorithm.setupStatsAndExecuteOperation(operation, bindOperationStatsRegexp);
-                return true;
+                return setLastOperation(alg.setupStatsAndExecuteOperation(op, bindOperationStatsRegexp));
             } else {
                 out.println("No operation has been executed yet. Use operationExecute method first.");
                 return false;
@@ -943,7 +998,7 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "show information about the last executed operation", arguments = {})
     public boolean operationInfo(PrintStream out, String... args) {
-        out.println(lastOperation);
+        out.println(getLastOperation());
         return true;
     }
 
@@ -963,7 +1018,8 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "show error code returned by the last executed operation", arguments = {})
     public boolean operationErrorCode(PrintStream out, String... args) {
-        out.println(lastOperation == null ? ErrorCode.NOT_SET : lastOperation.getErrorCode());
+        AbstractOperation op = getLastOperation();
+        out.println(op == null ? ErrorCode.NOT_SET : op.getErrorCode());
         return true;
     }
 
@@ -983,8 +1039,9 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "show number of objects returned by the last executed operation", arguments = {})
     public boolean operationObjectCount(PrintStream out, String... args) {
-        if (lastOperation instanceof QueryOperation) {
-            out.println(((QueryOperation<?>)lastOperation).getAnswerCount());
+        AbstractOperation op = getLastOperation();
+        if (op instanceof QueryOperation) {
+            out.println(((QueryOperation<?>)op).getAnswerCount());
         } else {
             out.println("Object count is available only for query operations");
         }
@@ -1009,11 +1066,12 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "show the locator of the last executed query operation", arguments = {})
     public boolean operationQueryObjectLocator(PrintStream out, String... args) {
-        if (!(lastOperation instanceof RankingSingleQueryOperation)) {
-            out.println("A single-query ranking operation needed, but have " + lastOperation == null ? null : lastOperation.getClass().getName());
+        AbstractOperation op = getLastOperation();
+        if (!(op instanceof RankingSingleQueryOperation)) {
+            out.println("A single-query ranking operation needed, but have " + op == null ? null : op.getClass().getName());
             return false;
         }
-        LocalAbstractObject queryObject = ((RankingSingleQueryOperation)lastOperation).getQueryObject();
+        LocalAbstractObject queryObject = ((RankingSingleQueryOperation)op).getQueryObject();
         String locator = queryObject == null ? null : queryObject.getLocatorURI();
         if (args.length > 1) {
             out.print(locator);
@@ -1045,7 +1103,8 @@ public class CoreApplication {
      */    
     @ExecutableMethod(description = "show an argument of the last executed operation", arguments = {"index of the argument to show"})
     public boolean operationArgument(PrintStream out, String... args) {
-        if (lastOperation == null) {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
             out.println("No operation has been executed yet. Use operationExecute method first.");
             return false;
         }
@@ -1059,13 +1118,13 @@ public class CoreApplication {
             return false;
         } catch (NumberFormatException ignore) {
         }
-        if (argIndex < 0 || argIndex >= lastOperation.getArgumentCount()) {
-            out.println("operationArgument index '" + args[1] + "' is not within <0;" + lastOperation.getArgumentCount() + ") bounds");
+        if (argIndex < 0 || argIndex >= op.getArgumentCount()) {
+            out.println("operationArgument index '" + args[1] + "' is not within <0;" + op.getArgumentCount() + ") bounds");
             return false;
         }
 
         // Display it
-        out.println(lastOperation.getArgument(argIndex));
+        out.println(op.getArgument(argIndex));
         return true;
     }
 
@@ -1095,7 +1154,8 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "show or set a parameter of the last executed operation", arguments = {"name of the parameter to show or set", "new value of the parameter (optional)", "class of the value being set (optional)"})
     public boolean operationParam(PrintStream out, String... args) {
-        if (lastOperation == null) {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
             out.println("No operation has been executed yet. Use operationExecute method first.");
             return false;
         }
@@ -1115,13 +1175,13 @@ public class CoreApplication {
             }
             // Convert the parameter and set it
             try {
-                lastOperation.setParameter(args[1], Convert.stringToType(args[2], parameterClass, namedInstances));
+                op.setParameter(args[1], Convert.stringToType(args[2], parameterClass, namedInstances));
             } catch (InstantiationException e) {
                 out.println("Cannot convert '" + args[2] + "' to " + parameterClass);
                 return false;
             }
         } else { // Show parameter
-            out.println(lastOperation.getParameter(args[1]));
+            out.println(op.getParameter(args[1]));
         }
         return true;
     }
@@ -1141,12 +1201,12 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "change the answer collection of the last executed operation", arguments = {"collection class", "arguments for constructor ..."})
     public boolean operationChangeAnswerCollection(PrintStream out, String... args) {
-        AbstractOperation operation = lastOperation;
-        if (operation == null) {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
             out.println("No operation has been executed yet");
             return false;
         }
-        if (!(operation instanceof RankingQueryOperation)) {
+        if (!(op instanceof RankingQueryOperation)) {
             out.println("Answer collection can be changed only for ranked results");
             return false;
         }
@@ -1163,7 +1223,7 @@ public class CoreApplication {
             RankedSortedCollection newAnswerCollection = ConstructorInstantiator.createInstanceWithStringArgs(Convert.getConstructors(clazz), args, 2, args.length - 1, namedInstances);
 
             // Set the instance in the operation
-            ((RankingQueryOperation)operation).setAnswerCollection(newAnswerCollection);
+            ((RankingQueryOperation)op).setAnswerCollection(newAnswerCollection);
 
             return true;
         } catch (ClassNotFoundException e) {
@@ -1196,12 +1256,12 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "change the answer collection of the last executed operation", arguments = {"collection instance"})
     public boolean operationChangeAnswerNamedInstance(PrintStream out, String... args) {
-        AbstractOperation operation = lastOperation;
-        if (operation == null) {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
             out.println("No operation has been executed yet");
             return false;
         }
-        if (!(operation instanceof RankingQueryOperation)) {
+        if (!(op instanceof RankingQueryOperation)) {
             out.println("Answer collection can be changed only for ranked results");
             return false;
         }
@@ -1214,7 +1274,7 @@ public class CoreApplication {
             out.println("Named instance '" + args[1] + "' is not collection for the ranking query");
             return false;
         }
-        ((RankingQueryOperation)operation).setAnswerCollection((RankedSortedCollection)newAnswerCollection);
+        ((RankingQueryOperation)op).setAnswerCollection((RankedSortedCollection)newAnswerCollection);
         return true;
     }
 
@@ -1240,8 +1300,8 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "process the last executed operation by a static method", arguments = {"object class", "method name", "additional arguments for the method (optional) ..."})
     public boolean operationProcessByMethod(PrintStream out, String... args) throws InvocationTargetException {
-        AbstractOperation operation = lastOperation;
-        if (operation == null) {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
             out.println("No operation has been executed yet");
             return false;
         }
@@ -1255,11 +1315,10 @@ public class CoreApplication {
             stringArgs[2] = null;
             // Note that the output is added as "out" named instance temporarily
             Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), true, 2, getExtendedNamedInstances("out", out, false));
-            methodArgs[0] = lastOperation;
+            methodArgs[0] = op;
 
             // Execute method
-            lastOperation = method.instantiate(methodArgs);
-            return true;
+            return setLastOperation(method.instantiate(methodArgs));
         } catch (ClassNotFoundException e) {
             out.println("Class not found: " + args[1]);
             return false;
@@ -1312,13 +1371,13 @@ public class CoreApplication {
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */  
     private boolean operationAnswer(Integer subAnswerIndex, PrintStream out, int argIndex, String[] args) {
-        QueryOperation<?> operation;
+        QueryOperation<?> op;
         try {
-            operation = (QueryOperation<?>)lastOperation;
+            op = (QueryOperation<?>)getLastOperation();
         } catch (ClassCastException ignore) {
-            operation = null;
+            op = null;
         }
-        if (operation == null) {
+        if (op == null) {
             out.println("The operationAnswer method must be called after some QueryOperation was executed");
             return false;
         }
@@ -1385,7 +1444,7 @@ public class CoreApplication {
         }
 
         // Display output
-        Iterator<?> answerIterator = subAnswerIndex != null ? operation.getSubAnswer(subAnswerIndex.intValue()) : operation.getAnswer();
+        Iterator<?> answerIterator = subAnswerIndex != null ? op.getSubAnswer(subAnswerIndex.intValue()) : op.getAnswer();
         while (skipCount-- > 0 && answerIterator.hasNext())
             answerIterator.next();
         while (answerIterator.hasNext() && maxCount-- > 0) {
@@ -1540,7 +1599,7 @@ public class CoreApplication {
     public boolean operationAnswerRawObjects(PrintStream out, String... args) throws IOException, ClassCastException {
         Iterator<AbstractObject> it;
         try {
-            it = ((QueryOperation<?>)lastOperation).getAnswerObjects();
+            it = ((QueryOperation<?>)getLastOperation()).getAnswerObjects();
         } catch (Exception ignore) {
             out.println("The operationAnswerRawObjects method must be called after some QueryOperation was executed");
             return false;
@@ -1574,7 +1633,8 @@ public class CoreApplication {
      */
     @ExecutableMethod(description = "directly execute a method of the running algorithm", arguments = {"method name", "arguments for the method ..."})
     public boolean methodExecute(PrintStream out, String... args) {
-        if (algorithm == null) {
+        Algorithm alg = getAlgorithm();
+        if (alg == null) {
             out.println("No running algorithm is selected");
             return false;
         }
@@ -1584,7 +1644,7 @@ public class CoreApplication {
         }
 
         try {
-            Object rtv = algorithm.executeMethodWithStringArguments(args, 1, namedInstances);
+            Object rtv = alg.executeMethodWithStringArguments(args, 1, namedInstances);
             if (rtv != null)
                 out.println(rtv);
             return true;
@@ -1758,8 +1818,9 @@ public class CoreApplication {
      */ 
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)", "separator appended after printed statistics (defaults to newline)"})
     public boolean statisticsLastOperation(PrintStream out, String... args) {
+        Algorithm alg = getAlgorithm();
         if (args.length >= 3) {
-            String stats = algorithm.getOperationStatistics().printStatistics(args[1], args[2]);
+            String stats = alg.getOperationStatistics().printStatistics(args[1], args[2]);
             if (args.length >= 4) {
                 out.print(stats);
                 out.print(args[3]);
@@ -1767,9 +1828,9 @@ public class CoreApplication {
                 out.println(stats);
             }
         } else if (args.length >= 2) {
-            out.println(algorithm.getOperationStatistics().printStatistics(args[1]));
+            out.println(alg.getOperationStatistics().printStatistics(args[1]));
         } else {
-            out.println(algorithm.getOperationStatistics().printStatistics());
+            out.println(alg.getOperationStatistics().printStatistics());
         }
         return true;
     }
@@ -2169,7 +2230,7 @@ public class CoreApplication {
         }
             
         try {
-            Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", lastOperation, true));
+            Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", getLastOperation(), true));
             namedInstances.put(args[2], instance);
             return true;
         } catch (NoSuchInstantiatorException e) {
@@ -2938,8 +2999,10 @@ public class CoreApplication {
                 if (assignOutput != null)
                     out.println("WARNING: Action '" + actionName + "' has both the 'outputFile' and the 'assign' parameters defined. Using outputFile.");
                 PrintStream outputStream = outputStreams.get(fileName);
-                if (outputStream == null) // Output stream not opened yet
-                    outputStreams.put(fileName, outputStream = new PrintStream(fileName));
+                if (outputStream == null) { // Output stream not opened yet
+                    outputStream = new PrintStream(fileName);
+                    outputStreams.put(fileName, outputStream);
+                }
                 return outputStream;
             } else {
                 // No output file specified, use either the assign output (if specified) or the current output
