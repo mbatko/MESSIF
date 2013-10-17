@@ -3,11 +3,9 @@ package messif.objects.impl;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializator;
@@ -20,15 +18,16 @@ import messif.objects.nio.BinarySerializator;
 public class ObjectSignatureSQFD extends ObjectFloatVector {
     
     /** Class id for serialization. */
-    private static final long serialVersionUID = 1021002L;
+    private static final long serialVersionUID = 1021003L;
 
+    
     //****************** Constants ******************//
 
     /** Vector of weights to be used for weighted L2 (distance between centroids) */
-    private static final float[] defaultWeights = { 1f, 1f, 1f, 1f, 1f, 1f, 1f }; //to change impact of X, Y, L, a, b
+    public static final float[] defaultWeights = { 1f, 1f, 1f, 1f, 1f, 1f, 1f }; //to change impact of X, Y, L, a, b
 
     /** parameter of the Gaussian distance/similarity conversion */
-    private static final float defaultAlpha = 1f;
+    public static final float defaultAlpha = 0.64f;
 
     
     //****************  Additional (precomputed) data  ***************//
@@ -81,18 +80,39 @@ public class ObjectSignatureSQFD extends ObjectFloatVector {
         precomputeSelfDistance();   
     }
 
-//    public ObjectSignatureSQFD(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
-//        this(stream, true);
-//    }
-//
-//    public ObjectSignatureSQFD(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
-//        super(stream);
-//        this.sumOfWeights = calculateSumOfWeights();
-//        if (precomputeSelfDistance) {
-//            precomputeSelfDistance();
-//        }
-//    }
+    public ObjectSignatureSQFD(BufferedReader stream) throws EOFException, IOException, NumberFormatException {
+        this(stream, true);
+    }
 
+    public ObjectSignatureSQFD(BufferedReader stream, boolean precomputeSelfDistance) throws EOFException, IOException, NumberFormatException {
+        super(stream);
+        String line = stream.readLine();
+        if (line == null)
+            throw new EOFException("EoF reached while initializing " + getClass().getName());
+        int [] numbers = ObjectIntVector.parseIntVector(line);
+        if (numbers.length != 2)
+            throw new NumberFormatException("expected two integers as 'nClusters nDim' but the line was: '" + line +"'");
+        this.nClusters = numbers[0];
+        this.nDim = numbers[1];
+        this.sumOfWeights = calculateSumOfWeights();
+        
+        if (precomputeSelfDistance) {
+            precomputeSelfDistance();
+        }
+    }
+
+    @Override
+    protected void writeData(OutputStream stream) throws IOException {
+        super.writeData(stream);
+        stream.write(String.valueOf(nClusters).getBytes());
+        stream.write(' ');
+        stream.write(String.valueOf(nDim).getBytes());
+        stream.write('\n');
+    }
+
+    
+    // ****************************     Precomputation of partial distances    ************************* //
+    
     /**
      * Compute and store self-distance (for default alpha and weights).
      * @return partial result of multiplication of corresponding parts of the vectors and matrix

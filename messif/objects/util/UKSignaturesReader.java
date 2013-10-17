@@ -36,9 +36,23 @@ public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
     protected FileChannelInputStream headerReader;
     /** Data reader */
     protected FileChannelInputStream dataReader;
+    /** Locator permutation reader */
+    protected FileChannelInputStream locatorReader;
     
-    
+    /**
+     * Construct the reader with name of the binary file with UK-formated signature data file.
+     * @param fileName UK-formated signature binary file
+     */
     public UKSignaturesReader(String fileName) {
+        this(fileName, null);
+    }
+    
+    /**
+     * Construct the reader with name of the binary file with UK-formated signature data file.
+     * @param fileName UK-formated signature binary file
+     * @param locatorMappingFile file with mapping between some original object locators and order of the objects in the data file
+     */
+    public UKSignaturesReader(String fileName, String locatorMappingFile) {
         try {
             this.fileName = fileName;
             this.channel = FileChannel.open(new File(fileName).toPath(), StandardOpenOption.READ);
@@ -50,6 +64,15 @@ public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
             long firstOffset = HEADER_SIZE_BYTES + mSignatures * 8;
             dataReader = new FileChannelInputStream(DEFAULT_BUFFER_SIZE, false, channel, firstOffset, Long.MAX_VALUE);
             dataReader.order(ByteOrder.LITTLE_ENDIAN);
+                        
+            if (locatorMappingFile != null) {
+                // soubor uchovavajici permutaci je trivialni binarni soubor obsahujici pouze sekveci uint32 cisel (opet v little endian).
+                // i-te cislo odpovida i-te signature v bsf souboru a pokud se to nekde nepokazilo, tohle cislo by melo byt ID prislusneho 
+                //    obrazku, tak jak jsme ho tahali z vaseho weboveho rozhranni.
+                FileChannel locatorChannel = FileChannel.open(new File(locatorMappingFile).toPath(), StandardOpenOption.READ);
+                locatorReader = new FileChannelInputStream(DEFAULT_BUFFER_SIZE, false, locatorChannel, 0L, Long.MAX_VALUE);
+                locatorReader.order(ByteOrder.LITTLE_ENDIAN);
+            }
         } catch (IOException ex) {
             Logger.getLogger(UKSignaturesReader.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -106,9 +129,16 @@ public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
         for (int i = 0; i < dataSize; i++) {
             nextData [i] = dataBuffer.getFloat();
         }
+        
+        // read the locator from the permutation file
+        if (locatorReader != null) {
+            String locator = String.valueOf(locatorReader.readInput(4).getInt());
+            return new ObjectSignatureSQFD(locator, sizeOfNextSignature, mDim, nextData);
+        }        
         return new ObjectSignatureSQFD(sizeOfNextSignature, mDim, nextData);
     }
     
+    @Override
     public boolean hasNext() {
         if (nextObject != null) {
             return true;
@@ -126,6 +156,7 @@ public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
         }
     }
 
+    @Override
     public ObjectSignatureSQFD next() {
         try {
             return nextObject;
@@ -134,9 +165,27 @@ public class UKSignaturesReader implements Iterator<ObjectSignatureSQFD> {
         }
     }
 
+    @Override
     public void remove() {
         throw new UnsupportedOperationException("The " + UKSignaturesReader.class.getName() + " is read-only"); 
     }
     
 
+    public static void readAndPrintObjects(int objsToRead, String signatureFile) {
+        readAndPrintObjects(objsToRead, signatureFile, null);
+    }
+    
+    public static void readAndPrintObjects(int objsToRead, String signatureFile, String permutationFile) {
+        UKSignaturesReader ukSignaturesReader = (permutationFile != null) ?
+                new UKSignaturesReader(signatureFile, permutationFile) : new UKSignaturesReader(signatureFile);
+        
+        try {
+            for (int i = 0; i < objsToRead && ukSignaturesReader.hasNext(); i++) {
+                ukSignaturesReader.next().write(System.out);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(UKSignaturesReader.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }    
+    
 }
