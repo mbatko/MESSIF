@@ -41,12 +41,14 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import messif.algorithms.Algorithm;
 import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.objects.LocalAbstractObject;
 import messif.objects.extraction.ExtractorDataSource;
 import messif.objects.extraction.ExtractorException;
 import messif.objects.extraction.Extractors;
 import messif.objects.extraction.MultiExtractor;
+import messif.operations.AbstractOperation;
 
 /**
  * Provides a HTTP extension to {@link Application} that allows to execute operations
@@ -76,6 +78,73 @@ public class HttpApplication extends Application {
     private HttpServer httpServer;
     /** Remembered list of contexts */
     private Map<String, HttpContext> httpServerContexts;
+    /** Thread-safe last executed operation */
+    private final ThreadLocal<AbstractOperation> lastOperation = new ThreadLocal<AbstractOperation>();
+    /** Thread-safe current selected algorithm */
+    private final ThreadLocal<Algorithm> algorithm = new ThreadLocal<Algorithm>();
+
+
+    //****************** Attribute access methods ******************//
+
+    @Override
+    AbstractOperation getLastOperation() {
+        return this.lastOperation.get();
+    }
+
+    @Override
+    boolean setLastOperation(AbstractOperation lastOperation) {
+        this.lastOperation.set(lastOperation);
+        return lastOperation != null;
+    }
+
+    /**
+     * {@inheritDoc}
+     * Note that if an algorithm was selected using {@link #algorithmSelectInThread},
+     * it will be returned in that thread only. Otherwise, the globally {@link #algorithmSelect}
+     * selected running algorithm will be used.
+     *
+     * @return {@inheritDoc}
+     */
+    @Override
+    Algorithm getAlgorithm() {
+        Algorithm alg = this.algorithm.get();
+        return alg == null ? super.getAlgorithm() : alg;
+    }
+
+    /**
+     * Select algorithm to manage in current thread.
+     * That means that the running algorithm for the other operations is set only
+     * for the current execution of the actual HTTP context.
+     * A parameter with algorithm sequence number is required for specifying, which algorithm to select.
+     * To unset the algorithm, use a value of -1.
+     *
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; algorithmSelectInThread 0
+     * </pre>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the algorithm sequence number
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @see #algorithmInfoAll
+     */
+    @ExecutableMethod(description = "select algorithm to manage", arguments = {"# of the algorithm to select"})
+    public boolean algorithmSelectInThread(PrintStream out, String... args) {
+        try {
+            int algorithmIndex = Integer.parseInt(args[1]);
+            if (algorithmIndex == -1)
+                this.algorithm.remove();
+            else
+                this.algorithm.set(getAlgorithm(algorithmIndex));
+        } catch (IndexOutOfBoundsException ignore) {
+        } catch (NumberFormatException ignore) {
+        }
+
+        out.print("Algorithm # must be specified - use a number between 0 and ");
+        out.println(getAlgorithmCount() - 1);
+
+        return false;
+    }
 
 
     //****************** HTTP server command functions ******************//
@@ -156,14 +225,18 @@ public class HttpApplication extends Application {
             return false;
         }
 
+        String actionName = args[argIndex + 1];
         Map<String, String> contextExtractorNames = args.length >= argIndex + 3 ? Convert.stringToMap(args[argIndex + 2]) : null;
         String contentType = args.length >= argIndex + 4 ? args[argIndex + 3] : "text/plain";
         String charset = args.length >= argIndex + 5 ? args[argIndex + 4] : "utf8";
 
+        if (!props.containsKey(actionName))
+            throw new IllegalArgumentException("Cannot find action '" + actionName + "' in the given control file data");
+
         try {
             HttpContext context = httpServer.createContext(
                     args[argIndex],
-                    new HttpApplicationHandler(props, args[argIndex + 1], contextExtractorNames, contentType, charset, variables)
+                    new HttpApplicationHandler(props, actionName, contextExtractorNames, contentType, charset, variables)
             );
             httpServerContexts.put(args[argIndex], context);
             return true;

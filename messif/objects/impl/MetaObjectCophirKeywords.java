@@ -110,6 +110,15 @@ public class MetaObjectCophirKeywords extends MetaObjectArrayWeightedSum impleme
     }
 
     /**
+     * Creates a new instance of MetaObjectCophirKeywords with the given encapsulated objects.
+     * @param locatorURI the locator URI for the new object
+     * @param objects the encapsulated objects to add (keys should match the {@link #descriptorNames})
+     */
+    public MetaObjectCophirKeywords(String locatorURI, Map<String, ? extends LocalAbstractObject> objects) {
+        this(locatorURI, objects, null);
+    }
+
+    /**
      * Creates a new instance of MetaObjectCophirKeywords from another {@link MetaObject}.
      * @param metaObject the meta object the encapsulated objects of which to add (keys should match the {@link #descriptorNames})
      */
