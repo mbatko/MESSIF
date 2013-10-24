@@ -73,19 +73,25 @@ public class InstantiatorSignature {
         if (constructorClass == null) {
             // Try method or field (i.e. last dot position denotes method/field name
             int dotPos = signature.lastIndexOf('.');
-            if (dotPos == -1)
-                throw new IllegalArgumentException("Class not found: " + signature);
-            this.instance = namedInstances == null ? null : namedInstances.get(signature.substring(0, dotPos));
-            if (this.instance == null) {
-                try {
-                    this.objectClass = Class.forName(signature.substring(0, dotPos));
-                } catch (ClassNotFoundException ignore) {
-                    throw new IllegalArgumentException("Class not found: " + signature.substring(0, dotPos));
-                }
-            } else {
+            if (dotPos == -1) {
+                this.instance = namedInstances.get(signature);
+                if (this.instance == null)
+                    throw new IllegalArgumentException("Class not found: " + signature);
                 this.objectClass = null;
+                this.name = null;
+            } else {
+                this.instance = namedInstances == null ? null : namedInstances.get(signature.substring(0, dotPos));
+                if (this.instance == null) {
+                    try {
+                        this.objectClass = Class.forName(signature.substring(0, dotPos));
+                    } catch (ClassNotFoundException ignore) {
+                        throw new IllegalArgumentException("Class not found: " + signature.substring(0, dotPos));
+                    }
+                } else {
+                    this.objectClass = null;
+                }
+                this.name = signature.substring(dotPos + 1);
             }
-            this.name = signature.substring(dotPos + 1);
         } else {
             // We have parsed constructor class
             this.objectClass = constructorClass;
@@ -173,6 +179,8 @@ public class InstantiatorSignature {
         if (isFieldSignature()) {
             if (instance == null)
                 return new FieldInstantiator<T>(checkClass, objectClass, name).instantiate();
+            else if (name == null)
+                return checkClass.cast(instance);
             else
                 return new FieldInstantiator<T>(checkClass, instance, name).instantiate();
         } else {

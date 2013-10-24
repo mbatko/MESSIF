@@ -16,7 +16,6 @@
  */
 package messif.buckets.impl;
 
-import messif.objects.LocalAbstractObject;
 import java.io.Serializable;
 import messif.buckets.BucketDispatcher;
 import messif.buckets.LocalBucket;
@@ -25,6 +24,7 @@ import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.index.ModifiableOrderedIndex;
 import messif.buckets.index.impl.IntStorageIndex;
 import messif.buckets.storage.impl.MemoryStorage;
+import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 
 
@@ -55,7 +55,7 @@ public class MemoryStorageObjectKeyBucket extends OrderedLocalBucket<AbstractObj
     //****************** Data storage ******************//
 
     /** Object storage with object-id index */
-    protected ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> objects =
+    private ModifiableOrderedIndex<AbstractObjectKey, LocalAbstractObject> objects =
             new IntStorageIndex<AbstractObjectKey, LocalAbstractObject>(
                     new MemoryStorage<LocalAbstractObject>(LocalAbstractObject.class),
                     LocalAbstractObjectOrder.keyToLocalObjectComparator
