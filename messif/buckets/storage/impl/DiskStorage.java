@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
+import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
@@ -93,7 +94,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     /** Header flag constant for indication whether the file was correctly closed */
     protected static final int FLAG_CLOSED = 0x00000003; // lower two bits
     /** Default number of asynchronous threads */
-    protected static final int DEFAULT_ASYNC_THREADS = 64;
+    protected static final int DEFAULT_ASYNC_THREADS = 128;
     /** Default size of the reading buffer */
     protected static final int DEFAULT_BUFFER_SIZE = 16*1024;
 
@@ -697,6 +698,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
             return fileChannel;
 
         synchronized (this) {
+            if (fileChannel != null)
+                return fileChannel;
+            
             // If file does not exist before, it is auto-created by the RandomAccessFile constructor
             boolean fileExists = file.length() > startPosition;
 
@@ -784,6 +788,15 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         in.defaultReadObject();
 
         this.readonly = !file.canWrite();
+        if (inputStreamCount <= 0) {
+            try {
+                Field countField = DiskStorage.class.getDeclaredField("inputStreamCount");
+                countField.setAccessible(true);
+                countField.set(this, DEFAULT_ASYNC_THREADS);
+            } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException ex) {
+                Logger.getLogger(DiskStorage.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
 
