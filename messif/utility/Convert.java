@@ -865,7 +865,7 @@ public abstract class Convert {
     public static <T, U extends T> T[] copyGenericArray(U[] original, int offset, int length, Class<T> componentType) throws NegativeArraySizeException {
         T[] copy = createGenericArray(componentType, length);
         if (original != null)
-            System.arraycopy(original, 0, copy, offset, Math.min(original.length - offset, length));
+            System.arraycopy(original, offset, copy, 0, length);
         return copy;
     }
 
@@ -931,7 +931,7 @@ public abstract class Convert {
     }
 
     /** Internal patter for {@link #trimAndUnquote} and {@link #splitBySpaceWithQuotes} methods */
-    private static final Pattern quoteMatchingPattern = Pattern.compile("\\G\\s*(?:([^\\s'\"]+)|'([^']*)'|\"([^\"]*)\")(\\s*)");
+    private static final Pattern quoteMatchingPattern = Pattern.compile("\\G\\s*(?:'((?:[^'\\\\]|\\\\.)*)'|\"((?:[^\"\\\\]|\\\\.)*)\"|(\\S+))(\\s*)");
 
     /**
      * Removes quotes from the given string (double or single).

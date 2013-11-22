@@ -46,7 +46,7 @@ import messif.objects.util.AbstractObjectIterator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class QueryOperation<TAnswer> extends AbstractOperation {
+public abstract class QueryOperation<TAnswer> extends AbstractOperation implements Iterable<TAnswer> {
     /** class id for serialization */
     private static final long serialVersionUID = 2L;
 
@@ -182,6 +182,17 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation {
      * @return an iterator over all objects in the answer to this query
      */
     public abstract Iterator<TAnswer> getAnswer();
+
+    /**
+     * Returns an iterator over all objects in the answer to this query.
+     * This method is an implementation of the {@link Iterable} interface
+     * by calling the {@link #getAnswer()} method.
+     * @return an iterator over all objects in the answer to this query
+     */
+    @Override
+    public final Iterator<TAnswer> iterator() {
+        return getAnswer();
+    }
 
     /**
      * Returns an iterator over all objects in the answer skipping the first

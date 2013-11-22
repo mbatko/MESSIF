@@ -308,17 +308,17 @@ public abstract class Extractors {
                     throw new IOException("External extractor requires file - use messif.objects.extraction.Extractors.setExternalExtractorTempFileSuffix to enable automatic temp file creation");
                 // External extractor requires file, but the data sources is not a file - store the data into a temporary file
                 final File tempFile = dataSource.pipeToTemporaryFile("externalExtractorTempFile_", externalExtractorTempFileSuffix, null);
-                return new BufferedInputStream(new ExternalProcessInputStream(Runtime.getRuntime().exec(String.format(command, tempFile.getAbsoluteFile()))) {
+                return new BufferedInputStream(new ExternalProcessInputStream(Runtime.getRuntime().exec(Convert.splitBySpaceWithQuotes(String.format(command, tempFile.getAbsoluteFile())))) {
                     @Override
                     protected void onExit(int processExitCode) {
                         tempFile.delete();
                     }
                 });
             } else {
-                extractorProcess = Runtime.getRuntime().exec(String.format(command, ((File)dataFile).getAbsoluteFile()));
+                extractorProcess = Runtime.getRuntime().exec(Convert.splitBySpaceWithQuotes(String.format(command, ((File)dataFile).getAbsoluteFile())));
             }
         } else {
-            extractorProcess = Runtime.getRuntime().exec(command);
+            extractorProcess = Runtime.getRuntime().exec(Convert.splitBySpaceWithQuotes(command));
             OutputStream os = extractorProcess.getOutputStream();
             dataSource.pipe(os);
             os.close();

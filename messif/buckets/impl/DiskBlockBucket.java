@@ -48,13 +48,6 @@ public class DiskBlockBucket extends LocalBucket implements Serializable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
-    /** The prefix for auto-generated filenames */
-    protected static final String FILENAME_PREFIX = "disk_block_bucket_";
-
-    /** The suffix for auto-generated filenames */
-    protected static final String FILENAME_SUFFIX = ".dbb";
-
-
     //****************** Data storage ******************//
 
     /** Object storage */
