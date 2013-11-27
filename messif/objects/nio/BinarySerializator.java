@@ -493,7 +493,7 @@ public abstract class BinarySerializator {
      * @throws IOException if there was an I/O error
      */
     public int write(BinaryOutput output, String[] array) throws IOException {
-        int size = write(output, array.length);
+        int size = write(output, (array == null) ? 0 : array.length);
         for (int i = 0; i < array.length; i++)
             size += write(output, array[i]);
         return size;
@@ -1023,7 +1023,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(boolean[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1060,7 +1060,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(byte[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1097,7 +1097,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(short[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1134,7 +1134,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(char[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1171,7 +1171,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(int[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1245,7 +1245,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(float[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
@@ -1282,7 +1282,7 @@ public abstract class BinarySerializator {
      * @return the size of the binary-serialized array
      */
     public int getBinarySize(double[] array) {
-        return getBinarySize(array, 0, array.length);
+        return getBinarySize(array, 0, (array == null) ? 0 : array.length);
     }
 
     /**
