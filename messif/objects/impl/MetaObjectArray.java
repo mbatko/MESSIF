@@ -109,6 +109,21 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
     }
 
     /**
+     * Creates a new instance of MetaObjectArray that takes the objects from the given {@link MetaObject}.
+     * The array is initialized with objects from the {@link MetaObject} in the order they
+     * appear in the {@code objectNames} array. Note that if the object of a given
+     * name is not in the {@link MetaObject}, <tt>null</tt> is inserted into the array.
+     * A new unique object ID is generated and a new {@link AbstractObjectKey} is
+     * generated for the specified <code>locatorURI</code>.
+     * @param locatorURI the locator URI for the new object
+     * @param object the {@link MetaObject} with objects to encapsulate
+     * @param objectNames the names of the objects to take from the given {@code objects} map
+     */
+    public MetaObjectArray(String locatorURI, MetaObject object, String... objectNames) {
+        this(locatorURI, object.getObjectMap(), objectNames);
+    }
+
+    /**
      * Creates a new instance of MetaObjectArray that takes the objects from the given map.
      * The array is initialized with objects from the map in the order they
      * appear in the {@code objectNames} array. Note that if the object of a given
@@ -151,69 +166,66 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
     }
 
     /**
-     * Creates a new instance of MetaObjectArray from the given text stream with header.
-     * Note that a header must contain also the object names even though they are not
-     * stored and used by the array.
+     * Creates a new instance of MetaObjectArray from the given text stream with array header.
+     * The header consists of the the number of objects in the array and their class,
+     * which is the same for all of the loaded objects (i.e. the array is homogeneous).
      * @param stream the text stream to read the objects from
-     * @param readHomogenousObjects flag whether to read list of homogenous objects
-     *          (i.e. the header is the count and the class name), or a heterogenous header
-     *          (i.e. the header is a semi-colon separated list of object names and classes)
      * @param objectClass if not <tt>null</tt> value provided, it will override the object class
      *          in the header (note that this will be used only if read homogenous objects is <tt>true</tt>)
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
-     * @see #readObjectsHeader(java.io.BufferedReader)
      */
-    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects, Class<? extends LocalAbstractObject> objectClass) throws IOException {
+    public MetaObjectArray(BufferedReader stream, Class<? extends LocalAbstractObject> objectClass) throws IOException {
         String[] header = readObjectsHeader(stream);
-        if (readHomogenousObjects) {
-            int count;
-            try {
-                count = Integer.parseInt(header[0]);
-                if (objectClass == null) {
-                    objectClass = Convert.getClassForName(header[1], LocalAbstractObject.class);
-                }
-            } catch (IndexOutOfBoundsException e) {
-                throw new IOException("Can't create object from stream: object count and class expected but '" + Arrays.toString(header) + "' found");
-            } catch (NumberFormatException e) {
-                throw new IOException("Can't create object from stream: object count cannot be converted '" + header[0] + "' found");
-            } catch (ClassNotFoundException e) {
-                throw new IOException("Can't create object from stream: " + e);
+        int count;
+        try {
+            count = Integer.parseInt(header[0]);
+            if (objectClass == null) {
+                objectClass = Convert.getClassForName(header[1], LocalAbstractObject.class);
             }
-            this.objects = readObjects(stream, count, objectClass);
-        } else {
-            Collection<LocalAbstractObject> values = readObjects(stream, null, header, new LinkedHashMap<String, LocalAbstractObject>()).values();
-            this.objects = values.toArray(new LocalAbstractObject[values.size()]);
+        } catch (IndexOutOfBoundsException e) {
+            throw new IOException("Can't create object from stream: object count and class expected but '" + Arrays.toString(header) + "' found");
+        } catch (NumberFormatException e) {
+            throw new IOException("Can't create object from stream: object count cannot be converted '" + header[0] + "' found");
+        } catch (ClassNotFoundException e) {
+            throw new IOException("Can't create object from stream: " + e);
         }
+        this.objects = readObjects(stream, count, objectClass);
     }
 
     /**
-     * Creates a new instance of MetaObjectArray from the given text stream with header.
-     * Note that a header must contain also the object names even though they are not
-     * stored and used by the array.
-     * @param stream the text stream to read the objects from
-     * @param readHomogenousObjects flag whether to read list of homogenous objects
-     *          (i.e. the header is the count and the class name), or a heterogenous header
-     *          (i.e. the header is a semi-colon separated list of object names and classes)
-     * @throws IOException when an error appears during reading from given stream,
-     *         EOFException is returned if end of the given stream is reached.
-     * @see #readObjectsHeader(java.io.BufferedReader)
-     */
-    public MetaObjectArray(BufferedReader stream, boolean readHomogenousObjects) throws IOException {
-        this(stream, readHomogenousObjects, null);
-    }
-
-    /**
-     * Creates a new instance of MetaObjectArray from the given text stream with header.
-     * Note that a header must contain also the object names even though they are not
-     * stored and used by the array.
+     * Creates a new instance of MetaObjectArray from the given text stream with array header.
+     * The header consists of the the number of objects in the array and their class,
+     * which is the same for all of the loaded objects (i.e. the array is homogeneous).
      * @param stream the text stream to read the objects from
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
-     * @see #readObjectsHeader(java.io.BufferedReader)
      */
     public MetaObjectArray(BufferedReader stream) throws IOException {
-        this(stream, false, null);
+        this(stream, (Class<? extends LocalAbstractObject>)null);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream with header.
+     * Note that a header must contain also the object names even though they are not
+     * stored and used by the array.
+     *
+     * @param stream the text stream to read the objects from
+     * @param objectNames the names of the objects to load (according to the header);
+     *          if this parameter is <tt>null</tt>, all objects are taken using the order in the datafile
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     * @see #readObjectsHeader(java.io.BufferedReader)
+     */
+    public MetaObjectArray(BufferedReader stream, String... objectNames) throws IOException {
+        Map<String, LocalAbstractObject> objectsMap = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>());
+        if (objectNames == null) {
+            this.objects = objectsMap.values().toArray(new LocalAbstractObject[objectsMap.size()]);
+        } else {
+            this.objects = new LocalAbstractObject[objectNames.length];
+            for (int i = 0; i < objectNames.length; i++)
+                this.objects[i] = objectsMap.get(objectNames[i]);
+        }
     }
 
 
