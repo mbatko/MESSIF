@@ -29,7 +29,7 @@ import messif.objects.classification.ClassificationWithConfidenceBase;
 import messif.utility.ModifiableParametric;
 
 /**
- * Encapsulation object for the data on which the {@link KeywordProcessor} operates.
+ * Encapsulation object for the data on which the {@link KeywordClassifier} operates.
  * 
  * @param <T> the class that represents keywords in this classification
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz

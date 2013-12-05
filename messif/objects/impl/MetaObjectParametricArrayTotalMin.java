@@ -113,7 +113,7 @@ public class MetaObjectParametricArrayTotalMin extends MetaObjectParametricArray
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArrayTotalMin(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArrayTotalMin(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(stream, classes);
     }
 
@@ -125,7 +125,7 @@ public class MetaObjectParametricArrayTotalMin extends MetaObjectParametricArray
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArrayTotalMin(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArrayTotalMin(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(stream, additionalParameters, classes);
     }
 

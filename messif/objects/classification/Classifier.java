@@ -20,7 +20,7 @@ import messif.utility.Parametric;
 
 /**
  * Establish a basic interface for classifiers.
- * The given object is {@link #classify(java.lang.Object) classified}
+ * The given object is {@link #classify classified}
  * into zero, one, or several categories {@code C}.
  *
  * @param <T> the class of instances that are classified

@@ -148,7 +148,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectArray(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectArray(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         readObjectCommentsWithoutData(stream);
         this.objects = readObjects(stream, classes);
     }
@@ -217,8 +217,8 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      *         EOFException is returned if end of the given stream is reached.
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
-    public MetaObjectArray(BufferedReader stream, String... objectNames) throws IOException {
-        Map<String, LocalAbstractObject> objectsMap = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>());
+    public MetaObjectArray(BufferedReader stream, String[] objectNames) throws IOException {
+        Map<String, LocalAbstractObject> objectsMap = readObjects(stream, objectNames == null ? null: Arrays.asList(objectNames), readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>());
         if (objectNames == null) {
             this.objects = objectsMap.values().toArray(new LocalAbstractObject[objectsMap.size()]);
         } else {
@@ -331,7 +331,7 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         if (classes == null || classes.length == 0)
             throw new IllegalArgumentException("At least one object class must be specified for reading");
         LocalAbstractObject[] ret = new LocalAbstractObject[classes.length];

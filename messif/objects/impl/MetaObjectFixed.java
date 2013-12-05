@@ -176,7 +176,7 @@ public abstract class MetaObjectFixed extends MetaObject {
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         if (classes == null || classes.length == 0)
             throw new IllegalArgumentException("At least one object class must be specified for reading");
         LocalAbstractObject[] ret = new LocalAbstractObject[classes.length];
@@ -215,7 +215,7 @@ public abstract class MetaObjectFixed extends MetaObject {
      * @return the array of objects read from the binary input
      * @throws IOException if there was an I/O error reading from the buffer
      */
-    protected final LocalAbstractObject[] readObjectsBinary(BinaryInput input, BinarySerializator serializator, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    protected final LocalAbstractObject[] readObjectsBinary(BinaryInput input, BinarySerializator serializator, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         LocalAbstractObject[] objects = new LocalAbstractObject[classes.length];
         for (int i = 0; i < classes.length; i++)
             objects[i] = serializator.readObject(input, classes[i]);

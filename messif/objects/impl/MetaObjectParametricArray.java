@@ -142,7 +142,7 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(additionalParameters);
         readObjectCommentsWithoutData(stream);
         this.objects = MetaObjectArray.readObjects(stream, classes);
@@ -168,7 +168,7 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArray(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArray(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         this(stream, new HashMap<String, Serializable>(), classes);
     }
 

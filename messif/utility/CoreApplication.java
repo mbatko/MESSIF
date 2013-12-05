@@ -351,7 +351,7 @@ public class CoreApplication {
     /**
      * Adds the given algorithm to the list of running algorithms and select it as the current running algorithm.
      * @param algorithm the algorithm to add
-     * @return
+     * @return <tt>true</tt> if the current algorithm was set to a new value or <tt>false</tt> if the current algorithm is <tt>null</tt>
      */
     boolean addAlgorithm(Algorithm algorithm) {
         this.algorithms.add(algorithm);
