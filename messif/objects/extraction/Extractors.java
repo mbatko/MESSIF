@@ -533,6 +533,87 @@ public abstract class Extractors {
     }
 
     /**
+     * Creates an instance of {@link Extractor} or {@link MultiExtractor} from property values.
+     * A property with the given {@code key} must be a type of extractor to create.
+     * <p>
+     * If type is "external", additional property {@code <key>.command} is required
+     * to contain the external command to execute. Optionally, {@code <key>.fileAsArgument},
+     * {@code <key>.locatorParameter}, {@code <key>.parameterArg}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createExternalExtractor(java.lang.Class, java.lang.String, boolean, java.lang.String, int, java.lang.Object[]) createExternalExtractor}.
+     * </p>
+     * <p>
+     * If type is "text", no additional parameters are required. Optionally,
+     * {@code <key>.dataParameter}, <key>.locatorParameter}, {@code <key>.parameterArg},
+     * and {@code <key>.additionalArg1...n} can be specified - see
+     * {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
+     * </p>
+     * <p>
+     * If type is "constructor", additional property {@code <key>.constructorClass} is required.
+     * The parameter specify a class with public constructor having a single {@link ExtendedProperties} argument.
+     * </p>
+     * <p>
+     * If type is "method", additional properties {@code <key>.methodClass} and {@code <key>.methodName} are required.
+     * The parameters specify the class and the static method name in that class with a single {@link ExtendedProperties} argument.
+     * </p>
+     *
+     * @param multiExtractor flag whether to create a {@link MultiExtractor} or {@link Extractor}
+     * @param objectClass the class of objects that will be created by the extractor
+     * @param properties the properties with values
+     * @param key the key property name
+     * @return a new instance of extractor
+     * @throws ExtendedPropertiesException if there some of the required properties were missing or invalid
+     * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
+     */
+    private static Object createExtractorFromPropertiesImpl(boolean multiExtractor, Class<? extends LocalAbstractObject> objectClass, ExtendedProperties properties, String key) throws ExtendedPropertiesException, IllegalArgumentException {
+        String extractorType = properties.getRequiredProperty(key).trim().toLowerCase();
+        if (extractorType.equals("external")) {
+            return multiExtractor ?
+                    createExternalMultiExtractor(
+                        objectClass,
+                        properties.getRequiredProperty(key + ".command"),
+                        properties.getBoolProperty(key + ".fileAsArgument", false),
+                        properties.getProperty(key + ".locatorParameter"),
+                        properties.getIntProperty(key + ".parameterArg", -1),
+                        (Object[])properties.getMultiProperty(key + ".additionalArg")
+                    ) : createExternalExtractor(
+                        objectClass,
+                        properties.getRequiredProperty(key + ".command"),
+                        properties.getBoolProperty(key + ".fileAsArgument", false),
+                        properties.getProperty(key + ".locatorParameter"),
+                        properties.getIntProperty(key + ".parameterArg", -1),
+                        (Object[])properties.getMultiProperty(key + ".additionalArg")
+                    );
+        } else if (extractorType.equals("text")) {
+            return createTextExtractor(objectClass,
+                    properties.getProperty(key + ".dataParameter"),
+                    properties.getProperty(key + ".locatorParameter"),
+                    properties.getIntProperty(key + ".parameterArg", -1),
+                    (Object[])properties.getMultiProperty(key + ".additionalArg")
+            );
+        } else if (extractorType.equals("constructor")) {
+            try {
+                Class<?> extractorClass = properties.getClassProperty(key + ".constructorClass", true, multiExtractor ? MultiExtractor.class : Extractor.class);
+                return extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key + "."));
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
+            } catch (Exception e) {
+                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
+            }
+        } else if (extractorType.equals("method")) {
+            try {
+                Class<?> extractorClass = properties.getClassProperty(key + ".methodClass", true, multiExtractor ? MultiExtractor.class : Extractor.class);
+                Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
+                return method.invoke(null, ExtendedProperties.restrictProperties(properties, key + "."));
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
+            } catch (Exception e) {
+                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
+            }
+        }
+        throw new ExtendedPropertiesException("Unknown extractor type: " + extractorType);
+    }
+
+    /**
      * Creates an instance of {@link Extractor} from property values.
      * A property with the given {@code key} must be a type of extractor to create.
      * <p>
@@ -544,8 +625,16 @@ public abstract class Extractors {
      * <p>
      * If type is "text", no additional parameters are required. Optionally,
      * {@code <key>.dataParameter}, <key>.locatorParameter}, {@code <key>.parameterArg},
-     * and {@code <key>.additionalArg1...n} can be specified - see 
+     * and {@code <key>.additionalArg1...n} can be specified - see
      * {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
+     * </p>
+     * <p>
+     * If type is "constructor", additional property {@code <key>.constructorClass} is required.
+     * The parameter specify a class with public constructor having a single {@link ExtendedProperties} argument.
+     * </p>
+     * <p>
+     * If type is "method", additional properties {@code <key>.methodClass} and {@code <key>.methodName} are required.
+     * The parameters specify the class and the static method name in that class with a single {@link ExtendedProperties} argument.
      * </p>
      *
      * @param <T> the class of objects that will be created by the extractor
@@ -557,44 +646,43 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
      */
     public static <T extends LocalAbstractObject> Extractor<T> createExtractorFromProperties(Class<? extends T> objectClass, ExtendedProperties properties, String key) throws ExtendedPropertiesException, IllegalArgumentException {
-        String extractorType = properties.getRequiredProperty(key).trim().toLowerCase();
-        if (extractorType.equals("external")) {
-            return createExternalExtractor(
-                    objectClass,
-                    properties.getRequiredProperty(key + ".command"),
-                    properties.getBoolProperty(key + ".fileAsArgument", false),
-                    properties.getProperty(key + ".locatorParameter"),
-                    properties.getIntProperty(key + ".parameterArg", -1),
-                    (Object[])properties.getMultiProperty(key + ".additionalArg")
-            );
-        } else if (extractorType.equals("text")) {
-            return createTextExtractor(objectClass,
-                    properties.getProperty(key + ".dataParameter"),
-                    properties.getProperty(key + ".locatorParameter"),
-                    properties.getIntProperty(key + ".parameterArg", -1),
-                    (Object[])properties.getMultiProperty(key + ".additionalArg")
-            );
-        } else if (extractorType.equals("constructor")) {
-            try {
-                Class<?> extractorClass = properties.getClassProperty(key + ".constructorClass", true, Extractor.class);
-                return cast(extractorClass.getConstructor(ExtendedProperties.class).newInstance(ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
-            } catch (InvocationTargetException e) {
-                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
-            } catch (Exception e) {
-                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
-            }
-        } else if (extractorType.equals("method")) {
-            try {
-                Class<?> extractorClass = properties.getClassProperty(key + ".methodClass", true, Extractor.class);
-                Method method = extractorClass.getMethod(properties.getRequiredProperty(key + ".methodName"), ExtendedProperties.class);
-                return cast(method.invoke(null, ExtendedProperties.restrictProperties(properties, key + ".")), objectClass);
-            } catch (InvocationTargetException e) {
-                throw new IllegalArgumentException("Error creating extractor " + objectClass + " by properties constructor: " + e.getCause(), e.getCause());
-            } catch (Exception e) {
-                throw new ExtendedPropertiesException("Cannot create extractor " + objectClass + ": " + e, e);
-            }
-        }
-        throw new ExtendedPropertiesException("Unknown extractor type: " + extractorType);
+        return cast(createExtractorFromPropertiesImpl(false, objectClass, properties, key), objectClass);
+    }
+
+    /**
+     * Creates an instance of {@link MultiExtractor} from property values.
+     * A property with the given {@code key} must be a type of extractor to create.
+     * <p>
+     * If type is "external", additional property {@code <key>.command} is required
+     * to contain the external command to execute. Optionally, {@code <key>.fileAsArgument},
+     * {@code <key>.locatorParameter}, {@code <key>.parameterArg}, and {@code <key>.additionalArg1...n} can be specified
+     * - see {@link #createExternalExtractor(java.lang.Class, java.lang.String, boolean, java.lang.String, int, java.lang.Object[]) createExternalExtractor}.
+     * </p>
+     * <p>
+     * If type is "text", no additional parameters are required. Optionally,
+     * {@code <key>.dataParameter}, <key>.locatorParameter}, {@code <key>.parameterArg},
+     * and {@code <key>.additionalArg1...n} can be specified - see
+     * {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
+     * </p>
+     * <p>
+     * If type is "constructor", additional property {@code <key>.constructorClass} is required.
+     * The parameter specify a class with public constructor having a single {@link ExtendedProperties} argument.
+     * </p>
+     * <p>
+     * If type is "method", additional properties {@code <key>.methodClass} and {@code <key>.methodName} are required.
+     * The parameters specify the class and the static method name in that class with a single {@link ExtendedProperties} argument.
+     * </p>
+     *
+     * @param <T> the class of objects that will be created by the extractor
+     * @param objectClass the class of objects that will be created by the extractor
+     * @param properties the properties with values
+     * @param key the key property name
+     * @return a new instance of extractor
+     * @throws ExtendedPropertiesException if there some of the required properties were missing or invalid
+     * @throws IllegalArgumentException if the extractor cannot be created with the specified parameters
+     */
+    public static <T extends LocalAbstractObject> MultiExtractor<T> createMultiExtractorFromProperties(Class<? extends T> objectClass, ExtendedProperties properties, String key) throws ExtendedPropertiesException, IllegalArgumentException {
+        return castToMultiExtractor(createExtractorFromPropertiesImpl(true, objectClass, properties, key), objectClass, false);
     }
 
     /**
