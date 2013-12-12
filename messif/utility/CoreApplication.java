@@ -1479,7 +1479,7 @@ public class CoreApplication {
      *          <li>Locators = display just locators,</li>
      *          <li>DistanceLocators = display format "distance: locator",</li>
      *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
-     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *          <li>anything else will be treated as {@link MessageFormat} with four (zero-base indexed) arguments containing:
      *              the given answer object as-is,
      *              the {@link AbstractObject} from the answer object,
      *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
@@ -1532,7 +1532,7 @@ public class CoreApplication {
      *          <li>DistanceLocators = display format "distance: locator",</li>
      *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
      *          <li>MetaObjectLocatorDistances = display format "locator: metaobject-subdistance",</li>
-     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *          <li>anything else will be treated as {@link MessageFormat} with five (zero-base indexed) arguments containing:
      *              the given answer object as-is,
      *              the {@link AbstractObject} from the answer object,
      *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},

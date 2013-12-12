@@ -18,6 +18,7 @@ package messif.objects.extraction;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import messif.algorithms.Algorithm;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
@@ -69,14 +70,16 @@ public class AlgorithmExtractor implements Extractor<LocalAbstractObject> {
     @Override
     public LocalAbstractObject extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
         SingletonQueryOperation op;
+        Object[] parameters;
         try {
-            op = operationConstructor.newInstance(Convert.parseTypesFromString(
+            parameters = Convert.parseTypesFromString(
                     operationArguments,
                     operationConstructor.getParameterTypes(),
                     false, // do not use var-args, since number of constructor parameters is given
                     0,
                     dataSource.getParameterMap()
-            ));
+            );
+            op = operationConstructor.newInstance(parameters);
         } catch (Exception e) {
             throw new ExtractorException("Cannot create operation", e);
         }
@@ -85,7 +88,12 @@ public class AlgorithmExtractor implements Extractor<LocalAbstractObject> {
         } catch (Exception e) {
             throw new ExtractorException("Cannot execute operation", e);
         }
-        return (LocalAbstractObject)op.getAnswerObject();
+
+        LocalAbstractObject object = (LocalAbstractObject)op.getAnswerObject();
+        if (object == null)
+            throw new ExtractorException("No object found for " + Arrays.toString(parameters));
+
+        return object;
     }
 
     @Override
