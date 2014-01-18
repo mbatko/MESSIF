@@ -16,7 +16,10 @@
  */
 package messif.algorithms.impl;
 
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
@@ -24,8 +27,10 @@ import messif.buckets.BucketStorageException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.StorageSearch;
+import messif.buckets.storage.impl.DatabaseStorage;
 import messif.objects.LocalAbstractObject;
-import messif.operations.QueryOperation;
+import messif.objects.nio.CachingSerializator;
+import messif.operations.AbstractOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
 import messif.operations.data.DeleteOperation;
@@ -67,6 +72,40 @@ public class LocatorStorageAlgorithm extends Algorithm {
         super("LocatorStorage-" + encapsulatedAlgorithm.getName());
         this.algorithm = encapsulatedAlgorithm;
         this.storage = storage;
+    }
+
+    @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "internal locator-based indexed storage"})
+    public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, String dbConnUrl, String tableName, Class<?>[] cacheClasses) throws IllegalArgumentException, SQLException {
+        this(encapsulatedAlgorithm, new DatabaseStorage<LocalAbstractObject>(LocalAbstractObject.class, dbConnUrl, null, null, tableName, "id", getDatabaseMap(cacheClasses)));
+    }
+
+    private static Map<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>> getDatabaseMap(Class<?>[] cacheClasses) {
+        Map<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>> ret = new HashMap<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>>();
+        ret.put("locator", DatabaseStorage.getLocatorColumnConvertor(true, false, true));
+        ret.put("binobj", new DatabaseStorage.BinarySerializableColumnConvertor<LocalAbstractObject>(LocalAbstractObject.class, new CachingSerializator<LocalAbstractObject>(LocalAbstractObject.class, cacheClasses)));
+        return ret;
+    }
+
+    @Override
+    public void finalize() throws Throwable {
+        algorithm.finalize();
+        storage.finalize();
+        super.finalize(); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void destroy() throws Throwable {
+        algorithm.destroy();
+        storage.destroy();
+        super.destroy(); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    /**
+     * Returns the encapsulated algorithm.
+     * @return the encapsulated algorithm
+     */
+    public Algorithm getAlgorithm() {
+        return algorithm;
     }
 
     /**
@@ -179,13 +218,13 @@ public class LocatorStorageAlgorithm extends Algorithm {
     }
 
     /**
-     * Implementation of a generic query operation.
+     * Implementation of a generic operation.
      * The the operation is passed the encapsulated algorithm for processing.
-     * @param op the generic query operation to execute
+     * @param op the generic operation to execute
      * @throws AlgorithmMethodException if the operation execution on the encapsulated algorithm has thrown an exception
      * @throws NoSuchMethodException if the operation is unsupported by the encapsulated algorithm
      */
-    public void queryOperation(QueryOperation<?> op) throws AlgorithmMethodException, NoSuchMethodException {
+    public void processOperation(AbstractOperation op) throws AlgorithmMethodException, NoSuchMethodException {
         algorithm.executeOperation(op);
     }
 }

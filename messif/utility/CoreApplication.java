@@ -3351,7 +3351,7 @@ public class CoreApplication {
         for (int i = 2; i < args.length; i++) {
             String[] varVal = args[i].split("=", 2);
             if (varVal.length == 2)
-                variables.put(varVal[0], varVal[1]);
+                variables.put(Convert.trimAndUnquote(varVal[0]), Convert.trimAndUnquote(varVal[1]));
             else action = args[i];
         }
 
