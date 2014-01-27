@@ -320,11 +320,39 @@ public abstract class Extractors {
         } else {
             extractorProcess = Runtime.getRuntime().exec(Convert.splitBySpaceWithQuotes(command));
             OutputStream os = extractorProcess.getOutputStream();
-            dataSource.pipe(os);
-            os.close();
+            try {
+                dataSource.pipe(os);
+            } catch (IOException e) {
+                StringBuilder error = new StringBuilder().append("Error '").append(e.getMessage()).append("' occurred when writing the data to external extractor: ");
+                try {
+                    Convert.readStringData(extractorProcess.getErrorStream(), error);
+                } catch (IOException ignore) {
+                    throw e; // Cannot read error message from process, throw the original error instead
+                }
+                throw new IOException(error.toString());
+            } finally {
+                os.close();
+            }
         }
 
         return new BufferedInputStream(new ExternalProcessInputStream(extractorProcess));
+    }
+
+    /**
+     * Creates an extractor encapsulated in application resources that creates objects from binary data.
+     * The encapsulated extractor must be a binary that receives the binary data
+     * on its standard input and return the text parsable by the constructor
+     * of {@code objectClass} on its standard output.
+     *
+     * @param <T> the class of object that is created by the extractor
+     * @param objectClass the class of object that is created by the extractor
+     * @param resourcePath the absolute path of the extractor resource
+     * @return object created by the extractor
+     * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
+     * @throws IOException if there was an error preparing the extractor from resources
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> createResourcesExtractor(Class<? extends T> objectClass, String resourcePath) throws IllegalArgumentException, IOException {
+        return createExternalExtractor(objectClass, '"' + Convert.resourceToTemporaryFile(resourcePath).getAbsolutePath() + "\" -");
     }
 
     /**

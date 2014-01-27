@@ -140,10 +140,10 @@ public abstract class TextConversion {
      */
     public static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
         Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
-        for (int i = 0; i < keyWords.length; i++) {
-            String keyWord = unifyWord(keyWords[i], ignoreWords, stemmer, normalize);
-            if (keyWord != null)
-                processedKeyWords.add(keyWord);
+        for (String keyWord : keyWords) {
+            String keyWordUnified = unifyWord(keyWord, ignoreWords, stemmer, normalize);
+            if (keyWordUnified != null)
+                processedKeyWords.add(keyWordUnified);
         }
         return processedKeyWords;
     }
@@ -239,10 +239,7 @@ public abstract class TextConversion {
         } catch (IllegalStateException e) {
             throw new TextConversionException(e.getMessage(), e.getCause());
         }
-
-        // Add all missing keywords
-        for (Iterator<String> it = processedKeyWords.iterator(); it.hasNext();) {
-            String keyWord = it.next();
+        for (String keyWord : processedKeyWords) {
             try {
                 ret[retIndex] = wordIndex.store(keyWord).getAddress();
                 retIndex++;

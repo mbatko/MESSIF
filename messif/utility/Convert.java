@@ -16,6 +16,9 @@
  */
 package messif.utility;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -1444,5 +1447,53 @@ public abstract class Convert {
      */
     public static StringBuilder readStringData(InputStream data, StringBuilder str) throws IOException {
         return readStringData(new InputStreamReader(data), str);
+    }
+
+    /**
+     * Copies a resource data to a given local file.
+     * @param resourcePath the absolute path of the resource
+     * @param localFile the local file where the resource will be copied
+     * @param overwrite flag whether to silently overwrite the local file if it already exists
+     * @throws FileNotFoundException if the resource was not found, the destination local file cannot be created,
+     *          or (when overwrite flag is true) the local file already exists
+     * @throws IOException if there was a problem writing the local file
+     * @see Class#getResource(java.lang.String)
+     */
+    public static void resourceToLocalFile(String resourcePath, File localFile, boolean overwrite) throws FileNotFoundException, IOException {
+        InputStream resource = Convert.class.getResourceAsStream(resourcePath);
+        if (resource == null)
+            throw new FileNotFoundException("Resource '" + resourcePath + "' not found");
+        try {
+            if (!overwrite && localFile.exists())
+                throw new FileNotFoundException("Cannot create '" + localFile + "', it already exists");
+            FileOutputStream out = new FileOutputStream(localFile);
+            try {
+                byte[] buf = new byte[4069];
+                int len;
+                while ((len = resource.read(buf)) != -1)
+                    out.write(buf, 0, len);
+            } finally {
+                out.close();
+            }
+        } finally {
+            resource.close();
+        }
+    }
+
+    /**
+     * Copies a resource data to a generated temporary file.
+     * @param resourcePath the absolute path of the resource
+     * @return the generated temporary file where the file has been stored
+     * @throws FileNotFoundException if the resource was not found, the destination local file cannot be created,
+     *          or (when overwrite flag is true) the local file already exists
+     * @throws IOException if there was a problem writing the local file
+     * @see Class#getResource(java.lang.String)
+     */
+    public static File resourceToTemporaryFile(String resourcePath) throws IOException {
+        int extPos = resourcePath.lastIndexOf('.');
+        File ret = File.createTempFile("restotemp", extPos == -1 ? null : resourcePath.substring(extPos)); // Preserve extension
+        ret.deleteOnExit();
+        resourceToLocalFile(resourcePath, ret, true);
+        return ret;
     }
 }
