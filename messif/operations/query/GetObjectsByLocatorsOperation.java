@@ -153,6 +153,8 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
         for (Object object : objects) {
             if (object instanceof AbstractObject) {
                 locators.add(((AbstractObject)object).getLocatorURI());
+            } else if (object instanceof RankedAbstractObject) {
+                locators.add(((RankedAbstractObject)object).getObject().getLocatorURI());
             } else {
                 locators.add(object.toString());
             }

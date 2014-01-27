@@ -69,7 +69,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
      * @param additionalParameters additional parameters for this meta object
      */
     public MetaObjectParametric(Map<String, ? extends Serializable> additionalParameters) {
-        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable> (additionalParameters);
+        this.additionalParameters = (additionalParameters == null || additionalParameters.isEmpty()) ? null : new HashMap<String, Serializable> (additionalParameters);
     }
 
     /**
@@ -81,7 +81,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
      */
     public MetaObjectParametric(AbstractObjectKey objectKey, Map<String, ? extends Serializable> additionalParameters) {
         super(objectKey);
-        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable> (additionalParameters);
+        this.additionalParameters = (additionalParameters == null || additionalParameters.isEmpty()) ? null : new HashMap<String, Serializable> (additionalParameters);
     }
 
     /**
@@ -94,7 +94,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
      */
     public MetaObjectParametric(String locatorURI, Map<String, ? extends Serializable> additionalParameters) {
         super(locatorURI);
-        this.additionalParameters = (additionalParameters == null) ? null : new HashMap<String, Serializable>(additionalParameters);
+        this.additionalParameters = (additionalParameters == null || additionalParameters.isEmpty()) ? null : new HashMap<String, Serializable>(additionalParameters);
     }
 
 
@@ -189,7 +189,6 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
     //****************** Text stream I/O helper methods for parametric ******************//
 
     @Override
-    @SuppressWarnings("unchecked")
     protected boolean parseObjectComment(String line) throws IllegalArgumentException {
         if (super.parseObjectComment(line))
             return true;
@@ -197,11 +196,10 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
         if (!matcher.matches())
             return false;
         try {
-            if (additionalParameters != null) {
-                // This put is not safe, but the additional parameters in this case should be created in constructor
-                additionalParameters.put(matcher.group(1),
-                        Convert.stringToType(matcher.group(3), Convert.getClassForName(matcher.group(2), Serializable.class)));
-            }
+            if (additionalParameters == null)
+                additionalParameters = new HashMap<String, Serializable>();
+            additionalParameters.put(matcher.group(1),
+                    Convert.stringToType(matcher.group(3), Convert.getClassForName(matcher.group(2), Serializable.class)));
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("Class not found: " + e.getMessage());
         } catch (InstantiationException e) {

@@ -239,8 +239,10 @@ public class ExtractorDataSource extends ParametricBase implements Closeable {
             openDataSource(((URL)dataSource).openConnection());
         } else if (dataSource instanceof URLConnection) {
             openDataSource((URLConnection)dataSource);
+        } else if (dataSource == null) {
+            throw new IOException("Cannot open null data source (was anonymous input stream used?)");
         } else {
-            throw new InternalError("Unknown data source - added constructor without modification of openDataSource method");
+            throw new InternalError("Unknown extractor data source " + dataSource.getClass() + " - a constructor has been added without modification of openDataSourceAnonymous method?");
         }
     }
 

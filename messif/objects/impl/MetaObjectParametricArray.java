@@ -22,7 +22,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import messif.objects.LocalAbstractObject;
@@ -142,7 +141,7 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(additionalParameters);
         readObjectCommentsWithoutData(stream);
         this.objects = MetaObjectArray.readObjects(stream, classes);
@@ -168,8 +167,8 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArray(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
-        this(stream, new HashMap<String, Serializable>(), classes);
+    public MetaObjectParametricArray(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
+        this(stream, null, classes);
     }
 
     /**
@@ -182,7 +181,7 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @see #readObjectsHeader(java.io.BufferedReader)
      */
     public MetaObjectParametricArray(BufferedReader stream) throws IOException {
-        super(new HashMap<String, Serializable>());
+        super(null);
         this.objects = readObjects(stream, null, readObjectsHeader(stream), new LinkedHashMap<String, LocalAbstractObject>()).values().toArray(new LocalAbstractObject[0]);
     }
 
@@ -206,9 +205,11 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
     @Override
     public int getObjectCount() {
         int count = 0;
-        for (int i = 0; i < objects.length; i++)
-            if (objects[i] != null)
+        for (LocalAbstractObject object : objects) {
+            if (object != null) {
                 count++;
+            }
+        }
         return count;
     }
 
@@ -243,9 +244,10 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
     @Override
     public Collection<LocalAbstractObject> getObjects() {
         Collection<LocalAbstractObject> ret = new ArrayList<LocalAbstractObject>(objects.length);
-        for (int i = 0; i < objects.length; i++) {
-            if (objects[i] != null)
-                ret.add(objects[i]);
+        for (LocalAbstractObject object : objects) {
+            if (object != null) {
+                ret.add(object);
+            }
         }
         return ret;
     }
@@ -265,11 +267,12 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
 
     @Override
     protected void writeDataImpl(OutputStream stream) throws IOException {
-        for (int i = 0; i < objects.length; i++) {
-            if (objects[i] == null)
+        for (LocalAbstractObject object : objects) {
+            if (object == null) {
                 stream.write('\n');
-            else
-                objects[i].write(stream, false);
+            } else {
+                object.write(stream, false);
+            }
         }
     }
 
@@ -280,6 +283,7 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * The actual implementation of the metric function.
      * The distance is a trivial metric on locator URIs of this object and {@code obj}.
      * The array <code>metaDistances</code> is ignored.
+     * @return the actual distance between obj and this if the distance is lower than distThreshold
      * @see LocalAbstractObject#getDistance(messif.objects.LocalAbstractObject, float) LocalAbstractObject.getDistance
      */
     @Override
@@ -310,8 +314,9 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
     public int binarySerialize(BinaryOutput output, BinarySerializator serializator) throws IOException {
         int size = super.binarySerialize(output, serializator);
         size += serializator.write(output, objects.length);
-        for (int i = 0; i < objects.length; i++)
-            size += serializator.write(output, objects[i]);
+        for (LocalAbstractObject object : objects) {
+            size += serializator.write(output, object);
+        }
         return size;
     }
 
@@ -319,8 +324,9 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
     public int getBinarySize(BinarySerializator serializator) {
         int size = super.getBinarySize(serializator);
         size += serializator.getBinarySize(objects.length);
-        for (int i = 0; i < objects.length; i++)
-            size += serializator.getBinarySize(objects[i]);
+        for (LocalAbstractObject object : objects) {
+            size += serializator.getBinarySize(object);
+        }
         return size;
     }
 

@@ -98,7 +98,7 @@ public class MetaObjectArrayWeightedSum extends MetaObjectArray {
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectArrayWeightedSum(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectArrayWeightedSum(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(stream, classes);
     }
 

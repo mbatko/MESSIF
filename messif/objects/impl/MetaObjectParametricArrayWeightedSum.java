@@ -116,7 +116,7 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArrayWeightedSum(BufferedReader stream, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArrayWeightedSum(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(stream, classes);
     }
 
@@ -128,7 +128,7 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    public MetaObjectParametricArrayWeightedSum(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>... classes) throws IOException {
+    public MetaObjectParametricArrayWeightedSum(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(stream, additionalParameters, classes);
     }
 

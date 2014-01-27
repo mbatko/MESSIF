@@ -351,7 +351,7 @@ public class CoreApplication {
     /**
      * Adds the given algorithm to the list of running algorithms and select it as the current running algorithm.
      * @param algorithm the algorithm to add
-     * @return
+     * @return <tt>true</tt> if the current algorithm was set to a new value or <tt>false</tt> if the current algorithm is <tt>null</tt>
      */
     boolean addAlgorithm(Algorithm algorithm) {
         this.algorithms.add(algorithm);
@@ -1479,7 +1479,7 @@ public class CoreApplication {
      *          <li>Locators = display just locators,</li>
      *          <li>DistanceLocators = display format "distance: locator",</li>
      *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
-     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *          <li>anything else will be treated as {@link MessageFormat} with four (zero-base indexed) arguments containing:
      *              the given answer object as-is,
      *              the {@link AbstractObject} from the answer object,
      *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
@@ -1532,7 +1532,7 @@ public class CoreApplication {
      *          <li>DistanceLocators = display format "distance: locator",</li>
      *          <li>SwappedDistanceLocators = display format "locator: distance",</li>
      *          <li>MetaObjectLocatorDistances = display format "locator: metaobject-subdistance",</li>
-     *          <li>anything else will be treated as {@link MessageFormat} with five arguments containing:
+     *          <li>anything else will be treated as {@link MessageFormat} with five (zero-base indexed) arguments containing:
      *              the given answer object as-is,
      *              the {@link AbstractObject} from the answer object,
      *              the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
@@ -3351,7 +3351,7 @@ public class CoreApplication {
         for (int i = 2; i < args.length; i++) {
             String[] varVal = args[i].split("=", 2);
             if (varVal.length == 2)
-                variables.put(varVal[0], varVal[1]);
+                variables.put(Convert.trimAndUnquote(varVal[0]), Convert.trimAndUnquote(varVal[1]));
             else action = args[i];
         }
 
