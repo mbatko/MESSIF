@@ -59,7 +59,9 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.util.AbstractStreamObjectIterator;
+import messif.objects.util.MetaObjectEncapsulatedIterator;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
@@ -1970,7 +1972,7 @@ public class CoreApplication {
             return false;
         }
         AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
-        if (objectStream != null) 
+        if (objectStream != null) {
             try {
                 // Set parameter
                 objectStream.setConstructorParameterFromString((args.length > 3)?Integer.parseInt(args[3]):0, args[2], namedInstances);
@@ -1982,10 +1984,46 @@ public class CoreApplication {
             } catch (InstantiationException e) {
                 out.println(e.toString());
             }
-        else
+        } else {
             out.print("Stream '" + args[1] + "' is not opened");
-        return false;
+        }
 
+        return false;
+    }
+
+    /**
+     * Restricts the opened object stream that loads {@link MetaObject}s to return one of the encapsulated objects.
+     * The first required argument specifies an already opened object stream.
+     * The second required argument specifies the name of the encapsulated object to retrieve
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamRestrictMetaObject my_data MySpecialLocalObjectName
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args opened object stream to restrict,
+     *             the name of the encapsulated object to retrieve
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "restricts the opened metaobject object stream to return one of the encapsulated objects", arguments = { "opened object stream", "encapsulated object name" })
+    public boolean objectStreamRestrictMetaObject(PrintStream out, String... args) {
+        if (args.length < 3) {
+            out.println("objectStreamRestrictMetaObject requires a stream name and an encapsulated object name");
+            return false;
+        }
+
+        @SuppressWarnings("unchecked")
+        Iterator<? extends MetaObject> objectStream = (Iterator<? extends MetaObject>)namedInstances.get(args[1]); // This is unchecked but an exception will be thrown when the object is first read from the iterator, which is fine
+        if (objectStream == null) {
+            out.print("Stream '" + args[1] + "' is not opened");
+            return false;
+        }
+
+        namedInstances.put(args[1], new MetaObjectEncapsulatedIterator(objectStream, args[2]));
+        return true;
     }
 
     /**
@@ -3150,9 +3188,7 @@ public class CoreApplication {
         // Normal method
         Object rtv = methodExecutor.execute(out, arguments.toArray(new String[arguments.size()]));
         out.flush();
-        if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue())
-            return false;
-        return true;
+        return !(rtv instanceof Boolean) || ((Boolean)rtv).booleanValue();
     }
 
     /**
