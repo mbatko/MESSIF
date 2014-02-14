@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.DoubleBuffer;
@@ -147,6 +148,19 @@ public abstract class BinarySerializator {
         return 8;
     }
 
+    /**
+     * Writes a <code>BigInteger</code> value to the specified output.
+     *
+     * @param output the output buffer to write the value into
+     * @param value the <code>BigInteger</code> value to be written
+     * @return the number of bytes written
+     * @throws IOException if there was an I/O error
+     */
+    public int write(BinaryOutput output, BigInteger value) throws IOException {
+        byte[] array = value.toByteArray();
+        write(output, array);
+        return array.length;
+    }
 
     //************************ Serializing methods for primitive arrays ************************//
 
@@ -688,6 +702,16 @@ public abstract class BinarySerializator {
         return input.readInput(8).getDouble();
     }
 
+    /**
+     * Returns a <code>BigInteger</code> value read from the specified input.
+     *
+     * @param input the input buffer to read the value from
+     * @return a <code>BigInteger</code> value read from the input
+     * @throws IOException if there was an I/O error
+     */
+    public BigInteger readBigInteger(BinaryInput input) throws IOException {
+        return new BigInteger(readByteArray(input));
+    }	    
 
     //************************ Deserializing methods for primitive arrays ************************//
 
@@ -1300,6 +1324,17 @@ public abstract class BinarySerializator {
         return 4 + (length << 3);
     }
 
+    /**
+     * Returns the size of the (binary) serialized <code>BigInteger</code> in bytes. The exact size including all
+     * overhead is returned.
+     *
+     * @param value the value to get the size for
+     * @return the size of the binary-serialized value
+     */
+    public int getBinarySize(BigInteger value) {
+        return getBinarySize(value.toByteArray());
+    }
+    
     /**
      * Returns the size of the (binary) serialized {@link String} in bytes.
      * The exact size including all overhead is returned.
