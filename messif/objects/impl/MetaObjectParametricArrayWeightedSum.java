@@ -97,6 +97,21 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
     }
 
     /**
+     * Creates a new instance of MetaObjectParametricArrayWeightedSum that takes the objects from the given map.
+     * The array is initialized with objects from the map in the order they
+     * appear in the {@code objectNames} array. Note that if the object of a given
+     * name is not in the map, <tt>null</tt> is inserted into the array.
+     * A new unique object ID is generated and the given {@code objectKey} is used for the object.
+     * @param objectKey the key to be associated with this object
+     * @param additionalParameters additional parameters for this meta object
+     * @param objects the map with named objects to encapsulate
+     * @param objectNames the names of the objects to take from the given {@code objects} map
+     */
+    public MetaObjectParametricArrayWeightedSum(AbstractObjectKey objectKey, Map<String, ? extends Serializable> additionalParameters, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
+        super(objectKey, additionalParameters, objects, objectNames);
+    }
+
+    /**
      * Creates a new instance of MetaObjectParametricArrayWeightedSum from the given text stream with header.
      * Note that a header must contain also the object names even though they are not
      * stored and used by the array.

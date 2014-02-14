@@ -16,9 +16,6 @@
  */
 package messif.objects;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
-import messif.objects.keys.AbstractObjectKey;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -27,7 +24,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinarySerializator;
 import messif.utility.Convert;

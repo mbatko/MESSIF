@@ -59,6 +59,7 @@ import messif.executor.MethodExecutor.ExecutableMethod;
 import messif.executor.MethodNameExecutor;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.util.AbstractStreamObjectIterator;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
@@ -1970,7 +1971,7 @@ public class CoreApplication {
             return false;
         }
         AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
-        if (objectStream != null) 
+        if (objectStream != null) {
             try {
                 // Set parameter
                 objectStream.setConstructorParameterFromString((args.length > 3)?Integer.parseInt(args[3]):0, args[2], namedInstances);
@@ -1982,10 +1983,72 @@ public class CoreApplication {
             } catch (InstantiationException e) {
                 out.println(e.toString());
             }
-        else
+        } else {
             out.print("Stream '" + args[1] + "' is not opened");
-        return false;
+        }
 
+        return false;
+    }
+
+    /**
+     * Applies an additional conversion on the objects returned by an object stream.
+     * The first required argument specifies an object stream.
+     * The second required argument specifies the name of a {@link Convertor} instance.
+     *
+     * <p>
+     * Extension: if the second argument (convertor instance name) starts with a dot,
+     * a new convertor instance is created that converts a {@link MetaObject} to the
+     * respective encapsulated object with that name (without the dot).
+     * </p>
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamConvert my_data my_data_convertor_named_instance
+     * MESSIF &gt;&gt;&gt; objectStreamConvert my_data .MySpecialLocalObjectName
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args opened object stream to restrict,
+     *             the name of a convertor instance
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @SuppressWarnings("unchecked")
+    @ExecutableMethod(description = "applies conversion to stream objects", arguments = { "opened object stream", "convertor named instance" })
+    public boolean objectStreamConvert(PrintStream out, String... args) {
+        if (args.length < 3) {
+            out.println("objectStreamConvert requires a stream and convertor instance names");
+            return false;
+        }
+
+        Iterator<?> objectStream = (Iterator<?>)namedInstances.get(args[1]);
+        if (objectStream == null) {
+            out.print("Stream '" + args[1] + "' is not opened");
+            return false;
+        }
+
+        Convertor<Object, ?> convertor;
+        if (args[2].startsWith(".")) {
+            final String objectName = args[2].substring(1);
+            convertor = new Convertor<Object, LocalAbstractObject>() {
+                @Override
+                public LocalAbstractObject convert(Object value) {
+                    if (value == null)
+                        return null;
+                    return ((MetaObject)value).getObject(objectName);
+                }
+                @Override
+                public Class<? extends LocalAbstractObject> getDestinationClass() {
+                    return LocalAbstractObject.class;
+                }
+            };
+        } else {
+            convertor = (Convertor<Object, ?>)namedInstances.get(args[2]); // This cast in not checked, the convertor must accept any object
+        }
+        
+        namedInstances.put(args[1], new ConvertorIterator<Object, Object>(objectStream, convertor));
+        return true;
     }
 
     /**
@@ -3150,9 +3213,7 @@ public class CoreApplication {
         // Normal method
         Object rtv = methodExecutor.execute(out, arguments.toArray(new String[arguments.size()]));
         out.flush();
-        if (rtv instanceof Boolean && !((Boolean)rtv).booleanValue())
-            return false;
-        return true;
+        return !(rtv instanceof Boolean) || ((Boolean)rtv).booleanValue();
     }
 
     /**

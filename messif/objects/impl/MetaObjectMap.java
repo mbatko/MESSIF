@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
+import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
 import messif.objects.nio.BinaryOutput;
 import messif.objects.nio.BinarySerializable;
@@ -52,7 +53,7 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
     //****************** Attributes ******************//
 
     /** List of encapsulated objects */
-    protected Map<String, LocalAbstractObject> objects;
+    private Map<String, LocalAbstractObject> objects;
 
 
     //****************** Constructors ******************//
@@ -77,6 +78,17 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
         } else {
             this.objects = new TreeMap<String, LocalAbstractObject>(objects);
         }
+    }
+
+    /**
+     * Creates a new instance of MetaObjectMap from a collection of named objects.
+     *
+     * @param objectKey the key to be associated with this object
+     * @param objects collection of objects with their symbolic names
+     */
+    public MetaObjectMap(AbstractObjectKey objectKey, Map<String, LocalAbstractObject> objects) {
+        super(objectKey);
+        this.objects = new TreeMap<String, LocalAbstractObject>(objects);
     }
 
     /**
@@ -135,11 +147,12 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
+    @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
     public LocalAbstractObject clone(boolean cloneFilterChain) throws CloneNotSupportedException {
         MetaObjectMap rtv = (MetaObjectMap)super.clone(cloneFilterChain);
-        
+
+        // This is clonning, so access to another object's private field is ok
         rtv.objects = new TreeMap<String, LocalAbstractObject>();
-        
         for (Map.Entry<String, LocalAbstractObject> entry : objects.entrySet())
             rtv.objects.put(entry.getKey(), entry.getValue().clone(cloneFilterChain));
 
@@ -156,11 +169,12 @@ public class MetaObjectMap extends MetaObject implements BinarySerializable {
      * @throws CloneNotSupportedException if the object's class does not support cloning or there was an error
      */
     @Override
+    @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
     public LocalAbstractObject cloneRandomlyModify(Object... args) throws CloneNotSupportedException {
         MetaObjectMap objectClone = (MetaObjectMap)clone(true);
         // Replace all sub-objects with random-modified clones
         for (String name : getObjectNames())
-            objectClone.objects.put(name, getObject(name).cloneRandomlyModify(args));
+            objectClone.objects.put(name, getObject(name).cloneRandomlyModify(args)); // This is clonning, so access to another object's private field is ok
         return objectClone;
     }
 
