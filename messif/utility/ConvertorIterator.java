@@ -14,34 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package messif.objects.util;
+package messif.utility;
 
 import java.util.Iterator;
-import messif.objects.LocalAbstractObject;
-import messif.objects.MetaObject;
 
 /**
- * Special iterator that iterates over the encapsulated objects of a given {@link MetaObject}.
+ * Iterator that converts all objects from the encapsulated iterator.
+ *
+ * @param <F> the source class of the conversion, i.e. the class of objects returned by the encapsulated iterator
+ * @param <T> the destination class of the conversion, i.e. the class of objects returned by this iterator
  *
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MetaObjectEncapsulatedIterator implements Iterator<LocalAbstractObject> {
-    /** Encapsulated iterator that provides the envelope {@link MetaObject} */
-    private final Iterator<? extends MetaObject> iterator;
-    /** Name of the encapsulated object inside the {@link MetaObject} to get */
-    private final String objectName;
-
+public class ConvertorIterator<F, T> implements Iterator<T> {
+    /** Encapsulated iterator that provides the objects to convert */
+    private final Iterator<? extends F> iterator;
+    /** Convertor to apply to iterated items */
+    private final Convertor<? super F, ? extends T> convertor;
+    
     /**
-     * Creates a new iterator that iterates over {@code objectName} object from
-     * inside the {@link MetaObject}s provided by the given {@code iterator}.
-     * @param iterator the encapsulated iterator that provides the envelope {@link MetaObject}
-     * @param objectName the name of the encapsulated object inside the {@link MetaObject} to get
+     * Creates a new iterator converts all objects from the encapsulated iterator.
+     * @param iterator the encapsulated iterator that provides the objects to convert
+     * @param convertor the convertor to apply to iterated items
      */
-    public MetaObjectEncapsulatedIterator(Iterator<? extends MetaObject> iterator, String objectName) {
+    public ConvertorIterator(Iterator<? extends F> iterator, Convertor<? super F, ? extends T> convertor) {
         this.iterator = iterator;
-        this.objectName = objectName;
+        this.convertor = convertor;
     }
 
     @Override
@@ -50,8 +50,12 @@ public class MetaObjectEncapsulatedIterator implements Iterator<LocalAbstractObj
     }
 
     @Override
-    public LocalAbstractObject next() {
-        return iterator.next().getObject(objectName);
+    public T next() {
+        try {
+            return convertor.convert(iterator.next());
+        } catch (Exception e) {
+            throw new IllegalStateException("Error converting object: " + e, e);
+        }
     }
 
     @Override

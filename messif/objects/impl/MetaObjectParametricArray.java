@@ -127,7 +127,22 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      * @param objectNames the names of the objects to take from the given {@code objects} map
      */
     public MetaObjectParametricArray(String locatorURI, Map<String, ? extends Serializable> additionalParameters, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
-        super(locatorURI, additionalParameters);
+        this(new AbstractObjectKey(locatorURI), additionalParameters, objects, objectNames);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray that takes the objects from the given map.
+     * The array is initialized with objects from the map in the order they
+     * appear in the {@code objectNames} array. Note that if the object of a given
+     * name is not in the map, <tt>null</tt> is inserted into the array.
+     * A new unique object ID is generated and the given {@code objectKey} is used for the object.
+     * @param objectKey the key to be associated with this object
+     * @param additionalParameters additional parameters for this meta object
+     * @param objects the map with named objects to encapsulate
+     * @param objectNames the names of the objects to take from the given {@code objects} map
+     */
+    public MetaObjectParametricArray(AbstractObjectKey objectKey, Map<String, ? extends Serializable> additionalParameters, Map<String, ? extends LocalAbstractObject> objects, String... objectNames) {
+        super(objectKey, additionalParameters);
         this.objects = new LocalAbstractObject[objectNames.length];
         for (int i = 0; i < objectNames.length; i++)
             this.objects[i] = objects.get(objectNames[i]);

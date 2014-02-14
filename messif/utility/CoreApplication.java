@@ -61,7 +61,6 @@ import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
 import messif.objects.util.AbstractStreamObjectIterator;
-import messif.objects.util.MetaObjectEncapsulatedIterator;
 import messif.objects.util.RankedAbstractMetaObject;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
@@ -1992,37 +1991,63 @@ public class CoreApplication {
     }
 
     /**
-     * Restricts the opened object stream that loads {@link MetaObject}s to return one of the encapsulated objects.
-     * The first required argument specifies an already opened object stream.
-     * The second required argument specifies the name of the encapsulated object to retrieve
+     * Applies an additional conversion on the objects returned by an object stream.
+     * The first required argument specifies an object stream.
+     * The second required argument specifies the name of a {@link Convertor} instance.
+     *
+     * <p>
+     * Extension: if the second argument (convertor instance name) starts with a dot,
+     * a new convertor instance is created that converts a {@link MetaObject} to the
+     * respective encapsulated object with that name (without the dot).
+     * </p>
      *
      * <p>
      * Example of usage:
      * <pre>
-     * MESSIF &gt;&gt;&gt; objectStreamRestrictMetaObject my_data MySpecialLocalObjectName
+     * MESSIF &gt;&gt;&gt; objectStreamConvert my_data my_data_convertor_named_instance
+     * MESSIF &gt;&gt;&gt; objectStreamConvert my_data .MySpecialLocalObjectName
      * </pre>
      * </p>
      *
      * @param out a stream where the application writes information for the user
      * @param args opened object stream to restrict,
-     *             the name of the encapsulated object to retrieve
+     *             the name of a convertor instance
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "restricts the opened metaobject object stream to return one of the encapsulated objects", arguments = { "opened object stream", "encapsulated object name" })
-    public boolean objectStreamRestrictMetaObject(PrintStream out, String... args) {
+    @SuppressWarnings("unchecked")
+    @ExecutableMethod(description = "applies conversion to stream objects", arguments = { "opened object stream", "convertor named instance" })
+    public boolean objectStreamConvert(PrintStream out, String... args) {
         if (args.length < 3) {
-            out.println("objectStreamRestrictMetaObject requires a stream name and an encapsulated object name");
+            out.println("objectStreamConvert requires a stream and convertor instance names");
             return false;
         }
 
-        @SuppressWarnings("unchecked")
-        Iterator<? extends MetaObject> objectStream = (Iterator<? extends MetaObject>)namedInstances.get(args[1]); // This is unchecked but an exception will be thrown when the object is first read from the iterator, which is fine
+        Iterator<?> objectStream = (Iterator<?>)namedInstances.get(args[1]);
         if (objectStream == null) {
             out.print("Stream '" + args[1] + "' is not opened");
             return false;
         }
 
-        namedInstances.put(args[1], new MetaObjectEncapsulatedIterator(objectStream, args[2]));
+        Convertor<Object, ?> convertor;
+        if (args[2].startsWith(".")) {
+            final String objectName = args[2].substring(1);
+            convertor = new Convertor<Object, LocalAbstractObject>() {
+                @Override
+                public LocalAbstractObject convert(Object value) {
+                    if (value == null)
+                        return null;
+                    return ((MetaObject)value).getObject(objectName);
+                }
+                @Override
+                public Class<? extends LocalAbstractObject> getDestinationClass() {
+                    return LocalAbstractObject.class;
+                }
+            };
+        } else {
+            convertor = (Convertor<Object, ?>)namedInstances.get(args[2]); // This cast in not checked, the convertor must accept any object
+        }
+        
+        namedInstances.put(args[1], new ConvertorIterator<Object, Object>(objectStream, convertor));
         return true;
     }
 
