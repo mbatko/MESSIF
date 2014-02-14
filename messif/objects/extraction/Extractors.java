@@ -352,7 +352,9 @@ public abstract class Extractors {
      * @throws IOException if there was an error preparing the extractor from resources
      */
     public static <T extends LocalAbstractObject> Extractor<T> createResourcesExtractor(Class<? extends T> objectClass, String resourcePath) throws IllegalArgumentException, IOException {
-        return createExternalExtractor(objectClass, '"' + Convert.resourceToTemporaryFile(resourcePath).getAbsolutePath() + "\" -");
+        File extractor = Convert.resourceToTemporaryFile(resourcePath);
+        extractor.setExecutable(true, true);
+        return createExternalExtractor(objectClass, '"' + extractor.getAbsolutePath() + "\" -");
     }
 
     /**
