@@ -369,8 +369,14 @@ public class CoreApplication {
         if (algorithm == null)
             return false;
         boolean ret = algorithms.remove(algorithm);
-        if (this.algorithm == algorithm) // If the currently selected algorithm is removed, set it to null (the equality by instance IS correct)
-            this.algorithm = null;
+        // (the equality by instance IS correct)
+        if (this.algorithm == algorithm) {
+            // If the currently selected algorithm is removed, set it to the last added algorithm (or null)
+            if (algorithms.isEmpty()) 
+                this.algorithm = null;
+            else 
+                this.algorithm = algorithms.get(algorithms.size() - 1);                
+        }
         algorithm.finalize();
         return ret;
     }
@@ -1659,6 +1665,54 @@ public class CoreApplication {
         }
     }
 
+    /**
+     * Directly execute a method of specified running algorithm.
+     * The first argument is the number of the running algorithm, 
+     * then the method name and its arguments must be provided.
+     * Only {@link messif.utility.Convert#stringToType convertible} types can
+     * be passed as arguments and if there are several methods with the same name,
+     * the first one that matches the number of arguments is selected.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; methodExecuteOnAlgorithm 0 mySpecialAlgorithmMethod 1 false string_string
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args method name followed by the values for its arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "directly execute a method of specified running algorithm", arguments = {"algorithm number", "method name", "arguments for the method ..."})
+    public boolean methodExecuteOnAlgorithm(PrintStream out, String... args) {
+        if (args.length < 3) {
+            out.println("methodExecuteOnAlgorithm requires at least the algorithm number and method name (see 'help methodExecuteOnAlgorithm')");
+            return false;
+        }
+        Algorithm alg;
+        try {
+            alg = getAlgorithm(Integer.parseInt(args[1]));
+        } catch (IndexOutOfBoundsException ex) {            
+            out.println("Specified algorithm number is illegal");
+            return false;
+        }
+
+        try {
+            Object rtv = alg.executeMethodWithStringArguments(args, 2, namedInstances);
+            if (rtv != null)
+                out.println(rtv);
+            return true;
+        } catch (NoSuchInstantiatorException e) {
+            out.println("Method '" + args[2] + "' with " + (args.length - 3) + " arguments was not found in algorithm");
+            return false;
+        } catch (Exception e) {
+            logException(e);
+            out.println(e.toString());
+            return false;
+        }
+    }
+    
 
     //****************** Statistics command functions ******************//
 
