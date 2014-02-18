@@ -17,6 +17,7 @@
 package messif.objects.extraction;
 
 import java.io.BufferedInputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import messif.objects.LocalAbstractObject;
 import messif.objects.MetaObject;
@@ -351,10 +353,27 @@ public abstract class Extractors {
      * @throws IllegalArgumentException if the {@code objectClass} has no valid constructor
      * @throws IOException if there was an error preparing the extractor from resources
      */
-    public static <T extends LocalAbstractObject> Extractor<T> createResourcesExtractor(Class<? extends T> objectClass, String resourcePath) throws IllegalArgumentException, IOException {
-        File extractor = Convert.resourceToTemporaryFile(resourcePath);
-        extractor.setExecutable(true, true);
-        return createExternalExtractor(objectClass, '"' + extractor.getAbsolutePath() + "\" -");
+    public static <T extends LocalAbstractObject> ExtractorCloseable<T> createResourcesExtractor(Class<? extends T> objectClass, String resourcePath) throws IllegalArgumentException, IOException {
+        final File extractorFile = Convert.resourceToTemporaryFile(resourcePath);
+        extractorFile.setExecutable(true, true);
+        final Extractor<T> extractor = createExternalExtractor(objectClass, '"' + extractorFile.getAbsolutePath() + "\" -");
+        return new ExtractorCloseable<T>() {
+            @Override
+            public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                return extractor.extract(dataSource);
+            }
+            @Override
+            public Class<? extends T> getExtractedClass() {
+                return extractor.getExtractedClass();
+            }
+            @Override
+            public void close() throws IOException {
+                if (extractor instanceof Closeable)
+                    ((Closeable)extractor).close();
+                if (!extractorFile.delete())
+                    Logger.getLogger(getClass().getName()).warning("Cannot delete resources extractor file: " + extractorFile.getAbsolutePath());
+            }
+        };
     }
 
     /**
