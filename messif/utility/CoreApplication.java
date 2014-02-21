@@ -360,7 +360,7 @@ public class CoreApplication {
     }
 
     /**
-     * Removes the given algorithm from the list of running algorithms.
+     * Removes the given algorithm from the list of running algorithms and sets the last currently running algorithm as current.
      * @param algorithm the algorithm to remove
      * @return <tt>true</tt> if the algorithm was successfully removed
      * @throws Throwable if there was an error finializing the algorithm
@@ -507,7 +507,8 @@ public class CoreApplication {
     }
 
     /**
-     * Stops current algorithm and clear the memory used.
+     * Stops current algorithm and clear the memory used. If other algorithm(s) is running, the last executed is
+     *  selected as the current algorithm.
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmStop
@@ -517,7 +518,7 @@ public class CoreApplication {
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "stop current algorithm", arguments = {})
+    @ExecutableMethod(description = "stop current algorithm and select the previous as current", arguments = {})
     public boolean algorithmStop(PrintStream out, String... args) {
         try {
             return removeAlgorithm(getAlgorithm());

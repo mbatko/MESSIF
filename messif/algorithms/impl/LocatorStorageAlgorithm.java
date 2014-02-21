@@ -227,4 +227,9 @@ public class LocatorStorageAlgorithm extends Algorithm {
     public void processOperation(AbstractOperation op) throws AlgorithmMethodException, NoSuchMethodException {
         algorithm.executeOperation(op);
     }
+
+    @Override
+    public String toString() {
+        return new StringBuilder("ID-object wrapper ").append(storage).append(" over this algorithm: ").append(algorithm.toString()).toString();
+    }
 }

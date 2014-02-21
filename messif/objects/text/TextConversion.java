@@ -155,6 +155,9 @@ public abstract class TextConversion {
      * @throws TextConversionException if there was an error stemming the word
      */
     public static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
+        if (keyWords == null) {
+            return Collections.EMPTY_LIST;
+        }
         Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
         for (String keyWord : keyWords) {
             String keyWordUnified = unifyWord(keyWord, ignoreWords, stemmer, normalize);

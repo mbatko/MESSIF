@@ -51,7 +51,7 @@ public abstract class MetaObjectParametric extends MetaObject implements Modifia
     //****************** Constants ******************//
 
     /** Pattern for parsing param comment lines */
-    private static final Pattern paramCommentPattern = Pattern.compile("^#param \"(.*?)(?<!\\\\)\" (\\S+)\\s+(.*)");
+    private static final Pattern paramCommentPattern = Pattern.compile("^#param \"(.*?)(?<!\\\\)\" (\\S+)\\s+(.*)", Pattern.DOTALL);
 
 
     //****************** Attributes ******************//
