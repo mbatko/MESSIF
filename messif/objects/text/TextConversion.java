@@ -392,7 +392,7 @@ public abstract class TextConversion {
      * @throws IllegalStateException if there was a problem reading the index
      * @throws TextConversionException if there was an error expanding or stemming the words
      */
-    public static int[] textToWordIdentifiersMultiIndex(String string, String stringSplitRegexp, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>... readonlyWordIndexes) throws TextConversionException {
+    public static int[] textToWordIdentifiersMultiIndex(String string, String stringSplitRegexp, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
         Collection<String> words = TextConversion.unifyWords(TextConversion.normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, null, false);
         int[] data = new int[words.size()];
         int index = 0;

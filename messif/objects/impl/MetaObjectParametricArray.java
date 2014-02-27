@@ -157,9 +157,23 @@ public class MetaObjectParametricArray extends MetaObjectParametric implements B
      *         EOFException is returned if end of the given stream is reached.
      */
     public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, Class<? extends LocalAbstractObject>[] classes) throws IOException {
+        this(stream, additionalParameters, false, classes);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream.
+     * @param stream the text stream to read the objects from
+     * @param additionalParameters additional parameters for this meta object
+     * @param readEmptyClassLine flag whether to read a single line (that is ignored)
+     *          for a <tt>null</tt> class inside the {@code classes array}
+     * @param classes the classes of the objects to read from the stream
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectParametricArray(BufferedReader stream, Map<String, ? extends Serializable> additionalParameters, boolean readEmptyClassLine, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         super(additionalParameters);
         readObjectCommentsWithoutData(stream);
-        this.objects = MetaObjectArray.readObjects(stream, classes);
+        this.objects = MetaObjectArray.readObjects(stream, readEmptyClassLine, classes);
     }
 
     /**

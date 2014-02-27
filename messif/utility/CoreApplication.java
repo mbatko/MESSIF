@@ -3265,6 +3265,10 @@ public class CoreApplication {
                     actionName + '.', // prefix
                     variables
             );
+        // SPECIAL! Control file pass the variables to the called control file
+        if (arguments.get(0).equals("controlFile"))
+            return controlFileImpl(out, arguments.toArray(new String[arguments.size()]), new HashMap<String, String>(variables));
+
         // Normal method
         Object rtv = methodExecutor.execute(out, arguments.toArray(new String[arguments.size()]));
         out.flush();
@@ -3412,26 +3416,13 @@ public class CoreApplication {
     }
 
     /**
-     * Executes actions from a control file.
-     * All commands that can be started from the prompt can be used in control files.
-     * The first argument is required to specify the file with commands.
-     * Additional arguments are either variable specifications in the form of "varname=value"
-     * or the action name that is started (which defaults to "actions").
-     * For a full explanation of the command syntax see {@link CoreApplication}.
-     * 
-     * <p>
-     * Example of usage:
-     * <pre>
-     * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
-     * </pre>
-     * </p>
-     * 
+     * Implementation of the control file action that allows to pass the existing variables.
      * @param out a stream where the application writes information for the user
      * @param args file name followed by variable specifications and start action
+     * @param variables the original variables (some may be overwritten 
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "<var>=<value> ... (optional)", "actions block name (optional)" })
-    public boolean controlFile(PrintStream out, String... args) {
+    private boolean controlFileImpl(PrintStream out, String[] args, Map<String, String> variables) {
         // Open control file and create properties
         Properties props = new Properties();
         try {
@@ -3460,10 +3451,11 @@ public class CoreApplication {
 
         // Prepare variable for output streams
         Map<String, PrintStream> outputStreams = new HashMap<String, PrintStream>();
-        
+
         // Read variables and action from arguments
         String action = "actions";
-        Map<String, String> variables = new HashMap<String,String>();
+        if (variables == null)
+            variables = new HashMap<String, String>();
         for (int i = 2; i < args.length; i++) {
             String[] varVal = args[i].split("=", 2);
             if (varVal.length == 2)
@@ -3478,13 +3470,37 @@ public class CoreApplication {
         } catch (InvocationTargetException e) {
             throw new InternalError("Action execution cannot throw exception when throwException is false: " + e.getCause());
         }
-        
+
         // Close all opened output streams
         for (PrintStream stream : outputStreams.values())
             stream.close();
         outputStreams.clear();
-        
+
         return rtv;
+    }
+
+    /**
+     * Executes actions from a control file.
+     * All commands that can be started from the prompt can be used in control files.
+     * The first argument is required to specify the file with commands.
+     * Additional arguments are either variable specifications in the form of "varname=value"
+     * or the action name that is started (which defaults to "actions").
+     * For a full explanation of the command syntax see {@link CoreApplication}.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args file name followed by variable specifications and start action
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "<var>=<value> ... (optional)", "actions block name (optional)" })
+    public boolean controlFile(PrintStream out, String... args) {
+        return controlFileImpl(out, args, null);
     }
 
 

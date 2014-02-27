@@ -149,8 +149,21 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      *         EOFException is returned if end of the given stream is reached.
      */
     public MetaObjectArray(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
+        this(stream, false, classes);
+    }
+
+    /**
+     * Creates a new instance of MetaObjectArray from the given text stream.
+     * @param stream the text stream to read the objects from
+     * @param readEmptyClassLine flag whether to read a single line (that is ignored)
+     *          for a <tt>null</tt> class inside the {@code classes array}
+     * @param classes the classes of the objects to read from the stream
+     * @throws IOException when an error appears during reading from given stream,
+     *         EOFException is returned if end of the given stream is reached.
+     */
+    public MetaObjectArray(BufferedReader stream, boolean readEmptyClassLine, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         readObjectCommentsWithoutData(stream);
-        this.objects = readObjects(stream, classes);
+        this.objects = readObjects(stream, readEmptyClassLine, classes);
     }
 
     /**
@@ -326,18 +339,22 @@ public class MetaObjectArray extends MetaObject implements BinarySerializable {
      * </p>
      *
      * @param stream the text stream to read the objects from
+     * @param readEmptyClassLine flag whether to read a single line (that is ignored)
+     *          for a <tt>null</tt> class inside the {@code classes array}
      * @param classes the classes of the objects to read from the stream
      * @return the array of objects read from the stream
      * @throws IOException when an error appears during reading from given stream,
      *         EOFException is returned if end of the given stream is reached.
      */
-    protected static LocalAbstractObject[] readObjects(BufferedReader stream, Class<? extends LocalAbstractObject>[] classes) throws IOException {
+    protected static LocalAbstractObject[] readObjects(BufferedReader stream, boolean readEmptyClassLine, Class<? extends LocalAbstractObject>[] classes) throws IOException {
         if (classes == null || classes.length == 0)
             throw new IllegalArgumentException("At least one object class must be specified for reading");
         LocalAbstractObject[] ret = new LocalAbstractObject[classes.length];
         for (int i = 0; i < classes.length; i++) {
             if (classes[i] == null) {
                 ret[i] = null;
+                if (readEmptyClassLine) // The descriptor is ignored
+                    stream.readLine();
             } else if (peekNextChar(stream) == '\n') {
                 if (!stream.readLine().isEmpty()) // Read the empty line and assertion check
                     throw new InternalError("This should never happen - something is wrong with peekNextChar");
