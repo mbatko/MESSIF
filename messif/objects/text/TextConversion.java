@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -139,6 +140,21 @@ public abstract class TextConversion {
      */
     public static String[] normalizeAndSplitString(String string) {
         return normalizeAndSplitString(string, TEXT_SPLIT_REGEXP);
+    }
+
+    /**
+     * Creates a list of words that match the given regular expression.
+     * @param words the source words to match
+     * @param pattern the regular expression matching valid words
+     * @return a list of matching words
+     */
+    public static List<String> matchingWords(Collection<String> words, Pattern pattern) {
+        List<String> ret = new ArrayList<String>(words.size());
+        for (String word : words) {
+            if (pattern.matcher(word).matches())
+                ret.add(word);
+        }
+        return ret;
     }
 
     /**
