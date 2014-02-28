@@ -17,18 +17,22 @@
 package messif.algorithms.impl;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
+import messif.buckets.StorageInsertFailureException;
 import messif.buckets.index.LocalAbstractObjectOrder;
 import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.StorageSearch;
 import messif.buckets.storage.impl.DatabaseStorage;
 import messif.objects.LocalAbstractObject;
+import messif.objects.MetaObject;
 import messif.objects.nio.CachingSerializator;
 import messif.operations.AbstractOperation;
 import messif.operations.data.BulkInsertOperation;
@@ -60,6 +64,27 @@ public class LocatorStorageAlgorithm extends Algorithm {
     private final Algorithm algorithm;
     /** Internal indexed storage for handling locator-related queries */
     private final StorageIndexed<LocalAbstractObject> storage;
+    /** Name of the {@link MetaObject} encapsulated object to index in the algorithm */
+    private final String metaobjectName;
+
+    /**
+     * Creates a new locator-storage algorithm wrapper for the given algorithm.
+     * Note that the locator-storage stores the objects as-is while the
+     * algorithm can index only one of the encapsulated objects if the
+     * {@code metaobjectName} parameter is set.
+     *
+     * @param encapsulatedAlgorithm the algorithm to wrap
+     * @param metaobjectName the name of the {@link MetaObject} encapsulated object to index in the algorithm (if <tt>null</tt> the whole object is indexed)
+     * @param storage the storage used for indexed retrieval of the objects
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
+     */
+    @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "metaobject sub-object name to index", "internal locator-based indexed storage"})
+    public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, String metaobjectName, StorageIndexed<LocalAbstractObject> storage) throws IllegalArgumentException {
+        super("LocatorStorage-" + encapsulatedAlgorithm.getName());
+        this.algorithm = encapsulatedAlgorithm;
+        this.storage = storage;
+        this.metaobjectName = metaobjectName;
+    }
 
     /**
      * Creates a new locator-storage algorithm wrapper for the given algorithm.
@@ -69,16 +94,57 @@ public class LocatorStorageAlgorithm extends Algorithm {
      */
     @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "internal locator-based indexed storage"})
     public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, StorageIndexed<LocalAbstractObject> storage) throws IllegalArgumentException {
-        super("LocatorStorage-" + encapsulatedAlgorithm.getName());
-        this.algorithm = encapsulatedAlgorithm;
-        this.storage = storage;
+        this(encapsulatedAlgorithm, null, storage);
     }
 
-    @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "internal locator-based indexed storage"})
-    public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, String dbConnUrl, String tableName, Class<?>[] cacheClasses) throws IllegalArgumentException, SQLException {
+    /**
+     * Creates a new locator-db-storage algorithm wrapper for the given algorithm.
+     * The database for the given connection URL must contain a table with auto-generated
+     * identifier "id", the string "locator" column with index (so that the locator-based
+     * queries are fast), and the "binobj" LOB column for binary serialization of the descriptor.
+     *
+     * <p>
+     * Note that the locator-storage stores the objects as-is while the
+     * algorithm can index only one of the encapsulated objects if the
+     * {@code metaobjectName} parameter is set.
+     * </p>
+     *
+     * @param encapsulatedAlgorithm the algorithm to wrap
+     * @param metaobjectName the name of the {@link MetaObject} encapsulated object to index in the algorithm (if <tt>null</tt> the whole object is indexed)
+     * @param dbConnUrl the database connection URL (JDBC)
+     * @param tableName the name of the table in which to store the data
+     * @param cacheClasses the classes for the binary serialization
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
+     * @throws SQLException if there was an error connecting to the database
+     */
+    @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "metaobject sub-object name to index", "db connection URL", "db table name", "serialization cache classes"})
+    public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, String metaobjectName, String dbConnUrl, String tableName, Class<?>[] cacheClasses) throws IllegalArgumentException, SQLException {
         this(encapsulatedAlgorithm, new DatabaseStorage<LocalAbstractObject>(LocalAbstractObject.class, dbConnUrl, null, null, tableName, "id", getDatabaseMap(cacheClasses)));
     }
 
+    /**
+     * Creates a new locator-db-storage algorithm wrapper for the given algorithm.
+     * The database for the given connection URL must contain a table with auto-generated
+     * identifier "id", the string "locator" column with index (so that the locator-based
+     * queries are fast), and the "binobj" LOB column for binary serialization of the descriptor.
+     * 
+     * @param encapsulatedAlgorithm the algorithm to wrap
+     * @param dbConnUrl the database connection URL (JDBC)
+     * @param tableName the name of the table in which to store the data
+     * @param cacheClasses the classes for the binary serialization
+     * @throws IllegalArgumentException if the prototype returned by {@link #getExecutorParamClasses getExecutorParamClasses} has no items
+     * @throws SQLException if there was an error connecting to the database
+     */
+    @AlgorithmConstructor(description = "creates locator-storage wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "metaobject sub-object name to index", "db connection URL", "db table name", "serialization cache classes"})
+    public LocatorStorageAlgorithm(Algorithm encapsulatedAlgorithm, String dbConnUrl, String tableName, Class<?>[] cacheClasses) throws IllegalArgumentException, SQLException {
+        this(encapsulatedAlgorithm, null, dbConnUrl, tableName, cacheClasses);
+    }
+
+    /**
+     * Creates column convertor mappings for the database storage.
+     * @param cacheClasses the classes for the binary serialization
+     * @return column convertor mappings for the database storage
+     */
     private static Map<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>> getDatabaseMap(Class<?>[] cacheClasses) {
         Map<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>> ret = new HashMap<String, DatabaseStorage.ColumnConvertor<LocalAbstractObject>>();
         ret.put("locator", DatabaseStorage.getLocatorColumnConvertor(true, false, true));
@@ -87,6 +153,7 @@ public class LocatorStorageAlgorithm extends Algorithm {
     }
 
     @Override
+    @SuppressWarnings({"FinalizeNotProtected", "FinalizeCalledExplicitly"})
     public void finalize() throws Throwable {
         algorithm.finalize();
         storage.finalize();
@@ -119,8 +186,18 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @throws NoSuchMethodException if the encapsulated algorithm does not support the insert operation
      */
     public void insertOperation(InsertOperation op) throws BucketStorageException, AlgorithmMethodException, NoSuchMethodException {
+        // Wrap insert operation if necessary
+        InsertOperation executedOp;
+        if (metaobjectName == null) {
+            executedOp = op;
+        } else {
+            executedOp = new InsertOperation(((MetaObject)op.getInsertedObject()).getObject(metaobjectName));
+        }
+
         storage.store(op.getInsertedObject());
-        algorithm.executeOperation(op);
+        executedOp = algorithm.executeOperation(executedOp);
+        if (op != executedOp) // Instance check is correct
+            op.updateFrom(executedOp);
     }
 
     /**
@@ -134,10 +211,32 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @throws NoSuchMethodException if the encapsulated algorithm does not support the insert operation
      */
     public void bulkInsertOperation(BulkInsertOperation op) throws BucketStorageException, AlgorithmMethodException, NoSuchMethodException {
+        // Prepare the wrapper for the inserted objects
+        List<LocalAbstractObject> insertedObjects = new ArrayList<LocalAbstractObject>(op.getInsertedObjects().size());
+        StorageInsertFailureException exception = null;
+        // Store the objects into the storage first
         for (LocalAbstractObject object : op.getInsertedObjects()) {
-            storage.store(object);
+            try {
+                storage.store(object);
+                if (metaobjectName == null) {
+                    insertedObjects.add(object);
+                } else {
+                    insertedObjects.add(((MetaObject)object).getObject(metaobjectName));
+                }
+            } catch (BucketStorageException e) {
+                if (exception == null)
+                    exception = new StorageInsertFailureException(e);
+                exception.addFailedObject(object);
+            }
         }
-        algorithm.executeOperation(op);
+
+        // Execute the bulk insert operation
+        if (!insertedObjects.isEmpty())
+            op.updateFrom(algorithm.executeOperation(new BulkInsertOperation(insertedObjects)));
+
+        // Throw deferred exception if applicable
+        if (exception != null)
+            throw exception;
     }
 
     /**
@@ -152,16 +251,18 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @throws NoSuchMethodException if the encapsulated algorithm does not support the delete operation
      */
     public void deleteOperation(DeleteOperation op) throws BucketStorageException, AlgorithmMethodException, NoSuchMethodException {
-        op = algorithm.executeOperation(op);
-        if (op.wasSuccessful()) {
+        DeleteOperation executedOp = algorithm.executeOperation(op);
+        if (executedOp.wasSuccessful()) {
             Set<String> locators = new HashSet<String>();
-            for (LocalAbstractObject deletedObject : op.getObjects()) {
+            for (LocalAbstractObject deletedObject : executedOp.getObjects()) {
                 locators.add(deletedObject.getLocatorURI());
             }
             StorageSearch<LocalAbstractObject> search = storage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, locators);
             if (search.next())
                 search.remove();
         }
+        if (op != executedOp) // Instance check is correct
+            op.updateFrom(executedOp);
     }
 
     /**
@@ -225,7 +326,9 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @throws NoSuchMethodException if the operation is unsupported by the encapsulated algorithm
      */
     public void processOperation(AbstractOperation op) throws AlgorithmMethodException, NoSuchMethodException {
-        algorithm.executeOperation(op);
+        AbstractOperation executedOp = algorithm.executeOperation(op);
+        if (op != executedOp) // Instance check is correct
+            op.updateFrom(executedOp);
     }
 
     @Override

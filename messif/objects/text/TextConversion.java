@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -142,6 +143,21 @@ public abstract class TextConversion {
     }
 
     /**
+     * Creates a list of words that match the given regular expression.
+     * @param words the source words to match
+     * @param pattern the regular expression matching valid words
+     * @return a list of matching words
+     */
+    public static List<String> matchingWords(Collection<String> words, Pattern pattern) {
+        List<String> ret = new ArrayList<String>(words.size());
+        for (String word : words) {
+            if (pattern.matcher(word).matches())
+                ret.add(word);
+        }
+        return ret;
+    }
+
+    /**
      * Return a collection of stemmed, non-ignored words.
      * Note that the ignore words are updated whenever a non-ignored word is found,
      * thus if {@code ignoreWords} is not <tt>null</tt> the resulting collection
@@ -155,9 +171,9 @@ public abstract class TextConversion {
      * @throws TextConversionException if there was an error stemming the word
      */
     public static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
-        if (keyWords == null) {
-            return Collections.EMPTY_LIST;
-        }
+        if (keyWords == null)
+            return Collections.emptyList();
+
         Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
         for (String keyWord : keyWords) {
             String keyWordUnified = unifyWord(keyWord, ignoreWords, stemmer, normalize);
