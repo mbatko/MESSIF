@@ -577,23 +577,6 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
     //****************** Bulk modification methods ******************//
 
     /**
-     * Add all of the elements provided by the specified iterator.
-     * The elements are added according the to order defined by the comparator. If the specified
-     *  collection is of type {@link SortedCollection} over the same type, then it is assumed that
-     *  it is ordered by the same comparator and these lists are effectively merged.
-     * @param it iterator iterating over all elements to be added to this list
-     * @return <tt>true</tt> if this list changed as a result of the call
-     * @throws NullPointerException if the specified iterator is null
-     */
-    public boolean addAll(Iterator<? extends T> it) {
-	boolean ret = false;
-        while (it.hasNext())
-            if (add(it.next()))
-                ret = true;
-        return ret;
-    }
-    
-    /**
      * Add all of the elements in the specified collection to this list.
      * The elements are added according the to order defined by the comparator. If the specified
      *  collection is of type {@link SortedCollection} over the same type, then it is assumed that
@@ -604,29 +587,26 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
      */
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        if (c instanceof SortedCollection) {
-            return addAllSortedArray(((SortedCollection) c).items, c.size());
+	boolean ret = false;
+        for (T t : c) {
+            if (add(t))
+                ret = true;            
         }
-        return addAll(c.iterator());
+        return ret;
     }
 
     /**
      * Add all of the elements in the specified array to this list assuming that the
      *  items of the {@code array} are ordered according to the same {@link #comparator} as
-     *  this collection. If capacity would be exceeded, no data is added anf false is returned.
+     *  this collection. If capacity C would be exceeded, then only the top-C objects remain in the merged answer.
      * @param array array of objects ordered according to the same {@link #comparator} as this collection
      * @param size number of elements from the array to be added to this collection (the rest is ignored)
-     * @param c collection containing elements to be added to this list
      * @return <tt>true</tt> if this list changed as a result of the call; false if, e.g., the resulting collection
      *  should exceed the capacity (in this case no data from {@code array} is added.
      * @throws NullPointerException if the specified array is null
      */
     protected boolean addAllSortedArray(Object[] array, int size) {
-        // if the inserted array does not fit to this collections capacity
-        if (this.size + size > capacity) {
-            return false;
-        }
-        Object [] newArray = new Object[size + this.size];
+        Object [] newArray = new Object[Math.min(size + this.size, capacity)];
         mergeSort((T[]) this.items, 0, this.size, (T[]) array, 0, size, comparator, (T[]) newArray, 0, newArray.length);
         this.items = newArray;
         this.size = newArray.length;

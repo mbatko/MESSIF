@@ -86,7 +86,7 @@ public abstract class Extractors {
             }
         };
     }
-
+    
     /**
      * Returns a type-safe cast of a given extractor instance.
      * @param <T> the class of objects the extractor creates

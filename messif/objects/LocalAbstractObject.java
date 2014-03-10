@@ -21,7 +21,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.Map;
@@ -894,7 +896,132 @@ public abstract class LocalAbstractObject extends AbstractObject {
         return create(objectClass, new BufferedReader(new StringReader(objectData)), additionalArguments);
     }
 
+    
+    // *************   Static methods for easy implementation of read/write of the object from/to text *******************  //
 
+    /**
+     * Helper method for reading object primitive/array attributes from a text stream.
+     * If the field is a primitive type, the value of that attribute is read into respective attribute.
+     * If the field is an instance of some class, a static <code>Object valueOf(String value)</code> method is used to create a respective attribute object.
+     * If the field is an array, a <code>arrayItemsSeparator</code>-separated list of items is read into respective attribute array.
+     *
+     * @param line a line of text representing the data
+     * @param attributesRegexp the regular expression that is used to separate attributes
+     * @param arrayItemsRegexp the regular expression that is used to separate items of arrays
+     * @param dataObject the object whose data are read
+     * @param dataFields the list of <code>dataObject</code> attribute fields to read from the stream
+     * @throws IOException if there was an error reading from the stream
+     * @throws IllegalArgumentException if one of the specified fields is invalid or the value specified for a field can't be converted to correct type
+     */
+    public static void readAttributesFromStream(String line, String attributesRegexp, String arrayItemsRegexp, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
+        // Split the line
+        String[] attributes = line.trim().split(attributesRegexp, dataFields.length);
+        if (attributes.length != dataFields.length) {
+            throw new IllegalArgumentException("There was not enough attributes to create " + dataObject.getClass().getSimpleName());
+        }
+
+        // Process fields
+        for (int i = 0; i < dataFields.length; i++) {
+            try {
+                Class<?> fieldClass = dataFields[i].getType();
+                if (attributes[i].length() == 0) {
+                    // The value is empty text, set the attribute to null
+                    dataFields[i].set(dataObject, null);
+                } else if (fieldClass.isArray()) {
+                    // The field is array, split the values and fill them into array
+                    String[] itemStrings = attributes[i].split(arrayItemsRegexp);
+
+                    // Shift to the class of the components
+                    fieldClass = fieldClass.getComponentType();
+                    // Create new instance of array and fill its items
+                    Object fieldArray = Array.newInstance(fieldClass, itemStrings.length);
+                    for (int j = 0; j < itemStrings.length; j++) {
+                        Array.set(fieldArray, j, Convert.stringToType(itemStrings[j], fieldClass, null));
+                    }
+                    // Finally, assign the created array to the respective attribute
+                    dataFields[i].set(dataObject, fieldArray);
+                } else {
+                    // It is a primitive value (or class with valueOf)
+                    dataFields[i].set(dataObject, Convert.stringToType(attributes[i], fieldClass, null));
+                }
+            } catch (IllegalAccessException e) {
+                throw new IllegalArgumentException("Can't read value for " + dataObject.getClass().getSimpleName() + "." + dataFields[i].getName(), e);
+            } catch (InstantiationException e) {
+                throw new IllegalArgumentException("Can't read value for " + dataObject.getClass().getSimpleName() + "." + dataFields[i].getName(), e);
+            }
+        }
+    }
+
+
+    /**
+     * Helper method for writing object primitive/array attributes to a text stream.
+     * If the attribute is a primitive type, the value of that attribute is written.
+     * If the attribute is an instance of some class, {@link Object#toString toString} method result is written.
+     * If the attribute is an array, a <code>arrayItemsSeparator</code>-separated list of items is written.
+     *
+     * @param stream the stream to output the text to
+     * @param attributesSeparator the character written to separate attributes
+     * @param arrayItemsSeparator the character written to separate items of an array attribute
+     * @param dataObject the object whose data are written
+     * @param dataFields the list of <code>dataObject</code> attribute fields to write to the stream
+     * @throws IOException if there was an error writing to the stream
+     * @throws IllegalArgumentException if one of the specified fields is invalid
+     */
+    public static void writeAttributesToStream(OutputStream stream, char attributesSeparator, char arrayItemsSeparator, LocalAbstractObject dataObject, Field... dataFields) throws IOException, IllegalArgumentException {
+        // Print all specified attributes
+        for (int i = 0; i < dataFields.length; i++) {
+            // Write separator
+            if (i > 0)
+                stream.write(attributesSeparator);
+
+            // Get attribute for the spefied field
+            Object attribute;
+            try {
+                attribute = dataFields[i].get(dataObject);
+            } catch (IllegalAccessException e) {
+                throw new IllegalArgumentException(e.toString());
+            }
+
+            // Null values are written as empty
+            if (attribute == null)
+                continue;
+
+            // Get class of this attribute
+            if (attribute.getClass().isArray()) {
+                int length = Array.getLength(attribute);
+                for (int j = 0; j < length; j++) {
+                    if (j > 0)
+                        stream.write(arrayItemsSeparator);
+                    stream.write(Array.get(attribute, j).toString().getBytes());
+                }
+            } else stream.write(attribute.toString().getBytes());
+        }
+    }
+    
+   /**
+     * Returns a list of fields of the specified class that match the provided names.
+     * @param forClass the class to get fields for
+     * @param fieldName the list of field names
+     * @return a list of fields of the specified class that match the provided names
+     * @throws IllegalArgumentException if there is no attribute field with the specified name
+     */
+    protected static Field[] getFieldsForNames(Class<? extends LocalAbstractObject> forClass, String... fieldName) throws IllegalArgumentException {
+        // Prepare fields
+        Field[] fields = new Field[fieldName.length];
+        try {
+            // Get fileds with the specified names
+            for (int i = 0; i < fieldName.length; i++) {
+                fields[i] = forClass.getDeclaredField(fieldName[i]);
+                fields[i].setAccessible(true); // Allow access
+            }
+        } catch (NoSuchFieldException e) {
+            throw new IllegalArgumentException(e.toString());
+        }
+        
+        return fields;
+    }
+    
+    
     //****************** Cloning ******************//
 
     /**
