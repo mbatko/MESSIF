@@ -16,6 +16,11 @@
  */
 package messif.objects.text;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
 import java.util.ArrayList;
@@ -165,18 +170,19 @@ public abstract class TextConversion {
      * @param keyWords the list of keywords to transform
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param stemmer a {@link Stemmer} for word transformation
      * @param normalize if <tt>true</tt>, each keyword is first {@link #normalizeString(java.lang.String) normalized}
      * @return a set of stemmed, non-duplicate, non-ignored words
      * @throws TextConversionException if there was an error stemming the word
      */
-    public static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
+    public static Collection<String> unifyWords(String[] keyWords, Set<String> ignoreWords, Set<String> stopWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
         if (keyWords == null)
             return Collections.emptyList();
 
         Collection<String> processedKeyWords = new ArrayList<String>(keyWords.length);
         for (String keyWord : keyWords) {
-            String keyWordUnified = unifyWord(keyWord, ignoreWords, stemmer, normalize);
+            String keyWordUnified = unifyWord(keyWord, ignoreWords, stopWords, stemmer, normalize);
             if (keyWordUnified != null)
                 processedKeyWords.add(keyWordUnified);
         }
@@ -191,12 +197,13 @@ public abstract class TextConversion {
      * @param keyWord the keyword to transform
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param stemmer a {@link Stemmer} for word transformation
      * @param normalize if <tt>true</tt>, the keyword is first {@link #normalizeString(java.lang.String) normalized}
      * @return a stemmed, non-ignored word or <tt>null</tt>
      * @throws TextConversionException if there was an error stemming the word
      */
-    public static String unifyWord(String keyWord, Set<String> ignoreWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
+    public static String unifyWord(String keyWord, Set<String> ignoreWords, Set<String> stopWords, Stemmer stemmer, boolean normalize) throws TextConversionException {
         keyWord = keyWord.trim();
         if (normalize)
             keyWord = normalizeString(keyWord);
@@ -205,6 +212,8 @@ public abstract class TextConversion {
         // Perform stemming
         if (stemmer != null)
             keyWord = stemmer.stem(keyWord);
+        if (stopWords != null && stopWords.contains(keyWord))
+            return null;
         // Check if not ignored
         if (ignoreWords != null && !ignoreWords.add(keyWord))
             return null;
@@ -317,6 +326,7 @@ public abstract class TextConversion {
      * @param words the list of words to transform
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param expander instance for expanding the list of words
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
@@ -324,7 +334,7 @@ public abstract class TextConversion {
      * @return array of translated addresses
      * @throws TextConversionException if there was an error stemming the word or reading the index
      */
-    public static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) throws TextConversionException {
+    public static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, Set<String> stopWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) throws TextConversionException {
         if (words == null)
             return new int[0];
 
@@ -333,7 +343,7 @@ public abstract class TextConversion {
             words = expander.expandWords(words);
 
         // Convert array to a set, ignoring words from ignoreWords (e.g. words added by previous call)
-        Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stemmer, normalize);
+        Collection<String> processedKeyWords = unifyWords(words, ignoreWords, stopWords, stemmer, normalize);
 
         // If the keywords list is empty after ignored words, return
         if (processedKeyWords.isEmpty())
@@ -358,14 +368,15 @@ public abstract class TextConversion {
      * @param stringSplitRegexp the regular expression used to split the string into words
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
      * @return array of translated addresses
      * @throws IllegalStateException if there was a problem reading the index
      * @throws TextConversionException if there was an error stemming the word
      */
-    public static int[] textToWordIdentifiers(String string, String stringSplitRegexp, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
-        return textToWordIdentifiers(string, stringSplitRegexp, ignoreWords, null, stemmer, wordIndex);
+    public static int[] textToWordIdentifiers(String string, String stringSplitRegexp, Set<String> ignoreWords, Set<String> stopWords, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
+        return textToWordIdentifiers(string, stringSplitRegexp, ignoreWords, stopWords, null, stemmer, wordIndex);
     }
 
     /**
@@ -379,6 +390,7 @@ public abstract class TextConversion {
      * @param stringSplitRegexp the regular expression used to split the string into words
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param expander instance for expanding the list of words
      * @param stemmer a {@link Stemmer} for word transformation
      * @param wordIndex the index for translating words to addresses
@@ -386,8 +398,8 @@ public abstract class TextConversion {
      * @throws IllegalStateException if there was a problem reading the index
      * @throws TextConversionException if there was an error expanding or stemming the words
      */
-    public static int[] textToWordIdentifiers(String string, String stringSplitRegexp, Set<String> ignoreWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
-        return wordsToIdentifiers(normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, expander, stemmer, wordIndex, false);
+    public static int[] textToWordIdentifiers(String string, String stringSplitRegexp, Set<String> ignoreWords, Set<String> stopWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex) throws TextConversionException {
+        return wordsToIdentifiers(normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, stopWords, expander, stemmer, wordIndex, false);
     }
 
     /**
@@ -401,6 +413,7 @@ public abstract class TextConversion {
      * @param stringSplitRegexp the regular expression used to split the string into words
      * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
      *          if <tt>null</tt>, all keywords are added
+     * @param stopWords set of words to ignore but not update
      * @param stemmer a {@link Stemmer} for word transformation
      * @param writableWordIndex the index for translating words to addresses where the unknown words can be inserted
      * @param readonlyWordIndexes the indexes for translating words to addresses
@@ -408,8 +421,8 @@ public abstract class TextConversion {
      * @throws IllegalStateException if there was a problem reading the index
      * @throws TextConversionException if there was an error expanding or stemming the words
      */
-    public static int[] textToWordIdentifiersMultiIndex(String string, String stringSplitRegexp, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
-        Collection<String> words = TextConversion.unifyWords(TextConversion.normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, null, false);
+    public static int[] textToWordIdentifiersMultiIndex(String string, String stringSplitRegexp, Set<String> ignoreWords, Set<String> stopWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
+        Collection<String> words = TextConversion.unifyWords(TextConversion.normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, stopWords, null, false);
         int[] data = new int[words.size()];
         int index = 0;
         for (IntStorageIndexed<String> wordIndex : readonlyWordIndexes) {
@@ -432,6 +445,7 @@ public abstract class TextConversion {
      *
      * @param strings the multiple strings of words to transform
      * @param stringSplitRegexp the regular expression used to split the string into words
+     * @param stopWords set of words to ignore but not update
      * @param stemmer a {@link Stemmer} for word transformation
      * @param writableWordIndex the index for translating words to addresses where the unknown words can be inserted
      * @param readonlyWordIndexes the indexes for translating words to addresses
@@ -439,13 +453,42 @@ public abstract class TextConversion {
      * @throws IllegalStateException if there was a problem reading the index
      * @throws TextConversionException if there was an error expanding or stemming the words
      */
-    public static int[][] textsToWordIdentifiersMultiIndex(String[] strings, String stringSplitRegexp, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
+    public static int[][] textsToWordIdentifiersMultiIndex(String[] strings, String stringSplitRegexp, Set<String> stopWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
         int[][] data = new int[strings.length][];
         Set<String> ignoreWords = new HashSet<String>();
         for (int i = 0; i < strings.length; i++) {
-            data[i] = textToWordIdentifiersMultiIndex(strings[i], stringSplitRegexp, ignoreWords, stemmer, writableWordIndex, readonlyWordIndexes);
+            data[i] = textToWordIdentifiersMultiIndex(strings[i], stringSplitRegexp, ignoreWords, stopWords, stemmer, writableWordIndex, readonlyWordIndexes);
         }
         return data;
+    }
+
+    /**
+     * Load a set of words from a given table.
+     * @param dbConnUrl the database JDBC connection URL
+     * @param tableName the table name to get the words from
+     * @param columnName the table column name to get the words from
+     * @return a set of words from a given table
+     * @throws SQLException if there was a problem communicating with the database
+     */
+    public static Set<String> loadDatabaseWords(String dbConnUrl, String tableName, String columnName) throws SQLException {
+        if (dbConnUrl == null)
+            return null;
+        Connection connection = DriverManager.getConnection(dbConnUrl);
+        try {
+            PreparedStatement stm = connection.prepareStatement("select " + columnName + " from " + tableName);
+            ResultSet rs = stm.executeQuery();
+            try {
+                Set<String> words = new HashSet<String>();
+                while (rs.next()) {
+                    words.add(rs.getString(1));
+                }
+                return words;
+            } finally {
+                stm.close();
+            }
+        } finally {
+            connection.close();
+        }
     }
 
     /**
