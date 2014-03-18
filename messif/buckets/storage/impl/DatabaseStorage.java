@@ -52,6 +52,8 @@ import messif.objects.nio.BinarySerializator;
 import messif.objects.nio.BufferInputStream;
 import messif.utility.Convert;
 import messif.utility.ExtendedDatabaseConnection;
+import messif.utility.ModifiableParametric;
+import messif.utility.Parametric;
 
 /**
  * Database-based storage.
@@ -1224,7 +1226,7 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
         public boolean isColumnCompatible(IndexComparator<?, ? super T> indexComparator) {
             return indexComparator != null &&
                     indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator) &&
-                    Comparable.class.isAssignableFrom(setterMethod.getReturnType());
+                    Comparable.class.isAssignableFrom(setterMethod.getParameterTypes()[0]);
         }
 
         @Override
@@ -1329,6 +1331,81 @@ public class DatabaseStorage<T> extends ExtendedDatabaseConnection implements In
             return key;
         }
     };
+
+    /**
+     * Column convertor that uses a {@link ModifiableParametric} value to decompose/restore
+     * a given object to/from a database storage.
+     */
+    public static class ParametricColumnConvertor implements SearchableColumnConvertor<Object, ModifiableParametric> {
+        /** class serial id for serialization */
+        private static final long serialVersionUID = 1L;
+
+        //****************** Attributes ******************//
+
+        /** Name of the {@link Parametric} value to work with */
+        private final String parameterName;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage */
+        private final boolean usedToRead;
+        /** Flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage */
+        private final boolean usedToWrite;
+        /** Flag whether to remove the parameter once the data are stored to the database */
+        private final boolean removeParameterOnWrite;
+
+
+        //****************** Constructor ******************//
+
+        /**
+         * Creates a new instance of ParametricColumnConvertor.
+         * @param parameterName the name of the {@link Parametric} value to work with
+         * @param usedToRead a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is retrieved from the storage
+         * @param usedToWrite a flag whether this column convertor is used (<tt>true</tt>) or should be skipped (<tt>false</tt>) when the object is stored into the storage
+         * @param removeParameterOnWrite a flag whether to remove the parameter value from the original object once the data are stored to the database
+         */
+        public ParametricColumnConvertor(String parameterName, boolean usedToRead, boolean usedToWrite, boolean removeParameterOnWrite) throws IllegalArgumentException {
+            this.parameterName = parameterName;
+            this.usedToRead = usedToRead;
+            this.usedToWrite = usedToWrite;
+            this.removeParameterOnWrite = removeParameterOnWrite;
+        }
+
+
+        //****************** Implementation of ColumnConvertor interface ******************//
+
+        @Override
+        public Object convertToColumnValue(ModifiableParametric instance) throws BucketStorageException {
+            Object value = instance.getParameter(parameterName);
+            if (removeParameterOnWrite)
+                instance.removeParameter(parameterName);
+            return value;
+        }
+
+        @Override
+        public boolean isConvertToColumnUsed() {
+            return usedToWrite;
+        }
+
+        @Override
+        public ModifiableParametric convertFromColumnValue(ModifiableParametric value, Object column) throws BucketStorageException {
+            value.setParameter(parameterName, column);
+            return value;
+        }
+
+        @Override
+        public boolean isConvertFromColumnUsed() {
+            return usedToRead;
+        }
+
+        @Override
+        public boolean isColumnCompatible(IndexComparator<?, ? super ModifiableParametric> indexComparator) {
+            return indexComparator != null &&
+                    indexComparator.equals(LocalAbstractObjectOrder.trivialObjectComparator);
+        }
+
+        @Override
+        public Object convertKeyToColumnValue(Object key) {
+            return key;
+        }
+    }
 
     /**
      * Wraps a column convertor while changing its read/write capabilities.
