@@ -41,7 +41,7 @@ public class DeleteOperation extends AbstractOperation {
     //****************** Attributes ******************//
 
     /** Object to match the data against */
-    private final LocalAbstractObject deletedObject;
+    private LocalAbstractObject deletedObject;
 
     /** Maximal number of deleted objects, zero means unlimited */
     private final int deleteLimit;
@@ -88,6 +88,17 @@ public class DeleteOperation extends AbstractOperation {
         this(deletedObject, 0);
     }
 
+    
+    //******************   Clonning    ********************* //
+    
+    @Override
+    public DeleteOperation clone() throws CloneNotSupportedException {
+        DeleteOperation operation = (DeleteOperation)super.clone();
+        if (operation.deletedObject != null)
+            operation.deletedObject = operation.deletedObject.clone();
+        return operation;
+    }
+        
 
     //****************** Attribute access ******************//
 
