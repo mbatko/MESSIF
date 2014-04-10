@@ -173,8 +173,8 @@ public class LocatorStorageAlgorithm extends Algorithm {
      */
     public Algorithm getAlgorithm() {
         return algorithm;
-    }
-
+    }   
+    
     /**
      * Implementation of the insert operation.
      * The object is first inserted into the internal storage and if it is successful,
@@ -280,7 +280,14 @@ public class LocatorStorageAlgorithm extends Algorithm {
     public void deleteByLocatorOperation(DeleteByLocatorOperation op) throws BucketStorageException, AlgorithmMethodException, NoSuchMethodException {
         StorageSearch<LocalAbstractObject> search = storage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, op.getLocators());
         while (!op.isLimitReached() && search.next()) {
-            DeleteOperation delete = algorithm.executeOperation(new DeleteOperation(search.getCurrentObject(), op.getDeleteLimit(), true));
+            LocalAbstractObject objectToDeleteFromIndex;
+            if (metaobjectName == null) {
+                objectToDeleteFromIndex = search.getCurrentObject();
+            } else {
+                objectToDeleteFromIndex = ((MetaObject)search.getCurrentObject()).getObject(metaobjectName);
+            }
+            
+            DeleteOperation delete = algorithm.executeOperation(new DeleteOperation(objectToDeleteFromIndex, op.getDeleteLimit(), true));
             if (delete.wasSuccessful()) {
                 search.remove();
                 op.addDeletedObject(search.getCurrentObject());

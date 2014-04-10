@@ -30,7 +30,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
-import messif.utility.ParametricBase;
+import messif.utility.ModifiableParametricBase;
 
 /**
  * Provides a data source for {@link Extractor}s.
@@ -52,7 +52,7 @@ import messif.utility.ParametricBase;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractorDataSource extends ParametricBase implements Closeable {
+public class ExtractorDataSource extends ModifiableParametricBase implements Closeable {
     /** Number of bytes that the {@link #getBinaryData()} method allocates */
     private static final int readStreamDataAllocation = 4096;
 

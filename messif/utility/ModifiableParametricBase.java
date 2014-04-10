@@ -37,9 +37,9 @@ public class ModifiableParametricBase extends ParametricBase implements Modifiab
      * Creates a new instance of ModifiableParametricBase backed-up by the given map with parameters.
      * @param map the map that provides the parameter values
      */
-    public ModifiableParametricBase(Map<String, Object> map) {
+    public ModifiableParametricBase(Map<String, ? extends Object> map) {
         super(map);
-        this.map = map;
+        this.map = (Map<String, Object>) map;
     }
 
     @Override
