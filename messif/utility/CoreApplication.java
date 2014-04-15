@@ -2303,6 +2303,53 @@ public class CoreApplication {
     }
 
     /**
+     * Creates a named instance for the current running thread.
+     * Note that if the given named instance exists, it must have been created by this method previously.
+     * An argument specifying the signature of a constructor, a factory method or a static field
+     * is required. Additional argument specifies the name for the instance.
+     * Note that a "lastOperation" temporary named instance is available during the instantiation.
+     * <p>
+     * Example of usage for constructor, factory method and static field:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.objects.impl.ObjectByteVectorL1(1,2,3,4,5,6,7,8,9,10) my_object
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.utility.ExtendedProperties.getProperties(someparameters.cf) my_props
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator my_comparator
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the instance constructor, factory method or static field signature and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating a named instance
+     */
+    @ExecutableMethod(description = "creates a named instance for the current running thread", arguments = { "instance constructor, factory method or static field signature", "name to register"})
+    @SuppressWarnings("unchecked")
+    public boolean namedInstanceThread(PrintStream out, String... args) throws InvocationTargetException {
+        if (args.length <= 2) {
+            out.println("Two arguments (signature and instance name) are required for namedInstanceThread");
+            return false;
+        }
+
+        ThreadLocal<Object> valueHolder;
+        synchronized (namedInstances) {
+            if (namedInstances.containsKey(args[2])) {
+                valueHolder = (ThreadLocal<Object>)namedInstances.get(args[2]);
+            } else {
+                valueHolder = new InheritableThreadLocal<Object>();
+                namedInstances.put(args[2], valueHolder);
+            }
+        }
+
+        try {
+            valueHolder.set(InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", getLastOperation(), true)));
+            return true;
+        } catch (NoSuchInstantiatorException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e);
+            return false;
+        }
+    }
+
+    /**
      * Prints the list of all named instances.
      * <p>
      * Example of usage:
