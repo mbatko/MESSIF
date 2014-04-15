@@ -91,7 +91,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *   <li><code>-register &lt;host&gt;:&lt;port&gt;</code> send UDP "alive" announcements to the specified &lt;host&gt;:&lt;port&gt;</li>
  *   <li><code>&lt;controlFile&gt; [action] [var=value ...]]</code> executes <code>action</code> in the specified <code>controlFile</code> (optionally with setting variables)</li>
  * </ul>
- * 
+ *
  * The telnet interface (when <tt>cmdport</tt> is specified) allows to execute {@link CoreApplication}'s methods.
  * Automatic (context) help is generated whenever user provides incorrect data. For example, entering empty text on the
  * MESSIF prompt will list all available commands. Type just the command name to get help on its arguments (of course
@@ -102,9 +102,9 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  * .... telnet &lt;localhost&gt; &lt;cmdport&gt;
  * MESSIF >>> operationInfo
  * Range query .... returned 8 objects
- * MESSIF >>> 
+ * MESSIF >>>
  * </pre>
- * 
+ *
  * The <i>control file</i> is another way of issuing application commands. It allows to
  * prepare batches of commands that can be run either immediately after the process is started
  * (see the parameters above) or through the {@link #controlFile} method.
@@ -372,10 +372,10 @@ public class CoreApplication {
         // (the equality by instance IS correct)
         if (this.algorithm == algorithm) {
             // If the currently selected algorithm is removed, set it to the last added algorithm (or null)
-            if (algorithms.isEmpty()) 
+            if (algorithms.isEmpty())
                 this.algorithm = null;
-            else 
-                this.algorithm = algorithms.get(algorithms.size() - 1);                
+            else
+                this.algorithm = algorithms.get(algorithms.size() - 1);
         }
         algorithm.finalize();
         return ret;
@@ -390,7 +390,7 @@ public class CoreApplication {
      * any searching or indexing capabilities. To actually store and query data,
      * an algorithm must be created using this method. To implement an algorithm,
      * simply inherit from the {@link messif.algorithms.Algorithm}.
-     * 
+     *
      * <p>
      * To create algorithm, at least the name of the algorithm class must be provided.
      * Additional parameters are passed to the algorithm's constructor. The following
@@ -404,7 +404,7 @@ public class CoreApplication {
      * (see {@link messif.algorithms.impl.ParallelSequentialScan} for more informations).
      * If some wrong constructor parameters are specified, the constructor annotations are shown for the class.
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args algorithm class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -437,7 +437,7 @@ public class CoreApplication {
             logException((ex != null)?ex:e);
             out.println((ex != null)?ex:e);
             out.println("---------------- Available constructors ----------------");
-            
+
             for (Constructor<Algorithm> constructor : constructors)
                 out.println(Algorithm.getConstructorDescription(constructor));
             return false;
@@ -450,7 +450,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmRestore /some/where/file/algorithm.serialized
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args file name with the serialized algorithm
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -469,7 +469,7 @@ public class CoreApplication {
         } catch (IOException e) {
             out.println(e.toString());
         } catch (ClassNotFoundException e) {
-            out.println(e.toString());            
+            out.println(e.toString());
         }
         return false;
     }
@@ -480,7 +480,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmStore /some/where/file/algorithm.serialized
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args file name where the serialized algorithm is stored
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -513,7 +513,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmStop
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -534,7 +534,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmStopAll
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -558,7 +558,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmInfo
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -580,7 +580,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmInfoAll
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -608,7 +608,7 @@ public class CoreApplication {
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmSelect 0
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the algorithm sequence number
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -640,14 +640,14 @@ public class CoreApplication {
      *   <li>coma-separated list of numbers or number ranges;</li>
      *   <li>word "all" to get all currently running algorithms as a static array.</li>
      * </ul>
-     * 
+     *
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; algorithmToNamedInstace runningAlgs 0-2,6,9
      * </pre>
-     * 
+     *
      * @param out a stream where the application writes information for the user
-     * @param args the name of the variable and, optionally, the algorithm sequence number selector 
+     * @param args the name of the variable and, optionally, the algorithm sequence number selector
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     @ExecutableMethod(description = "select algorithm to manage", arguments = {"name of the variable", "algorithm sequence number selector (optional)"})
@@ -824,13 +824,13 @@ public class CoreApplication {
      * requires two parameters - a {@link messif.objects.LocalAbstractObject}
      * and a radius. The {@link messif.objects.LocalAbstractObject} is usually entered
      * as a next object from a stream (see {@link #objectStreamOpen}).
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @throws InvocationTargetException if there was an error while creating an instance of the operation
      * @throws AlgorithmMethodException if there was an error executing the operation
-     */    
+     */
     @ExecutableMethod(description = "execute specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
     public boolean operationExecute(PrintStream out, String... args) throws InvocationTargetException, AlgorithmMethodException {
         Algorithm alg = getAlgorithm();
@@ -860,14 +860,14 @@ public class CoreApplication {
      * is shown. In order to execute an operation, an operation instance must be created.
      * Similarly to the {@link #algorithmStart}, the name of operation's class
      * must be provided and all the additional arguments are passed to its constructor.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationBgExecute messif.operations.query.RangeQueryOperation objects 1.3
      * </pre>
      * </p>
-     * 
+     *
      * <p>
      * Note that the last operation is updated, however, the control is returned immediately.
      * So if there is another operation executed meanwhile (either background or normal), the results
@@ -880,7 +880,7 @@ public class CoreApplication {
      * @throws InvocationTargetException if there was an error while creating an instance of the operation
      */
     @ExecutableMethod(description = "execute on background specified operation on current algorithm instance", arguments = {"operation class", "arguments for constructor ..."})
-    public boolean operationBgExecute(PrintStream out, String... args) throws InvocationTargetException {       
+    public boolean operationBgExecute(PrintStream out, String... args) throws InvocationTargetException {
         Algorithm alg = getAlgorithm();
         if (alg == null) {
             out.println("No running algorithm is selected");
@@ -908,14 +908,14 @@ public class CoreApplication {
     /**
      * Synchronize on all operations run on the background.
      * After this method finishes, there are no running operations on background.
-     *  
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationWaitBg
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -942,26 +942,26 @@ public class CoreApplication {
             return false;
         }
     }
-    
+
     /**
      * Executes the last operation once more.
      * Note that the operation instance remains the same except for its answer, which
      * might be reset, if <tt>true</tt> is passed as an argument. The default behavior
      * is <em>not</em> to reset the answer.
      * Statistics are always reset.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationExecuteAgain true
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args flag whether to reset operation answer
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @throws AlgorithmMethodException if there was an error executing the operation
-     */    
+     */
     @ExecutableMethod(description = "execute the last operation once more", arguments = {"boolean whether to reset operation answer (default: false)"})
     public boolean operationExecuteAgain(PrintStream out, String... args) throws AlgorithmMethodException {
         try {
@@ -992,18 +992,18 @@ public class CoreApplication {
      * is shown. Note that the operation might be still running if the
      * {@link #operationBgExecute} was used and thus the results might not be complete.
      * Use {@link #operationWaitBg} to wait for background operations to finish.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationInfo
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     */
     @ExecutableMethod(description = "show information about the last executed operation", arguments = {})
     public boolean operationInfo(PrintStream out, String... args) {
         out.println(getLastOperation());
@@ -1012,18 +1012,18 @@ public class CoreApplication {
 
     /**
      * Show the {@link ErrorCode} returned by the last executed operation.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationErrorCode
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     */
     @ExecutableMethod(description = "show error code returned by the last executed operation", arguments = {})
     public boolean operationErrorCode(PrintStream out, String... args) {
         AbstractOperation op = getLastOperation();
@@ -1033,18 +1033,18 @@ public class CoreApplication {
 
     /**
      * Show the number of objects returned by the last executed operation.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationObjectCount
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     */
     @ExecutableMethod(description = "show number of objects returned by the last executed operation", arguments = {})
     public boolean operationObjectCount(PrintStream out, String... args) {
         AbstractOperation op = getLastOperation();
@@ -1060,18 +1060,18 @@ public class CoreApplication {
      * Show the {@link AbstractObject#getLocatorURI() locatorURI} of the query object of the last executed operation.
      * Note that a {@link RankingSingleQueryOperation} must have been executed prior to calling this method.
      * Optionally, the argument specifies text written after the locator (defaults to new line).
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationQueryObjectLocator :
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args optional suffix to write
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     */
     @ExecutableMethod(description = "show the locator of the last executed query operation", arguments = {})
     public boolean operationQueryObjectLocator(PrintStream out, String... args) {
         AbstractOperation op = getLastOperation();
@@ -1097,18 +1097,18 @@ public class CoreApplication {
      * is shown. Note that the operation might be still running if the
      * {@link #operationBgExecute} was used and thus the results might not be complete.
      * Use {@link #operationWaitBg} to wait for background operations to finish.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationArgument 0
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args zero-based index of the argument to show
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */    
+     */
     @ExecutableMethod(description = "show an argument of the last executed operation", arguments = {"index of the argument to show"})
     public boolean operationArgument(PrintStream out, String... args) {
         AbstractOperation op = getLastOperation();
@@ -1252,7 +1252,7 @@ public class CoreApplication {
      * a descendant of {@link RankingQueryOperation}. The collection must be
      * prepared as a named instance first. Note that the collection will be cleared
      * and its contents replaced by the current operation answer.
-     * 
+     *
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationChangeAnswerNamedInstance collection_named_instance
@@ -1346,7 +1346,7 @@ public class CoreApplication {
      * the {@link AbstractObject#getLocatorURI() locator} of the {@link AbstractObject},
      * the distance,
      * the meta-object sub-distance for the given {@code subAnswerInder}
-     * 
+     *
      * @param answerObject the answer object from a query operation (e.g. {@link AbstractObject}, {@link RankedAbstractObject}, or {@link RankedAbstractMetaObject})
      * @param subAnswerIndex the index of the sub-distance to get from the {@link RankedAbstractMetaObject}
      * @return a static array with the five formatting elements of the answer object
@@ -1371,13 +1371,13 @@ public class CoreApplication {
 
     /**
      * Internal method that prints the last operation answer to the output.
-     * 
+     *
      * @param subAnswerIndex the index of the sub-answer to display (if <tt>null</tt> the whole answer is used)
      * @param out a stream where the application writes information for the user
      * @param args additional optional arguments for the display
      * @param argIndex the index of the first optional argument
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */  
+     */
     private boolean operationAnswer(Integer subAnswerIndex, PrintStream out, int argIndex, String[] args) {
         QueryOperation<?> op;
         try {
@@ -1500,18 +1500,18 @@ public class CoreApplication {
      *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
      * </p>
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationAnswer DistanceLocators , en
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args display separator for the list of objects and type of the display
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */  
+     */
     @ExecutableMethod(description = "list objects retrieved by the last executed query operation", arguments = {"objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationAnswer(PrintStream out, String... args) {
         return operationAnswer(null, out, 1, args);
@@ -1554,18 +1554,18 @@ public class CoreApplication {
      *     <li>number of results to skip from the beginning (defaults to 0)</li>
      *   </ul>
      * </p>
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationSubAnswer 1 Locators
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args sub-answer index, display separator for the list of objects, and type of the display
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */  
+     */
     @ExecutableMethod(description = "list sub-answer objects retrieved by the last executed query operation", arguments = {"sub-answer index to show", "objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationSubAnswer(PrintStream out, String... args) {
         Integer subAnswerIndex;
@@ -1589,20 +1589,20 @@ public class CoreApplication {
      * If the last operation was not {@link messif.operations.QueryOperation query} operation,
      * this method will fail.
      * </p>
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; operationAnswerRawObjects
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args no arguments required
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      * @throws IOException if some of the objects failed to write themselves to output
      * @throws ClassCastException if the operation did not provide {@link LocalAbstractObject}s in its answer
-     */  
+     */
     @ExecutableMethod(description = "list sub-answer objects retrieved by the last executed query operation", arguments = {"sub-answer index to show", "objects separator (not required)", "display All/Objects/Locators/DistanceLocators/SLocatorsDistance (defaults to All)", "number of results to display (defaults to all)", "number of results to skip (defaults to 0)"})
     public boolean operationAnswerRawObjects(PrintStream out, String... args) throws IOException, ClassCastException {
         Iterator<AbstractObject> it;
@@ -1627,14 +1627,14 @@ public class CoreApplication {
      * Only {@link messif.utility.Convert#stringToType convertible} types can
      * be passed as arguments and if there are several methods with the same name,
      * the first one that matches the number of arguments is selected.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; methodExecute mySpecialAlgorithmMethod 1 false string_string
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args method name followed by the values for its arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -1668,19 +1668,19 @@ public class CoreApplication {
 
     /**
      * Directly execute a method of specified running algorithm.
-     * The first argument is the number of the running algorithm, 
+     * The first argument is the number of the running algorithm,
      * then the method name and its arguments must be provided.
      * Only {@link messif.utility.Convert#stringToType convertible} types can
      * be passed as arguments and if there are several methods with the same name,
      * the first one that matches the number of arguments is selected.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; methodExecuteOnAlgorithm 0 mySpecialAlgorithmMethod 1 false string_string
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args method name followed by the values for its arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -1694,7 +1694,7 @@ public class CoreApplication {
         Algorithm alg;
         try {
             alg = getAlgorithm(Integer.parseInt(args[1]));
-        } catch (IndexOutOfBoundsException ex) {            
+        } catch (IndexOutOfBoundsException ex) {
             out.println("Specified algorithm number is illegal");
             return false;
         }
@@ -1713,7 +1713,7 @@ public class CoreApplication {
             return false;
         }
     }
-    
+
 
     //****************** Statistics command functions ******************//
 
@@ -1723,18 +1723,18 @@ public class CoreApplication {
      * statistic methods are useless.
      * If <tt>false</tt> is passed as parameter, statistics are enabled again.
      * By default, statistics are enabled when application starts.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsDisable false
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args flag whether to disable (true) or enable (false) the statistics
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */ 
+     */
     @ExecutableMethod(description = "enable/disable statistics - if disabled, all statistics are useless", arguments = { "false to enable statistics (not required)" })
     public boolean statisticsDisable(PrintStream out, String... args) {
         if (args.length <= 1 || Boolean.parseBoolean(args[1]))
@@ -1765,11 +1765,11 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; statisticsGlobal DistanceComputations.* , ,
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args regular expression to match statistic names and the display separators for the statistic values
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */ 
+     */
     @ExecutableMethod(description = "show global statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)", "final separator (not required)" })
     public boolean statisticsGlobal(PrintStream out, String... args) {
         if (args.length >= 3) {
@@ -1822,14 +1822,14 @@ public class CoreApplication {
     /**
      * Reset all global statistics.
      * An optional parameter is a regular expression applied on names as a filter.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsResetGlobal DistanceComputations
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args regular expression to match statistic names
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -1867,11 +1867,11 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; statisticsLastOperation DistanceComputations.* , ,
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args regular expression to match statistic names and the display separators for the statistic values
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */ 
+     */
     @ExecutableMethod(description = "show last operation statistics", arguments = { "statistic name regexp (not required)", "separator of statistics (not required)", "separator appended after printed statistics (defaults to newline)"})
     public boolean statisticsLastOperation(PrintStream out, String... args) {
         Algorithm alg = getAlgorithm();
@@ -1895,18 +1895,18 @@ public class CoreApplication {
      * Regular expression on global statistics' names that are bound for each executed operation.
      * A required argument sets the regular expression applied on names as a filter.
      * If the passed argument is <tt>null</tt>, the autobinding is disabled.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; statisticsSetAutoBinding .*
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args regular expression to match statistic names to bind
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */ 
+     */
     @ExecutableMethod(description = "set auto binding operation statistics to global ones", arguments = { "statistic name regexp (if null, auto binding is disabled)" })
     public boolean statisticsSetAutoBinding(PrintStream out, String... args) {
         if (args.length >= 2)
@@ -1923,12 +1923,12 @@ public class CoreApplication {
      * The first required argument specifies a file name from which to open the stream.
      * The second required argument gives a fully-qualified name of the stored {@link LocalAbstractObject object class}.
      * The third required argument is a name under which the stream is opened.
-     * 
+     *
      * <p>
      * If the name (third argument) is then specified in place where {@link LocalAbstractObject}
      * is argument required, the next object is read from the stream and used as the argument's value.
      * </p>
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
@@ -1936,10 +1936,10 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; operationExecute messif.operations.query.RangeQueryOperation my_data 1.3
      * MESSIF &gt;&gt;&gt; operationExecute messif.operations.query.kNNQueryOperation my_data 10
      * </pre>
-     * 
+     *
      * Note that the first two objects are read from the stream file /my/data/file.xx, first is used
      * as a query object for the range query, the second is used in the k-NN query.
-     * 
+     *
      * A second example with a special class that requires some additional constructor parameters:
      * <pre>
      * public class MyClass {
@@ -1950,7 +1950,7 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; objectStreamOpen /my/data/file.xx MyClass other_data 10 string_value
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args file name to read from,
      *             class name of objects to be read from the file,
@@ -1998,7 +1998,7 @@ public class CoreApplication {
 
     /**
      * Sets a value of additional constructor parameter of an opened object stream.
-     * See {@link #objectStreamOpen} method for explanation of the concept of 
+     * See {@link #objectStreamOpen} method for explanation of the concept of
      * additional constructor parameters.
      * This method requires three arguments:
      * <ul>
@@ -2007,14 +2007,14 @@ public class CoreApplication {
      *   <li>the constructor parameter index to change (zero-based).</li>
      * </ul>
      * The third argument is optional. If not specified, <tt>0</tt> is assumed.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; objectStreamSetParameter other_data new_string_value 1
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args name of the object stream, new parameter value to object's contructor, and zero-based index of the parameter
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2101,7 +2101,7 @@ public class CoreApplication {
         } else {
             convertor = (Convertor<Object, ?>)namedInstances.get(args[2]); // This cast in not checked, the convertor must accept any object
         }
-        
+
         namedInstances.put(args[1], new ConvertorIterator<Object, Object>(objectStream, convertor));
         return true;
     }
@@ -2109,14 +2109,14 @@ public class CoreApplication {
     /**
      * Closes a named object stream.
      * An argument specifying the name of the stream to close is required.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; objectStreamClose my_data
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args name of an opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2130,14 +2130,14 @@ public class CoreApplication {
      * Resets a named object stream. It means that the objects are read from
      * the beginning of the stream's file again.
      * An argument specifying the name of the stream to reset is required.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; objectStreamReset my_data
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args name of an opened object stream
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2149,7 +2149,7 @@ public class CoreApplication {
             return false;
         }
         AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
-        if (objectStream != null) 
+        if (objectStream != null)
             try {
                 // Reset the returned stream
                 objectStream.reset();
@@ -2215,7 +2215,7 @@ public class CoreApplication {
      * Note that this method is not available from the command line interface.
      * This action does not have .parameter.#no syntax, but every value passed as
      * with this action name will be stored in the created properties.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
@@ -2227,7 +2227,7 @@ public class CoreApplication {
      * This configuration file action will create (or replace) a named instance called "myProps"
      * with a {@link ExtendedProperties} instance that will contain properties "propName1" and
      * "propName2" with values "propValue1" and "propValue2" respectively.
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param inputProperties the properties to copy from
      * @param name the name for the instance
@@ -2346,10 +2346,57 @@ public class CoreApplication {
             out.println("Two arguments (signature and instance name) are required for namedInstanceReplace");
             return false;
         }
-            
+
         try {
             Object instance = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", getLastOperation(), true));
             namedInstances.put(args[2], instance);
+            return true;
+        } catch (NoSuchInstantiatorException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e);
+            return false;
+        }
+    }
+
+    /**
+     * Creates a named instance for the current running thread.
+     * Note that if the given named instance exists, it must have been created by this method previously.
+     * An argument specifying the signature of a constructor, a factory method or a static field
+     * is required. Additional argument specifies the name for the instance.
+     * Note that a "lastOperation" temporary named instance is available during the instantiation.
+     * <p>
+     * Example of usage for constructor, factory method and static field:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.objects.impl.ObjectByteVectorL1(1,2,3,4,5,6,7,8,9,10) my_object
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.utility.ExtendedProperties.getProperties(someparameters.cf) my_props
+     * MESSIF &gt;&gt;&gt; namedInstanceThread messif.buckets.index.LocalAbstractObjectOrder.locatorToLocalObjectComparator my_comparator
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the instance constructor, factory method or static field signature and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating a named instance
+     */
+    @ExecutableMethod(description = "creates a named instance for the current running thread", arguments = { "instance constructor, factory method or static field signature", "name to register"})
+    @SuppressWarnings("unchecked")
+    public boolean namedInstanceThread(PrintStream out, String... args) throws InvocationTargetException {
+        if (args.length <= 2) {
+            out.println("Two arguments (signature and instance name) are required for namedInstanceThread");
+            return false;
+        }
+
+        ThreadLocal<Object> valueHolder;
+        synchronized (namedInstances) {
+            if (namedInstances.containsKey(args[2])) {
+                valueHolder = (ThreadLocal<Object>)namedInstances.get(args[2]);
+            } else {
+                valueHolder = new InheritableThreadLocal<Object>();
+                namedInstances.put(args[2], valueHolder);
+            }
+        }
+
+        try {
+            valueHolder.set(InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", getLastOperation(), true)));
             return true;
         } catch (NoSuchInstantiatorException e) {
             out.println("Error creating named instance for " + args[1] + ": " + e);
@@ -2365,7 +2412,7 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; namedInstanceList
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args no arguments required
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2450,7 +2497,7 @@ public class CoreApplication {
             out.println("Error creating named instance for " + args[1] + ": " + e);
             return false;
         }
-        
+
     }
 
     /**
@@ -2526,7 +2573,7 @@ public class CoreApplication {
             return true;
         } finally {
             stream.close();
-        }        
+        }
     }
 
 
@@ -2537,14 +2584,14 @@ public class CoreApplication {
      * If an argument is passed, the logging level is set.
      * Allowed argument values are names of {@link Level logging level} constants.
      * Otherwise the current logging level is printed out.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; loggingLevel warning
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the new logging level
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2569,14 +2616,14 @@ public class CoreApplication {
      * Allowed argument values are names of {@link Level logging level} constants.
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the console logging level setting.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; loggingConsoleChangeLevel info
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the new logging level
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2602,7 +2649,7 @@ public class CoreApplication {
      * The fourth argument specifies whether to use XML or text (the default) format.
      * Allowed argument values are names of {@link Level logging level} constants.
      * The fifth optional argument specifies a regular expression that the message must satisfy
-     * in order to be written in this file. 
+     * in order to be written in this file.
      * The sixth argument specifies the message part that the regular expression
      * is applied to - see {@link Logging.RegexpFilterAgainst} for explanation of
      * the various values.
@@ -2613,17 +2660,17 @@ public class CoreApplication {
      * In that case, once the file reaches the size, it is renamed with a numbering
      * prefix and all other logging file numbers are increased by one (log rotation).
      * The files with a greater or equal number than this argument specifies are deleted.
-     * 
+     *
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the file's logging level.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; loggingFileAdd myFile.log info true false messif.* CLASS_NAME
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the file name,
      *              logging level,
@@ -2667,14 +2714,14 @@ public class CoreApplication {
      * Removes a logging file.
      * The file must be previously opened by {@link #loggingFileAdd}.
      * A required argument specifies the name of the opened logging file to close.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; loggingFileRemove myFile.log
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the logging file name to remove
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2697,14 +2744,14 @@ public class CoreApplication {
      * and the second one the new logging level to set.
      * Note that the messages with lower logging level than the current global
      * logging level will not be printed regardless of the file's logging level.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; loggingFileChangeLevel myFile.log fine
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args the logging file name and the new logging level
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2731,14 +2778,14 @@ public class CoreApplication {
      * Schedules {@link System#gc() full garbage collection}.
      * If an optional argument is passed, the application will sleep for the number
      * of milliseconds specified.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; collectGarbage 30000
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args number of milliseconds to sleep after the garbage collection
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2763,14 +2810,14 @@ public class CoreApplication {
 
     /**
      * Displays the memory usage of this virtual machine.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; memoryUsage
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args this method has no arguments
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2787,14 +2834,14 @@ public class CoreApplication {
 
     /**
      * Returns current time in milliseconds or the specified date format.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; currentTime "d M yyyy HH:mm"
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args an optional argument specifying the date/time format according to {@link SimpleDateFormat}
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2813,7 +2860,7 @@ public class CoreApplication {
         }
         return true;
     }
-    
+
     /**
      * Shows a list of commands with help.
      *
@@ -2882,14 +2929,14 @@ public class CoreApplication {
      * separators. In the separators, special texts "SPACE" and "NEWLINE" can be specified.
      * All additional parameters are then added to the output separated by the inner separators
      * and followed by the final separator.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; echo NEWLINE+NEWLINE x y z
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args output type separator and list of values to print
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2943,14 +2990,14 @@ public class CoreApplication {
      * Computes a sum of the parameters and prints the result to the output.
      * The first argument is the {@link DecimalFormat output format} used
      * for printing the value. All computations are done in doubles.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; sum #,##0.## 10 20 30
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args format of the result followed by the list of values to sum
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -2990,14 +3037,14 @@ public class CoreApplication {
      * MESSIF &gt;&gt;&gt; decode mySpecVal ^your Y ^my M .* unknown
      * </pre>
      * </p>
-     * 
+     *
      * <p>
      * Additionally, a map-based syntax can be used with only two parameters:
      * <pre>
      * MESSIF &gt;&gt;&gt; decode mySpecVal "^your"="Y","^my"=M,.*="unknown"
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args checked value followed by matched and result value pairs
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
@@ -3191,7 +3238,7 @@ public class CoreApplication {
             return foreachValues.length;
         } else {
             try {
-                return repeatValue == null ? 
+                return repeatValue == null ?
                     (repeatUntilExceptionClass == null ? 1 : Integer.MAX_VALUE) : // No repeats specified, but repeat until exception
                     Integer.valueOf(substituteVariables(repeatValue, variables));
             } catch (NumberFormatException e) {
@@ -3238,7 +3285,7 @@ public class CoreApplication {
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).
      * For a full explanation of the command syntax see {@link CoreApplication}.
-     * 
+     *
      * @param out the stream to write the output to
      * @param props the properties with actions
      * @param actionName the name of the action to execute
@@ -3278,7 +3325,7 @@ public class CoreApplication {
     /**
      * This method reads and executes one action (with name actionName) from the control file (props).
      * For a full explanation of the command syntax see {@link CoreApplication}.
-     * 
+     *
      * @param out the stream to write the output to
      * @param props the properties with actions
      * @param actionName the name of the action to execute
@@ -3347,7 +3394,7 @@ public class CoreApplication {
 
                 // Perform action
                 if (methodName.indexOf(' ') != -1) {
-                    // Special "block" method 
+                    // Special "block" method
                     for (String blockActionName : methodName.split("[ \t]+"))
                         if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null)) {
                             if (assignOutput != null)
@@ -3419,7 +3466,7 @@ public class CoreApplication {
      * Implementation of the control file action that allows to pass the existing variables.
      * @param out a stream where the application writes information for the user
      * @param args file name followed by variable specifications and start action
-     * @param variables the original variables (some may be overwritten 
+     * @param variables the original variables (some may be overwritten
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     private boolean controlFileImpl(PrintStream out, String[] args, Map<String, String> variables) {
@@ -3486,14 +3533,14 @@ public class CoreApplication {
      * Additional arguments are either variable specifications in the form of "varname=value"
      * or the action name that is started (which defaults to "actions").
      * For a full explanation of the command syntax see {@link CoreApplication}.
-     * 
+     *
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
      * </pre>
      * </p>
-     * 
+     *
      * @param out a stream where the application writes information for the user
      * @param args file name followed by variable specifications and start action
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
