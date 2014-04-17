@@ -127,7 +127,7 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * The database for the given connection URL must contain a table with auto-generated
      * identifier "id", the string "locator" column with index (so that the locator-based
      * queries are fast), and the "binobj" LOB column for binary serialization of the descriptor.
-     * 
+     *
      * @param encapsulatedAlgorithm the algorithm to wrap
      * @param dbConnUrl the database connection URL (JDBC)
      * @param tableName the name of the table in which to store the data
@@ -173,8 +173,8 @@ public class LocatorStorageAlgorithm extends Algorithm {
      */
     public Algorithm getAlgorithm() {
         return algorithm;
-    }   
-    
+    }
+
     /**
      * Implementation of the insert operation.
      * The object is first inserted into the internal storage and if it is successful,
@@ -286,7 +286,7 @@ public class LocatorStorageAlgorithm extends Algorithm {
             } else {
                 objectToDeleteFromIndex = ((MetaObject)search.getCurrentObject()).getObject(metaobjectName);
             }
-            
+
             DeleteOperation delete = algorithm.executeOperation(new DeleteOperation(objectToDeleteFromIndex, op.getDeleteLimit(), true));
             if (delete.wasSuccessful()) {
                 search.remove();

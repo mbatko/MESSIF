@@ -2101,7 +2101,7 @@ public class CoreApplication {
         } else {
             convertor = (Convertor<Object, ?>)namedInstances.get(args[2]); // This cast in not checked, the convertor must accept any object
         }
-
+        
         namedInstances.put(args[1], new ConvertorIterator<Object, Object>(objectStream, convertor));
         return true;
     }
@@ -3466,7 +3466,7 @@ public class CoreApplication {
      * Implementation of the control file action that allows to pass the existing variables.
      * @param out a stream where the application writes information for the user
      * @param args file name followed by variable specifications and start action
-     * @param variables the original variables (some may be overwritten
+     * @param variables the original variables (some may be overwritten 
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
     private boolean controlFileImpl(PrintStream out, String[] args, Map<String, String> variables) {
@@ -3533,14 +3533,14 @@ public class CoreApplication {
      * Additional arguments are either variable specifications in the form of "varname=value"
      * or the action name that is started (which defaults to "actions").
      * For a full explanation of the command syntax see {@link CoreApplication}.
-     *
+     * 
      * <p>
      * Example of usage:
      * <pre>
      * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
      * </pre>
      * </p>
-     *
+     * 
      * @param out a stream where the application writes information for the user
      * @param args file name followed by variable specifications and start action
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>

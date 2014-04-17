@@ -403,6 +403,35 @@ public abstract class TextConversion {
     }
 
     /**
+     * Load a set of words from a given table.
+     * @param dbConnUrl the database JDBC connection URL
+     * @param tableName the table name to get the words from
+     * @param columnName the table column name to get the words from
+     * @return a set of words from a given table
+     * @throws SQLException if there was a problem communicating with the database
+     */
+    public static Set<String> loadDatabaseWords(String dbConnUrl, String tableName, String columnName) throws SQLException {
+        if (dbConnUrl == null)
+            return null;
+        Connection connection = DriverManager.getConnection(dbConnUrl);
+        try {
+            PreparedStatement stm = connection.prepareStatement("select " + columnName + " from " + tableName);
+            ResultSet rs = stm.executeQuery();
+            try {
+                Set<String> words = new HashSet<String>();
+                while (rs.next()) {
+                    words.add(rs.getString(1));
+                }
+                return words;
+            } finally {
+                stm.close();
+            }
+        } finally {
+            connection.close();
+        }
+    }
+
+    /**
      * Transforms a string of words into array of addresses.
      * The string is {@link #normalizeAndSplitString(java.lang.String, java.lang.String) normalized and split}
      * first, then the readonly word indexes are sequentially used to transform the words to identifiers.
@@ -460,35 +489,6 @@ public abstract class TextConversion {
             data[i] = textToWordIdentifiersMultiIndex(strings[i], stringSplitRegexp, ignoreWords, stopWords, stemmer, writableWordIndex, readonlyWordIndexes);
         }
         return data;
-    }
-
-    /**
-     * Load a set of words from a given table.
-     * @param dbConnUrl the database JDBC connection URL
-     * @param tableName the table name to get the words from
-     * @param columnName the table column name to get the words from
-     * @return a set of words from a given table
-     * @throws SQLException if there was a problem communicating with the database
-     */
-    public static Set<String> loadDatabaseWords(String dbConnUrl, String tableName, String columnName) throws SQLException {
-        if (dbConnUrl == null)
-            return null;
-        Connection connection = DriverManager.getConnection(dbConnUrl);
-        try {
-            PreparedStatement stm = connection.prepareStatement("select " + columnName + " from " + tableName);
-            ResultSet rs = stm.executeQuery();
-            try {
-                Set<String> words = new HashSet<String>();
-                while (rs.next()) {
-                    words.add(rs.getString(1));
-                }
-                return words;
-            } finally {
-                stm.close();
-            }
-        } finally {
-            connection.close();
-        }
     }
 
     /**
