@@ -88,7 +88,7 @@ public abstract class Convert {
         if (type.isPrimitive())
             type = wrapPrimitiveType(type);
 
-        // Named instances of objects (this needs to be before the other type conversions are tries so that the named instances work)
+        // Named instances of objects (this needs to be before the other type conversions are tried so that the named instances work)
         if (namedInstances != null) {
             Object instance = namedInstances.get(string);
             if (instance != null) {
