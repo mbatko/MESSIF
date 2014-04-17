@@ -74,13 +74,13 @@ public class InstantiatorSignature {
             // Try method or field (i.e. last dot position denotes method/field name
             int dotPos = signature.lastIndexOf('.');
             if (dotPos == -1) {
-                this.instance = namedInstances.get(signature);
+                this.instance = Convert.expandReferencedInstances(namedInstances.get(signature));
                 if (this.instance == null)
                     throw new IllegalArgumentException("Class not found: " + signature);
                 this.objectClass = null;
                 this.name = null;
             } else {
-                this.instance = namedInstances == null ? null : namedInstances.get(signature.substring(0, dotPos));
+                this.instance = namedInstances == null ? null : Convert.expandReferencedInstances(namedInstances.get(signature.substring(0, dotPos)));
                 if (this.instance == null) {
                     try {
                         this.objectClass = Class.forName(signature.substring(0, dotPos));
