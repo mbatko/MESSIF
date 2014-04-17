@@ -1,5 +1,6 @@
 package messif.algorithms.impl;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import messif.algorithms.Algorithm;
@@ -9,6 +10,7 @@ import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingMultiQueryOperation;
+import messif.utility.reflection.Instantiators;
 
 /**
  * Wrapper algorithm that processes {@link RankingMultiQueryOperation}s by executing
@@ -23,9 +25,9 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
     /** Encapsulated algorithm that handles regular queries */
     private final Algorithm algorithm;
     /** Class of the single-object query operation class that is used while evaluating the multi-object query */
-    private final Class<? extends QueryOperation<?>> singleQueryOperationClass;
+    private final Constructor<? extends QueryOperation<?>> queryOperationConstructor;
     /** Additional parameters for the single-object query operation */
-    private final Object[] operationParameters;
+    private final Object[] queryOperationArguments;
 
     /**
      * Creates a new multi-object query wrapper algorithm.
@@ -33,18 +35,20 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
      * @param singleQueryOperationClass the single-object query operation class that is used while evaluating the multi-object query
      * @param operationParameters the additional parameters (starting from the second one, the first one is always the query object)
      *          for the single-object query operation
+     * @throws NoSuchMethodException  if the single-query operation constructor was not found for the given number of arguments
      */
-    public MultiQueryWrapperAlgorithm(Algorithm algorithm, Class<? extends QueryOperation<?>> singleQueryOperationClass, Object... operationParameters) throws IllegalArgumentException {
+    @AlgorithmConstructor(description = "creates a multi-query wrapper for the given algorithm", arguments = {"algorithm to encapsulate", "query to run at the algorithm", "parameters of the query (except for the query object)..."})
+    public MultiQueryWrapperAlgorithm(Algorithm algorithm, Class<? extends QueryOperation<?>> singleQueryOperationClass, String... operationParameters) throws IllegalArgumentException, NoSuchMethodException {
         super("Multi-query wrapper on " + algorithm.getName());
         this.algorithm = algorithm;
-        this.singleQueryOperationClass = singleQueryOperationClass;
-        // Copy operation parametes and make space for the query object parameter (first argument)
-        if (operationParameters == null) {
-            this.operationParameters = new Object[1];
-        } else {
-            this.operationParameters = new Object[operationParameters.length + 1];
-            System.arraycopy(operationParameters, 0, this.operationParameters, 1, operationParameters.length);
-        }
+        this.queryOperationConstructor = AbstractOperation.getAnnotatedConstructor(singleQueryOperationClass, operationParameters == null ? 1 : operationParameters.length + 1);
+        Class<?>[] operationPrototype = queryOperationConstructor.getParameterTypes();
+        this.queryOperationArguments = new Object[operationPrototype.length];
+        if (operationParameters != null)
+            System.arraycopy(operationParameters, 0, this.queryOperationArguments, 1, operationParameters.length);
+        String error = Instantiators.isPrototypeMatching(operationPrototype, this.queryOperationArguments, true, null);
+        if (error != null)
+            throw new IllegalArgumentException(error);
     }
 
     @Override
@@ -76,14 +80,16 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
      * @throws NoSuchMethodException if the operation is unsupported by the encapsulated algorithm
      * @throws InvocationTargetException if the specified operation cannot be created for the given parameters
      * @throws InterruptedException if the computation has been interrupted while processing
+     * @throws InstantiationException if the single-query operation cannot be created
+     * @throws IllegalAccessException if the single-query operation constructors is not accessible
      */
-    public synchronized void processMultiObjectOperation(RankingMultiQueryOperation op) throws AlgorithmMethodException, NoSuchMethodException, InvocationTargetException, InterruptedException {
+    public synchronized void processMultiObjectOperation(RankingMultiQueryOperation op) throws AlgorithmMethodException, NoSuchMethodException, InvocationTargetException, InterruptedException, InstantiationException, IllegalAccessException {
         for (LocalAbstractObject queryObject : op.getQueryObjects()) {
-            Object[] params = operationParameters.clone();
+            Object[] params = queryOperationArguments.clone();
             params[0] = queryObject;
-            algorithm.backgroundExecuteOperation(AbstractOperation.createOperation(singleQueryOperationClass, params));
+            algorithm.backgroundExecuteOperation(queryOperationConstructor.newInstance(params));
         }
-        for (QueryOperation<?> executedOperation : algorithm.waitBackgroundExecuteOperation(singleQueryOperationClass)) {
+        for (QueryOperation<?> executedOperation : algorithm.waitBackgroundExecuteOperation(queryOperationConstructor.getDeclaringClass())) {
             for (Iterator<AbstractObject> it = executedOperation.getAnswerObjects(); it.hasNext();) {
                 op.addToAnswer((LocalAbstractObject)it.next());
             }
