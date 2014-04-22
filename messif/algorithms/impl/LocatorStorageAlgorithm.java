@@ -318,9 +318,11 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @param op the get-by-multiple-locators operation to execute
      */
     public void objectsByLocators(GetObjectsByLocatorsOperation op) {
-        StorageSearch<LocalAbstractObject> search = storage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, op.getLocators());
-        while (search.next()) {
-            op.addToAnswer(search.getCurrentObject());
+        if (!op.getLocators().isEmpty()) {
+            StorageSearch<LocalAbstractObject> search = storage.search(LocalAbstractObjectOrder.locatorToLocalObjectComparator, op.getLocators());
+            while (search.next()) {
+                op.addToAnswer(search.getCurrentObject());
+            }
         }
         op.endOperation();
     }
