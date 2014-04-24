@@ -121,6 +121,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  &lt;actionName&gt;.foreach = &lt;value&gt; &lt;value&gt; ...
  *  &lt;actionName&gt;.repeatUntilException = &lt;some exception class, e.g. java.util.NoSuchElementException&gt;
  *  &lt;actionName&gt;.loopVariable = &lt;variable name&gt;
+ *  &lt;actionName&gt;.ignoreException = &lt;some exception class, e.g. messif.buckets.DuplicateObjectException&gt;
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss
@@ -155,6 +156,8 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *                at time intervals specified by the argument. Note that the action will
  *                be executed normally (as a normal action) at first and then it will
  *                be run asynchronously (in another thread!) at the given time intervals.
+ * <li><i>ignoreException</i> parameter is optional and allows to ignore an exception thrown
+ *                by the action (or any of its descendant actions) and continue processing normally
  * <li><i>outputFile</i> parameter is optional and allows to redirect output of this block to a file
  *  &lt;filename&gt;. When this filename is reached for the first time, it is opened for writing
  *  (previous contents are destroyed) and all successive writes are appended to this file
@@ -2161,6 +2164,51 @@ public class CoreApplication {
         return false;
     }
 
+    /**
+     * Skip objects in a named object stream.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; objectStreamSkip my_data 100 abcd
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name of an opened object stream,
+     *          the number of objects to skip (or zero for infinite),
+     *          the locator (regular expression) of an object to skip to
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "skip objects from the stream", arguments = { "name of the stream", "number of objects to skip (or -1 for infinite)", "locator (regexp) of an object to skip to" })
+    public boolean objectStreamSkip(PrintStream out, String... args) {
+        if (args.length < 3) {
+            out.println("objectStreamSkip requires a stream name and number of objects to skip (see 'help objectStreamSkip')");
+            return false;
+        }
+        AbstractStreamObjectIterator<?> objectStream = (AbstractStreamObjectIterator<?>)namedInstances.get(args[1]);
+        if (objectStream == null) {
+            out.print("Stream '" + args[1] + "' is not opened");
+            return false;
+        }
+
+        // Skip by number of objects
+        try {
+            int skipObjects = Integer.parseInt(args[2]);
+            if (skipObjects > 0)
+                objectStream.skip(skipObjects);
+        } catch (NumberFormatException e) {
+            out.println("Cannot convert number of objects to skip: " + e);
+            return false;
+        }
+
+        // Skip by locator
+        if (args.length > 3 && !args[3].isEmpty())
+            objectStream.getObjectByLocatorRegexp(args[3]);
+
+        return true;
+    }
+
 
     //****************** Property file ******************//
 
@@ -3200,11 +3248,12 @@ public class CoreApplication {
      * @param out the stream to write the output to
      * @param props the properties with actions
      * @param actionName the name of the action to execute
+     * @param modifierName the action modifier name that contains the exception
      * @param variables the current variables' environment
      * @return the action's repeat-until exception class or <tt>null</tt> if they are not specified
      */
-    protected Class<? extends Throwable> getCFActionException(PrintStream out, Properties props, String actionName, Map<String,String> variables) {
-        String repeatUntilException = props.getProperty(actionName + ".repeatUntilException");
+    protected Class<? extends Throwable> getCFActionException(PrintStream out, Properties props, String actionName, String modifierName, Map<String,String> variables) {
+        String repeatUntilException = props.getProperty(actionName + modifierName);
         if (repeatUntilException == null)
             return null;
         try {
@@ -3355,9 +3404,14 @@ public class CoreApplication {
         if (outputStream == null)
             return false;
 
+        // Read ignore exception modifier
+        Class<? extends Throwable> ignoreExceptionClass = getCFActionException(out, props, actionName, ".ignoreException", variables);
+        if (ignoreExceptionClass == Throwable.class)
+            return false;
+
         // Read number of repeats (or foreach value) of this method
         String[] foreachValues = getCFActionForeach(out, props, actionName, variables);
-        Class<? extends Throwable> repeatUntilExceptionClass = getCFActionException(out, props, actionName, variables);
+        Class<? extends Throwable> repeatUntilExceptionClass = getCFActionException(out, props, actionName, ".repeatUntilException", variables);
         if (repeatUntilExceptionClass == Throwable.class)
             return false;
         int repeat = getCFActionRepeat(out, props, actionName, variables, foreachValues, repeatUntilExceptionClass);
@@ -3396,7 +3450,7 @@ public class CoreApplication {
                 if (methodName.indexOf(' ') != -1) {
                     // Special "block" method
                     for (String blockActionName : methodName.split("[ \t]+"))
-                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null)) {
+                        if (!controlFileExecuteAction(outputStream, props, blockActionName, variables, outputStreams, throwException || repeatUntilExceptionClass != null || ignoreExceptionClass != null)) {
                             if (assignOutput != null)
                                 out.print(assignOutput.toString());
                             return false; // Stop execution of block if there was an error
@@ -3415,7 +3469,7 @@ public class CoreApplication {
                         return false; // Execution unsuccessful, method/action not found
                     } else
                         // There was no method for the action, so we try it as a name of block
-                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, throwException || repeatUntilExceptionClass != null))
+                        if (!controlFileExecuteAction(outputStream, props, methodName, variables, outputStreams, throwException || repeatUntilExceptionClass != null || ignoreExceptionClass != null))
                             return false;
                 }
 
@@ -3424,10 +3478,13 @@ public class CoreApplication {
                     outputStream.println(substituteVariables(descriptionAfter, variables));
             }
         } catch (InvocationTargetException e) {
-            // Check whether the repeat-until is not captured
-            if (repeatUntilExceptionClass == null || !repeatUntilExceptionClass.isInstance(getRootCauseInvocationTargetException(e))) {
-                if (throwException) // Exception is being handled by a higher call
-                    throw e;
+            if (repeatUntilExceptionClass != null && repeatUntilExceptionClass.isInstance(getRootCauseInvocationTargetException(e))) {
+                // Repeat-until exception is captured, continue processing
+            } else if (ignoreExceptionClass != null && ignoreExceptionClass.isInstance(getRootCauseInvocationTargetException(e))) {
+                // Ignore exception is captured, continue processing
+            } else if (throwException) { // Exception is being handled by a higher call
+                throw e;
+            } else { // Action failed with exception
                 processException(e.getCause(), out, true);
                 out.println("Action '" + actionName + "' failed - control file execution was terminated");
                 return false;
@@ -3524,6 +3581,30 @@ public class CoreApplication {
         outputStreams.clear();
 
         return rtv;
+    }
+
+    /**
+     * Executes actions from a control file.
+     * All commands that can be started from the prompt can be used in control files.
+     * The first argument is required to specify the file with commands.
+     * Additional arguments are either variable specifications in the form of "varname=value"
+     * or the action name that is started (which defaults to "actions").
+     * For a full explanation of the command syntax see {@link CoreApplication}.
+     * 
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
+     * </pre>
+     * </p>
+     * 
+     * @param out a stream where the application writes information for the user
+     * @param args file name followed by variable specifications and start action
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     */
+    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "<var>=<value> ... (optional)", "actions block name (optional)" })
+    public boolean controlFile(PrintStream out, String... args) {
+        return controlFileImpl(out, args, null);
     }
 
     /**

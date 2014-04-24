@@ -648,6 +648,46 @@ public abstract class BinarySerializator {
     }
 
     /**
+     * Writes <code>object</code> to a given file.
+     * If the object implements {@link BinarySerializable} interface, it
+     * is binary-serialized. Otherwise, a standard Java {@link java.io.Serializable serialization} is used.
+     *
+     * @param object the object to write
+     * @param bufferDirect the type of buffer to use (direct or array-backed)
+     * @param outputFile the file to output the data to
+     * @throws IOException if there was an error writing the data
+     */
+    public final void writeToFile(Object object, boolean bufferDirect, File outputFile) throws IOException {
+        BufferOutputStream data = write(object, bufferDirect);
+        FileOutputStream out = new FileOutputStream(outputFile);
+        try {
+            data.write(out.getChannel(), 0);
+        } finally {
+            out.close();
+        }
+    }
+
+    /**
+     * Reads an instance from the <code>input</code> using this serializator.
+     *
+     * @param <E> the class that is expected to be in the input
+     * @param expectedClass the class that is expected to be in the input
+     * @param bufferDirect the type of buffer to use (direct or array-backed)
+     * @param inputFile the file to read the instance from
+     * @return an instance of the deserialized object
+     * @throws IOException if there was an I/O error
+     * @throws IllegalArgumentException if the constructor or the factory method has a wrong prototype
+     */
+    public final <E> E readFromFile(Class<? extends E> expectedClass, boolean bufferDirect, File inputFile) throws IOException {
+        FileInputStream in = new FileInputStream(inputFile);
+        try {
+            return readObject(new FileChannelInputStream(BufferOutputStream.MINIMAL_BUFFER_SIZE, bufferDirect, in.getChannel(), 0, Long.MAX_VALUE), expectedClass);
+        } finally {
+            in.close();
+        }
+    }
+
+    /**
      * Writes <code>object</code> to this output buffer using binary serialization.
      * The following rules must hold:
      * <ul>
