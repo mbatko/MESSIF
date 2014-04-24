@@ -238,23 +238,6 @@ public abstract class TextConversion {
     }
 
     /**
-     * Processes the given collection of words by stemming.
-     * @param words the words to process
-     * @param stemmer the stemmer to use
-     * @return a set of stemmed words
-     * @throws TextConversionException if a stemming error occurred
-     */
-    public static Set<String> stemWords(Collection<String> words, Stemmer stemmer) throws TextConversionException {
-        if (words == null || words.isEmpty())
-            return Collections.emptySet();
-        Set<String> ret = new HashSet<String>();
-        for (String word : words) {
-            ret.add(stemmer.stem(word));
-        }
-        return ret;
-    }
-
-    /**
      * Convert the given array of word identifiers to words using the given storage.
      * @param wordIndex the index used to transform the integers to words
      * @param ids the array of integers to convert
@@ -504,64 +487,6 @@ public abstract class TextConversion {
         Set<String> ignoreWords = new HashSet<String>();
         for (int i = 0; i < strings.length; i++) {
             data[i] = textToWordIdentifiersMultiIndex(strings[i], stringSplitRegexp, ignoreWords, stopWords, stemmer, writableWordIndex, readonlyWordIndexes);
-        }
-        return data;
-    }
-
-    /**
-     * Transforms a string of words into array of addresses.
-     * The string is {@link #normalizeAndSplitString(java.lang.String, java.lang.String) normalized and split}
-     * first, then the readonly word indexes are sequentially used to transform the words to identifiers.
-     * The remaining words are stemmed and read from the writable word index and if not found
-     * the are inserted.
-     *
-     * @param string the string with the words to transform
-     * @param stringSplitRegexp the regular expression used to split the string into words
-     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
-     *          if <tt>null</tt>, all keywords are added
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param writableWordIndex the index for translating words to addresses where the unknown words can be inserted
-     * @param readonlyWordIndexes the indexes for translating words to addresses
-     * @return array of translated addresses
-     * @throws IllegalStateException if there was a problem reading the index
-     * @throws TextConversionException if there was an error expanding or stemming the words
-     */
-    public static int[] textToWordIdentifiersMultiIndex(String string, String stringSplitRegexp, Set<String> ignoreWords, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
-        Collection<String> words = TextConversion.unifyWords(TextConversion.normalizeAndSplitString(string, stringSplitRegexp), ignoreWords, null, false);
-        int[] data = new int[words.size()];
-        int index = 0;
-        for (IntStorageIndexed<String> wordIndex : readonlyWordIndexes) {
-            index = wordsToIdentifiersRead(words, wordIndex, data, index);
-        }
-        // Perform stemming for the read/write index
-        words = TextConversion.stemWords(words, stemmer);
-        index = wordsToIdentifiersRead(words, writableWordIndex, data, index);
-        index = wordsToIdentifiersStore(words, writableWordIndex, data, index);
-        if (index != data.length) // Resize the array if some keywords were not stored
-            data = Arrays.copyOf(data, index);
-        return data;
-    }
-
-    /**
-     * Transforms multiple strings of words into multi-array of addresses.
-     * Each of the given strings is converted using
-     * {@link #textToWordIdentifiersMultiIndex(java.lang.String, java.lang.String, java.util.Set, messif.objects.text.Stemmer, messif.buckets.storage.IntStorageIndexed, messif.buckets.storage.IntStorageIndexed...) textToWordIdentifiersMultiIndex}
-     * method.
-     *
-     * @param strings the multiple strings of words to transform
-     * @param stringSplitRegexp the regular expression used to split the string into words
-     * @param stemmer a {@link Stemmer} for word transformation
-     * @param writableWordIndex the index for translating words to addresses where the unknown words can be inserted
-     * @param readonlyWordIndexes the indexes for translating words to addresses
-     * @return array of translated addresses
-     * @throws IllegalStateException if there was a problem reading the index
-     * @throws TextConversionException if there was an error expanding or stemming the words
-     */
-    public static int[][] textsToWordIdentifiersMultiIndex(String[] strings, String stringSplitRegexp, Stemmer stemmer, IntStorageIndexed<String> writableWordIndex, IntStorageIndexed<String>[] readonlyWordIndexes) throws TextConversionException {
-        int[][] data = new int[strings.length][];
-        Set<String> ignoreWords = new HashSet<String>();
-        for (int i = 0; i < strings.length; i++) {
-            data[i] = textToWordIdentifiersMultiIndex(strings[i], stringSplitRegexp, ignoreWords, stemmer, writableWordIndex, readonlyWordIndexes);
         }
         return data;
     }

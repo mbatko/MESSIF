@@ -3607,30 +3607,6 @@ public class CoreApplication {
         return controlFileImpl(out, args, null);
     }
 
-    /**
-     * Executes actions from a control file.
-     * All commands that can be started from the prompt can be used in control files.
-     * The first argument is required to specify the file with commands.
-     * Additional arguments are either variable specifications in the form of "varname=value"
-     * or the action name that is started (which defaults to "actions").
-     * For a full explanation of the command syntax see {@link CoreApplication}.
-     * 
-     * <p>
-     * Example of usage:
-     * <pre>
-     * MESSIF &gt;&gt;&gt; controlFile commands.cf var1=100 var2=data.file my_special_action
-     * </pre>
-     * </p>
-     * 
-     * @param out a stream where the application writes information for the user
-     * @param args file name followed by variable specifications and start action
-     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     */
-    @ExecutableMethod(description = "execute actions from control file", arguments = { "control file path", "<var>=<value> ... (optional)", "actions block name (optional)" })
-    public boolean controlFile(PrintStream out, String... args) {
-        return controlFileImpl(out, args, null);
-    }
-
 
     //****************** Socket interface processor ******************//
 
