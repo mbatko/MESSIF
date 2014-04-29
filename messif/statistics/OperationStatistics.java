@@ -35,7 +35,7 @@ import java.util.Iterator;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public final class OperationStatistics implements Serializable {
+public final class OperationStatistics implements Serializable, Iterable<Statistics<?>> {
 
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
@@ -78,12 +78,17 @@ public final class OperationStatistics implements Serializable {
     /****************** Local operation statistic objects ******************/
     
     protected final StatisticsList statistics = new StatisticsList();
-    
+
     /** Access all statistics */
     public Iterator<Statistics<?>> getAllStatistics() {
         return statistics.iterator();
     }
-        
+
+    @Override
+    public Iterator<Statistics<?>> iterator() {
+        return getAllStatistics();
+    }
+
     /** Access statistics whose names match the given regular expression */
     public Iterator<Statistics<?>> getAllStatistics(String regex) {
         return statistics.iterator(regex);
@@ -247,9 +252,9 @@ public final class OperationStatistics implements Serializable {
      *          in both this and {@code sourceStats} but with of different class
      */
     @SuppressWarnings("unchecked")
-    public synchronized void updateFrom(OperationStatistics sourceStats) throws IllegalArgumentException {
+    public synchronized void updateFrom(Iterable<? extends Statistics<?>> sourceStats) throws IllegalArgumentException {
         // For every source statistics update values in our stat
-        for (Statistics<?> stat : sourceStats.statistics) {
+        for (Statistics<?> stat : sourceStats) {
             // Update our statistics
             getStatistics(stat.getName(), stat.getClass()).updateFrom(stat); // This cast IS checked, since stat and new stat have exactly the same class...
         }

@@ -2,7 +2,12 @@ package messif.algorithms.impl;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.objects.AbstractObject;
@@ -10,6 +15,7 @@ import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingMultiQueryOperation;
+import messif.statistics.FutureWithStatistics;
 import messif.utility.reflection.Instantiators;
 
 /**
@@ -49,6 +55,7 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
         String error = Instantiators.isPrototypeMatching(operationPrototype, this.queryOperationArguments, true, null);
         if (error != null)
             throw new IllegalArgumentException(error);
+        setOperationsThreadPool(Executors.newCachedThreadPool());
     }
 
     @Override
@@ -84,18 +91,44 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
      * @throws IllegalAccessException if the single-query operation constructors is not accessible
      */
     public synchronized void processMultiObjectOperation(RankingMultiQueryOperation op) throws AlgorithmMethodException, NoSuchMethodException, InvocationTargetException, InterruptedException, InstantiationException, IllegalAccessException {
-        for (LocalAbstractObject queryObject : op.getQueryObjects()) {
+        Collection<? extends LocalAbstractObject> queryObjects = op.getQueryObjects();
+        List<FutureWithStatistics<? extends QueryOperation<?>>> futures = new ArrayList<FutureWithStatistics<? extends QueryOperation<?>>>(queryObjects.size());
+        for (LocalAbstractObject queryObject : queryObjects) {
             Object[] params = queryOperationArguments.clone();
             params[0] = queryObject;
-            algorithm.backgroundExecuteOperation(queryOperationConstructor.newInstance(params));
+            futures.add(algorithm.backgroundExecuteOperationWithStatistics(queryOperationConstructor.newInstance(params)));
         }
-        for (QueryOperation<?> executedOperation : algorithm.waitBackgroundExecuteOperation(queryOperationConstructor.getDeclaringClass())) {
-            for (Iterator<AbstractObject> it = executedOperation.getAnswerObjects(); it.hasNext();) {
+
+        for (Future<? extends QueryOperation<?>> future : futures) {
+            for (Iterator<AbstractObject> it = Algorithm.waitBackgroundExecution(future).getAnswerObjects(); it.hasNext();) {
                 op.addToAnswer((LocalAbstractObject)it.next());
             }
         }
         op.endOperation();
     }
+
+    /**
+     * Implementation of multi-object query operation.
+     *
+     * @param op the generic operation to execute
+     * @throws AlgorithmMethodException if the operation execution on the encapsulated algorithm has thrown an exception
+     * @throws NoSuchMethodException if the operation is unsupported by the encapsulated algorithm
+     * @throws InvocationTargetException if the specified operation cannot be created for the given parameters
+     * @throws InterruptedException if the computation has been interrupted while processing
+     * @throws InstantiationException if the single-query operation cannot be created
+     * @throws IllegalAccessException if the single-query operation constructors is not accessible
+     */
+//    public synchronized void processMultiObjectOperation(RankingMultiQueryOperation op) throws AlgorithmMethodException, NoSuchMethodException, InvocationTargetException, InterruptedException, InstantiationException, IllegalAccessException {
+//        for (LocalAbstractObject queryObject : op.getQueryObjects()) {
+//            Object[] params = queryOperationArguments.clone();
+//            params[0] = queryObject;
+//            QueryOperation<?> executedOperation = algorithm.executeOperation(queryOperationConstructor.newInstance(params));
+//            for (Iterator<AbstractObject> it = executedOperation.getAnswerObjects(); it.hasNext();) {
+//                op.addToAnswer((LocalAbstractObject)it.next());
+//            }
+//        }
+//        op.endOperation();
+//    }
 
     /**
      * Implementation of a generic operation.

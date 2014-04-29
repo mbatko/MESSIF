@@ -29,8 +29,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Future;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
+import messif.statistics.FutureWithStatistics;
 import messif.statistics.OperationStatistics;
 import messif.utility.Convert;
 import messif.utility.reflection.NoSuchInstantiatorException;
@@ -339,6 +341,16 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
         } else {
             return (T)rtv;
         }
+    }
+
+    @Override
+    public <T extends AbstractOperation> Future<T> backgroundExecuteOperation(T operation) {
+        throw new UnsupportedOperationException("Background execution with waiting cannot be used on RMI algorithm");
+    }
+
+    @Override
+    public <T extends AbstractOperation> FutureWithStatistics<T> backgroundExecuteOperationWithStatistics(T operation) {
+        throw new UnsupportedOperationException("Background execution with waiting cannot be used on RMI algorithm");
     }
 
     @Override

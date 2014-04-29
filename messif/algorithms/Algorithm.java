@@ -33,29 +33,28 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import messif.executor.Executable;
 import messif.executor.MethodClassExecutor;
 import messif.executor.MethodExecutor;
-import messif.executor.MethodThread;
-import messif.executor.MethodThreadList;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 import messif.operations.query.GetObjectCountOperation;
+import messif.statistics.FutureWithStatistics;
+import messif.statistics.FutureWithStatisticsImpl;
 import messif.statistics.OperationStatistics;
 import messif.statistics.StatisticCounter;
 import messif.statistics.StatisticObject;
@@ -106,9 +105,6 @@ public abstract class Algorithm implements Serializable {
 
     /** Executor for operations */
     private transient MethodClassExecutor operationExecutor;
-
-    /** List of background-executed operations (per thread) */
-    private transient ThreadLocal<StatisticsEnabledMethodThreadList> bgExecutionList;
 
     /** Thread pool service to process operations in threads. */
     private transient ExecutorService operationsThreadPool;
@@ -453,12 +449,6 @@ public abstract class Algorithm implements Serializable {
         runningOperationsSemaphore = new Semaphore(maximalConcurrentOperations, true);
         runningOperations = new WeakHashMap<Thread, AbstractOperation>(maximalConcurrentOperations);
         operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
-        bgExecutionList = new ThreadLocal<StatisticsEnabledMethodThreadList>() {
-            @Override
-            protected synchronized StatisticsEnabledMethodThreadList initialValue() {
-                return new StatisticsEnabledMethodThreadList(operationExecutor);
-            }
-        };
     }
 
     /**
@@ -498,32 +488,6 @@ public abstract class Algorithm implements Serializable {
         } finally {
             if (maximalConcurrentOperations > 0)
                 runningOperationsSemaphore.release();
-        }
-    }
-
-    /**
-     * Execute operation with additional parameters on background.
-     * This is a synchronized wrapper around {@link MethodExecutor#backgroundExecute}.
-     * @param updateStatistics set to <tt>true</tt> if the operations statistic should be updated after the operation finishes its background execution
-     * @param params the parameters compatible with {@link #getExecutorParamClasses()}
-     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
-     */
-    protected final void backgroundExecute(boolean updateStatistics, Object... params) throws NoSuchMethodException {
-        if (maximalConcurrentOperations > 0)
-            runningOperationsSemaphore.acquireUninterruptibly();
-        try {
-            MethodThread bgMethodThread = bgExecutionList.get().backgroundExecute(updateStatistics, params);
-            synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-                runningOperations.put(bgMethodThread.getRunningThread(), getExecutorOperationParam(params));
-            }
-        } catch (NoSuchMethodException e) { // Unlock on exception (but keep the lock if everything was ok)
-            if (maximalConcurrentOperations > 0)
-                runningOperationsSemaphore.release();
-            throw e;
-        } catch (RuntimeException e) { // Unlock on exception (but keep the lock if everything was ok)
-            if (maximalConcurrentOperations > 0)
-                runningOperationsSemaphore.release();
-            throw e;
         }
     }
 
@@ -572,7 +536,7 @@ public abstract class Algorithm implements Serializable {
      * @throws AlgorithmMethodException if the execution has thrown an exception
      * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
      */
-    public <T> Iterator<? extends T> getQueryAnswer(QueryOperation<? extends T> operation) throws AlgorithmMethodException, NoSuchMethodException {
+    public final <T> Iterator<? extends T> getQueryAnswer(QueryOperation<? extends T> operation) throws AlgorithmMethodException, NoSuchMethodException {
         return executeOperation(operation).getAnswer();
     }
 
@@ -590,68 +554,72 @@ public abstract class Algorithm implements Serializable {
      * @throws NoSuchMethodException if the operation is unknown or unsupported by this algorithm
      * @throws AlgorithmMethodException if the execution has thrown an exception
      */
-    public <T> Iterator<? extends T> getQueryAnswer(Class<? extends QueryOperation<? extends T>> operationClass, Object... arguments) throws InvocationTargetException, AlgorithmMethodException, NoSuchMethodException {
+    public final <T> Iterator<? extends T> getQueryAnswer(Class<? extends QueryOperation<? extends T>> operationClass, Object... arguments) throws InvocationTargetException, AlgorithmMethodException, NoSuchMethodException {
         return getQueryAnswer(AbstractOperation.createOperation(operationClass, arguments));
     }
 
     /**
-     * Execute algorithm operation on background.
-     * <i>Note:</i> Method {@link #waitBackgroundExecuteOperation} MUST be called in the future to release resources.
-     * @param operation the operation to execute on this algorithm
-     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     * Creates a new {@link Callable} that simply runs the {@link #executeOperation} method on the given operation.
+     * @param <T> the type of operation
+     * @param operation the operation to run
+     * @return the created {@link Callable}
      */
-    public void backgroundExecuteOperation(AbstractOperation operation) throws NoSuchMethodException {
-        backgroundExecuteOperation(operation, false);
+    protected <T extends AbstractOperation> Callable<T> createBackgroundExecutionCallable(final T operation) {
+        return new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return executeOperation(operation);
+            }
+        };
     }
 
     /**
      * Execute algorithm operation on background.
-     * <i>Note:</i> Method {@link #waitBackgroundExecuteOperation} MUST be called in the future to release resources.
+     * @param <T> the type of the executed operation
      * @param operation the operation to execute on this algorithm
-     * @param updateStatistics set to <tt>true</tt> if the operations statistic should be updated after the operation finishes its background execution
-     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
+     * @return a {@link Future} that can be used to wait for the execution to finish and retrieve the resulting executed operation;
+     *      note that a {@link NoSuchMethodException} exception can be thrown if the operation is unsupported (there is no method for the operation)
      */
-    public void backgroundExecuteOperation(AbstractOperation operation, boolean updateStatistics) throws NoSuchMethodException {
-        backgroundExecute(updateStatistics, operation);
+    public <T extends AbstractOperation> Future<T> backgroundExecuteOperation(T operation) {
+        return operationsThreadPool.submit(createBackgroundExecutionCallable(operation));
     }
 
     /**
-     * Wait for all operations executed on background to finish.
-     * @return the list of operations that were executed
-     * @throws AlgorithmMethodException if there was an exception during the background execution
-     * @throws InterruptedException if the waiting was interrupted
+     * Execute algorithm operation on background.
+     * @param <T> the type of the executed operation
+     * @param operation the operation to execute on this algorithm
+     * @return a {@link Future} that can be used to wait for the execution to finish and retrieve the resulting executed operation;
+     *      note that a {@link NoSuchMethodException} exception can be thrown if the operation is unsupported (there is no method for the operation)
      */
-    public List<AbstractOperation> waitBackgroundExecuteOperation() throws AlgorithmMethodException, InterruptedException {
-        return waitBackgroundExecuteOperation(AbstractOperation.class);
+    public <T extends AbstractOperation> FutureWithStatistics<T> backgroundExecuteOperationWithStatistics(T operation) {
+        return FutureWithStatisticsImpl.submit(operationsThreadPool, createBackgroundExecutionCallable(operation));
     }
 
     /**
-     * Wait for all operations executed on background to finish.
-     * Only objects (executed methods arguments) with the specified class are returned.
-     * 
-     * @param <E> type of the returned operations
-     * @param argClass filter on the returned operation classes
-     * @return the list of operations that were executed
+     * Helper method for waiting for an operation executed on background.
+     * Note that the operation statistics are automatically updated if the given future
+     * implements {@link FutureWithStatistics}.
+     * @param <T> the type of the executed operation
+     * @param future a future of the previously executed operation
+     * @return the executed operation
      * @throws AlgorithmMethodException if there was an exception during the background execution
      * @throws InterruptedException if the waiting was interrupted
+     * @throws NoSuchMethodException if the operation is not supported
      */
-    public <E extends AbstractOperation> List<E> waitBackgroundExecuteOperation(Class<E> argClass) throws AlgorithmMethodException, InterruptedException {
-        MethodThreadList list = bgExecutionList.get();
-
-        // Wait for execution end and release locks
-        int operationsCount = list.waitBackgroundExecuteOperation();
-        if (maximalConcurrentOperations > 0)
-            runningOperationsSemaphore.release(operationsCount);
-
+    @SuppressWarnings("ThrowableResultIgnored")
+    public static <T extends AbstractOperation> T waitBackgroundExecution(Future<? extends T> future) throws InterruptedException, AlgorithmMethodException, NoSuchMethodException {
         try {
-            List<E> retList = list.getAllMethodsReturnValue(argClass);
-
-            // clear the list of finished threads
-            list.clearThreadLists();
-
-            return retList;
-        } catch (Exception e) {
-            throw new AlgorithmMethodException(e);
+            T ret = future.get();
+            if (future instanceof FutureWithStatistics) {
+                OperationStatistics.getLocalThreadStatistics().updateFrom((FutureWithStatistics<? extends T>)future);
+            }
+            return ret;
+        } catch (ExecutionException ex) {
+            if (ex.getCause() instanceof AlgorithmMethodException)
+                throw (AlgorithmMethodException)ex.getCause();
+            if (ex.getCause() instanceof NoSuchMethodException)
+                throw (NoSuchMethodException)ex.getCause();
+            throw new AlgorithmMethodException(ex.getCause());
         }
     }
 
@@ -663,17 +631,8 @@ public abstract class Algorithm implements Serializable {
      * After the operation is finished, there is no way to access it.
      * @param operation the operation to execute on this algorithm
      */
-    public void backgroundExecuteOperationIndependent(final AbstractOperation operation) {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    executeOperation(operation);
-                } catch (Exception e) {
-                    log.log(Level.SEVERE, "Independent " + operation + " has failed: " + e, e);
-                }
-            }
-        }.start();
+    public void backgroundExecuteOperationIndependent(AbstractOperation operation) {
+        backgroundExecuteOperation(operation);
     }
 
     /**
@@ -712,88 +671,6 @@ public abstract class Algorithm implements Serializable {
         return terminateOperation(operation.getOperationID());
     }
 
-    /** This is a helper class that allows merging of operation statistics from the background-executed operations */
-    private static class StatisticsEnabledMethodThreadList extends MethodThreadList implements Executable {
-        /** The marked statistics to merge */
-        protected Set<OperationStatistics> statisticsToMerge = null;
-
-        /**
-         * Create a new instance of StatisticsEnabledMethodThreadList.
-         * @param methodExecutor the executor to use to actually execute code
-         */
-        private StatisticsEnabledMethodThreadList(MethodExecutor methodExecutor) {
-            super(methodExecutor);
-        }
-
-        /**
-         * Mark the current thread statistics for future merge.
-         * Must be called from within the thread whose statistics are going to be merged.
-         */
-        @Override
-        public synchronized void execute() {
-            if (statisticsToMerge == null)
-                statisticsToMerge = new HashSet<OperationStatistics>();
-            statisticsToMerge.add(OperationStatistics.getLocalThreadStatistics());
-        }
-
-        /**
-         * Execute registered method by arguments on background.
-         * If updateStatistics is set to <tt>true</tt>, OperationStatistics of the
-         * calling thread are updated when the execution finishes and is retrieved
-         * by {@link #waitBackgroundExecuteOperation}.
-         * 
-         * @param updateStatistics flag enabling the OperationStatistics update
-         * @param arguments The array of arguments for the execution method (must be consistent with the prototype in constructor)
-         * @param executeBefore method to call before registered method
-         * @param executeAfter method to call after registered method
-         * @return method execution thread object. Method waitExecutionEnd of this object can be used to retrieve the results
-         * @throws NoSuchMethodException if there was no valid method for the specified arguments
-         */
-        public MethodThread backgroundExecute(boolean updateStatistics, Object[] arguments, Executable executeBefore, Executable executeAfter) throws NoSuchMethodException {
-            if (!updateStatistics)
-                return backgroundExecute(arguments, executeBefore, executeAfter);
-
-            if (executeAfter == null)
-                return backgroundExecute(arguments, executeBefore, this);
-
-            // Value for executeAfter is set, a collection must be created
-            List<Executable> executeAfterList = new ArrayList<Executable>();
-            executeAfterList.add(executeAfter);
-            executeAfterList.add(this);
-            return backgroundExecute(arguments, Collections.singletonList(executeBefore), executeAfterList);
-        }
-
-        /**
-         * Execute registered method by arguments on background.
-         * If updateStatistics is set to <tt>true</tt>, OperationStatistics of the
-         * calling thread are updated when the execution finishes and is retrieved
-         * by {@link #waitBackgroundExecuteOperation}.
-         * 
-         * @param updateStatistics flag enabling the OperationStatistics update
-         * @param arguments arguments for the execution method (must be consistent with the prototype in constructor)
-         * @return method execution thread object; method waitExecutionEnd of this object can be used to retrieve the results
-         * @throws NoSuchMethodException if there was no valid method for the specified arguments
-         */
-        public MethodThread backgroundExecute(boolean updateStatistics, Object... arguments) throws NoSuchMethodException {
-            return backgroundExecute(updateStatistics, arguments, null, null);
-        }
-
-        @Override
-        public int waitBackgroundExecuteOperation() throws InterruptedException {
-            int rtv = super.waitBackgroundExecuteOperation();
-            synchronized (this) {
-                if (statisticsToMerge != null) {
-                    OperationStatistics destinationStats = OperationStatistics.getLocalThreadStatistics();
-                    for (OperationStatistics stats : statisticsToMerge)
-                        destinationStats.updateFrom(stats);
-                    statisticsToMerge.clear();
-                }
-            }
-            return rtv;
-        }
-
-    }
-
     /**
      * This method can be used by all algorithms before processing any operation to set default (operation) statistics.
      * @throws ClassCastException if new statistic cannot be created
@@ -830,8 +707,8 @@ public abstract class Algorithm implements Serializable {
      * The list must be consistent with the parameters array passed to {@link #execute} and {@link #backgroundExecute}.
      * @return array of additional parameters that are needed for operation execution
      */
-    protected Class[] getExecutorParamClasses() {
-        Class[] rtv = { AbstractOperation.class };
+    protected Class<?>[] getExecutorParamClasses() {
+        Class<?>[] rtv = { AbstractOperation.class };
         return rtv;
     }
 
@@ -957,7 +834,7 @@ public abstract class Algorithm implements Serializable {
      */
     @SuppressWarnings({"unchecked","rawtypes"})
     public static <E extends Algorithm> Constructor<E>[] getAnnotatedConstructorsArray(Class<? extends E> algorithmClass) {
-        return getAnnotatedConstructors(algorithmClass).toArray(new Constructor[0]);
+        return getAnnotatedConstructors(algorithmClass).toArray(new Constructor[1]);
     }
 
     /**

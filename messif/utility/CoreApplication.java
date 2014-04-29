@@ -872,10 +872,7 @@ public class CoreApplication {
      * </p>
      *
      * <p>
-     * Note that the last operation is updated, however, the control is returned immediately.
-     * So if there is another operation executed meanwhile (either background or normal), the results
-     * of this operation will be replaced. Use {@link #operationWaitBg} method to wait for the operation
-     * to finish.
+     * Note that the last operation is <em>not</em> updated and the control is returned immediately.
      * </p>
      * @param out a stream where the application writes information for the user
      * @param args operation class followed by constructor arguments
@@ -894,56 +891,12 @@ public class CoreApplication {
         if (operation == null)
             return false;
 
-        try {
-            // Execute operation
-            OperationStatistics.resetLocalThreadStatistics();
-            if (bindOperationStatsRegexp != null)
-                OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
-            alg.backgroundExecuteOperation(operation);
-            return true;
-        } catch (NoSuchMethodException e) {
-            out.println(e.getMessage());
-            algorithmSupportedOperations(out, args);
-            return false;
-        }
-    }
-
-    /**
-     * Synchronize on all operations run on the background.
-     * After this method finishes, there are no running operations on background.
-     *
-     * <p>
-     * Example of usage:
-     * <pre>
-     * MESSIF &gt;&gt;&gt; operationWaitBg
-     * </pre>
-     * </p>
-     *
-     * @param out a stream where the application writes information for the user
-     * @param args this method has no arguments
-     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
-     * @throws AlgorithmMethodException if there was an error executing the operation
-     */
-    @ExecutableMethod(description = "wait for all background operations", arguments = {})
-    public boolean operationWaitBg(PrintStream out, String... args) throws AlgorithmMethodException {
-        Algorithm alg = getAlgorithm();
-        if (alg == null) {
-            out.println("No running algorithm is selected");
-            return false;
-        }
-
-        try {
-            List<AbstractOperation> waitBackgroundExecuteOperation = alg.waitBackgroundExecuteOperation();
-            if (! waitBackgroundExecuteOperation.isEmpty()) {
-                setLastOperation(waitBackgroundExecuteOperation.get(0));
-            }
-            if (bindOperationStatsRegexp != null)
-                OperationStatistics.getLocalThreadStatistics().unbindAllStats(bindOperationStatsRegexp);
-            return true;
-        } catch (InterruptedException e) {
-            out.println(e.toString());
-            return false;
-        }
+        // Execute operation
+        OperationStatistics.resetLocalThreadStatistics();
+        if (bindOperationStatsRegexp != null)
+            OperationStatistics.getLocalThreadStatistics().registerBoundAllStats(bindOperationStatsRegexp);
+        alg.backgroundExecuteOperationIndependent(operation);
+        return true;
     }
 
     /**

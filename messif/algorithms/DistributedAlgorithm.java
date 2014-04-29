@@ -227,18 +227,6 @@ public abstract class DistributedAlgorithm extends Algorithm implements Startabl
         return operation;
     }
 
-    /**
-     * Execute algorithm operation on background.
-     * <i>Note:</i> Method {@link #waitBackgroundExecuteOperation} MUST be called in the future to release resources.
-     * @param operation the operation to execute on this algorithm
-     * @param updateStatistics set to <tt>true</tt> if the operations statistic should be updated after the operation finishes its background execution
-     * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
-     */
-    @Override
-    public void backgroundExecuteOperation(AbstractOperation operation, boolean updateStatistics) throws NoSuchMethodException {
-        backgroundExecute(updateStatistics, operation, null);
-    }
-
 
     //****************** Operation method specifier ******************//
 
