@@ -192,21 +192,30 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
      * The {@link ResultSet} returned by the execution can be retrieved by {@link PreparedStatement#getResultSet()}.
      * Note that if a {@link SQLRecoverableException} is thrown while executing,
      * the current connection is {@link #closeConnection() closed} and the command
-     * retried.
+     * retried. For select queries, the {@link PreparedStatement#setFetchSize(int) number of results fetched} hint
+     * can be specified if the driver supports it. Note, that e.g. for the MySQL driver,
+     * additional useCursorFetch=true option must be given.
      *
      * @param statement the previous cached statement that matches the given {@code sql} (can be <tt>null</tt>)
      * @param sql the SQL command to prepare and execute
+     * @param fetchSize the number of results fetched in one go, only applicable for SELECT SQL queries, should be zero otherwise or if a driver default should be used
      * @param returnGeneratedKeys flag whether to set the {@link Statement#RETURN_GENERATED_KEYS} on the prepared statement
      * @param parameters the values for the SQL parameters (denoted by "?" chars in the SQL command)
      * @return an executed prepared statement
      * @throws SQLFeatureNotSupportedException if the {@link Statement#RETURN_GENERATED_KEYS} is not supported by the driver
      * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
      */
-    protected final PreparedStatement prepareAndExecute(PreparedStatement statement, String sql, boolean returnGeneratedKeys, Object... parameters) throws SQLFeatureNotSupportedException, SQLException {
+    protected final PreparedStatement prepareAndExecute(PreparedStatement statement, String sql, int fetchSize, boolean returnGeneratedKeys, Object... parameters) throws SQLFeatureNotSupportedException, SQLException {
         for (;;) {
             // Prepare statement
-            if (statement == null || statement.isClosed())
-                statement = getConnection().prepareStatement(sql, returnGeneratedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
+            if (statement == null || statement.isClosed()) {
+                if (fetchSize > 0) {
+                    statement = getConnection().prepareStatement(sql, java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
+                    statement.setFetchSize(fetchSize);
+                } else {
+                    statement = getConnection().prepareStatement(sql, returnGeneratedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
+                }
+            }
 
             // Map parameters
             if (parameters != null)
@@ -226,6 +235,25 @@ public abstract class ExtendedDatabaseConnection implements Serializable {
                 }
             }
         }
+    }
+
+    /**
+     * Prepares and executes an SQL command using this storage's database connection.
+     * The {@link ResultSet} returned by the execution can be retrieved by {@link PreparedStatement#getResultSet()}.
+     * Note that if a {@link SQLRecoverableException} is thrown while executing,
+     * the current connection is {@link #closeConnection() closed} and the command
+     * retried.
+     *
+     * @param statement the previous cached statement that matches the given {@code sql} (can be <tt>null</tt>)
+     * @param sql the SQL command to prepare and execute
+     * @param returnGeneratedKeys flag whether to set the {@link Statement#RETURN_GENERATED_KEYS} on the prepared statement
+     * @param parameters the values for the SQL parameters (denoted by "?" chars in the SQL command)
+     * @return an executed prepared statement
+     * @throws SQLFeatureNotSupportedException if the {@link Statement#RETURN_GENERATED_KEYS} is not supported by the driver
+     * @throws SQLException if there was an unrecoverable error when parsing or executing the SQL command
+     */
+    protected final PreparedStatement prepareAndExecute(PreparedStatement statement, String sql, boolean returnGeneratedKeys, Object... parameters) throws SQLFeatureNotSupportedException, SQLException {
+        return prepareAndExecute(statement, sql, 0, returnGeneratedKeys, parameters);
     }
 
     /**

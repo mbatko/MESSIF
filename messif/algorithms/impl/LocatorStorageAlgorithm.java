@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
@@ -337,8 +336,7 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @param op the get-random-objects operation to execute
      */
     public void getRandomObjects(GetRandomObjectsQueryOperation op) {
-        StorageSearch<LocalAbstractObject> search = storage.search();
-        op.evaluate(new SearchAbstractObjectIterator<>(search));
+        op.evaluate(new SearchAbstractObjectIterator<>(storage));
         op.endOperation();
     }
 
@@ -348,8 +346,7 @@ public class LocatorStorageAlgorithm extends Algorithm {
      * @param op the get-random-object operation to execute
      */
     public void getRandomObject(GetRandomObjectQueryOperation op) {        
-        StorageSearch<LocalAbstractObject> search = storage.search();
-        op.evaluate(new SearchAbstractObjectIterator<>(search));
+        op.evaluate(new SearchAbstractObjectIterator<>(storage));
         op.endOperation();
     }
     
