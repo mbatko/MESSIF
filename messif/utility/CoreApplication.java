@@ -251,7 +251,7 @@ public class CoreApplication {
      */
     protected Throwable getRootCauseInvocationTargetException(InvocationTargetException invocationTargetException) {
         Throwable cause = invocationTargetException.getCause();
-        while (cause instanceof InvocationTargetException)
+        while (cause instanceof InvocationTargetException || cause instanceof AlgorithmMethodException)
             cause = cause.getCause();
         return cause;
     }

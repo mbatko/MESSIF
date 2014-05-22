@@ -23,11 +23,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.buckets.BucketStorageException;
 import messif.buckets.StorageInsertFailureException;
 import messif.buckets.index.LocalAbstractObjectOrder;
+import messif.buckets.index.SearchAbstractObjectIterator;
 import messif.buckets.storage.StorageIndexed;
 import messif.buckets.storage.StorageSearch;
 import messif.buckets.storage.impl.DatabaseStorage;
@@ -41,6 +43,8 @@ import messif.operations.data.DeleteOperation;
 import messif.operations.data.InsertOperation;
 import messif.operations.query.GetObjectByLocatorOperation;
 import messif.operations.query.GetObjectsByLocatorsOperation;
+import messif.operations.query.GetRandomObjectQueryOperation;
+import messif.operations.query.GetRandomObjectsQueryOperation;
 
 /**
  * Wrapper for any {@link Algorithm} that stores all the inserted objects into additional
@@ -327,6 +331,28 @@ public class LocatorStorageAlgorithm extends Algorithm {
         op.endOperation();
     }
 
+    /**
+     * Implementation of the get-random-objects operation
+     * The objects are retrieved using the internal storage.
+     * @param op the get-random-objects operation to execute
+     */
+    public void getRandomObjects(GetRandomObjectsQueryOperation op) {
+        StorageSearch<LocalAbstractObject> search = storage.search();
+        op.evaluate(new SearchAbstractObjectIterator<>(search));
+        op.endOperation();
+    }
+
+    /**
+     * Implementation of the get-random-object operation
+     * The objects are retrieved using the internal storage.
+     * @param op the get-random-object operation to execute
+     */
+    public void getRandomObject(GetRandomObjectQueryOperation op) {        
+        StorageSearch<LocalAbstractObject> search = storage.search();
+        op.evaluate(new SearchAbstractObjectIterator<>(search));
+        op.endOperation();
+    }
+    
     /**
      * Implementation of a generic operation.
      * The the operation is passed the encapsulated algorithm for processing.

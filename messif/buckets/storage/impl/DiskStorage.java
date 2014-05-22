@@ -209,8 +209,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
     @Override
     public void destroy() throws Throwable {
-        if (closeFileChannel())
+        if (closeFileChannel()) {
             file.delete();
+        }
     }
 
 
@@ -788,6 +789,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         in.defaultReadObject();
 
         this.readonly = !file.canWrite();
+        if (readonly) {
+            System.out.println("cannot write to file " + file.toString());
+        }
         if (inputStreamCount <= 0) {
             try {
                 Field countField = DiskStorage.class.getDeclaredField("inputStreamCount");

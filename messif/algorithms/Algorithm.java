@@ -33,6 +33,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -290,14 +292,19 @@ public abstract class Algorithm implements Serializable {
             if (file.isDirectory())
                 file = new File(file, getName().replaceAll("[^a-zA-Z0-9.-]", "_") + ".bin");
         
+            beforeStoreToFile(filepath);
+            
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
             try {
                 out.writeObject(this);
                 log.log(Level.INFO, "Algorithm stored to: {0}", file.getAbsolutePath());
+                afterStoreToFile(filepath, true);
+            } catch (IOException ex) {
+                afterStoreToFile(filepath, false);
+                throw ex;
             } finally {
                 out.close();
-            }
-            onStoreToFile(filepath);
+            } 
         } finally {
             // Unlock operations
             if (maximalConcurrentOperations > 0)
@@ -306,11 +313,20 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * This method is executed after the method {@link #storeToFile(java.lang.String)} 
+     * This method is executed BEFORE the method {@link #storeToFile(java.lang.String)} 
      *  was called. It is empty and expected to be overridden.
      * @param filepath the path to a file where the algorithm was stored
      */
-    protected void onStoreToFile(String filepath) { 
+    protected void beforeStoreToFile(String filepath) {
+    }
+
+    /**
+     * This method is executed after the method {@link #storeToFile(java.lang.String)} 
+     *  was called. It is empty and expected to be overridden.
+     * @param filepath the path to a file where the algorithm was stored
+     * @param successful true, if the write to file was successful, false otherwise
+     */
+    protected void afterStoreToFile(String filepath, boolean successful) { 
     }
     
 
