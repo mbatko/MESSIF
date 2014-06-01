@@ -99,6 +99,7 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
             futures.add(algorithm.backgroundExecuteOperationWithStatistics(queryOperationConstructor.newInstance(params)));
         }
 
+        op.setAnswerIgnoringDuplicates(true);
         for (Future<? extends QueryOperation<?>> future : futures) {
             for (Iterator<AbstractObject> it = Algorithm.waitBackgroundExecution(future).getAnswerObjects(); it.hasNext();) {
                 op.addToAnswer((LocalAbstractObject)it.next());
