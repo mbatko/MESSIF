@@ -48,15 +48,25 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
 
     /**
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
+     * @param algName string name of this algorithm to be used instead of the standard string
      * @param algorithms the algorithms on which the operations are processed
      * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
      */
-    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
-        super("Multiple overlay algorithm on: " + algorithms.size() + " algorithms");
+    public MultipleOverlaysAlgorithm(String algName, Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
+        super(algName);
         this.algorithms = new ArrayList<Algorithm>(algorithms);
         this.cloneAsynchronousOperation = cloneAsynchronousOperation;
     }
 
+    /**
+     * Creates a new multi-algorithm overlay for the given collection of algorithms.
+     * @param algorithms the algorithms on which the operations are processed
+     * @param cloneAsynchronousOperation the flag whether to clone the operation for asynchronous processing
+     */
+    public MultipleOverlaysAlgorithm(Collection<? extends Algorithm> algorithms, boolean cloneAsynchronousOperation) {
+        this("Multiple overlay algorithm on: " + algorithms.size() + " algorithms", algorithms, cloneAsynchronousOperation);
+    }
+    
     /**
      * Creates a new multi-algorithm overlay for the given collection of algorithms.
      * @param algorithms the algorithms on which the operations are processed

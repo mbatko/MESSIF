@@ -109,31 +109,4 @@ public abstract class NavigationProcessors {
             }
         }
     }
-
-    /**
-     * Executes a given {@code operation} by the processor provided by {@link NavigationDirectory}.
-     * If the passed objects are not instances of {@link NavigationDirectory} or {@link AbstractOperation},
-     * or the directory does not provide processor for the given operation, <tt>false</tt> is returned
-     * and no processing is done. Otherwise, the sequential or asynchronous processing
-     * is executed for the given operation.
-     * 
-     * @param executor the executor service that provides the worker threads for asynchronous execution
-     * @param navigationDirectory an instance of {@link NavigationDirectory} as plain {@link Object}
-     * @param operation an instance of {@link AbstractOperation} as plain {@link Object} compatible with the given {@link NavigationDirectory}
-     * @return <tt>true</tt> if the {@code operation} was processed using the {@code navigationDirectory} or
-     *      <tt>false</tt> if no processing was performed
-     * @throws InterruptedException if the processing thread is interrupted during the processing
-     * @throws AlgorithmMethodException if there was an error during the processing
-     * @throws CloneNotSupportedException if there was a need for cloning (due to asynchronous access) but cloning was not supported
-     */
-    public static boolean executeWithCast(ExecutorService executor, Object navigationDirectory, Object operation) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
-        if (!(operation instanceof AbstractOperation))
-            return false;
-        NavigationProcessor<? extends AbstractOperation> navigationProcessor = getNavigationProcessor(navigationDirectory, (AbstractOperation)operation);
-        if (navigationProcessor == null)
-            return false;
-        execute(executor, navigationProcessor);
-        return true;
-    }
-
 }

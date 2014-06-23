@@ -398,6 +398,9 @@ public abstract class ObjectFloatVector extends LocalAbstractObject implements B
      */
     @Override
     public String toString() {
+        if (getLocatorURI() != null) {
+            return super.toString();
+        }
         StringBuffer rtv = new StringBuffer(super.toString()).append(" [");
 
         for (int i = 0; i < this.data.length; i++) {

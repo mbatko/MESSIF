@@ -33,8 +33,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +46,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static messif.algorithms.NavigationProcessors.execute;
+import static messif.algorithms.NavigationProcessors.getNavigationProcessor;
 import messif.executor.MethodClassExecutor;
 import messif.executor.MethodExecutor;
 import messif.objects.LocalAbstractObject;
@@ -466,32 +466,70 @@ public abstract class Algorithm implements Serializable {
         runningOperations = new WeakHashMap<Thread, AbstractOperation>(maximalConcurrentOperations);
         operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
     }
-
+    
+    /**
+     * Executes a given {@code operation} by the processor provided by {@link NavigationDirectory}.
+     * If the passed objects are not instances of {@link NavigationDirectory} or {@link AbstractOperation},
+     * or the directory does not provide processor for the given operation, <tt>false</tt> is returned
+     * and no processing is done. Otherwise, the sequential or asynchronous processing
+     * is executed for the given operation.
+     * 
+     * @param navigationDirectory an instance of {@link NavigationDirectory} as plain {@link Object}
+     * @param operation an instance of {@link AbstractOperation} as plain {@link Object} compatible with the given {@link NavigationDirectory}
+     * @param statisticsOn run the before/after operation statistics, see {@link #statisticsBeforeOperation()} and {@link #statisticsAfterOperation(messif.operations.AbstractOperation)}
+     * @return <tt>true</tt> if the {@code operation} was processed using the {@code navigationDirectory} or
+     *      <tt>false</tt> if no processing was performed
+     * @throws InterruptedException if the processing thread is interrupted during the processing
+     * @throws AlgorithmMethodException if there was an error during the processing
+     * @throws CloneNotSupportedException if there was a need for cloning (due to asynchronous access) but cloning was not supported
+     */
+    public boolean executeUsingNavDir(Object navigationDirectory, Object operation, boolean statisticsOn) throws InterruptedException, AlgorithmMethodException, CloneNotSupportedException {
+        if (!(operation instanceof AbstractOperation))
+            return false;
+        NavigationProcessor<? extends AbstractOperation> navigationProcessor = getNavigationProcessor(navigationDirectory, (AbstractOperation)operation);
+        if (navigationProcessor == null)
+            return false;
+        if (statisticsOn) {
+            statisticsBeforeOperation();            
+        }
+        NavigationProcessors.execute(operationsThreadPool, navigationProcessor);
+        if (statisticsOn) {
+            statisticsAfterOperation((AbstractOperation) operation);            
+        }
+        return true;
+    }
+    
+    
     /**
      * Execute operation with additional parameters.
-     * This is a synchronized wrapper around {@link MethodExecutor#execute}. 
-     * @param addTimeStatistic add the execution time statistic to {@link OperationStatistics}
+     * This is a synchronized wrapper around {@link MethodExecutor#execute}.
+     * @param statisticsOn add the execution time statistics to {@link OperationStatistics}
      * @param params the parameters compatible with {@link #getExecutorParamClasses()}
      * @throws AlgorithmMethodException if the execution has thrown an exception
      * @throws NoSuchMethodException if the operation is unsupported (there is no method for the operation)
      */
-    protected final void execute(boolean addTimeStatistic, Object... params) throws AlgorithmMethodException, NoSuchMethodException {
+    protected final void execute(final boolean statisticsOn, Object... params) throws AlgorithmMethodException, NoSuchMethodException {
         if (maximalConcurrentOperations > 0)
             runningOperationsSemaphore.acquireUninterruptibly();
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
             runningOperations.put(Thread.currentThread(), getExecutorOperationParam(params));
         }
+        // log the operation processing information 
+        long startTimeStamp = 0;
+        if (log.isLoggable(Level.INFO)) {
+            startTimeStamp = System.currentTimeMillis();
+        }
         try {
+            StatisticTimer operationTime = null;
             // Measure time of execution (as an operation statistic)
-            if (addTimeStatistic) {
-                StatisticTimer operationTime = OperationStatistics.getOpStatistics("OperationTime", StatisticTimer.class);
+            if (statisticsOn) {
+                operationTime = OperationStatistics.getOpStatistics("OperationTime", StatisticTimer.class);
                 operationTime.start();
-                if (!NavigationProcessors.executeWithCast(operationsThreadPool, this, params[0]))
-                    operationExecutor.execute(params);
+            }
+            if (!executeUsingNavDir(this, params[0], statisticsOn))
+                operationExecutor.execute(params);
+            if (statisticsOn) {
                 operationTime.stop();
-            } else {
-                if (!NavigationProcessors.executeWithCast(operationsThreadPool, this, params[0]))
-                    operationExecutor.execute(params);
             }
         } catch (CloneNotSupportedException e) {
             throw new AlgorithmMethodException(e);
@@ -502,6 +540,9 @@ public abstract class Algorithm implements Serializable {
         } catch (InvocationTargetException e) {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
+            if (log.isLoggable(Level.INFO)) {
+                log.log(Level.INFO, "{0} processed: {1}; Time: {2}", new Object[]{this.getName(), params[0].toString(), System.currentTimeMillis() - startTimeStamp});
+            }
             if (maximalConcurrentOperations > 0)
                 runningOperationsSemaphore.release();
         }
