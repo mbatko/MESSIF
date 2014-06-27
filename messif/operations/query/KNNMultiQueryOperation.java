@@ -16,8 +16,8 @@
  */
 package messif.operations.query;
 
-import messif.objects.DistanceFunctionMultiObjectAggregation;
 import messif.objects.DistanceFunctionMultiObject;
+import messif.objects.DistanceFunctionMultiObjectAggregation;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
@@ -91,6 +91,7 @@ public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
      * @param answerType the type of objects this operation stores in its answer
      * @param distanceFunction the distance function for computing the distances between a data object and all query objects
      */
+    @AbstractOperation.OperationConstructor({"Query objects", "Number of nearest objects", "Store individual distances", "Answer type", "Distance aggregation function"})
     public KNNMultiQueryOperation(LocalAbstractObject[] queryObjects, int k, boolean storedIndividualDistances, AnswerType answerType, DistanceFunctionMultiObject<? super LocalAbstractObject> distanceFunction) {
         super(queryObjects, distanceFunction, storedIndividualDistances, answerType, k);
         this.k = k;

@@ -2483,7 +2483,7 @@ public class CoreApplication {
         try {
             Object value = namedInstances.get(args[1]);
             if (value == null) // Named instance not accessed directly, try instantiation
-                value = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, namedInstances);
+                value = InstantiatorSignature.createInstanceWithStringArgs(args[1], Object.class, getExtendedNamedInstances("lastOperation", getLastOperation(), true));
             out.println(Convert.expandReferencedInstances(value));
             return true;
         } catch (NoSuchInstantiatorException e) {

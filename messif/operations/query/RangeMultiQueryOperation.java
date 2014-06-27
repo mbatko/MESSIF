@@ -16,8 +16,8 @@
  */
 package messif.operations.query;
 
-import messif.objects.DistanceFunctionMultiObjectAggregation;
 import messif.objects.DistanceFunctionMultiObject;
+import messif.objects.DistanceFunctionMultiObjectAggregation;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
