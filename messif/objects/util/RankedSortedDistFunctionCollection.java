@@ -86,17 +86,12 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * @throws IllegalArgumentException if the specified initial or maximal capacity is invalid or the ranking distance function is not compatible with the ranking object
      * @throws NullPointerException if both the ranking distance function and the ranking object are <tt>null</tt>
      */
-    @SuppressWarnings("unchecked")
     public RankedSortedDistFunctionCollection(DistanceFunction<? super T> rankingDistanceFunction, T rankingObject, float originalDistanceWeight, boolean rankInAdd, int initialCapacity, int maximalCapacity) throws IllegalArgumentException, NullPointerException {
         super(initialCapacity, maximalCapacity);
-        if (rankingDistanceFunction == null) {
-            this.rankingDistanceFunction = (DistanceFunction)LocalAbstractObject.trivialDistanceFunction; // This cast IS checked on the next line
-        } else {
-            this.rankingDistanceFunction = rankingDistanceFunction;
-        }
+        this.rankingDistanceFunction = rankingDistanceFunction;
         this.originalDistanceWeight = originalDistanceWeight;
-        if (rankingObject != null && !this.rankingDistanceFunction.getDistanceObjectClass().isInstance(rankingObject))
-            throw new IllegalArgumentException("Ranking collection distance function is not compatible with the given ranking object");
+        if (rankingObject != null)
+            checkDistanceCompatible(rankingObject);
         this.rankingObject = rankingObject;
         this.rankInAdd = rankInAdd;
     }
@@ -153,13 +148,12 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * {@inheritDoc}
      * @throws IllegalArgumentException {@inheritDoc} or the distance function requires a different class
      */
-    @SuppressWarnings("unchecked")
     @Override
     public RankedAbstractObject add(AnswerType answerType, AbstractObject object, float distance, float[] objectDistances) throws IllegalArgumentException {
-        if (!rankingDistanceFunction.getDistanceObjectClass().isInstance(object))
-            throw new IllegalArgumentException("Distance function requires " + rankingDistanceFunction.getDistanceObjectClass() + " but " + object.getClass() + " was given (using AnswerType.NODATA_OBJECTS?)");
+        checkDistanceCompatible(object);
 
         // This cast is sufficiently checked on the previous line - we only require object compatible with the distance function
+        @SuppressWarnings("unchecked")
         RankedAbstractObject rankedObject = rankObject(answerType, object, getNewDistance(distance, (T)object), objectDistances);
         return super.add(rankedObject) ? rankedObject : null;
     }
@@ -193,6 +187,18 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      */
     public DistanceFunction<? super T> getRankingDistanceFunction() {
         return rankingDistanceFunction;
+    }
+
+    /**
+     * Check whether the given object is compatible with the ranking distance function.
+     * If it is not, exception is thrown.
+     * @param object the object to check
+     * @throws IllegalArgumentException if the object is not compatible
+     */
+    private void checkDistanceCompatible(Object object) throws IllegalArgumentException {
+        Class<?> distanceObjectClass = rankingDistanceFunction == null ? LocalAbstractObject.class : rankingDistanceFunction.getDistanceObjectClass();
+        if (!distanceObjectClass.isInstance(object))
+            throw new IllegalArgumentException("Distance function requires " + distanceObjectClass + " but " + object.getClass() + " was given (using AnswerType.NODATA_OBJECTS?)");
     }
 
     /**
@@ -230,7 +236,11 @@ public class RankedSortedDistFunctionCollection<T extends AbstractObject> extend
      * @return new distance to be used by this collection
      */
     protected final float getNewDistance(float origDistance, T object) {
-        return origDistance * originalDistanceWeight + rankingDistanceFunction.getDistance(rankingObject, object);
+        return origDistance * originalDistanceWeight + (
+                rankingDistanceFunction == null ?
+                    ((LocalAbstractObject)rankingObject).getDistance((LocalAbstractObject)object):
+                    rankingDistanceFunction.getDistance(rankingObject, object)
+        );
     }    
         
 }

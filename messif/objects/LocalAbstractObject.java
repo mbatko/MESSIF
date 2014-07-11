@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -92,10 +93,11 @@ public abstract class LocalAbstractObject extends AbstractObject {
     //****************** Trivial distance function ******************//
 
     /**
-     * Trivial distance function that for any {@link LocalAbstractObject} returns
-     * the call to {@link #getDistance(messif.objects.LocalAbstractObject)} method
+     * Implementation of a simple trivial distance function.
      */
-    public static final DistanceFunction<LocalAbstractObject> trivialDistanceFunction = new DistanceFunction<LocalAbstractObject>() {
+    public static final class TrivialDistanceFunction implements DistanceFunction<LocalAbstractObject>, Serializable {
+        /** Class serial id for serialization */
+        private static final long serialVersionUID = 1L;
         @Override
         public float getDistance(LocalAbstractObject o1, LocalAbstractObject o2) {
             return o1.getDistance(o2);
@@ -104,7 +106,13 @@ public abstract class LocalAbstractObject extends AbstractObject {
         public Class<? extends LocalAbstractObject> getDistanceObjectClass() {
             return LocalAbstractObject.class;
         }
-    };
+    }
+
+    /**
+     * Trivial distance function that for any {@link LocalAbstractObject} returns
+     * the call to {@link #getDistance(messif.objects.LocalAbstractObject)} method
+     */
+    public static final DistanceFunction<LocalAbstractObject> trivialDistanceFunction = new TrivialDistanceFunction();
 
 
     //****************** Constructors ******************//

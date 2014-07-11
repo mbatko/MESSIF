@@ -86,7 +86,7 @@ public abstract class Classifications {
      * @param <C> the class of instances that represent the classification categories
      * @param object the object to cast to classification
      * @param categoriesClass the class of instances that represent the classification categories
-     * @param confidence the confidence to set for the objects that does not have one
+     * @param confidence the confidence to set for the objects that do not have one
      * @param lowestConfidence the lowest possible confidence of this classification
      * @param highestConfidence the highest possible confidence of this classification
      * @return the object converted to classification

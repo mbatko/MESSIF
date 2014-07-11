@@ -16,6 +16,7 @@
  */
 package messif.operations;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import messif.objects.DistanceFunctionMultiObject;
 import messif.objects.LocalAbstractObject;
+import messif.objects.util.AbstractObjectList;
 import messif.objects.util.RankedAbstractObject;
 import messif.objects.util.RankedSortedCollection;
 import messif.utility.Convert;
@@ -316,7 +318,40 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     public RankedAbstractObject addToAnswer(LocalAbstractObject object) {
         return addToAnswer(object, LocalAbstractObject.MAX_DISTANCE);
     }
-    
+
+    /**
+     * Creates an array of {@link LocalAbstractObject}s from a given instance.
+     * The instance can be:
+     * <ul>
+     * <li>{@link LocalAbstractObject} - an array with this single object is returned</li>
+     * <li>static array - an array with copied and cast objects is returned</li>
+     * <li>{@link Iterator} - an array with all objects from the iterator is returned</li>
+     * <li>{@link Collection} - an array with all objects from the collection is returned</li>
+     * </ul>
+     * @param objects the object, array, iterator, or collection to convert
+     * @return an array of objects
+     */
+    @SuppressWarnings({"unchecked", "SuspiciousToArrayCall"})
+    public static LocalAbstractObject[] toObjectArray(Object objects) {
+        if (objects == null)
+            return null;
+        if (objects instanceof LocalAbstractObject)
+            return new LocalAbstractObject[] { (LocalAbstractObject)objects };
+        if (objects instanceof LocalAbstractObject[])
+            return (LocalAbstractObject[])objects;
+        if (objects.getClass().isArray()) {
+            LocalAbstractObject[] ret = new LocalAbstractObject[Array.getLength(objects)];
+            for (int i = 0; i < ret.length; i++) {
+                ret[i] = (LocalAbstractObject)Array.get(objects, i);
+            }
+            return ret;
+        }
+        if (objects instanceof Iterator)
+            objects = new AbstractObjectList<LocalAbstractObject>((Iterator)objects);
+        Collection<?> col = (Collection<?>)objects;
+        return col.toArray(new LocalAbstractObject[col.size()]);
+    }
+
     /**
      * Creates a new ranking multi-query operation of the specified class.
      * @param <E> the class of the operation that should be created
@@ -328,7 +363,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
      * @throws IllegalArgumentException if the argument count or their types don't match the specified operation class constructor
      * @throws InvocationTargetException if there was an exception in the operation's constructor
      */
-    public static <E extends RankingMultiQueryOperation> E createOperation(Class<E> operationClass, List<? extends LocalAbstractObject> queryObjects, Object... arguments) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
+    public static <E extends RankingMultiQueryOperation> E createOperation(Class<E> operationClass, LocalAbstractObject[] queryObjects, Object... arguments) throws NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
         // Add query object to the arguments
         Object[] args = new Object[arguments.length + 1];
         args[0] = queryObjects;
