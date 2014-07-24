@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -321,20 +320,7 @@ public abstract class Extractors {
             }
         } else {
             extractorProcess = Runtime.getRuntime().exec(Convert.splitBySpaceWithQuotes(command));
-            OutputStream os = extractorProcess.getOutputStream();
-            try {
-                dataSource.pipe(os);
-            } catch (IOException e) {
-                StringBuilder error = new StringBuilder().append("Error '").append(e.getMessage()).append("' occurred when writing the data to external extractor: ");
-                try {
-                    Convert.readStringData(extractorProcess.getErrorStream(), error);
-                } catch (IOException ignore) {
-                    throw e; // Cannot read error message from process, throw the original error instead
-                }
-                throw new IOException(error.toString());
-            } finally {
-                os.close();
-            }
+            new ExtractorDataSource.PipeThread(dataSource, extractorProcess.getOutputStream()).start();
         }
 
         return new BufferedInputStream(new ExternalProcessInputStream(extractorProcess));

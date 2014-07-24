@@ -423,6 +423,7 @@ public class ExtractorDataSource extends ModifiableParametricBase implements Clo
             out.close();
         }
     }
+
     /**
      * Output all data from this data source to a automatically generated temporary file.
      * The name of the file is generated using {@link File#createTempFile(java.lang.String, java.lang.String, java.io.File)}.
@@ -441,6 +442,53 @@ public class ExtractorDataSource extends ModifiableParametricBase implements Clo
         File file = File.createTempFile(prefix, suffix, directory);
         pipeToFile(file);
         return file;
+    }
+
+    /**
+     * Helper class that pipes the given data source to a given output stream in thread.
+     */
+    public static class PipeThread extends Thread {
+        /** Exception that occurred during the piping */
+        private IOException exception;
+        /** Input data source to pipe */
+        private final ExtractorDataSource dataSource;
+        /** Output stream to pipe to */
+        private final OutputStream outputStream;
+
+        /**
+         * Creates a new pipe thread.
+         * Note that the thread needs to be started.
+         * @param dataSource the input data source to pipe
+         * @param outputStream the output stream to pipe to
+         */
+        public PipeThread(ExtractorDataSource dataSource, OutputStream outputStream) {
+            this.dataSource = dataSource;
+            this.outputStream = outputStream;
+        }
+
+        @Override
+        public void run() {
+            try {
+                dataSource.pipe(outputStream);
+            } catch (IOException e) {
+                exception = e;
+            } finally {
+                try {
+                    outputStream.close();
+                } catch (IOException ignore) {
+                }
+            }
+        }
+
+        /**
+         * Returns the exception that occurred during the piping or
+         * <tt>null</tt> if there was no problem.
+         * @return the exception that occurred during the piping or
+         * <tt>null</tt> if there was no problem.
+         */
+        public IOException getException() {
+            return exception;
+        }
     }
 
     @Override
