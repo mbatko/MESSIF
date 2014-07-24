@@ -1,28 +1,34 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>messif</groupId>
-  <artifactId>messif</artifactId>
-  <version>2.1-DEVEL</version>
-  <packaging>jar</packaging>
+    <groupId>messif</groupId>
+    <artifactId>messif</artifactId>
+    <version>2.1.0-DEVEL</version>
+    <packaging>jar</packaging>
 
-  <name>messif-devel</name>
-  <url>http://maven.apache.org</url>
+    <name>messif-devel</name>
+    <url>http://disa.fi.muni.cz/trac/messif/</url>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-    <description>Different (de)serialization of the LongStorageMemoryIndex</description>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <description>Metric Similarity Search Implementation Framework.
+The framework objectives are:
+- to provide basic support for the indexing based on metric space – let developers focus on the higher-level design;
+- to create a uniﬁed and semi-automated mechanism for measuring and collecting statistics;
+- to deﬁne and use uniform interfaces to support modularity and thus allow reusing of the code;
+- to provide infrastructure for distributed processing with focus on peer-to-peer paradigm – communication support, deployment, monitoring, testing, etc.;
+- to support complex similarity search in multi-metric spaces.</description>
     <build>
         <plugins>
             <plugin>

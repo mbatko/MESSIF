@@ -453,6 +453,24 @@ public abstract class Algorithm implements Serializable {
         return supportedOperations.get(0);
     }
 
+    /**
+     * Given a list of abstract operation classes and a required class,
+     * this auxiliary static method returns list of all classes that are subclass of the required class.
+     * @param <E> type of the returned operations
+     * @param operations list of operation classes to search within
+     * @param subclassToSearch ancestor class of the returned operations
+     * @return the list of operations this particular algorithm supports
+     */
+    public static <E extends AbstractOperation> List<Class<? extends E>> getOperationSubClasses(Collection<Class<? extends AbstractOperation>> operations, Class<? extends E> subclassToSearch) {
+        List<Class<? extends E>> ret = new ArrayList<>();
+        for (Class<? extends AbstractOperation> operClass : operations) {
+            if (subclassToSearch.isAssignableFrom(operClass)) {
+                ret.add((Class<E>) operClass); // This class is checked on the previous line
+            }
+        }
+        return ret;
+    }
+
 
     //****************** Operation execution ******************//
 
