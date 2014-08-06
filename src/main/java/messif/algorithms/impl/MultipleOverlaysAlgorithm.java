@@ -100,6 +100,20 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
         algorithms.get(algorithmIndex).setOperationsThreadPool(operationsThreadPool);
     }
 
+    /**
+     * If the sub-algorithms don't have their own thread pool, the top algorithm shares its thread pool with them.
+     * @param operationsThreadPool 
+     */
+    @Override
+    public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
+        super.setOperationsThreadPool(operationsThreadPool);
+        for (Algorithm algorithm : algorithms) {
+            if (algorithm.getOperationsThreadPool() == null) {
+                algorithm.setOperationsThreadPool(operationsThreadPool);
+            }
+        }
+    }
+    
     @Override
     public NavigationProcessor<? extends AbstractOperation> getNavigationProcessor(AbstractOperation operation) {
         return new AbstractNavigationProcessor<AbstractOperation, Algorithm>(operation, cloneAsynchronousOperation, algorithms) {
