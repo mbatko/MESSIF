@@ -96,6 +96,11 @@ public class MultiQueryWrapperAlgorithm extends Algorithm {
         for (LocalAbstractObject queryObject : queryObjects) {
             Object[] params = queryOperationArguments.clone();
             params[0] = queryObject;
+            for (int i = 1; i < params.length; i++) {
+                Object param = op.getParameter("argument." + i);
+                if (param != null)
+                    params[i] = param;
+            }
             futures.add(algorithm.backgroundExecuteOperationWithStatistics(queryOperationConstructor.newInstance(params)));
         }
 
