@@ -46,7 +46,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static messif.algorithms.NavigationProcessors.execute;
 import static messif.algorithms.NavigationProcessors.getNavigationProcessor;
 import messif.executor.MethodClassExecutor;
 import messif.executor.MethodExecutor;
@@ -63,6 +62,7 @@ import messif.statistics.StatisticObject;
 import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
+import messif.utility.ModifiableParametric;
 import messif.utility.reflection.MethodInstantiator;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
@@ -533,10 +533,7 @@ public abstract class Algorithm implements Serializable {
             runningOperations.put(Thread.currentThread(), getExecutorOperationParam(params));
         }
         // log the operation processing information 
-        long startTimeStamp = 0;
-        if (log.isLoggable(Level.INFO)) {
-            startTimeStamp = System.currentTimeMillis();
-        }
+        long startTimeStamp = System.currentTimeMillis();
         try {
             StatisticTimer operationTime = null;
             // Measure time of execution (as an operation statistic)
@@ -558,8 +555,12 @@ public abstract class Algorithm implements Serializable {
         } catch (InvocationTargetException e) {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
+            long runningTime = System.currentTimeMillis() - startTimeStamp;
             if (log.isLoggable(Level.INFO)) {
-                log.log(Level.INFO, "{0} processed: {1}; Time: {2}", new Object[]{this.getName(), params[0].toString(), System.currentTimeMillis() - startTimeStamp});
+                log.log(Level.INFO, "{0} processed: {1}; Time: {2}", new Object[]{this.getName(), params[0].toString(), runningTime});
+            }
+            if (! statisticsOn && (params[0] instanceof ModifiableParametric)) {
+                ((ModifiableParametric) params[0]).setParameter("OperationTime", runningTime);
             }
             if (maximalConcurrentOperations > 0)
                 runningOperationsSemaphore.release();
@@ -751,10 +752,10 @@ public abstract class Algorithm implements Serializable {
      * @throws ClassCastException if new statistic cannot be created
      */
     public void statisticsBeforeOperation() throws ClassCastException {
-        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
-        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
-        OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
-    }
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations", "DistanceComputations");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "DistanceComputations.Savings", "DistanceComputations.Savings");
+            OperationStatistics.getLocalThreadStatistics().registerBoundStat(StatisticCounter.class, "BlockReads", "BlockReads");
+        }
 
     /**
      * This method can be used by all algorithms after processing any operation to set default (operation) statistics.

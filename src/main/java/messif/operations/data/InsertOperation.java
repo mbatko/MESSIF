@@ -106,15 +106,6 @@ public class InsertOperation extends AbstractOperation {
     }
 
     /**
-     * Return a string representation of this operation.
-     * @return a string representation of this operation
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer().append("inserted object: ").append(insertedObject).toString();
-    }
-
-    /**
      * Clear non-messif data stored in operation.
      * This method is intended to be called whenever the operation is
      * sent back to client in order to minimize problems with unknown

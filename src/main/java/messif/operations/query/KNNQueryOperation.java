@@ -157,10 +157,11 @@ public class KNNQueryOperation extends RankingSingleQueryOperation {
             // Get current object
             LocalAbstractObject object = objects.next();
 
-            if (getQueryObject().excludeUsingPrecompDist(object, getAnswerThreshold()))
+            float threshold = getAnswerThreshold();
+            if (getQueryObject().excludeUsingPrecompDist(object, threshold))
                 continue;
 
-            addToAnswer(object, getAnswerThreshold());
+            addToAnswer(object, threshold);
         }
 
         return getAnswerCount() - beforeCount;

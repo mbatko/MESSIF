@@ -56,10 +56,10 @@ public class SortedCollection<T> extends SortedArrayData<T, T> implements Queue<
     private final Comparator<? super T> comparator;
 
     /** Array buffer into which the elements of the SortedCollection are stored */
-    private Object[] items;
+    private volatile Object[] items;
 
     /** Size of the SortedCollection (the number of elements it contains) */
-    private int size;
+    private volatile int size;
 
     /** Maximal capacity of the collection */
     private int capacity;

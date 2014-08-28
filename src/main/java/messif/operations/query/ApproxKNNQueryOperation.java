@@ -157,6 +157,42 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation implements Approx
         this.radiusGuaranteed = radiusGuaranteed;
     }
 
+    //****************** Operation parameters handling ******************//
+    
+    /**
+     * Returns number of arguments of this operation: it is five (query, k, localSearchParam, localSearchType, radiusGuaranteed)
+     * @return number of arguments of this operation
+     */
+    @Override
+    public int getArgumentCount() {
+        return super.getArgumentCount() + 3;
+    }
+    
+    /**
+     * Returns argument that was passed while constructing instance.
+     * If the argument is not stored within operation, <tt>null</tt> is returned.
+     * @param index index of an argument passed to constructor
+     * @return argument that was passed while constructing instance
+     * @throws IndexOutOfBoundsException if index parameter is out of range
+     */
+    @Override
+    public Object getArgument(int index) throws IndexOutOfBoundsException {
+        int superArgumentCount = super.getArgumentCount();
+        if (index < superArgumentCount) {
+            return super.getArgument(index);
+        }
+        if (index == superArgumentCount) {
+            return localSearchParam;
+        }
+        if (index == superArgumentCount + 1) {
+            return localSearchType;
+        }
+        if (index == superArgumentCount + 2) {
+            return radiusGuaranteed;
+        }
+        throw new IndexOutOfBoundsException("ApproxKNNQUeryOperation has only " + (superArgumentCount + 3) + " arguments");
+    }
+    
 
     //****************** Attribute access ******************//
 
@@ -215,16 +251,6 @@ public class ApproxKNNQueryOperation extends KNNQueryOperation implements Approx
     protected void updateFrom(ApproxKNNQueryOperation operation) {
         if (radiusGuaranteed > operation.radiusGuaranteed)
             radiusGuaranteed = operation.radiusGuaranteed;
-    }
-
-    /**
-     * Returns the information about this operation.
-     * @return the information about this operation
-     */
-    @Override
-    public String toString() {
-        return new StringBuffer(super.toString()).
-                append("; local search param: ").append(localSearchParam).append(" of type: ").append(localSearchType.toString()).toString();
     }
     
 }

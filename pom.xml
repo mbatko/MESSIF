@@ -4,7 +4,7 @@
 
     <groupId>messif</groupId>
     <artifactId>messif</artifactId>
-    <version>2.1.1-DEVEL</version>
+    <version>2.1.2-DEVEL</version>
     <packaging>jar</packaging>
 
     <name>messif-devel</name>

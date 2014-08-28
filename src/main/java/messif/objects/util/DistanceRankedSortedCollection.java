@@ -19,6 +19,8 @@ package messif.objects.util;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.utility.SortedCollection;
 
@@ -99,8 +101,14 @@ public class DistanceRankedSortedCollection<T extends DistanceRankedObject<?>> e
      *         {@link LocalAbstractObject#MAX_DISTANCE} if there are not enough objects.
      */
     public float getThresholdDistance() {
-        if (isFull())
-            return getLastDistance();
+        if (isFull()) {
+            try {
+                return getLastDistance();
+            } catch (NullPointerException ex) {
+                Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "getLastDistance() returned null", ex);
+                return LocalAbstractObject.MAX_DISTANCE;
+            }
+        }
         else
             return LocalAbstractObject.MAX_DISTANCE;
     }

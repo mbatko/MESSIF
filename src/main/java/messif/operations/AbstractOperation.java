@@ -189,6 +189,25 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         return additionalParameters.remove(name);
     }
 
+    /**
+     * Adds the additional parameters to the passed builder in format "paramString: value, nextSring: value, ..."
+     * @param builder string builder to add the parameter information to
+     * @return the same builder
+     */
+    protected StringBuilder appendAdditionalParameters(StringBuilder builder) {
+        int paramCount = getParameterCount();
+        if (paramCount <= 0) {
+            return builder;
+        }
+        int i = 0;
+        for (Map.Entry<String, ? extends Serializable> entry : getParameterMap().entrySet()) {
+            builder.append(entry.getKey()).append(": ").append(entry.getValue());
+            if (++i < paramCount) {
+                builder.append(", ");
+            }
+        }
+        return builder;
+    }
 
     //*****************   Operation-UUID comparator   **************************//
 
@@ -486,6 +505,10 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         StringBuilder str = new StringBuilder(getClass().getSimpleName());
         appendArguments(str);
         appendErrorCode(str);
+        if (getParameterCount() > 0) {
+            str.append("\n");
+            appendAdditionalParameters(str);
+        }
         return str.toString();
     }
 

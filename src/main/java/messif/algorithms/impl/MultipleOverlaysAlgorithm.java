@@ -107,11 +107,11 @@ public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDi
     @Override
     public void setOperationsThreadPool(ExecutorService operationsThreadPool) {
         super.setOperationsThreadPool(operationsThreadPool);
-        for (Algorithm algorithm : algorithms) {
-            if (algorithm.getOperationsThreadPool() == null) {
-                algorithm.setOperationsThreadPool(operationsThreadPool);
-            }
-        }
+//        for (Algorithm algorithm : algorithms) {
+//            if (algorithm.getOperationsThreadPool() == null) {
+//                algorithm.setOperationsThreadPool(operationsThreadPool);
+//            }
+//        }
     }
     
     @Override
