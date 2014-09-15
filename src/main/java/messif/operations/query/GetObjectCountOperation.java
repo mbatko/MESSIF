@@ -149,28 +149,4 @@ public class GetObjectCountOperation extends AbstractOperation {
         return "Get object count operation returned " + getAnswerCount() + " objects";
     }
 
-
-    /****************** Equality driven by operation data ******************/
-
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
-    @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always GetObjectCountOperation or its descendant, because it has only abstract ancestors
-        return true;
-    }
-
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
-    @Override
-    public int dataHashCode() {
-        return 0;
-    }
-
 }

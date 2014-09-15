@@ -257,6 +257,93 @@ public abstract class QueryOperation<TAnswer> extends AbstractOperation implemen
     }
 
 
+    //****************** Equality driven by operation data ******************//
+
+    /** 
+     * Indicates whether some other operation has the same data as this one.
+     *
+     * @param   operation   the reference object with which to compare.
+     * @return  <code>true</code> if this object has the same data as the obj
+     *          argument; <code>false</code> otherwise.
+     */
+    public final boolean dataEquals(QueryOperation operation) {
+        if (operation == null)
+            return false;
+        Class<? extends QueryOperation> thisClass = getClass();
+        Class<? extends QueryOperation> operationClass = operation.getClass();
+        if (thisClass.equals(operationClass))
+            return dataEqualsImpl(operation);
+        if (thisClass.isAssignableFrom(operationClass))
+            return operation.dataEqualsImpl(this);
+        return false;
+    }
+
+    /** 
+     * Indicates whether some other operation has the same data as this one.
+     *
+     * @param   operation   the reference object with which to compare.
+     * @return  <code>true</code> if this object has the same data as the obj
+     *          argument; <code>false</code> otherwise.
+     */
+    protected abstract boolean dataEqualsImpl(QueryOperation operation);
+
+    /**
+     * Returns a hash code value for the data of this operation.
+     * Override this method if the operation has its own data.
+     * 
+     * @return a hash code value for the data of this operation
+     */
+    public abstract int dataHashCode();
+
+    /**
+     * A wrapper class that allows to hash/equal abstract objects
+     * using their data and not ID. Especially, standard hashing
+     * structures (HashMap, etc.) can be used on wrapped object.
+     */
+    public static class DataEqualOperation {
+        /** Encapsulated operation */
+        protected final QueryOperation operation;
+
+        /**
+         * Creates a new instance of DataEqualObject wrapper over the specified LocalAbstractObject.
+         * @param operation the encapsulated object
+         */
+        public DataEqualOperation(QueryOperation operation) {
+            this.operation = operation;
+        }
+
+        /**
+         * Returns the encapsulated operation.
+         * @return the encapsulated operation
+         */
+        public QueryOperation get() {
+            return operation;
+        }
+
+        /**
+         * Returns a hash code value for the operation data.
+         * @return a hash code value for the data of this operation
+         */
+        @Override
+        public int hashCode() {
+            return operation.dataHashCode();
+        }
+
+        /** 
+         * Indicates whether some other object has the same data as this operation.
+         * @param   obj the reference object with which to compare.
+         * @return  <code>true</code> if this object has the same data as the obj
+         *          argument; <code>false</code> otherwise.
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof AbstractOperation)
+                return operation.dataEquals((QueryOperation)obj);
+            else return false;
+        }
+    }
+    
+
     //****************** Textual representation ******************//
 
     /**

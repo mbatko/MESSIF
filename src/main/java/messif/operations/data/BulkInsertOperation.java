@@ -16,6 +16,7 @@
  */
 package messif.operations.data;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -40,10 +41,13 @@ public class BulkInsertOperation extends AbstractOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    /** Name of a parameter that is used to store list of objects stored by previous processing of this operation */
+    public static final String INSERTED_OBJECTS_PARAM = "inserted_objects_param";
+    
     //****************** Attributes ******************//
 
     /** List of objects to insert */
-    private AbstractObjectList<? extends LocalAbstractObject> insertedObjects;
+    private List<? extends LocalAbstractObject> insertedObjects;
 
 
     //****************** Constructors ******************//
@@ -56,7 +60,7 @@ public class BulkInsertOperation extends AbstractOperation {
      *          (<tt>true</tt>) or a {@link NoSuchElementException} is thrown (<tt>false</tt>)
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
-    protected BulkInsertOperation(AbstractObjectList<? extends LocalAbstractObject> insertedObjects, boolean permitEmpty) throws NoSuchElementException {
+    protected BulkInsertOperation(List<? extends LocalAbstractObject> insertedObjects, boolean permitEmpty) throws NoSuchElementException {
         this.insertedObjects = insertedObjects;
         if (!permitEmpty && this.insertedObjects.isEmpty())
             throw new NoSuchElementException();
@@ -70,7 +74,7 @@ public class BulkInsertOperation extends AbstractOperation {
      * @throws NoSuchElementException if the inserted objects list is empty 
      */
     public BulkInsertOperation(Collection<? extends LocalAbstractObject> insertedObjects) throws NoSuchElementException {
-        this(new AbstractObjectList<LocalAbstractObject>(insertedObjects), false);
+        this(new ArrayList<LocalAbstractObject>(insertedObjects), false);
     }
 
     /**
@@ -181,19 +185,6 @@ public class BulkInsertOperation extends AbstractOperation {
             operation.insertedObjects = abstractObjectList;
         }
         return operation;
-    }
-
-    //****************** Equality driven by operation data ******************//
-
-    @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always BulkInsertOperation or its descendant, because it has only abstract ancestors
-        return insertedObjects.dataEquals(((BulkInsertOperation)obj).insertedObjects);
-    }
-
-    @Override
-    public int dataHashCode() {
-        return insertedObjects.dataHashCode();
     }
 
 }

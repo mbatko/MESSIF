@@ -451,7 +451,7 @@ public class JoinQueryOperation extends QueryOperation<RankedJoinObject> {
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always JoinQueryOperation or its descendant, because it has only abstract ancestors
         JoinQueryOperation castObj = (JoinQueryOperation)obj;
 

@@ -224,7 +224,7 @@ public abstract class RankingMultiQueryOperation extends RankingQueryOperation {
     }
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always RankingMultiQueryOperation or its descendant, because it has only abstract ancestors
         RankingMultiQueryOperation castObj = (RankingMultiQueryOperation)obj;
 

@@ -82,25 +82,6 @@ public class GetCandidateSetOperation extends AbstractOperation {
     // ************************      Overrides     ******************************** //
     
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation operation) {
-        if (!(operation instanceof GetCandidateSetOperation)) {
-            return false;
-        }
-        if (encapsulatedOperation == null && ((GetCandidateSetOperation) operation).encapsulatedOperation != null) {
-            return false;
-        }
-        return encapsulatedOperation.dataEquals(((GetCandidateSetOperation) operation).encapsulatedOperation);
-    }
-
-    @Override
-    public int dataHashCode() {
-        if (encapsulatedOperation == null) {
-            return 0;
-        }
-        return encapsulatedOperation.dataHashCode();
-    }
-
-    @Override
     public boolean wasSuccessful() {
         return (getErrorCode() == RESPONSE_RETURNED);
     }

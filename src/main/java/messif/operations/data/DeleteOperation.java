@@ -192,19 +192,4 @@ public class DeleteOperation extends AbstractOperation {
         for (LocalAbstractObject object : objects)
             object.clearSurplusData();
     }
-
-
-    //****************** Equality driven by operation data ******************//
-
-    @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always DeleteOperation or its descendant, because it has only abstract ancestors
-        return deletedObject.dataEquals(((DeleteOperation)obj).deletedObject);
-    }
-
-    @Override
-    public int dataHashCode() {
-        return deletedObject.dataHashCode();
-    }
-
 }

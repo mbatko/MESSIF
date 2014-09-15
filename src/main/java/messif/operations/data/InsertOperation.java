@@ -129,27 +129,4 @@ public class InsertOperation extends AbstractOperation {
         return operation;
     }
     
-    //****************** Equality driven by operation data ******************//
-
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
-    @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always InsertOperation or its descendant, because it has only abstract ancestors
-        return insertedObject.dataEquals(((InsertOperation)obj).insertedObject);
-    }
-
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
-    @Override
-    public int dataHashCode() {
-        return insertedObject.dataHashCode();
-    }
-
 }

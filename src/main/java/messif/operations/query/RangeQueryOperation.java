@@ -21,6 +21,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedSortedCollection;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.RankingSingleQueryOperation;
 
 /**
@@ -237,7 +238,7 @@ public class RangeQueryOperation extends RankingSingleQueryOperation {
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always RangeQueryOperation or its descendant, because it has only abstract ancestors
         RangeQueryOperation castObj = (RangeQueryOperation)obj;
 

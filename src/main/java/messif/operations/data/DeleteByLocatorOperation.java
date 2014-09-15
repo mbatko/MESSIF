@@ -41,6 +41,9 @@ public class DeleteByLocatorOperation extends AbstractOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
+    /** Name of a parameter that is used to store list of objects actually deleted by previous processing of this operation */
+    public static final String DELETED_OBJECTS_PARAM = "deleted_objects_param";
+    
     //****************** Attributes ******************//
 
     /** The locators of the objects to delete */
@@ -223,30 +226,6 @@ public class DeleteByLocatorOperation extends AbstractOperation {
         super.clearSurplusData();
         for (LocalAbstractObject object : objects)
             object.clearSurplusData();
-    }
-
-
-    //****************** Equality driven by operation data ******************//
-
-    /** 
-     * Indicates whether some other operation has the same data as this one.
-     * @param   obj   the reference object with which to compare.
-     * @return  <code>true</code> if this object has the same data as the obj
-     *          argument; <code>false</code> otherwise.
-     */
-    @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
-        // The argument obj is always DeleteByLocatorOperation or its descendant, because it has only abstract ancestors
-        return locators.equals(((DeleteByLocatorOperation)obj).locators);
-    }
-
-    /**
-     * Returns a hash code value for the data of this operation.
-     * @return a hash code value for the data of this operation
-     */
-    @Override
-    public int dataHashCode() {
-        return locators.hashCode();
     }
 
 }

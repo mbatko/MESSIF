@@ -21,6 +21,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.ListingQueryOperation;
+import messif.operations.QueryOperation;
 
 
 /**
@@ -108,7 +109,7 @@ public class GetAllObjectsQueryOperation extends ListingQueryOperation {
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         return true;
     }
 

@@ -21,6 +21,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.RankingSingleQueryOperation;
 import messif.utility.ErrorCode;
 
@@ -212,7 +213,7 @@ public class IncrementalNNQueryOperation extends RankingSingleQueryOperation {
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always kNNQueryOperation or its descendant, because it has only abstract ancestors
         IncrementalNNQueryOperation castObj = (IncrementalNNQueryOperation)obj;
 

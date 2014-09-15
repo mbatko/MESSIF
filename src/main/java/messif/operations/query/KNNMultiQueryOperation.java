@@ -22,6 +22,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.RankingMultiQueryOperation;
 
 /**
@@ -145,7 +146,7 @@ public class KNNMultiQueryOperation extends RankingMultiQueryOperation {
     //****************** Equality driven by operation data ******************//
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always kNNQueryOperation or its descendant, because it has only abstract ancestors
         KNNMultiQueryOperation castObj = (KNNMultiQueryOperation)obj;
 

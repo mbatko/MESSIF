@@ -20,6 +20,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.SingletonQueryOperation;
 
 
@@ -86,7 +87,7 @@ public class GetRandomObjectQueryOperation extends SingletonQueryOperation {
     //****************** Equality driven by operation data ******************//
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always GetRandomObjectQueryOperation or its descendant, because it has only abstract ancestors
         return true;
     }

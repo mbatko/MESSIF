@@ -23,6 +23,7 @@ import messif.objects.util.AbstractObjectList;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
 import messif.operations.ListingQueryOperation;
+import messif.operations.QueryOperation;
 
 
 /**
@@ -116,7 +117,7 @@ public class GetRandomObjectsQueryOperation extends ListingQueryOperation {
     //****************** Equality driven by operation data ******************//
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         return count == ((GetRandomObjectsQueryOperation)obj).count;
     }
 

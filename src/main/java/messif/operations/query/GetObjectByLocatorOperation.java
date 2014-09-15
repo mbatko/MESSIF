@@ -23,6 +23,7 @@ import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.SingletonQueryOperation;
 
 
@@ -149,7 +150,7 @@ public class GetObjectByLocatorOperation extends SingletonQueryOperation {
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always GetObjectByLocatorOperation or its descendant, because it has only abstract ancestors
         return locator.equals(((GetObjectByLocatorOperation)obj).locator);
     }

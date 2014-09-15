@@ -22,6 +22,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.RankingSingleQueryOperation;
 
 /**
@@ -150,7 +151,7 @@ public class GetObjectsByLocatorPrefixOperation extends RankingSingleQueryOperat
     //****************** Equality driven by operation data ******************//
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always DeleteOperation or its descendant, because it has only abstract ancestors
         return locatorPrefix.equals(((GetObjectsByLocatorPrefixOperation)obj).locatorPrefix);
     }

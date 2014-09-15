@@ -19,6 +19,7 @@ package messif.operations.query;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AggregationFunction;
 import messif.operations.AbstractOperation;
+import messif.operations.QueryOperation;
 import messif.operations.RankingQueryOperation;
 
 
@@ -182,7 +183,7 @@ public class TopCombinedQueryOperation extends AggregationFunctionQueryOperation
      *          argument; <code>false</code> otherwise.
      */
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always TopCombinedQueryOperation or its descendant, because it has only abstract ancestors
         TopCombinedQueryOperation castObj = (TopCombinedQueryOperation)obj;
 

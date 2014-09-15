@@ -26,6 +26,7 @@ import messif.objects.util.AbstractObjectIterator;
 import messif.objects.util.RankedAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.AnswerType;
+import messif.operations.QueryOperation;
 import messif.operations.RankingSingleQueryOperation;
 
 /**
@@ -269,7 +270,7 @@ public class GetObjectsByLocatorsOperation extends RankingSingleQueryOperation {
 
     @Override
     @SuppressWarnings("AccessingNonPublicFieldOfAnotherObject")
-    protected boolean dataEqualsImpl(AbstractOperation obj) {
+    protected boolean dataEqualsImpl(QueryOperation obj) {
         // The argument obj is always GetObjectsByLocatorsOperation or its descendant, because it has only abstract ancestors
         return locators.equals(((GetObjectsByLocatorsOperation)obj).locators);
     }

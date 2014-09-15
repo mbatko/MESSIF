@@ -76,23 +76,6 @@ public class GetAlgorithmInfoOperation extends AbstractOperation {
     }
 
     @Override
-    protected boolean dataEqualsImpl(AbstractOperation operation) {
-        if (!(operation instanceof GetAlgorithmInfoOperation))
-            return false;
-        GetAlgorithmInfoOperation castOperation = (GetAlgorithmInfoOperation)operation;
-        if (answer == null)
-            return castOperation.answer == null;
-        if (castOperation.answer == null)
-            return false;
-        return answer.equals(castOperation.answer);
-    }
-
-    @Override
-    public int dataHashCode() {
-        return answer == null ? 0 : answer.hashCode();
-    }
-
-    @Override
     public void updateFrom(AbstractOperation operation) throws ClassCastException {
         if (!(operation instanceof GetAlgorithmInfoOperation))
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());
