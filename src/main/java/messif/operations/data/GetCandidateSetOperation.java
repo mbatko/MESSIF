@@ -1,9 +1,19 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ *  This file is part of MESSIF library.
+ *
+ *  MESSIF library is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  MESSIF library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package messif.operations.data;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -25,6 +35,8 @@ import messif.operations.RankingSingleQueryOperation;
  */
 public class GetCandidateSetOperation extends AbstractOperation {
 
+    /** Class id for serialization. */
+    private static final long serialVersionUID = 512301L;    
     /**
      * Operation for which the candidate set should be returned.
      */
@@ -78,8 +90,18 @@ public class GetCandidateSetOperation extends AbstractOperation {
         return encapsulatedOperation;
     }
     
-    
     // ************************      Overrides     ******************************** //
+    @Override
+    public void updateFrom(AbstractOperation operation) throws ClassCastException {
+        if (! (operation instanceof GetCandidateSetOperation))
+            throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());        
+        if (this == operation) {
+            return;
+        }
+        GetCandidateSetOperation castOp = (GetCandidateSetOperation) operation;
+        this.candidateSetLocators.addAll(castOp.candidateSetLocators);
+        super.updateFrom(operation);                
+    }
     
     @Override
     public boolean wasSuccessful() {
