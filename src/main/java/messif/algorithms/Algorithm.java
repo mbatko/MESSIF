@@ -103,7 +103,7 @@ public abstract class Algorithm implements Serializable {
     private transient Semaphore runningOperationsSemaphore;
 
     /** List of currently running operations */
-    private transient WeakHashMap<Thread, AbstractOperation> runningOperations;
+    private transient WeakHashMap<AbstractOperation, Thread> runningOperations;
 
     /** Executor for operations */
     private transient MethodClassExecutor operationExecutor;
@@ -345,18 +345,6 @@ public abstract class Algorithm implements Serializable {
     }
 
     /**
-     * Returns the operation executed in the given thread.
-     * If the given thread is not an algorithm execution thread, <tt>null</tt> is returned.
-     * @param thread the algorithm execution thread for which to get the operation
-     * @return the executed operation or <tt>null</tt> if the thread is not executing any operation
-     */
-    public AbstractOperation getRunningOperationByThread(Thread thread) {
-        synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-            return runningOperations.get(thread);
-        }
-    }
-
-    /**
      * Returns the currently executed operation with the given identifier.
      * If there is no running operation with that identifier, <tt>null</tt> is returned.
      * @param operationId the identifier of the operation to get
@@ -367,15 +355,6 @@ public abstract class Algorithm implements Serializable {
             if (operation.getOperationID().equals(operationId))
                 return operation;
         return null;
-    }
-
-    /**
-     * Returns the operation executed in this thread.
-     * If this thread is not an algorithm execution thread, <tt>null</tt> is returned.
-     * @return the executed operation or <tt>null</tt> if this thread is not executing any operation
-     */
-    public AbstractOperation getRunningOperation() {
-        return getRunningOperationByThread(Thread.currentThread());
     }
 
     /**
@@ -391,9 +370,9 @@ public abstract class Algorithm implements Serializable {
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
             // The list of operations must be copied to a serializable list
             Collection<AbstractOperation> ret = new ArrayList<AbstractOperation>(runningOperations.size());
-            for (Entry<Thread, AbstractOperation> entry : runningOperations.entrySet()) { // Note that the entryset never returns a key weak-ref that is garbage collected
-                if (entry.getKey().isAlive())
-                    ret.add(entry.getValue());
+            for (Entry<AbstractOperation, Thread> entry : runningOperations.entrySet()) { // Note that the entryset never returns a key weak-ref that is garbage collected
+                if (entry.getValue().isAlive())
+                    ret.add(entry.getKey());
             }
             return ret;
         }
@@ -481,7 +460,7 @@ public abstract class Algorithm implements Serializable {
      */
     private void initializeExecutor() throws IllegalArgumentException {
         runningOperationsSemaphore = new Semaphore(maximalConcurrentOperations, true);
-        runningOperations = new WeakHashMap<Thread, AbstractOperation>(maximalConcurrentOperations);
+        runningOperations = new WeakHashMap<>(maximalConcurrentOperations);
         operationExecutor = new MethodClassExecutor(this, 0, null, Modifier.PUBLIC|Modifier.PROTECTED, Algorithm.class, getExecutorParamClasses());
     }
     
@@ -530,7 +509,7 @@ public abstract class Algorithm implements Serializable {
         if (maximalConcurrentOperations > 0)
             runningOperationsSemaphore.acquireUninterruptibly();
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-            runningOperations.put(Thread.currentThread(), getExecutorOperationParam(params));
+            runningOperations.put(getExecutorOperationParam(params), Thread.currentThread());
         }
         // log the operation processing information 
         long startTimeStamp = System.currentTimeMillis();
@@ -723,10 +702,10 @@ public abstract class Algorithm implements Serializable {
      */
     public boolean terminateOperation(UUID operationId) {
         synchronized (algorithmName) { // We are synchronizing the access to the list using algorithmName so that the runningOperations can be set when deserializing
-            for (Entry<Thread, AbstractOperation> entry : runningOperations.entrySet()) {
-                if (entry.getValue().getOperationID().equals(operationId)) {
-                    entry.getKey().interrupt();
-                    return entry.getKey().isAlive();
+            for (Entry<AbstractOperation, Thread> entry : runningOperations.entrySet()) {
+                if (entry.getKey().getOperationID().equals(operationId)) {
+                    entry.getValue().interrupt();
+                    return entry.getValue().isAlive();
                 }
             }
             return false;

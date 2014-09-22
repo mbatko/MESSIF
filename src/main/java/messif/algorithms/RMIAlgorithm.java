@@ -271,18 +271,8 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
     }
 
     @Override
-    public AbstractOperation getRunningOperationByThread(Thread thread) {
-        throw new UnsupportedOperationException("This operation cannot be called via RMI");
-    }
-
-    @Override
     public AbstractOperation getRunningOperationById(UUID operationId) {
         return (AbstractOperation)methodExecuteHandleException("getRunningOperationById", operationId);
-    }
-
-    @Override
-    public AbstractOperation getRunningOperation() {
-        return (AbstractOperation)methodExecuteHandleException("getRunningOperation");
     }
 
     @Override
