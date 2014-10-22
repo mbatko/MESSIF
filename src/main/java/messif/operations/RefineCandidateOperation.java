@@ -71,6 +71,23 @@ public class RefineCandidateOperation extends AbstractOperation {
     // *****************************        Overrides         ********************************* //
     
     @Override
+    public Object getArgument(int index) throws IndexOutOfBoundsException {
+        switch (index) {
+        case 0:
+            return getRankingOperation().getQueryObject().getLocatorURI();
+        case 1:
+            return getCandidateOperation().getCandidateSetSize();
+        default:
+            throw new IndexOutOfBoundsException("GetObjectByLocatorOperation has only one argument");
+        }
+    }
+
+    @Override
+    public int getArgumentCount() {
+        return 2;
+    }
+    
+    @Override
     public void updateFrom(AbstractOperation operation) throws ClassCastException {
         if (! (operation instanceof RefineCandidateOperation))
             throw new IllegalArgumentException(getClass().getSimpleName() + " cannot be updated from " + operation.getClass().getSimpleName());        
