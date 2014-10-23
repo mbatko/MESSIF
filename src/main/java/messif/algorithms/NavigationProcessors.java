@@ -47,7 +47,7 @@ public abstract class NavigationProcessors {
         if (!(navigationDirectory instanceof NavigationDirectory))
             return null;
         try {
-            return ((NavigationDirectory<AbstractOperation>)navigationDirectory).getNavigationProcessor(operation);
+            return ((NavigationDirectory)navigationDirectory).getNavigationProcessor(operation);
         } catch (ClassCastException e) {
             return null;
         }

@@ -28,18 +28,18 @@ import messif.operations.AbstractOperation;
  * so that parallel or distributed environment can be utilized
  * and redundant data accessed can be avoided.
  * 
- * @param <O> the type of operations processed by this navigation directory
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public interface NavigationDirectory <O extends AbstractOperation> {
+public interface NavigationDirectory {
     /**
      * Returns the {@link NavigationProcessor navigator} that provides the steps
      * in which the given operation should be evaluated.
      * 
+     * @param <O> the type of operations processed by this navigation directory
      * @param operation the operation to get the navigator for
      * @return a navigator for processing the given operation
      */
-    public NavigationProcessor<? extends O> getNavigationProcessor(O operation);
+    public <O extends AbstractOperation> NavigationProcessor<O> getNavigationProcessor(O operation);
 }

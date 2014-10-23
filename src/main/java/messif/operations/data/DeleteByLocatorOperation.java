@@ -37,7 +37,7 @@ import messif.operations.AbstractOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Delete by locator")
-public class DeleteByLocatorOperation extends AbstractOperation {
+public class DeleteByLocatorOperation extends DataManipulationOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 1L;
 

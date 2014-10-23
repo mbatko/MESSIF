@@ -34,7 +34,7 @@ import messif.operations.AbstractOperation;
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
 @AbstractOperation.OperationName("Delete")
-public class DeleteOperation extends AbstractOperation {
+public class DeleteOperation extends DataManipulationOperation {
     /** Class serial id for serialization */
     private static final long serialVersionUID = 2L;
 

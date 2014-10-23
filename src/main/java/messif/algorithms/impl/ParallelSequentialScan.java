@@ -35,6 +35,7 @@ import messif.buckets.LocalBucket;
 import messif.buckets.impl.MemoryStorageBucket;
 import messif.objects.LocalAbstractObject;
 import messif.objects.util.AbstractObjectIterator;
+import messif.operations.AbstractOperation;
 import messif.operations.query.GetAlgorithmInfoOperation;
 import messif.operations.data.BulkInsertOperation;
 import messif.operations.data.DeleteByLocatorOperation;
@@ -53,7 +54,7 @@ import messif.operations.query.GetObjectCountOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ParallelSequentialScan extends Algorithm implements NavigationDirectory<QueryOperation<?>> {
+public class ParallelSequentialScan extends Algorithm implements NavigationDirectory {
     /** class id for serialization */
     static final long serialVersionUID = 1L;
 
@@ -264,8 +265,12 @@ public class ParallelSequentialScan extends Algorithm implements NavigationDirec
     //****************** Query processing thread implementation ******************//
 
     @Override
-    public AsynchronousNavigationProcessor<? extends QueryOperation<?>> getNavigationProcessor(QueryOperation<?> operation) {
-        return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>(operation, false, buckets);
+    public AsynchronousNavigationProcessor<? extends QueryOperation<?>> getNavigationProcessor(AbstractOperation operation) {
+        if (operation instanceof QueryOperation) {
+            return new BucketQueryOperationNavigationProcessor<QueryOperation<?>>((QueryOperation<?>) operation, false, buckets);
+        } else {
+            return null;
+        }
     }
 
 

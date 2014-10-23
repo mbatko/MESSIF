@@ -37,7 +37,7 @@ import messif.operations.AbstractOperation;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDirectory<AbstractOperation> {
+public class MultipleOverlaysAlgorithm extends Algorithm implements NavigationDirectory {
     /** class id for serialization */
     private static final long serialVersionUID = 1L;
 

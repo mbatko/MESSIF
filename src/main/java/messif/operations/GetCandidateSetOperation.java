@@ -14,10 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with MESSIF library.  If not, see <http://www.gnu.org/licenses/>.
  */
-package messif.operations.data;
+package messif.operations;
 
+import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import messif.objects.AbstractObject;
 import messif.operations.AbstractOperation;
 import static messif.operations.OperationErrorCode.RESPONSE_RETURNED;
 import messif.operations.RankingSingleQueryOperation;
@@ -88,6 +90,26 @@ public class GetCandidateSetOperation extends AbstractOperation {
      */
     public RankingSingleQueryOperation getEncapsulatedOperation() {
         return encapsulatedOperation;
+    }
+    
+    // ************************     Data manipulation    ***************************** //
+    
+    // TODO: manage also the nubmer of ADDED objects so that the limit can be checked
+    
+    /**
+     * Adds all objects from the iterator to the answer queue of this operation.
+     * @param it iterator over objects to be added to the answer
+     * @return true if all objects from the iterator were added to the answer, false otherwise
+     */
+    public boolean addAll(Iterator<AbstractObject> it) {
+        try {
+            while (it.hasNext()) {
+                candidateSetLocators.add(it.next().getLocatorURI());
+            }
+            return true;
+        } catch (IllegalStateException ex) {
+            return false;
+        }
     }
     
     // ************************      Overrides     ******************************** //

@@ -16,8 +16,6 @@
  */
 package messif.operations;
 
-import messif.operations.data.GetCandidateSetOperation;
-
 /**
  * This operation starts refinement of the encapsulated {@link RankingSingleQueryOperation} using
  *  the candidate set stored in the provided {@link GetCandidateSetOperation}.
