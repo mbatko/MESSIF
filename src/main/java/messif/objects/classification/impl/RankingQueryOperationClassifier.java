@@ -16,7 +16,6 @@
  */
 package messif.objects.classification.impl;
 
-import java.util.Iterator;
 import messif.algorithms.Algorithm;
 import messif.algorithms.AlgorithmMethodException;
 import messif.objects.LocalAbstractObject;
@@ -45,7 +44,7 @@ import messif.utility.Parametric;
 public abstract class RankingQueryOperationClassifier<C> implements UpdatableClassifier<LocalAbstractObject, C> {
 
     /** Classifier used to compute the object classification */
-    private final Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier;
+    private final Classifier<? super RankingQueryOperation, C> classifier;
     /** Algorithm that supplies the similar objects */
     private final Algorithm algorithm;
     /** Name of the parameter to put the executed operation into when classifying */
@@ -57,7 +56,7 @@ public abstract class RankingQueryOperationClassifier<C> implements UpdatableCla
      * @param algorithm the algorithm that supplies the similar objects
      * @param executedOperationParameter the name of the parameter to put the executed operation into when classifying
      */
-    public RankingQueryOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, Algorithm algorithm, String executedOperationParameter) {
+    public RankingQueryOperationClassifier(Classifier<? super RankingQueryOperation, C> classifier, Algorithm algorithm, String executedOperationParameter) {
         this.classifier = classifier;
         this.algorithm = algorithm;
         this.executedOperationParameter = executedOperationParameter;
@@ -69,7 +68,7 @@ public abstract class RankingQueryOperationClassifier<C> implements UpdatableCla
             RankingQueryOperation op = algorithm.executeOperation(createOperation(object));
             if (parameters instanceof ModifiableParametric && executedOperationParameter != null)
                 ((ModifiableParametric)parameters).setParameter(executedOperationParameter, op);
-            return classifier.classify(op.getAnswer(), parameters);
+            return classifier.classify(op, parameters);
         } catch (AlgorithmMethodException e) {
             throw new ClassificationException("There was an error executing KNN query", e.getCause());
         } catch (NoSuchMethodException e) {

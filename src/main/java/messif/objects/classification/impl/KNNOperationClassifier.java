@@ -16,11 +16,9 @@
  */
 package messif.objects.classification.impl;
 
-import java.util.Iterator;
 import messif.algorithms.Algorithm;
 import messif.objects.LocalAbstractObject;
 import messif.objects.classification.Classifier;
-import messif.objects.util.RankedAbstractObject;
 import messif.operations.RankingQueryOperation;
 import messif.operations.query.KNNQueryOperation;
 import messif.utility.Parametric;
@@ -49,7 +47,7 @@ public class KNNOperationClassifier<C> extends RankingQueryOperationClassifier<C
      * @param algorithm the algorithm that supplies the similar objects
      * @param executedOperationParameter the name of the parameter to put the executed operation into when classifying
      */
-    public KNNOperationClassifier(Classifier<? super Iterator<? extends RankedAbstractObject>, C> classifier, int k, Algorithm algorithm, String executedOperationParameter) {
+    public KNNOperationClassifier(Classifier<? super RankingQueryOperation, C> classifier, int k, Algorithm algorithm, String executedOperationParameter) {
         super(classifier, algorithm, executedOperationParameter);
         this.k = k;
     }
