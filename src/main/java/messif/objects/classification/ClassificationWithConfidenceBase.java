@@ -131,14 +131,11 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
     }
 
     /**
-     * Adds the given category with confidence to this classification.
-     * Note that <tt>null</tt> category is silently ignored.
-     * @param category the category to add
-     * @param confidence the confidence of the category to add
-     * @return this instance to allow chaining
-     * @throws IllegalArgumentException if the confidence is not within the bounds
+     * Check whether the given confidence is within the given boundaries.
+     * @param confidence the confidence to check
+     * @throws IllegalArgumentException if the given confidence is invalid
      */
-    public ClassificationWithConfidenceBase<C> add(C category, float confidence) throws IllegalArgumentException {
+    protected final void checkValidConfidence(float confidence) throws IllegalArgumentException {
         if (confidence != UNKNOWN_CONFIDENCE) {
             if (lowestConfidence < highestConfidence) {
                 if (confidence < lowestConfidence || confidence > highestConfidence)
@@ -148,6 +145,18 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
                     throw new IllegalArgumentException("Confidence " + confidence + " is not within [" + highestConfidence + ";" + lowestConfidence + "]");
             }
         }
+    }
+
+    /**
+     * Adds the given category with confidence to this classification.
+     * Note that <tt>null</tt> category is silently ignored.
+     * @param category the category to add
+     * @param confidence the confidence of the category to add
+     * @return this instance to allow chaining
+     * @throws IllegalArgumentException if the confidence is not within the bounds
+     */
+    public ClassificationWithConfidenceBase<C> add(C category, float confidence) throws IllegalArgumentException {
+        checkValidConfidence(confidence);
         if (category != null)
             confidenceMap.put(category, confidence);
         return this;
@@ -297,18 +306,25 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
 
     //****************** String conversion *************//
 
+    /**
+     * Internal method for the toString conversion that adds the category string.
+     * @param str the string to append the category string to
+     * @param category the category the textual representation of which to append
+     */
+    protected void appendCategory(StringBuilder str, C category) {
+        str.append(category);
+        float confidence = getConfidence(category);
+        if (confidence != UNKNOWN_CONFIDENCE)
+            str.append('(').append(confidence).append(')');
+    }
+
     @Override
     public String toString() {
         Iterator<C> iterator = iterator();
         StringBuilder str = new StringBuilder();
         str.append("[");
         while (iterator.hasNext()) {
-            C category = iterator.next();
-            str.append(category);
-            float confidence = getConfidence(category);
-            if (confidence != UNKNOWN_CONFIDENCE)
-                str.append('(').append(confidence).append(')');
-
+            appendCategory(str, iterator.next());
             if (iterator.hasNext())
                 str.append(", ");
         }
