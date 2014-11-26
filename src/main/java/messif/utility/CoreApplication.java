@@ -2406,6 +2406,52 @@ public class CoreApplication {
     }
 
     /**
+     * Creates a new named instance or replaces an old one via constructor call.
+     * <p>
+     * Example of usage for constructor, factory method and static field:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; namedInstanceConstructor my_object false messif.objects.impl.ObjectByteVectorL1 1,2,3,4,5,6,7,8,9,10
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the instance constructor, factory method or static field signature and the name to register
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while creating a named instance
+     */
+    @ExecutableMethod(description = "creates a new named instance or replaces old one", arguments = { "name to register", "flag whether to replace (true) for existing instance", "parameters for the constructor..."})
+    public boolean namedInstanceConstructor(PrintStream out, String... args) throws InvocationTargetException {
+        if (args.length <= 3) {
+            out.println("At least three arguments (instance name, replace flag, and constructor class) are required for namedInstanceConstructor");
+            return false;
+        }
+
+        if (!Boolean.parseBoolean(args[2]) && namedInstances.containsKey(args[1])) {
+            out.println("Named instance '" + args[1] + "' already exists");
+            return false;
+        }
+
+        Class<?> instanceClass;
+        try {
+            instanceClass = Class.forName(args[3]);
+        } catch (ClassNotFoundException e) {
+            out.println("Can't find constructor class: " + e.getMessage());
+            return false;
+        }
+
+        Object[] objArgs = new Object[args.length - 4];
+        System.arraycopy(args, 4, objArgs, 0, objArgs.length);
+        try {
+            Object instance = new ConstructorInstantiator<Object>(instanceClass, true, getExtendedNamedInstances("lastOperation", getLastOperation(), true), objArgs).instantiate(objArgs);
+            namedInstances.put(args[1], instance);
+            return true;
+        } catch (NoSuchInstantiatorException e) {
+            out.println("Error creating named instance for " + args[1] + ": " + e);
+            return false;
+        }
+    }
+
+    /**
      * Prints the list of all named instances.
      * <p>
      * Example of usage:

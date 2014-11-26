@@ -169,4 +169,25 @@ public abstract class Classifications {
         return getSortedCategories(classification, getCategoriesConfidenceComparator(classification));
     }
 
+    /**
+     * Returns the highest/lowest confidence from the classes in the given classification.
+     * @param <C> the class of instances that represent the classification categories
+     * @param classification the classification the extreme confidence to get
+     * @param greaterThan the comparison direction
+     * @param startFrom the smallest/highest confidence to initialize computation of the extreme from
+     * @return the highest/lowest confidence
+     */
+    public static <C> float getExtremeConfidence(ClassificationWithConfidence<C> classification, boolean greaterThan, float startFrom) {
+        for (C c : classification) {
+            float confidence = classification.getConfidence(c);
+            if (greaterThan) {
+                if (confidence > startFrom)
+                    startFrom = confidence;
+            } else {
+                if (confidence < startFrom)
+                    startFrom = confidence;
+            }
+        }
+        return startFrom;
+    }
 }
