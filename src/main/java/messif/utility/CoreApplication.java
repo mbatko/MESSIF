@@ -123,6 +123,7 @@ import messif.utility.reflection.NoSuchInstantiatorException;
  *  &lt;actionName&gt;.loopVariable = &lt;variable name&gt;
  *  &lt;actionName&gt;.ignoreException = &lt;some exception class, e.g. messif.buckets.DuplicateObjectException&gt;
  *  &lt;actionName&gt;.outputFile = &lt;filename&gt;
+ *  &lt;actionName&gt;.outputLog = &lt;target logger name and optionally logging level&gt;
  *  &lt;actionName&gt;.assign = &lt;variable name&gt;
  *  &lt;actionName&gt;.postponeUntil = hh:mm:ss
  *  &lt;actionName&gt;.description = &lt;any text with variable expansion&gt;
@@ -3398,7 +3399,8 @@ public class CoreApplication {
 
         // Read the assign parameter and set the output stream
         String assignVariable = substituteVariables(props.getProperty(actionName + ".assign"), variables);
-        ByteArrayOutputStream assignOutput = assignVariable != null ? new ByteArrayOutputStream() : null;
+        String assignLogging = substituteVariables(props.getProperty(actionName + ".outputLog"), variables);
+        ByteArrayOutputStream assignOutput = assignVariable != null || assignLogging != null ? new ByteArrayOutputStream() : null;
         PrintStream outputStream = getCFActionOutput(out, props, actionName, variables, outputStreams, assignOutput);
         if (outputStream == null)
             return false;
@@ -3499,9 +3501,17 @@ public class CoreApplication {
                 variables.put(loopVariable, savedLoopVariableValue);
         }
 
-        // Assign variable is requested
-        if (assignVariable != null && assignOutput != null)
-            variables.put(assignVariable, assignOutput.toString().trim());
+        // Assign output is requested
+        if (assignOutput != null) {
+            String outputString = assignOutput.toString().trim();
+            if (assignVariable != null) // Output to variable
+                variables.put(assignVariable, outputString);
+            if (assignLogging != null) { // Output to logging message
+                int levelComma = assignLogging.indexOf(',');
+                Logger logger = Logger.getLogger(levelComma != -1 ? assignLogging.substring(0, levelComma) : assignLogging);
+                logger.log(levelComma != -1 ? Level.parse(assignLogging.substring(levelComma + 1)) : Level.INFO, outputString);
+            }
+        }
 
         // If repeatEvery modifier was specified, start the thread
         String repeatEveryModifier = props.getProperty(actionName + ".repeatEvery");
