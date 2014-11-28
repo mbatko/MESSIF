@@ -16,18 +16,20 @@
  */
 package messif.algorithms;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
 import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.statistics.FutureWithStatistics;
@@ -36,16 +38,19 @@ import messif.utility.Convert;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
- * Uses a (set of) RMI connection(s) to remote algorithm to simulate local algorithm.
+ * Uses a RMI connection to remote algorithm to simulate local algorithm.
  * @see AlgorithmRMIServer
  * @author Michal Batko, Masaryk University, Brno, Czech Republic, batko@fi.muni.cz
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
+ * @deprecated this code is stored here just in case the new implementation of {@link RMIAlgorithm} would not work
+ *  exactly in the same way as the original one
  */
-public class RMIAlgorithm extends Algorithm implements Cloneable {
+@Deprecated()
+public class RMIAlgorithmOriginal extends Algorithm implements Cloneable {
     /** class id for serialization */
-    private static final long serialVersionUID = 659874589001L;
-    
+    private static final long serialVersionUID = 659874587001L;
+
     //****************** Attributes ******************//
 
     /** Remote algorithm's IP address */
@@ -57,12 +62,14 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
     /** Number of reconnection tries if the RMI connection fails */
     private final int connectionRetries;
 
-    /** A synchronized queue of RMI connections to be used by this algorithm */
-    private transient final BlockingDeque<RMIMethodExecutor> connectionQueue;
+    /** Opened RMI connection to remote algorithm */
+    private transient Socket socket;
+    /** RMI connection output stream for sending method invocations to the remote algorithm */
+    private transient ObjectOutputStream out;
+    /** RMI connection input stream for reading remote algorithm results */
+    private transient ObjectInputStream in;
 
-    /** A list of all connections - used especially to close them all during finalization. */
-    private transient final Collection<RMIMethodExecutor> allConnections;
-    
+
     //****************** Constructors ******************//
 
     /**
@@ -71,13 +78,11 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @param port the remote algorithm's RMI port
      * @param connectionRetries the number of reconnection tries if the RMI connection fails
      */
-    public RMIAlgorithm(InetAddress host, int port, int connectionRetries) {
+    public RMIAlgorithmOriginal(InetAddress host, int port, int connectionRetries) {
         super(Convert.inetAddressToString(host, port));
         this.host = host;
         this.port = port;
         this.connectionRetries = connectionRetries;
-        this.allConnections = new ArrayList();
-        this.connectionQueue = new LinkedBlockingDeque<>();
     }
 
     /**
@@ -85,7 +90,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @param host the remote algorithm's IP address
      * @param port the remote algorithm's RMI port
      */
-    public RMIAlgorithm(InetAddress host, int port) {
+    public RMIAlgorithmOriginal(InetAddress host, int port) {
         this(host, port, 1);
     }
 
@@ -96,7 +101,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @param connectionRetries the number of reconnection tries if the RMI connection fails
      * @throws UnknownHostException if the host name cannot be resolved to IP address
      */
-    public RMIAlgorithm(String host, int port, int connectionRetries) throws UnknownHostException {
+    public RMIAlgorithmOriginal(String host, int port, int connectionRetries) throws UnknownHostException {
         this(InetAddress.getByName(host), port, connectionRetries);
     }
 
@@ -107,10 +112,10 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @throws UnknownHostException if the host name cannot be resolved to IP address
      */
     @AlgorithmConstructor(description = "creates an RMI algorithm stub", arguments = {"host", "RMI port"})
-    public RMIAlgorithm(String host, int port) throws UnknownHostException {
+    public RMIAlgorithmOriginal(String host, int port) throws UnknownHostException {
         this(InetAddress.getByName(host), port);
     }
-    
+
     @Override
     public void finalize() throws Throwable {
         // Clean up connection
@@ -119,7 +124,7 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
 
     @Override
     public Object clone() throws CloneNotSupportedException {
-        return new RMIAlgorithm(host, port, connectionRetries);
+        return new RMIAlgorithmOriginal(host, port, connectionRetries);
     }
 
     //****************** Connection control methods ******************//
@@ -141,39 +146,23 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
     }
 
     /**
-     * Returns the number of times the connection is retried, in case it returns IO exception.
-     * @return the number of times the connection is retried, in case it returns IO exception.
-     */
-    public int getConnectionRetries() {
-        return connectionRetries;
-    }
-    
-    /**
-     * For backwards compatibility, this RMI algorithm has only one connection.
-     * @return return the number connections to the RMI server to be held and used
-     */
-    public int getNumberOfConnections() {
-        return 1;
-    }
-    
-    /**
      * Returns <tt>true</tt> if the algorithm is currently connected.
      * @return <tt>true</tt> if the algorithm is currently connected
      */
     public boolean isConnected() {
-        return (! allConnections.isEmpty());
+        return (socket != null) && socket.isConnected();
     }
-    
+
     /**
      * Connects this algorithm to the RMI service.
      * @throws IOException if there was a problem connecting
      */
     public synchronized void connect() throws IOException {
         if (!isConnected()) {
-            for (int i = 0; i < getNumberOfConnections(); i++) {
-                allConnections.add(new RMIMethodExecutor(host, port));
-            }
-            connectionQueue.addAll(allConnections);
+            socket = new Socket(host, port);
+            out = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            out.flush();
+            in = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
         }
     }
 
@@ -181,8 +170,13 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * Disconnects this algorithm from the RMI service.
      */
     public synchronized void disconnect() {
-        for (RMIMethodExecutor connection : allConnections) {
-            connection.disconnect();
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException ignore) {} // The IO exceptions when closing connection are ignored
+            socket = null;
+            in = null;
+            out = null;
         }
     }
 
@@ -191,7 +185,6 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
 
     /**
      * Executes a given method on the remote algorithm and returns result.
-     * One of the pooled connections to the server is used; if none is available, this method blocks and waits.
      * If an I/O error occurs during the communication, the connection is tried
      * to be reestablished for <code>reconnectRetries</code> times. After that
      * an {@link IllegalStateException} is thrown.
@@ -204,19 +197,21 @@ public class RMIAlgorithm extends Algorithm implements Cloneable {
      * @throws IllegalStateException if there was a problem communicating with the remote algorithm
      * @throws IllegalArgumentException if there was a problem reading the class in the remote algorithm's result
      */
-    protected Object methodExecute(String methodName, int reconnectRetries, Object... methodArguments) throws IllegalStateException, IllegalArgumentException {
-        RMIMethodExecutor connection = null;
-        try {
-            if (! isConnected()) {
-                connect();
-            }
-            connection = connectionQueue.takeFirst();
-            return connection.methodExecute(methodName, reconnectRetries, methodArguments);
-        } catch (InterruptedException | IOException ex) {
-            return ex;
-        } finally {
-            if (connection != null) {
-                connectionQueue.addFirst(connection);
+    private synchronized Object methodExecute(String methodName, int reconnectRetries, Object... methodArguments) throws IllegalStateException, IllegalArgumentException {
+        for (;;) {
+            try {
+                connect(); // Does nothing if already connected
+                out.writeUTF(methodName);
+                out.writeUnshared(methodArguments);
+                out.reset();
+                out.flush();
+                return in.readUnshared();
+            } catch (IOException e) {
+                disconnect();
+                if (reconnectRetries-- <= 0)
+                    throw new IllegalStateException("Error communicating with remote algorithm", e);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalArgumentException("Cannot read result of '" + methodName + "': " + e);
             }
         }
     }

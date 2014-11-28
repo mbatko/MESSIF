@@ -3305,30 +3305,42 @@ public class CoreApplication {
      * @param actionName the name of the action to execute
      * @param variables the current variables environment
      * @param outputStreams currently opened output streams
-     * @return the created thread
      */
-    protected Thread createCFActionRepeatEveryThread(String repeatEveryModifier, final PrintStream out, final Properties props, final String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
-        final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
-        final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
-        final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
-        return new Thread("Repeat action " + actionName + " every " + repeatEveryModifier) {
-            @Override
-            public void run() {
-                while (!isInterrupted()) {
+    protected void createCFActionRepeatEveryThread(String repeatEveryModifier, final PrintStream out, final Properties props, final String actionName, Map<String,String> variables, Map<String, PrintStream> outputStreams) {
+        synchronized (repeatEveryThreads) {
+            if (repeatEveryThreads.containsKey(actionName)) {
+                return;
+            }        
+            final long repeatTime = Convert.hmsToMilliseconds(substituteVariables(repeatEveryModifier, variables));
+            final Map<String, String> variablesCopy = new HashMap<String, String>(variables);
+            final Map<String, PrintStream> outputStreamsCopy = new HashMap<String, PrintStream>(outputStreams);
+            Thread thread = new Thread("Repeat action " + actionName + " every " + repeatEveryModifier) {
+                @Override
+                public void run() {
                     try {
-                        sleep(repeatTime);
-                    } catch (InterruptedException ignore) {
-                        break;
-                    }
-                    try {
-                        if (!controlFileExecuteAction(out, props, actionName, variablesCopy, outputStreamsCopy, false))
-                            break;
-                    } catch (InvocationTargetException e) {
-                        throw new InternalError("Exception thrown even though it should not have been thrown: " + e);
+                        while (!isInterrupted()) {
+                            try {
+                                sleep(repeatTime);
+                            } catch (InterruptedException ignore) {
+                                break;
+                            }
+                            try {
+                                if (!controlFileExecuteAction(out, props, actionName, variablesCopy, outputStreamsCopy, false))
+                                    break;
+                            } catch (InvocationTargetException e) {
+                                throw new InternalError("Exception thrown even though it should not have been thrown: " + e);
+                            }
+                        }
+                    } finally {
+                        synchronized (repeatEveryThreads) {
+                            repeatEveryThreads.remove(actionName);
+                        }
                     }
                 }
-            }
-        };
+            };
+            repeatEveryThreads.put(actionName, thread);
+            thread.start();
+        }
     }
 
     /**
@@ -3516,13 +3528,7 @@ public class CoreApplication {
         // If repeatEvery modifier was specified, start the thread
         String repeatEveryModifier = props.getProperty(actionName + ".repeatEvery");
         if (repeatEveryModifier != null) {
-            synchronized (repeatEveryThreads) {
-                if (!repeatEveryThreads.containsKey(actionName)) {
-                    Thread repeatEveryThread = createCFActionRepeatEveryThread(repeatEveryModifier, out, props, actionName, variables, outputStreams);
-                    repeatEveryThreads.put(actionName, repeatEveryThread);
-                    repeatEveryThread.start();
-                }
-            }
+            createCFActionRepeatEveryThread(repeatEveryModifier, out, props, actionName, variables, outputStreams);
         }
 
         return true; // Execution successful
