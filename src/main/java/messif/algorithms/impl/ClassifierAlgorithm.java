@@ -16,7 +16,6 @@
  */
 package messif.algorithms.impl;
 
-import java.util.HashMap;
 import messif.algorithms.Algorithm;
 import messif.objects.AbstractObject;
 import messif.objects.LocalAbstractObject;
@@ -27,7 +26,6 @@ import messif.objects.classification.ClassificationWithConfidence;
 import messif.objects.classification.Classifications;
 import messif.objects.classification.Classifier;
 import messif.operations.RankingQueryOperation;
-import messif.utility.ModifiableParametricBase;
 
 /**
  * Algorithm wrapper for a {@link Classifier}.
@@ -51,7 +49,7 @@ public class ClassifierAlgorithm<C> extends Algorithm {
      */
     @AlgorithmConstructor(description = "create classifier algorithm wrapper", arguments = {"the classifier to wrap"})
     public ClassifierAlgorithm(Classifier<? super RankingQueryOperation, C> classifier) {
-        super("Annotation");
+        super("Classification by " + classifier);
         this.classifier = classifier;
     }
 
@@ -63,7 +61,7 @@ public class ClassifierAlgorithm<C> extends Algorithm {
      * @throws ClassificationException if there was an error creating the classification
      */
     public void classify(RankingQueryOperation op) throws ClassificationException {
-        Classification<C> classification = classifier.classify(op, new ModifiableParametricBase(new HashMap<String, Object>()));
+        Classification<C> classification = classifier.classify(op, op);
         if (classification instanceof ClassificationWithConfidence)
             classificationWithConfidenceToAnswer((ClassificationWithConfidence<C>)classification, op);
         else
