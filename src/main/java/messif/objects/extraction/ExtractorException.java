@@ -16,6 +16,8 @@
  */
 package messif.objects.extraction;
 
+import messif.utility.HttpErrorCodeProvider;
+
 /**
  * Throwable that indicates an error during extraction.
  * 
@@ -23,10 +25,13 @@ package messif.objects.extraction;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class ExtractorException extends Exception {
+public class ExtractorException extends Exception implements HttpErrorCodeProvider {
     /** Serial version for {@link java.io.Serializable} */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
+    /** HTTP error code from {@link HttpErrorCodeProvider} */
+    private int httpErrorCode = HttpErrorCodeProvider.ERROR_CODE_NOT_SET;
+    
     /**
      * Creates a new instance of <code>ExtractorException</code> without detail message.
      */
@@ -52,6 +57,35 @@ public class ExtractorException extends Exception {
      */
     public ExtractorException(String msg, Throwable cause) {
         super(msg, cause);
+    }
+
+    /**
+     * Constructs an instance of <code>ExtractorException</code> with the specified detail message 
+     *  and HTTP error code to be returned.
+     * @param msg the detail message.
+     * @param httpErrorCode HTTP error code to be returned, if this exception is raised
+     */
+    public ExtractorException(String msg, int httpErrorCode) {
+        super(msg);
+        this.httpErrorCode = httpErrorCode;
+    }
+    
+    
+    // ************************       Interface HttpErrorCodeProvider      ************************** //
+    
+    @Override
+    public boolean isHttpErrorCodeSet() {
+        return httpErrorCode != HttpErrorCodeProvider.ERROR_CODE_NOT_SET;
+    }    
+    
+    @Override
+    public int getHttpErrorCode() {
+        return httpErrorCode;
+    }
+
+    @Override
+    public void setHttpErrorCode(int httpErrorCode) {
+        this.httpErrorCode = httpErrorCode;
     }
 
 }

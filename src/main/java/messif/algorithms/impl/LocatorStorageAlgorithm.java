@@ -44,6 +44,7 @@ import messif.operations.query.GetObjectByLocatorOperation;
 import messif.operations.query.GetObjectsByLocatorsOperation;
 import messif.operations.query.GetRandomObjectQueryOperation;
 import messif.operations.query.GetRandomObjectsQueryOperation;
+import messif.utility.HttpErrorCodeProvider;
 
 /**
  * Wrapper for any {@link Algorithm} that stores all the inserted objects into additional
@@ -196,8 +197,12 @@ public class LocatorStorageAlgorithm extends Algorithm {
         } else {
             executedOp = new InsertOperation(((MetaObject)op.getInsertedObject()).getObject(metaobjectName));
         }
-
-        storage.store(op.getInsertedObject());
+        try {
+            storage.store(op.getInsertedObject());
+        } catch (BucketStorageException ex) {
+            ex.setHttpErrorCode(HttpErrorCodeProvider.ERROR_CODE_CONFLICT);
+            throw ex;
+        }
         executedOp = algorithm.executeOperation(executedOp);
         if (op != executedOp) // Instance check is correct
             op.updateFrom(executedOp);
@@ -227,8 +232,10 @@ public class LocatorStorageAlgorithm extends Algorithm {
                     insertedObjects.add(((MetaObject)object).getObject(metaobjectName));
                 }
             } catch (BucketStorageException e) {
-                if (exception == null)
+                if (exception == null) {
                     exception = new StorageInsertFailureException(e);
+                    exception.setHttpErrorCode(HttpErrorCodeProvider.ERROR_CODE_CONFLICT);
+                }
                 exception.addFailedObject(object);
             }
         }

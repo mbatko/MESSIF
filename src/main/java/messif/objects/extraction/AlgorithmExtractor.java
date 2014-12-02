@@ -24,6 +24,7 @@ import messif.objects.LocalAbstractObject;
 import messif.operations.AbstractOperation;
 import messif.operations.SingletonQueryOperation;
 import messif.utility.Convert;
+import messif.utility.HttpErrorCodeProvider;
 
 /**
  * Implementation of {@link Extractor} that creates objects by
@@ -91,7 +92,7 @@ public class AlgorithmExtractor implements Extractor<LocalAbstractObject> {
 
         LocalAbstractObject object = (LocalAbstractObject)op.getAnswerObject();
         if (object == null)
-            throw new ExtractorException("No object found for " + Arrays.toString(parameters));
+            throw new ExtractorException("No object found for " + Arrays.toString(parameters), HttpErrorCodeProvider.ERROR_CODE_NOT_FOUND);
 
         return object;
     }

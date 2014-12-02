@@ -16,6 +16,8 @@
  */
 package messif.buckets;
 
+import messif.utility.HttpErrorCodeProvider;
+
 /**
  * The ancestor of all <code>Throwables</code> that indicate an illegal
  * condition occurred while operating with buckets.
@@ -24,15 +26,17 @@ package messif.buckets;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public abstract class BucketStorageException extends Exception {
+public abstract class BucketStorageException extends Exception implements HttpErrorCodeProvider {
     /** Class serial id for serialization */
-    private static final long serialVersionUID = 1L;    
+    private static final long serialVersionUID = 2L;    
 
     //****************** Attributes ******************//
 
     /** Bucket error code associated with this exception */
     private final BucketErrorCode errorCode;
 
+    /** HTTP error code from {@link HttpErrorCodeProvider} */
+    private int httpErrorCode = HttpErrorCodeProvider.ERROR_CODE_NOT_SET;
 
     //****************** Constructors ******************//
 
@@ -106,4 +110,21 @@ public abstract class BucketStorageException extends Exception {
         return errorCode;
     }
 
+    // ************************       Interface HttpErrorCodeProvider      ************************** //
+    
+    @Override
+    public boolean isHttpErrorCodeSet() {
+        return httpErrorCode != HttpErrorCodeProvider.ERROR_CODE_NOT_SET;
+    }    
+    
+    @Override
+    public int getHttpErrorCode() {
+        return httpErrorCode;
+    }
+
+    @Override
+    public void setHttpErrorCode(int httpErrorCode) {
+        this.httpErrorCode = httpErrorCode;
+    }
+    
 }
