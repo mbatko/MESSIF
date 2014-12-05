@@ -1244,6 +1244,71 @@ public class CoreApplication {
     }
 
     /**
+     * Processes a parameter from the last executed operation by a given method.
+     * The method must be static and must have at least one argument that can receive
+     * the given parametric object. Additional arguments for the method
+     * can be specified. The modified (or the original) operation must be returned
+     * from the method.
+     *
+     * <p>
+     * Example of usage:
+     * <pre>
+     * MESSIF &gt;&gt;&gt; operationParamProcessByMethod paramName somePackage.someClass someMethod methodArg2 methodArg3
+     * </pre>
+     * </p>
+     *
+     * @param out a stream where the application writes information for the user
+     * @param args the name of the parameter to get from the operation,
+     *          the fully specified name of the class where the method is defined,
+     *          the name of the method, and
+     *          any number of additional arguments
+     * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
+     * @throws InvocationTargetException if there was an error while executing the method
+     */
+    @ExecutableMethod(description = "process a parameter of the last executed operation by a static method", arguments = {"parameter name", "object class", "method name", "additional arguments for the method (optional) ..."})
+    public boolean operationParamProcessByMethod(PrintStream out, String... args) throws InvocationTargetException {
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
+            out.println("No operation has been executed yet");
+            return false;
+        }
+
+        Object parameter = op.getParameter(args[1]);
+        if (parameter == null) {
+            out.println("There was no parameter " + args[1] + " in the last executed operation");
+            return false;
+        }
+
+        try {
+            // Prepare method
+            MethodInstantiator<Object> method = new MethodInstantiator<Object>(Object.class, Class.forName(args[2]), args[3], args.length - 3);
+
+            // Prepare arguments
+            String[] stringArgs = new String[args.length - 3];
+            System.arraycopy(args, 4, stringArgs, 1, args.length - 4);
+            // Note that the output is added as "out" named instance temporarily
+            Object[] methodArgs = Convert.parseTypesFromString(stringArgs, method.getInstantiatorPrototype(), true, 0, getExtendedNamedInstances("out", out, false));
+            methodArgs[0] = parameter;
+
+            // Execute method
+            Object result = method.instantiate(methodArgs);
+            if (result != null)
+                op.setParameter(args[1], result);
+
+            return true;
+        } catch (ClassNotFoundException e) {
+            out.println("Class not found: " + args[1]);
+            return false;
+        } catch (InstantiationException e) {
+            out.println("Error converting string: " + e.getMessage());
+            return false;
+        } catch (NoSuchInstantiatorException e) {
+            out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Processes the last executed operation by a given method. The method
      * must be static and must have the {@link AbstractOperation} (or its
      * descendant) as its first argument. Additional arguments for the method
