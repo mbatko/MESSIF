@@ -26,7 +26,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import messif.buckets.index.IndexComparator;
@@ -173,7 +173,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
     @Override
     public Serializable setParameter(String name, Object value) {
         if (additionalParameters == null)
-            additionalParameters = new HashMap<String, Serializable>();
+            additionalParameters = new LinkedHashMap<String, Serializable>();
         return additionalParameters.put(name, (Serializable)value);
     }
 
@@ -189,25 +189,6 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         return additionalParameters.remove(name);
     }
 
-    /**
-     * Adds the additional parameters to the passed builder in format "paramString: value, nextSring: value, ..."
-     * @param builder string builder to add the parameter information to
-     * @return the same builder
-     */
-    protected StringBuilder appendAdditionalParameters(StringBuilder builder) {
-        int paramCount = getParameterCount();
-        if (paramCount <= 0) {
-            return builder;
-        }
-        int i = 0;
-        for (Map.Entry<String, ? extends Serializable> entry : getParameterMap().entrySet()) {
-            builder.append(entry.getKey()).append(": ").append(entry.getValue());
-            if (++i < paramCount) {
-                builder.append(", ");
-            }
-        }
-        return builder;
-    }
 
     //*****************   Operation-UUID comparator   **************************//
 
@@ -334,7 +315,7 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         AbstractOperation operation = (AbstractOperation) super.clone();
 
         if (additionalParameters != null) {
-            operation.additionalParameters = new HashMap<String, Serializable>(additionalParameters);
+            operation.additionalParameters = new LinkedHashMap<String, Serializable>(additionalParameters);
         }
         
         return operation;
@@ -418,10 +399,6 @@ public abstract class AbstractOperation implements Serializable, Cloneable, Clea
         StringBuilder str = new StringBuilder(getClass().getSimpleName());
         appendArguments(str);
         appendErrorCode(str);
-        if (getParameterCount() > 0) {
-            str.append("\n");
-            appendAdditionalParameters(str);
-        }
         return str.toString();
     }
 

@@ -948,7 +948,6 @@ public class CoreApplication {
      * {@link #operationPrepare}, {@link #operationExecute}, or {@link #operationBgExecute}
      * is shown. Note that the operation might be still running if the
      * {@link #operationBgExecute} was used and thus the results might not be complete.
-     * Use {@link #operationWaitBg} to wait for background operations to finish.
      *
      * <p>
      * Example of usage:
@@ -958,12 +957,27 @@ public class CoreApplication {
      * </p>
      *
      * @param out a stream where the application writes information for the user
-     * @param args this method has no arguments
+     * @param args optional flag whether to show parametric values,
+     *          optional parameter name-value separator (defaults to colon), and
+     *          optional parameter record separator (defaults to newline)
      * @return <tt>true</tt> if the method completes successfully, otherwise <tt>false</tt>
      */
-    @ExecutableMethod(description = "show information about the last executed operation", arguments = {})
+    @ExecutableMethod(description = "show information about the last executed operation", arguments = {"flag whether to show parametric values", "parameter name-value separator", "parameter record separator"})
     public boolean operationInfo(PrintStream out, String... args) {
-        out.println(getLastOperation());
+        AbstractOperation op = getLastOperation();
+        if (op == null) {
+            out.println("No operation has been executed yet");
+            return false;
+        }
+
+        out.println(op);
+
+        if (args.length >= 2 && Boolean.parseBoolean(args[1])) {
+            String nameValueSeparator = args.length < 3 ? ": " : args[2];
+            String parameterSeparator = args.length < 4 ? System.lineSeparator() : args[3];
+            out.println(ParametricBase.append(new StringBuilder(), op, nameValueSeparator, parameterSeparator, false));
+        }
+
         return true;
     }
 

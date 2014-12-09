@@ -63,6 +63,7 @@ import messif.statistics.StatisticTimer;
 import messif.statistics.Statistics;
 import messif.utility.Convert;
 import messif.utility.ModifiableParametric;
+import messif.utility.ParametricBase;
 import messif.utility.reflection.MethodInstantiator;
 import messif.utility.reflection.NoSuchInstantiatorException;
 
@@ -98,6 +99,9 @@ public abstract class Algorithm implements Serializable {
 
     /** The name of this algorithm */
     private final String algorithmName;
+
+    /** Verbosity of the logging of the last executed operation */
+    private int executedOperationsLogVerbosity;
 
     /** Number of actually running operations */
     private transient Semaphore runningOperationsSemaphore;
@@ -216,6 +220,17 @@ public abstract class Algorithm implements Serializable {
      */
     public ExecutorService getOperationsThreadPool() {
         return operationsThreadPool;
+    }
+
+    /**
+     * Set the verbosity of the logging of the last executed operation.
+     * If set to zero (default), no executed operations are logged.
+     * If set to 1, the executed operation is logged using INFO level.
+     * If set to 2, the executed operation and all its parameters are logged using INFO level.
+     * @param executedOperationsLogVerbosity the verbosity level
+     */
+    public void setExecutedOperationsLogVerbosity(int executedOperationsLogVerbosity) {
+        this.executedOperationsLogVerbosity = executedOperationsLogVerbosity;
     }
 
 
@@ -535,8 +550,12 @@ public abstract class Algorithm implements Serializable {
             throw new AlgorithmMethodException(e.getCause());
         } finally {
             long runningTime = System.currentTimeMillis() - startTimeStamp;
-            if (log.isLoggable(Level.INFO)) {
-                log.log(Level.INFO, "{0} processed: {1}; Time: {2}", new Object[]{this.getName(), params[0].toString(), runningTime});
+            if (executedOperationsLogVerbosity > 0) {
+                Object paramString = params[0]; // This will be automatically converted to string by the logger
+                if (executedOperationsLogVerbosity > 1) {
+                    paramString = ParametricBase.toStringWithCast(params[0], "\n", ": ", ", ");
+                }
+                log.log(Level.INFO, "{0} processed: {1}; Time: {2}", new Object[]{this.getName(), paramString, runningTime});
             }
             if (! statisticsOn && (params[0] instanceof ModifiableParametric)) {
                 ((ModifiableParametric) params[0]).setParameter("OperationTime", runningTime);
