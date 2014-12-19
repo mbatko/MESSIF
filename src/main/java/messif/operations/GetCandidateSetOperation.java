@@ -113,6 +113,19 @@ public class GetCandidateSetOperation extends AbstractOperation {
     }
     
     // ************************      Overrides     ******************************** //
+    
+    @Override
+    public Object getArgument(int index) throws IndexOutOfBoundsException {
+        if (index != 0)
+            throw new IndexOutOfBoundsException("BulkInsertOperation has only one argument");
+        return getCandidateSetSize();
+    }
+
+    @Override
+    public int getArgumentCount() {
+        return 1;
+    }
+    
     @Override
     public void updateFrom(AbstractOperation operation) throws ClassCastException {
         if (! (operation instanceof GetCandidateSetOperation))

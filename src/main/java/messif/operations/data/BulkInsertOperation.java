@@ -161,7 +161,15 @@ public class BulkInsertOperation extends DataManipulationOperation {
 
     @Override
     public String toString() {
-        return new StringBuffer().append("BulkInsertOperation: object to be inserted: ").append(insertedObjects.size()).toString();
+        StringBuffer buffer = new StringBuffer().append("BulkInsertOperation (").append(insertedObjects.size()).append(" objects) ");
+        buffer.append(isFinished() ? "HAS" : "NOT").append(" finished: ");
+        if (isFinished()) {
+            buffer.append(getErrorCode().toString());
+            if (getParameter(INSERTED_OBJECTS_PARAM) != null && (getParameter(INSERTED_OBJECTS_PARAM) instanceof Collection)) {
+                buffer.append(" (inserted ").append(((Collection) getParameter(INSERTED_OBJECTS_PARAM)).size()).append(" objects)");
+            }
+        }
+        return buffer.toString();
     }
 
     @Override

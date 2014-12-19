@@ -3034,6 +3034,37 @@ public class CoreApplication {
         return true;
     }
 
+    @ExecutableMethod(description = "stops and removes thread of .repeatEvery action (if exists)", arguments = { "action name" })
+    public void stopRepeatEveryThread(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("param.1 (action name) must be specified for " + args[0]);
+            return;
+        }
+        synchronized (repeatEveryThreads) {
+            Thread get = repeatEveryThreads.get(args[1]);
+            if (get != null) {
+                get.interrupt();
+            }
+        }
+    }
+    
+    @ExecutableMethod(description = "waits until .repeatEvery thread finish (if exists)", arguments = { "action name" })
+    public void waitForRepeatEveryThread(PrintStream out, String... args) {
+        if (args.length < 2) {
+            out.println("param.1 (action name) must be specified for " + args[0]);
+            return;
+        }
+        Thread thread;
+        synchronized (repeatEveryThreads) {
+            thread = repeatEveryThreads.get(args[1]);
+        }
+        if (thread != null) {
+            try {
+                thread.join();
+            } catch (InterruptedException ignore ) { }
+        }
+    }
+        
     /**
      * Computes a sum of the parameters and prints the result to the output.
      * The first argument is the {@link DecimalFormat output format} used
@@ -3333,6 +3364,7 @@ public class CoreApplication {
                         }
                     } finally {
                         synchronized (repeatEveryThreads) {
+                            log.info("REMOVING ACTION "  + actionName + " from repeatEveryThreads");
                             repeatEveryThreads.remove(actionName);
                         }
                     }

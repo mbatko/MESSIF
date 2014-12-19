@@ -75,6 +75,10 @@ public class RefineCandidateOperation extends AbstractOperation {
             return getRankingOperation().getQueryObject().getLocatorURI();
         case 1:
             return getCandidateOperation().getCandidateSetSize();
+        case 2:
+            return getRankingOperation().getAnswerCount();
+        case 3:
+            return getRankingOperation().getAnswerType();
         default:
             throw new IndexOutOfBoundsException("GetObjectByLocatorOperation has only one argument");
         }
@@ -82,7 +86,7 @@ public class RefineCandidateOperation extends AbstractOperation {
 
     @Override
     public int getArgumentCount() {
-        return 2;
+        return 4;
     }
     
     @Override
