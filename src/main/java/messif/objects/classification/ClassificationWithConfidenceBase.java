@@ -318,16 +318,27 @@ public class ClassificationWithConfidenceBase<C> extends ClassificationBase<C> i
             str.append('(').append(confidence).append(')');
     }
 
-    @Override
-    public String toString() {
-        Iterator<C> iterator = iterator();
-        StringBuilder str = new StringBuilder();
-        str.append("[");
+    /**
+     * Appends the textual representation of the categories provided by the given
+     * iterator.
+     * @param str the string builder to create
+     * @param iterator the iterator for categories
+     * @return the filled string builder
+     */
+    protected StringBuilder append(StringBuilder str, Iterator<C> iterator) {
         while (iterator.hasNext()) {
             appendCategory(str, iterator.next());
             if (iterator.hasNext())
                 str.append(", ");
         }
+        return str;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder str = new StringBuilder();
+        str.append("[");
+        append(str, iterator());
         str.append("]");
         return str.toString();
     }

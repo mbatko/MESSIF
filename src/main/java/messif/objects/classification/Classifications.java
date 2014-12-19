@@ -129,17 +129,24 @@ public abstract class Classifications {
 
     /**
      * Returns a {@link Comparator} for sorting categories of the given {@link Classification} according to confidences.
-     * The ordering is from the lowest confidence to the highest as specified by the classification.
+     * The ordering is from the lowest to the highest confidence (or vice versa if {@highestFirst = true}) as specified by the classification.
+     *
      * @param <C> the class of instances that represent the classification categories
      * @param classification the classification the categories of which to sort
+     * @param highestFirst flag whether to reverse the order to show the items with the highest confidence first
      * @return an instance of the category sorting comparator
      */
-    public static <C> Comparator<C> getCategoriesConfidenceComparator(final ClassificationWithConfidence<C> classification) {
-        final int order = classification.getLowestConfidence() <= classification.getHighestConfidence() ? 1 : -1;
+    public static <C> Comparator<C> getCategoriesConfidenceComparator(final ClassificationWithConfidence<C> classification, boolean highestFirst) {
+        final int multiplier;
+        if (classification.getLowestConfidence() <= classification.getHighestConfidence()) {
+            multiplier = highestFirst ? -1 : 1;
+        } else {
+            multiplier = highestFirst ? 1 : -1;
+        }
         return new Comparator<C>() {
             @Override
             public int compare(C o1, C o2) {
-                return order * Float.compare(classification.getConfidence(o1), classification.getConfidence(o2));
+                return multiplier * Float.compare(classification.getConfidence(o1), classification.getConfidence(o2));
             }
         };
     }
@@ -166,7 +173,19 @@ public abstract class Classifications {
      * @return a sorted collection of all categories
      */
     public static <C> Collection<C> getSortedCategories(ClassificationWithConfidence<C> classification) {
-        return getSortedCategories(classification, getCategoriesConfidenceComparator(classification));
+        return getSortedCategories(classification, false);
+    }
+
+    /**
+     * Returns all categories of the given classification sorted by confidences.
+     * The ordering is from the lowest confidence to the highest as specified by the classification.
+     * @param <C> the class of instances that represent the classification categories
+     * @param classification the classification the categories of which to sort
+     * @param highestFirst flag whether to reverse the order to show the items with the highest confidence first
+     * @return a sorted collection of all categories
+     */
+    public static <C> Collection<C> getSortedCategories(ClassificationWithConfidence<C> classification, boolean highestFirst) {
+        return getSortedCategories(classification, getCategoriesConfidenceComparator(classification, highestFirst));
     }
 
     /**

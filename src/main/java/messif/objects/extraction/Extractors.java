@@ -733,7 +733,7 @@ public abstract class Extractors {
      * </p>
      * <p>
      * If type is "text", no additional parameters are required. Optionally,
-     * {@code <key>.dataParameter}, <key>.locatorParameter}, {@code <key>.parameterArg},
+     * {@code <key>.dataParameter}, {@code <key>.locatorParameter}, {@code <key>.parameterArg},
      * and {@code <key>.additionalArg1...n} can be specified - see 
      * {@link #createTextExtractor(java.lang.Class, java.lang.String, java.lang.String, int, java.lang.Object[]) createTextExtractor}.
      * </p>
@@ -800,6 +800,27 @@ public abstract class Extractors {
             @Override
             public Class<? extends MetaObjectParametricMap> getExtractedClass() {
                 return MetaObjectParametricMap.class;
+            }
+        };
+    }
+
+    /**
+     * Returns an extractor wrapper that uses an URL stored in a parameter to get the data.
+     * @param <T> the type of object returned by the extractor
+     * @param extractor the extractor to use on the data
+     * @param urlParameterName the name of the parameter where the URL is stored
+     * @return the wrapped extractor
+     */
+    public static <T extends LocalAbstractObject> Extractor<T> wrapUrlDataSource(final Extractor<T> extractor, final String urlParameterName) {
+        return new Extractor<T>() {
+            @Override
+            public T extract(ExtractorDataSource dataSource) throws ExtractorException, IOException {
+                URL url = new URL(dataSource.getRequiredParameter(urlParameterName, String.class));
+                return extractor.extract(new ExtractorDataSource(url, null, dataSource.getParameterMap()));
+            }
+            @Override
+            public Class<? extends T> getExtractedClass() {
+                return extractor.getExtractedClass();
             }
         };
     }
