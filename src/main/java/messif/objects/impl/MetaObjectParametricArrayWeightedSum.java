@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.logging.Logger;
 import messif.objects.LocalAbstractObject;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
@@ -196,6 +197,12 @@ public class MetaObjectParametricArrayWeightedSum extends MetaObjectParametricAr
         float rtv = 0;
         MetaObjectParametricArray castObj = (MetaObjectParametricArray)obj;
 
+        if (objects.length != castObj.objects.length) {
+            Logger.getLogger("MetaObjectParametricArrayWeightedSum")
+                    .warning("query object '" + this.toString() + "' (array size: " + objects.length + ") differs from object: " + castObj.toString() + " (array size: "+castObj.objects.length +")");
+            return MAX_DISTANCE;
+        }            
+        
         for (int i = 0; i < objects.length; i++) {
             float weight = getWeight(i);
             if (weight <= 0)

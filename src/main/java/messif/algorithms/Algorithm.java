@@ -101,7 +101,7 @@ public abstract class Algorithm implements Serializable {
     private final String algorithmName;
 
     /** Verbosity of the logging of the last executed operation */
-    private int executedOperationsLogVerbosity;
+    private int executedOperationsLogVerbosity = 1;
 
     /** Number of actually running operations */
     private transient Semaphore runningOperationsSemaphore;
