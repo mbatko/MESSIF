@@ -83,7 +83,10 @@ public class ExtractorException extends Exception implements HttpErrorCodeProvid
         return httpErrorCode;
     }
 
-    @Override
+    /**
+     * Sets a new HTTP code to be later returned by this provider.
+     * @param httpErrorCode a new HTTP code to be later returned by this provider.
+     */
     public void setHttpErrorCode(int httpErrorCode) {
         this.httpErrorCode = httpErrorCode;
     }

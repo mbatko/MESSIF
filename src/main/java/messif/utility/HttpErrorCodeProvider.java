@@ -51,11 +51,5 @@ public interface HttpErrorCodeProvider {
      * @return the HTTP error code to be returned to the HTTP client.
      */
     public int getHttpErrorCode();
-    
-    /**
-     * Sets a new HTTP code to be later returned by this provider.
-     * @param httpErrorCode a new HTTP code to be later returned by this provider.
-     */
-    public void setHttpErrorCode(int httpErrorCode);
-    
+        
 }
