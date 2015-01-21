@@ -1,0 +1,160 @@
+actions = startAlgorithm statisticsDisable httpStart
+build = startAlgorithm textConversionSetup insertData
+
+
+httpStart = textConversionSetup extractorSetup context_httpSearch context_httpInsert context_httpRemove
+
+## Text setup
+textConversionSetup = stemmer colConv keywordCleaningDB keywordConvertingDB textDescriptorFactory textConvertor
+textConversionClose = keywordCleaningDBClose keywordConvertingDBClose
+
+stemmer = namedInstanceAdd
+stemmer.param.1 = org.tartarus.snowball.MESSIFStemmer(english)
+stemmer.param.2 = stemmer
+
+colConv=namedInstanceAdd
+colConv.param.1 = messif.buckets.storage.impl.DatabaseStorage.trivialColumnConvertor
+colConv.param.2 = colConv
+
+keywordCleaningDB = namedInstanceAdd
+keywordCleaningDB.param.1 = messif.buckets.storage.impl.DatabaseStorage.create(\
+        java.lang.String,\
+        connectionURL="<dbConn>";\
+        tableName=keyword_cleaning;\
+        primaryKeyColumn=id;\
+        columnNames=keyword;\
+        columnConvertors=colConv;\
+        namedInstances=null)
+keywordCleaningDB.param.2 = keywordCleaningDB
+
+keywordCleaningDBClose = namedInstanceRemove
+keywordCleaningDBClose.param.1 = keywordCleaningDB
+
+keywordConvertingDB = namedInstanceAdd
+keywordConvertingDB.param.1 = messif.buckets.storage.impl.DatabaseStorage.create(\
+        java.lang.String,\
+        connectionURL="<dbConn>";\
+        tableName=keyword_converting;\
+        primaryKeyColumn=id;\
+        columnNames=keyword;\
+        columnConvertors=colConv;\
+        namedInstances=null)
+keywordConvertingDB.param.2 = keywordConvertingDB
+
+keywordConvertingDBClose = namedInstanceRemove
+keywordConvertingDBClose.param.1 = keywordConvertingDB
+
+textDescriptorFactory = namedInstanceAdd
+textDescriptorFactory.param.1 = messif.objects.impl.ObjectIntMultiVectorJaccard.createTextDescriptorFactory(stemmer, keywordConvertingDB, keywordCleaningDB)
+
+textConvertor = namedInstanceAdd
+textConvertor.param.1 = messif.objects.text.TextParametricConstructorConvertor(title|keywords, <dataclass>, KeyWordsType, true, textDescriptorFactory)
+
+
+## Extractor setup
+extractorSetup = locatorExtractor imageExtractorCmd imageExtractor
+
+locatorExtractor = namedInstanceAdd
+locatorExtractor.param.1 = messif.objects.extraction.AlgorithmExtractor(locatorAlg, messif.operations.query.GetObjectByLocatorOperation, locator|CLEARED_OBJECTS)
+
+imageExtractorCmd = namedInstanceAdd
+imageExtractorCmd.param.1 = messif.objects.extraction.Extractors.createExternalExtractor(<dataclass>, ./metaobject-dump -, locator)
+
+imageExtractor = namedInstanceAdd
+imageExtractor.param.1 = messif.objects.extraction.ConvertorExtractor(imageExtractorCmd, textConvertor)
+
+
+## Search context
+context_httpSearch = httpAddContext
+context_httpSearch.param.1 = /search
+context_httpSearch.param.2 = httpSearch httpAnswer
+context_httpSearch.param.3 = queryObject=locatorExtractor
+
+httpSearch = operationExecute
+httpSearch.param.1 = messif.operations.query.ApproxKNNQueryOperation
+httpSearch.param.2 = queryObject
+httpSearch.param.3 = <k!>
+httpSearch.param.4 = <approxlevel:12500>
+httpSearch.param.5 = ABS_OBJ_COUNT
+httpSearch.param.6 = -1
+
+httpAnswer = operationAnswer
+httpAnswer.param.1 = [{3},"{2}"]
+httpAnswer.param.2 = ,
+httpAnswer.description = [
+httpAnswer.descriptionAfter = ]
+
+
+## Insert context
+context_httpInsert = httpAddContext
+context_httpInsert.param.1 = /insert
+context_httpInsert.param.2 = httpInsert
+context_httpInsert.param.3 = insertObject=imageExtractor
+
+httpInsert = operationExecute
+httpInsert.param.1 = messif.operations.data.InsertOperation
+httpInsert.param.2 = insertObject
+httpInsert.descriptionAfter = Operation executed successfully
+
+
+## Remove context
+context_httpRemove = httpAddContext
+context_httpRemove.param.1 = /remove
+context_httpRemove.param.2 = httpRemove
+context_httpRemove.param.3 = removeObject=locatorExtractor
+
+httpRemove = operationExecute
+httpRemove.param.1 = messif.operations.data.DeleteOperation
+httpRemove.param.2 = removeObject
+httpRemove.descriptionAfter = Operation executed successfully
+
+
+###### Algorithm setup ######
+
+startAlgorithm = alg wrapLocatorStorage
+
+alg = algorithmStart
+alg.param.1 = messif.algorithms.impl.SequentialScan
+
+wrapLocatorStorage = indexAlgAssign locatorAlg locatorAlgAssign
+indexAlgAssign = algorithmToNamedInstance
+indexAlgAssign.param.1 = indexAlg
+locatorAlg = algorithmStart
+locatorAlg.param.1 = messif.algorithms.impl.LocatorStorageAlgorithm
+locatorAlg.param.2 = indexAlg
+locatorAlg.param.3 = <dbConn!>
+locatorAlg.param.4 = objects
+locatorAlg.param.5 = <dataclass>|\
+                messif.objects.keys.AbstractObjectKey|\
+                messif.objects.impl.ObjectColorLayout|\
+                messif.objects.impl.ObjectShortVectorL1|\
+                messif.objects.impl.ObjectIntVectorL1|\
+                messif.objects.impl.ObjectVectorEdgecomp|\
+                messif.objects.impl.ObjectXMRegionShape|\
+                messif.objects.impl.ObjectIntMultiVectorJaccard
+locatorAlgAssign = algorithmToNamedInstance
+locatorAlgAssign.param.1 = locatorAlg
+
+
+###### Data insertion ######
+
+insertData = data dataTextConvertor bulkinsert
+insertData.descriptionAfter = Done inserting data
+
+data = objectStreamOpen
+data.param.1 = <datafile>
+data.param.2 = <dataclass>
+data.param.3 = data
+
+dataTextConvertor = objectStreamConvert
+dataTextConvertor.param.1 = data
+dataTextConvertor.param.2 = textConvertor
+
+bulkinsert = operationExecute
+bulkinsert.param.1 = messif.operations.data.BulkInsertOperation
+bulkinsert.param.2 = data
+bulkinsert.param.3 = <bulksize:1000>
+bulkinsert.descriptionAfter = Inserted <bulksize:1000> objects
+#bulkinsert.repeat = <bulkcount>
+bulkinsert.repeatUntilException = java.util.NoSuchElementException
+bulkinsert.param.4 = false

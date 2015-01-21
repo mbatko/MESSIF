@@ -158,6 +158,8 @@ public class AsynchronousFileChannelInputStream extends BufferInputStream {
                 throw new EOFException("Cannot read more bytes - end of file encountered");
             position += bytesRead;
         } catch (ExecutionException e) {
+            if (e.getCause() instanceof IOException)
+                throw (IOException)e.getCause();
             throw new IOException(e);
         } catch (InterruptedException e) {
             throw new InterruptedIOException(e.getMessage());

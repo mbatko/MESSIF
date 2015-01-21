@@ -1,0 +1,48 @@
+#actions = myalg alginfo data ins alginfo neco
+actions = rmialg data search
+
+myalg = algorithmStart
+myalg.param.1 = messif.algorithms.impl.SequentialScan
+myalg.description = Starting algorithm
+
+myalgpar = algorithmStart
+myalgpar.param.1 = messif.algorithms.impl.ParallelSequentialScan
+myalgpar.param.2 = 5
+myalgpar.description = Starting algorithm
+
+rmialg = algorithmStart
+rmialg.param.1 = messif.algorithms.RMIAlgorithm
+rmialg.param.2 = cybela2.fi.muni.cz
+rmialg.param.3 = 13257
+
+alginfo = algorithmInfo
+
+data = profisct
+
+profisct = objectStreamOpen
+profisct.param.1 = P:/share/datasets/profimedia/metaobject-withkwid-withtext-cleaned.data.gz
+profisct.param.2 = messif.objects.impl.MetaObjectProfiSCT
+profisct.param.3 = data
+profisct.param.4 = true
+profisct.param.5 = true
+
+ins = insert operationInfo
+ins.repeat = <insCount:100>
+
+insert = operationExecute
+insert.param.1 = messif.operations.data.InsertOperation
+insert.param.2 = data
+
+search = resetData knn operationInfo answer
+search.foreach = 1 3 5
+
+resetData = objectStreamReset
+resetData.param.1 = data
+
+knn = operationExecute
+knn.param.1 = messif.operations.query.KNNQueryOperation
+knn.param.2 = data
+knn.param.3 = <search>
+knn.param.4 = ORIGINAL_OBJECTS
+
+answer = operationAnswer

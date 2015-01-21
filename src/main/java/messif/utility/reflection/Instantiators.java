@@ -16,7 +16,9 @@
  */
 package messif.utility.reflection;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Map;
 import messif.utility.Convert;
 
@@ -76,6 +78,41 @@ public abstract class Instantiators {
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Cannot get a getter method for property '" + propertyName + "' on " + clazz);
         }
+    }
+
+    /**
+     * Expands a variable-argument method/constructor prototype to the actual number of arguments.
+     * @param methodTypes the method/constructor prototype
+     * @param actualArgumentCount the actual number of arguments to expand the prototype to
+     * @return the expanded prototype
+     */
+    public static Class<?>[] varargExpandPrototype(Class<?>[] methodTypes, int actualArgumentCount) {
+        if (actualArgumentCount < methodTypes.length - 1)
+            return methodTypes;
+        int varargIndex = methodTypes.length - 1;
+        Class<?> varargClass = methodTypes[varargIndex].getComponentType(); // Vararg must be an array
+        methodTypes = Arrays.copyOf(methodTypes, actualArgumentCount);
+        for (int i = varargIndex; i < actualArgumentCount; i++) {
+            methodTypes[i] = varargClass;
+        }
+        return methodTypes;
+    }
+
+    /**
+     * Shrink the variable-argument method/constructor argument values to the actual method/constructor prototype.
+     * @param methodTypes the method/constructor prototype
+     * @param arguments the argument values for the method/constructor
+     * @return the shrunk argument array
+     */
+    public static Object[] varargShrinkValues(Class<?>[] methodTypes, Object[] arguments) {
+        int varargIndex = methodTypes.length - 1;
+        Object varargValues = Array.newInstance(methodTypes[varargIndex].getComponentType(), arguments.length - varargIndex);
+        for (int i = varargIndex; i < arguments.length; i++) {
+            Array.set(varargValues, i - varargIndex, arguments[i]);
+        }
+        arguments = Arrays.copyOf(arguments, methodTypes.length);
+        arguments[varargIndex] = varargValues;
+        return arguments;
     }
 
     /**

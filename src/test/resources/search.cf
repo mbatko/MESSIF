@@ -1,0 +1,30 @@
+actions = rmialg data search
+
+
+rmialg = algorithmStart
+rmialg.param.1 = messif.algorithms.RMIAlgorithm
+rmialg.param.2 = cybela13.fi.muni.cz
+rmialg.param.3 = 11402
+
+data = neuralnet
+
+neuralnet = objectStreamOpen
+neuralnet.param.1 = P:/share/datasets/seznam.cz/final.data.gz
+neuralnet.param.2 = messif.objects.impl.ObjectFloatVectorNeuralNetworkL2
+neuralnet.param.3 = data
+
+search = knn operationInfo answer
+#search.repeatUntilException = java.util.NoSuchElementException
+
+knn = operationExecute
+knn.param.1 = messif.operations.query.ApproxKNNQueryOperation
+knn.param.2 = data
+knn.param.3 = 100
+knn.param.4 = NODATA_OBJECTS
+knn.param.5 = 100000
+knn.param.6 = ABS_OBJ_COUNT
+knn.param.7 = -1
+
+answer = operationAnswer
+answer.param.1 = SwappedDistanceLocators
+answer.param.2 = ", "

@@ -359,6 +359,25 @@ public abstract class TextConversion {
     }
 
     /**
+     * Transforms a list of words into array of addresses.
+     * Note that unknown words are added to the index.
+     * The identifiers in the returned array need not correspond to the given words.
+     *
+     * @param words the list of words to transform
+     * @param ignoreWords set of words to ignore (e.g. the previously added keywords);
+     *          if <tt>null</tt>, all keywords are added
+     * @param expander instance for expanding the list of words
+     * @param stemmer a {@link Stemmer} for word transformation
+     * @param wordIndex the index for translating words to addresses
+     * @param normalize if <tt>true</tt>, each word is first {@link #normalizeString(java.lang.String) normalized}
+     * @return array of translated addresses
+     * @throws TextConversionException if there was an error stemming the word or reading the index
+     */
+    public static int[] wordsToIdentifiers(String[] words, Set<String> ignoreWords, WordExpander expander, Stemmer stemmer, IntStorageIndexed<String> wordIndex, boolean normalize) throws TextConversionException {
+        return wordsToIdentifiers(words, ignoreWords, null, expander, stemmer, wordIndex, normalize);
+    }
+
+    /**
      * Transforms a string of words into array of addresses.
      * The string is {@link #normalizeAndSplitString(java.lang.String, java.lang.String) normalized and split}
      * first, then the words are {@link #wordsToIdentifiers converted to identifiers}.

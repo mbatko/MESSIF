@@ -180,7 +180,13 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
             throw new NoSuchInstantiatorException("There are no constructors available");
         String error = null;
         for (Constructor<T> constructor : constructors) {
-            if ((error = Instantiators.isPrototypeMatching(constructor.getParameterTypes(), arguments, convertStringArguments, namedInstances)) == null)
+            Class<?>[] parameterTypes = constructor.getParameterTypes();
+
+            // Handle vararg parameter
+            if (constructor.isVarArgs())
+                parameterTypes = Instantiators.varargExpandPrototype(parameterTypes, arguments.length);
+
+            if ((error = Instantiators.isPrototypeMatching(parameterTypes, arguments, convertStringArguments, namedInstances)) == null)
                 return constructor;
         }
 
@@ -238,6 +244,8 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
         System.arraycopy(arguments, argStartIndex, args, 0, args.length);
         Constructor<? extends T> constructor = getConstructor(constructors, true, namedInstances, args);
         try {
+            if (constructor.isVarArgs())
+                args = Instantiators.varargShrinkValues(constructor.getParameterTypes(), args);
             return constructor.newInstance(args);
         } catch (InstantiationException e) {
             throw new NoSuchInstantiatorException("Cannot create abstract class using " + constructor);

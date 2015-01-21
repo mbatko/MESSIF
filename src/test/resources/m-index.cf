@@ -1,0 +1,230 @@
+#actions = deserialize locatorAssign statisticsDisable serializePeriodically httpStart
+actions = deserialize locatorAssign statisticsDisable httpStart
+
+
+#############################   Deserialization, initial M-Index settings #############################
+
+deserialize = algorithmRestore
+deserialize.param.1 = <working-dir>/serialized/mindex.bin
+
+locatorAssign = algorithmToNamedInstance
+locatorAssign.param.1 = locatorAlg
+
+serializePeriodically = methodExecute
+serializePeriodically.param.1 = checkModifiedAndStore
+serializePeriodically.param.2 = <working-dir>/serialized/mindex.bin
+serializePeriodically.repeatEvery = 1s
+
+#############################   Logging  #############################
+
+logging = removeSTDOutLog oneLineLogFormatter setFileLog
+
+removeSTDOutLog = loggingConsoleChangeLevel
+removeSTDOutLog.param.1 = WARNING
+
+oneLineLogFormatter = namedInstanceAdd
+oneLineLogFormatter.param.1 = messif.utility.Logging.oneLineFormatter
+oneLineLogFormatter.param.2 = oneLineLogFormatter
+
+setFileLog = loggingFileAdd
+setFileLog.param.1 = <searchlog:logs/search.log>
+setFileLog.param.2 = INFO
+setFileLog.param.3 = true
+setFileLog.param.4 = oneLineLogFormatter
+setFileLog.param.5 =
+setFileLog.param.6 = MESSAGE
+setFileLog.param.7 = 100000000
+setFileLog.param.8 = 40
+
+
+#############################   HTTP contexts  #############################
+
+httpStart = locatorExtractor imageExtractor dirExtractor context_httpSearch context_httpInsert context_httpBulkInsert context_httpRemove
+
+locatorExtractor = namedInstanceAdd
+locatorExtractor.param.1 = messif.objects.extraction.AlgorithmExtractor(locatorAlg, messif.operations.query.GetObjectByLocatorOperation, locator|CLEARED_OBJECTS)
+
+imageExtractor = namedInstanceAdd
+imageExtractor.param.1 = messif.objects.extraction.Extractors.createExternalExtractor(<dataclass>, ./metaobject-dump -, locator)
+
+dirExtractor = namedInstanceAdd
+dirExtractor.param.1 = messif.objects.extraction.Extractors.createExternalMultiExtractor(<dataclass>, ./metaobject-dump.sh ?subdir?, false, null, null)
+
+context_httpSearch = httpAddContext
+context_httpSearch.param.1 = /search
+context_httpSearch.param.2 = httpSearch httpAnswer
+context_httpSearch.param.3 = queryObject=locatorExtractor
+
+httpSearch = operationExecute
+httpSearch.param.1 = messif.operations.query.ApproxKNNQueryOperation
+httpSearch.param.2 = queryObject
+httpSearch.param.3 = <k!>
+httpSearch.param.4 = <approxlevel:12500>
+httpSearch.param.5 = ABS_OBJ_COUNT
+httpSearch.param.6 = -1
+
+httpAnswer = operationAnswer
+httpAnswer.param.1 = [{3},"{2}"]
+httpAnswer.param.2 = ,
+httpAnswer.description = [
+httpAnswer.descriptionAfter = ]
+
+context_httpBulkInsert = httpAddContext
+context_httpBulkInsert.param.1 = /batchInsert
+context_httpBulkInsert.param.2 = httpBulkInsert
+
+httpBulkInsert = operationExecute
+httpBulkInsert.param.1 = messif.operations.data.BulkInsertOperation
+httpBulkInsert.param.2 = dirExtractor
+
+context_httpInsert = httpAddContext
+context_httpInsert.param.1 = /insert
+context_httpInsert.param.2 = httpInsert
+context_httpInsert.param.3 = insertObject=imageExtractor
+
+httpInsert = operationExecute
+httpInsert.param.1 = messif.operations.data.InsertOperation
+httpInsert.param.2 = insertObject
+httpInsert.descriptionAfter = Operation executed successfully
+
+context_httpRemove = httpAddContext
+context_httpRemove.param.1 = /remove
+context_httpRemove.param.2 = httpRemove
+context_httpRemove.param.3 = removeObject=locatorExtractor
+
+httpRemove = operationExecute
+httpRemove.param.1 = messif.operations.data.DeleteOperation
+httpRemove.param.2 = removeObject
+httpRemove.descriptionAfter = Operation executed successfully
+
+#############################   object count
+
+objectCount = countOp operationInfo
+countOp = operationExecute
+countOp.param.1 = messif.operations.query.GetObjectCountOperation
+
+
+#####################################################   Building phase   ################################
+
+buildMIndex = properties createMIndex algorithmInfoAll wrapLocatorStorage serialize algorithmStop
+
+createMIndex = algorithmStart
+createMIndex.param.1 = mindex.algorithms.MIndexAlgorithm
+createMIndex.param.2 = properties
+createMIndex.param.3 = mindex.
+
+wrapLocatorStorage = mindexAssign locatorAlg
+mindexAssign = algorithmToNamedInstance
+mindexAssign.param.1 = mindexAlg
+locatorAlg = algorithmStart
+locatorAlg.param.1 = messif.algorithms.impl.LocatorStorageAlgorithm
+locatorAlg.param.2 = mindexAlg
+locatorAlg.param.3 = jdbc:mysql://andromeda.fi.muni.cz:3306/datasets?user=datasets&password=aEAb92Zg&characterEncoding=utf-8
+locatorAlg.param.4 = auriga
+locatorAlg.param.5 = messif.objects.impl.MetaObjectShapeAndColor|\
+                messif.objects.keys.AbstractObjectKey|\
+                messif.objects.impl.ObjectColorLayout|\
+                messif.objects.impl.ObjectShortVectorL1|\
+                messif.objects.impl.ObjectVectorEdgecomp|\
+                messif.objects.impl.ObjectIntVectorL1|\
+                messif.objects.impl.ObjectXMRegionShape
+
+
+#############################   data insert 
+
+insertData = data bulkinsert
+
+data = objectStreamOpen
+data.param.1 = <datafile>
+data.param.2 = <dataclass>
+data.param.3 = data
+
+bulkinsert = operationExecute
+bulkinsert.param.1 = messif.operations.data.BulkInsertOperation
+bulkinsert.param.2 = data
+bulkinsert.param.3 = <bulksize:1000>
+bulkinsert.repeat = <bulkcount>
+#bulkinsert.repeatUntilException = java.util.NoSuchElementException
+
+#############################  Serialization
+
+serialize = algorithmStore
+serialize.param.1 = <working-dir>/serialized/mindex.bin
+
+#####################       Create M-Index properties    #######################
+# create the M-Index configuration from all items starting with "properties."
+properties = propertiesCreate
+# the class of objects for which is this M-Index created
+properties.mindex.object_class = <dataclass>
+# the file with the pivots
+properties.mindex.pivot.file = <pivotfile>
+# if specified (and positive), then this number is taken regardless of content of the pivot file
+properties.mindex.pivot.number = 32
+# the minimum dynamic M-Index level
+properties.mindex.minlevel = 1
+# the maximum dynamic M-Index level
+properties.mindex.maxlevel = 6
+# class of PP calculator to be created during the M-Index initialization
+properties.mindex.ppcalculator.class = mindex.SequentialPPCalculator
+# process the operations on the leaf level in parallel
+properties.mindex.threads.use = false
+# maximal number of concurent threads per java process
+properties.mindex.threads.pool_size = 64
+# use precomputed pivot permutation, if passed from the outside
+#   set to true if using MapReduce PP calculator
+properties.mindex.use_existing_pivot_permutation = true
+# capacity of the buckets in lowest M-Index level 
+# when exceeded, M-Index dynamic tree is split to the next level (set as bucket soft capacity)
+properties.mindex.bucket.capacity = 1024
+# store the precomputed distances for pivot filtering (increases I/O, decreases comp. costs)
+properties.mindex.use_pivot_filtering = false
+# used when creating "multi-buckets" (used as minOccupation in the bucket dispatcher)
+properties.mindex.bucket.min_occupation = 0
+# occupation is counted either as number of objects or bytes (not precise)
+properties.mindex.bucket.occupation_as_bytes = false
+# if true, then the min occupation works as follows
+#  - every multi-bucket that can be split is split (if the new ones will have over minimum occupation)
+#  - or, the multi-bucket is split only when acceeds the max limit AND only the largest partition is put separately
+properties.mindex.bucket.agile_split = false
+# this is policy to allocate buckets on individual nodes (in distributed M-Index)
+properties.mindex.bucket.allocation.policy.class = mindex.distributed.RoundRobinBucketAllocationPolicy
+# class of buckets created at the cell tree leaf nodes
+properties.mindex.bucket.class = messif.buckets.impl.DiskBlockBucket
+properties.mindex.bucket.params.oneStorage = false
+properties.mindex.bucket.params.dir = <diskbucketdir>
+properties.mindex.bucket.params.cacheClasses = \
+			messif.objects.impl.ObjectVectorEdgecomp,\
+			mindex.MIndexKeyPPFull,\
+			messif.objects.impl.MetaObjectShapeAndColor,\
+			messif.objects.impl.ObjectShortVectorL1,\
+			mindex.MIndexPPSimple,\
+			messif.objects.impl.ObjectIntVectorL1,\
+			mindex.MIndexKeySimple,\
+			messif.objects.impl.ObjectColorLayout,\
+			messif.objects.impl.ObjectXMRegionShape,\
+			messif.objects.PrecomputedDistancesFixedArrayFilter,\
+			messif.objects.keys.AbstractObjectKey
+
+# if true, the index is better configured for precise search (e.g. the cells keep track of key interval)
+properties.mindex.precise.search = false
+# if yes, the operation is settings is ignored
+properties.mindex.approximate.force_default = false
+# default parameter of the approximate operation
+properties.mindex.approximate.precision = 10000
+# default type of approximate precision parameter
+properties.mindex.approximate.type = ABS_OBJ_COUNT
+# if the multi-buckets are used (see min_occupation) then this flag differentiates between two modes
+#  1) either the approximate search reads and processes always the whole multi-bucket (true)
+#  2) the cache is used and the multi-bucket is partitioned according to object keys and only relevant data is processed (false)
+properties.mindex.approximate.process_whole_multi_bucket = true
+# if true, then the M-Index keys are read from the data in bucket and check against query interval before processing
+properties.mindex.approximate.check_key_interval = false
+# if true, then inserted data are checked for duplicates and every object is then maximally once in the stored data
+properties.mindex.remove_duplicates = false
+# is this the "NoData" variant of the M-Index 
+#  if this flag is true, then the following flags are automatically considered as "false"
+#   1) use_pivot_filtering, 2) precise.search, 3) overfilled.bucket.special, 
+#   4) approximate.check_key_interval,  5) approximate.process_whole_multi_bucket
+properties.mindex.no_data = false
+# if set true, overfilled buckets, that cannot be split, use a special class (typically another M-Index)
+properties.mindex.overfilled.bucket.special = false

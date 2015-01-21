@@ -1,0 +1,106 @@
+actions = startAlgorithm statisticsDisable httpStart
+build = startAlgorithm insertData
+
+
+httpStart = imageExtractor imageMultiExtractor context_httpSearch context_httpInsert context_httpMultiInsert context_httpRemove
+
+
+
+## Extractor setup
+imageExtractor = namedInstanceAdd
+imageExtractor.param.1 = messif.objects.extraction.Extractors.createExternalExtractor(<dataclass>, p:/share/tools/extractors/dump-shape-color-stdin.exe)
+
+imageMultiExtractor = namedInstanceAdd
+imageMultiExtractor.param.1 = messif.objects.extraction.Extractors.createExternalMultiExtractor(<dataclass>, p:/share/tools/extractors/dump-shape-color-stdin.exe, false, null, null)
+
+
+
+## Search context
+# can be tested with
+# curl -i -X POST localhost:8090/search --data-binary "@test-post-data.txt"
+context_httpSearch = httpAddContext
+context_httpSearch.param.1 = /search
+context_httpSearch.param.2 = httpSearch httpAnswer
+context_httpSearch.param.3 = queryObject=imageExtractor
+
+httpSearch = operationExecute
+httpSearch.param.1 = messif.operations.query.ApproxKNNQueryOperation
+httpSearch.param.2 = queryObject
+httpSearch.param.3 = <k!>
+httpSearch.param.4 = <approxlevel:12500>
+httpSearch.param.5 = ABS_OBJ_COUNT
+httpSearch.param.6 = -1
+
+httpAnswer = operationAnswer
+httpAnswer.param.1 = [{3},"{2}"]
+httpAnswer.param.2 = ,
+httpAnswer.description = [
+httpAnswer.descriptionAfter = ]
+
+
+## Insert context
+context_httpInsert = httpAddContext
+context_httpInsert.param.1 = /insert
+context_httpInsert.param.2 = httpInsert
+context_httpInsert.param.3 = insertObject=imageExtractor
+
+httpInsert = operationExecute
+httpInsert.param.1 = messif.operations.data.InsertOperation
+httpInsert.param.2 = insertObject
+httpInsert.descriptionAfter = Operation executed successfully
+
+
+## Bulk insert context
+context_httpMultiInsert = httpAddContext
+context_httpMultiInsert.param.1 = /bulkInsert
+context_httpMultiInsert.param.2 = httpMultiInsert
+context_httpMultiInsert.param.3 = insertObjects=imageMultiExtractor
+
+httpMultiInsert = operationExecute
+httpMultiInsert.param.1 = messif.operations.data.BulkInsertOperation
+httpMultiInsert.param.2 = insertObjects
+httpMultiInsert.descriptionAfter = Operation executed successfully
+
+
+## Remove context
+context_httpRemove = httpAddContext
+context_httpRemove.param.1 = /remove
+context_httpRemove.param.2 = httpRemove
+context_httpRemove.param.3 = removeObject=imageExtractor
+
+httpRemove = operationExecute
+httpRemove.param.1 = messif.operations.data.DeleteOperation
+httpRemove.param.2 = removeObject
+httpRemove.descriptionAfter = Operation executed successfully
+
+
+###### Algorithm setup ######
+
+startAlgorithm = alg
+
+alg = algorithmStart
+alg.param.1 = messif.algorithms.impl.SequentialScan
+
+
+###### Data insertion ######
+
+insertData = data dataTextConvertor bulkinsert
+insertData.descriptionAfter = Done inserting data
+
+data = objectStreamOpen
+data.param.1 = <datafile>
+data.param.2 = <dataclass>
+data.param.3 = data
+
+dataTextConvertor = objectStreamConvert
+dataTextConvertor.param.1 = data
+dataTextConvertor.param.2 = textConvertor
+
+bulkinsert = operationExecute
+bulkinsert.param.1 = messif.operations.data.BulkInsertOperation
+bulkinsert.param.2 = data
+bulkinsert.param.3 = <bulksize:1000>
+bulkinsert.descriptionAfter = Inserted <bulksize:1000> objects
+#bulkinsert.repeat = <bulkcount>
+bulkinsert.repeatUntilException = java.util.NoSuchElementException
+bulkinsert.param.4 = false

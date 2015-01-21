@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.ClosedChannelException;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
@@ -114,7 +115,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     /** The file with data */
     private final File file;
     /** The channel on the file with data */
-    private transient AsynchronousFileChannel fileChannel;
+    private transient volatile AsynchronousFileChannel fileChannel;
     /** The position in the file where this storage starts (the real data starts at startPosition + headerSize) */
     protected final long startPosition;
     /** The maximal length of the file */
@@ -131,6 +132,8 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     private transient BlockingDeque<SoftReference<AsynchronousFileChannelInputStream>> inputStreams;
     /** Stream for writing data */
     private transient AsynchronousFileChannelOutputStream outputStream;
+    /** Counter for number of accesses (reads or writes) of this storage */
+    private transient volatile int accessCounter;
     /** Flag whether the file is modified */
     private transient boolean modified;
     /** Flag whether the file is readonly */
@@ -196,20 +199,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
     @Override
     @SuppressWarnings("FinalizeNotProtected")
     public void finalize() throws Throwable {
-        if (modifiedThread != null) {
-            try {
-                Runtime.getRuntime().removeShutdownHook(modifiedThread);
-            } catch (IllegalStateException ignore) {
-            }
-            modifiedThread = null;
-        }
-        closeFileChannel();
+        closeFileChannelCheckReferences();
         super.finalize();
     }
 
     @Override
     public void destroy() throws Throwable {
-        if (closeFileChannel()) {
+        if (closeFileChannelCheckReferences()) {
             file.delete();
         }
     }
@@ -262,7 +258,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
         // Read the parameters
         File file = Convert.getParameterValue(parameters, "file", File.class, null);
-        Class[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
+        Class<?>[] cacheClasses = Convert.getParameterValue(parameters, "cacheClasses", Class[].class, null);
         int bufferSize = Convert.getParameterValue(parameters, "bufferSize", Integer.class, DEFAULT_BUFFER_SIZE);
         boolean directBuffer = Convert.getParameterValue(parameters, "directBuffer", Boolean.class, false);
         int asyncThreads = Convert.getParameterValue(parameters, "asyncThreads", Integer.class, DEFAULT_ASYNC_THREADS);
@@ -418,6 +414,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
             fileChannel.force(true);
             writeToFileChannel(fileChannel, buffer, position);
             modified = false;
+            if (modifiedThread != null) {
+                try {
+                    Runtime.getRuntime().removeShutdownHook(modifiedThread);
+                } catch (IllegalStateException ignore) {
+                }
+                modifiedThread = null;
+            }
         } else {
             modified = true;
 
@@ -425,10 +428,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
             if (modifiedThread == null) {
                 modifiedThread = new Thread() {
                     @Override
-                    @SuppressWarnings("FinalizeCalledExplicitly")
                     public void run() {
                         try {
-                            DiskStorage.this.finalize();
+                            closeFileChannelCheckReferences();
                         } catch (Throwable e) {
                             log.log(Level.WARNING, "Error during finalization: {0}", (Object)e);
                         }
@@ -610,6 +612,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
      * @throws IOException if something goes wrong when working with the filesystem
      */
     protected AsynchronousFileChannelInputStream openInputStream() throws IOException {
+        accessCounter++;
         if (log.isLoggable(Level.FINE)) {
             // Measure time
             long time = System.currentTimeMillis();
@@ -635,9 +638,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
      */
     protected AsynchronousFileChannelInputStream takeInputStream(long position) throws IOException {
         // Need to store all objects currently in the store buffer, so that they are visible to the input stream
-        if (outputStream != null && outputStream.isDirty()) {
-            outputStream.flush();
-        }
+        flushOutputStream();
 
         // Take one stream from the queue, wait if there are none
         AsynchronousFileChannelInputStream stream;
@@ -650,8 +651,11 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         // Set position and return the stream
         try {
             // If the stream is not initialized (due to the soft reference), prepare it
-            if (stream == null)
-                stream = openInputStream();
+            if (stream == null) {
+                stream = openInputStream(); // This will increment access counter, no need to do it again
+            } else {
+                accessCounter++;
+            }
 
             stream.setPosition(position);
             return stream;
@@ -670,15 +674,18 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
      * @see #takeInputStream(long)
      */
     protected void returnInputStream(AsynchronousFileChannelInputStream stream) {
-        inputStreams.offerFirst(new SoftReference<>(stream));
+        if (inputStreams != null) {
+            inputStreams.offerFirst(new SoftReference<>(stream));
+        }
     }
 
     /**
+     * Returns the currently opened output stream over the current file channel.
      * Opens the output stream over the current file channel.
      * Note that the storage's modification flag is set to <tt>true</tt>.
      * @throws IOException if something goes wrong when working with the filesystem
      */
-    protected synchronized void openOutputStream() throws IOException {
+    private synchronized void openOutputStream() throws IOException {
         // Set modified flag
         if (!modified)
             writeHeader(getFileChannel(), startPosition, 0);
@@ -686,6 +693,38 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         // Open output stream
         outputStream = new AsynchronousFileChannelOutputStream(Math.abs(bufferSize), bufferDirect, getFileChannel(), startPosition + headerSize, maximalLength);
         outputStream.setPosition(startPosition + headerSize + fileOccupation);
+    }
+
+    /**
+     * Returns the current output stream.
+     * New output stream is opened using the current file channel if necessary.
+     * @return the current output stream
+     * @throws IOException if there was an I/O error opening the output stream
+     */
+    private synchronized AsynchronousFileChannelOutputStream getOutputStream() throws IOException {
+        if (outputStream == null)
+            openOutputStream();
+        accessCounter++;
+        return outputStream;
+    }
+
+    /**
+     * Writes the current buffered output data to the file.
+     * @throws IOException if there was an I/O error flushing the output stream data
+     */
+    private void flushOutputStream() throws IOException {
+        AsynchronousFileChannelOutputStream outStream = outputStream; // Avoid synchronization
+        if (outStream == null || !outStream.isDirty())
+            return;
+
+        synchronized (this) {
+            if (outputStream != null && outputStream.isDirty()) {
+                for (SoftReference<?> inputStreamRef : inputStreams) {
+                    inputStreamRef.clear();
+                }
+                outputStream.flush();
+            }
+        }
     }
 
     /**
@@ -701,7 +740,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         synchronized (this) {
             if (fileChannel != null)
                 return fileChannel;
-            
+
             // If file does not exist before, it is auto-created by the RandomAccessFile constructor
             boolean fileExists = file.length() > startPosition;
 
@@ -726,6 +765,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
                 writeHeader(fileChannel, startPosition, FLAG_CLOSED);
             }
 
+            accessCounter = 0;
             return fileChannel;
         }
     }
@@ -737,18 +777,10 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
      *          to be sure the data are really written to disk
      * @throws IOException if there was an I/O error
      */
-    public void flush(boolean syncPhysical) throws IOException {
-        if (outputStream != null) {
-            if (outputStream.isDirty())
-                synchronized (this) {
-                    for (SoftReference<?> inputStreamRef : inputStreams) {
-                        inputStreamRef.clear();
-                    }
-                    outputStream.flush();
-                }
-            if (syncPhysical)
-                fileChannel.force(false); // If output stream is not null, the file channel is open
-        }
+    public synchronized void flush(boolean syncPhysical) throws IOException {
+        flushOutputStream();
+        if (syncPhysical && fileChannel != null)
+            fileChannel.force(false);
     }
 
     /**
@@ -757,22 +789,57 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
      * @return <tt>true</tt> if the file channel was closed
      * @throws IOException if there was a problem closing the file channel
      */
-    protected boolean closeFileChannel() throws IOException {
+    private synchronized boolean closeFileChannelCheckReferences() throws IOException {
         if (references <= 0) {
-            if (fileChannel == null)
-                return true;
-            if (modified) {
-                flush(true);
-                outputStream = null;
-                writeHeader(fileChannel, startPosition, FLAG_CLOSED);
-            }
-            fileChannel.close();
-            fileChannel = null;
+            closeFileChannel();
             return true;
         } else {
             references--;
             return false;
         }
+    }
+
+    /**
+     * Close the associated file channel.
+     * @throws IOException if there was a problem closing the file channel
+     */
+    private synchronized void closeFileChannel() throws IOException {
+        if (fileChannel == null)
+            return;
+
+        // Reset the file channel so that other operations will block inside synchronization on getFileChannel
+        AsynchronousFileChannel outChan = fileChannel;
+        fileChannel = null;
+
+        // Close the previous file
+        if (modified) {
+            flush(true);
+            writeHeader(outChan, startPosition, FLAG_CLOSED);
+        }
+        outputStream = null;
+        inputStreams = null;
+        outChan.close();
+    }
+
+
+    /**
+     * Release the resources associated with this storage.
+     * After this method is called, the storage still can read/write data but
+     * next access will be more expensive.
+     * @param resetAccessCounter flag whether to reset the access counter
+     * @return <tt>true</tt> if the close was successful and resources were released or
+     *      <tt>false</tt> if the current access count is higher than {@code maximalAccessCount}
+     * @throws IOException if there was a problem closing the file channel
+     */
+    public synchronized boolean softClose(boolean resetAccessCounter) throws IOException {
+        if (accessCounter > 0) {
+            if (resetAccessCounter)
+                accessCounter = 0;
+            return false;
+        }
+
+        closeFileChannel();
+        return true;
     }
 
 
@@ -790,7 +857,7 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
         this.readonly = !file.canWrite();
         if (readonly) {
-            System.out.println("cannot write to file " + file.toString());
+            log.log(Level.WARNING, "Cannot write to file {0}", file);
         }
         if (inputStreamCount <= 0) {
             try {
@@ -851,14 +918,13 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
         try {
             // Open output stream if not opened yet (this statement is never reached if the storage is readonly)
-            if (outputStream == null)
-                openOutputStream();
+            AsynchronousFileChannelOutputStream outStream = getOutputStream();
 
             // Remember address
-            LongAddress<T> address = new LongAddress<>(this, outputStream.getPosition());
+            LongAddress<T> address = new LongAddress<>(this, outStream.getPosition());
 
             // Write object
-            fileOccupation += serializator.write(outputStream, object);
+            fileOccupation += serializator.write(outStream, object);
 
             // Update internal counters
             objectCount++;
@@ -898,17 +964,16 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
 
         try {
             // Open output stream if not opened yet (this statement is never reached if the storage is readonly)
-            if (outputStream == null)
-                openOutputStream();
+            AsynchronousFileChannelOutputStream outStream = getOutputStream();
 
             // Remember position to be able to restore it after the write
-            long currentPosition = outputStream.getPosition();
+            long currentPosition = outStream.getPosition();
             try {
-                outputStream.setPosition(position);
+                outStream.setPosition(position);
                 // Write the negative object size to indicate deleted object
-                serializator.write(outputStream, -objectSize);
+                serializator.write(outStream, -objectSize);
             } finally {
-                outputStream.setPosition(currentPosition);
+                outStream.setPosition(currentPosition);
             }
 
             // Update internal counters
@@ -1121,6 +1186,9 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
                 lastObjectPosition = inputStream.getPosition();
                 return serializator.readObject(inputStream, storedObjectsClass);
             } catch (EOFException e) {
+                return null;
+            } catch (ClosedChannelException e) {
+                log.log(Level.INFO, "Search encountered closed file channel on file {0}", file.getAbsolutePath());
                 return null;
             } catch (IOException e) {
                 throw new StorageFailureException("Cannot read next object from disk storage: " + e, e);

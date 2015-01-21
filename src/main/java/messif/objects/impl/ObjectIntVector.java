@@ -192,6 +192,15 @@ public abstract class ObjectIntVector extends LocalAbstractObject implements Bin
         return this.data.clone();
     }
 
+    /**
+     * Returns the integer value of vector element at the given position {@code index}.
+     * @param index the position of the vector element
+     * @return the vector component
+     */
+    public int getVectorData(int index) {
+        return this.data[index];
+    }
+
     @Override
     public int getSize() {
         return this.data.length * Integer.SIZE / 8;
