@@ -28,7 +28,6 @@ import java.io.Reader;
 import java.lang.ref.Reference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -43,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import messif.utility.reflection.InstantiatorSignature;
+import messif.utility.reflection.NoSuchInstantiatorException;
 
 /**
  * Utility class that provides methods for type conversions and instantiation.
@@ -160,19 +161,16 @@ public abstract class Convert {
             // Method not found, but never mind, other conversions might be possible...
         }
 
-        // Try name of a static field
-        try {
-            int dotPos = string.lastIndexOf('.');
-            if (dotPos != -1) {
-                Field field = Class.forName(string.substring(0, dotPos)).getField(string.substring(dotPos + 1));
-                if (Modifier.isStatic(field.getModifiers()) && type.isAssignableFrom(field.getType()))
-                    return type.cast(field.get(null));
+        // try to instantiate contructor/method/field
+        if (string.lastIndexOf('.') != -1) {
+            try {
+                return type.cast(InstantiatorSignature.createInstanceWithStringArgs(string, type, (Map) namedInstances));
+            } catch (NoSuchInstantiatorException e) {
+            } catch (InvocationTargetException e) {
+                throw new InstantiationException(e.getCause().toString());
             }
-        } catch (ClassNotFoundException ignore) {
-        } catch (NoSuchFieldException ignore) {
-        } catch (IllegalAccessException ignore) {
         }
-
+        
         throw new InstantiationException("String '" + string + "' cannot be converted to '" + type.getName() + "'");
     }
 

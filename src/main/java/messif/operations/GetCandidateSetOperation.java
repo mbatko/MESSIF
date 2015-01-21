@@ -20,9 +20,7 @@ import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import messif.objects.AbstractObject;
-import messif.operations.AbstractOperation;
 import static messif.operations.OperationErrorCode.RESPONSE_RETURNED;
-import messif.operations.RankingSingleQueryOperation;
 
 /**
  * This operation encapsulates {@link RankingSingleQueryOperation} and returns a candidate set requested size for 
@@ -61,9 +59,19 @@ public class GetCandidateSetOperation extends AbstractOperation {
      */
     @AbstractOperation.OperationConstructor({"operation to get the CS for", "size of the CS"})
     public GetCandidateSetOperation(RankingSingleQueryOperation encapsulatedOperation, int candidateSetSize) {
+        this(encapsulatedOperation, candidateSetSize, new ArrayBlockingQueue<String>(candidateSetSize));
+    } 
+
+    /**
+     * Creates a new operation given a query operation and required size of candidate set.
+     * @param encapsulatedOperation encapsulated query operation
+     * @param candidateSetSize required size of candidate set
+     * @param candidateLocatorQueue queue to be used for storing the candidate locators
+     */
+    public GetCandidateSetOperation(RankingSingleQueryOperation encapsulatedOperation, int candidateSetSize, BlockingQueue<String> candidateLocatorQueue) {
         this.encapsulatedOperation = encapsulatedOperation;
         this.candidateSetSize = candidateSetSize;
-        this.candidateSetLocators = new ArrayBlockingQueue<>(candidateSetSize);
+        this.candidateSetLocators = candidateLocatorQueue;
     } 
     
     // ************************      Getters and setters     ***************************** //
