@@ -19,6 +19,8 @@ package messif.utility.reflection;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import messif.utility.Convert;
 
@@ -95,7 +97,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @param arguments the arguments for the constructor
      * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    private ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         this(getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments));
     }
 
@@ -165,7 +167,9 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * If the <code>convertStringArguments</code> is specified, the
      * <code>arguments</code> elements are replaced with the converted types
      * if and only if a proper constructor is found. Their types then will be
-     * compatible with the constructor.
+     * compatible with the constructor. WARNING: If the returned constructor
+     * is {@link Constructor#isVarArgs() varArgs}, the method {@link Instantiators#varargShrinkValues}
+     * MUST be called on the converted arguments array in order to produce valid results.
      *
      * @param <T> the class in which to search for the constructor
      * @param constructors the list of constructors to search
@@ -175,7 +179,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @return a constructor for the specified class
      * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
      */
-    public static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    private static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         if (constructors.length == 0)
             throw new NoSuchInstantiatorException("There are no constructors available");
         String error = null;
@@ -211,8 +215,36 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @return a constructor for the specified class
      * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
      */
-    public static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         return getConstructor(Convert.getConstructors(constructorClass, publicOnlyConstructors), convertStringArguments, namedInstances, arguments);
+    }
+
+    /**
+     * Returns a constructor for the specified class that accepts the specified arguments.
+     * The <code>constructorClass</code>'s declared constructors are searched for the one that
+     * accepts the arguments.
+     * If the <code>convertStringArguments</code> is specified, the
+     * <code>arguments</code> elements are replaced with the converted types
+     * if and only if a proper constructor is found. Their types then will be
+     * compatible with the constructor.
+     *
+     * @param <T> the class in which to search for the constructor
+     * @param constructorClass the class for which to get the constructor
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link Convert#stringToType}
+     * @param publicOnlyConstructors flag whether to search in all declared constructors (<tt>false</tt>) or only in public constructors (<tt>true</tt>)
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param arguments the arguments for the constructor
+     * @return a constructor for the specified class
+     * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
+     */
+    public static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, List<Object> arguments) throws NoSuchInstantiatorException {
+        Object[] args = arguments.toArray();
+        Constructor<T> ret = getConstructor(Convert.getConstructors(constructorClass, publicOnlyConstructors), convertStringArguments, namedInstances, args);
+        if (ret.isVarArgs())
+            args = Instantiators.varargShrinkValues(ret.getParameterTypes(), args);
+        arguments.clear();
+        arguments.addAll(Arrays.asList(args));
+        return ret;
     }
 
     /**
@@ -300,6 +332,8 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
     @Override
     public T instantiate(Object... arguments) throws IllegalArgumentException, InvocationTargetException {
         try {
+            if (constructor.isVarArgs())
+                arguments = Instantiators.varargShrinkValues(constructor.getParameterTypes(), arguments);
             return constructor.newInstance(arguments);
         } catch (InstantiationException e) {
             throw new InternalError("Cannot call " + constructor + ": " + e); // This should never happen - the class is not abstract

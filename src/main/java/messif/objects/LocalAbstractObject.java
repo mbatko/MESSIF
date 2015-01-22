@@ -27,6 +27,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import messif.objects.keys.AbstractObjectKey;
 import messif.objects.nio.BinaryInput;
@@ -747,10 +750,11 @@ public abstract class LocalAbstractObject extends AbstractObject {
                     arguments = null;
                     constructor = ConstructorInstantiator.getConstructor(objectClass, true, BufferedReader.class);
                 } else {
-                    arguments = new Object[1 + additionalArguments.length];
-                    arguments[0] = new BufferedReader(new StringReader(""));
-                    System.arraycopy(additionalArguments, 0, arguments, 1, additionalArguments.length);
-                    constructor = ConstructorInstantiator.getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments);
+                    List<Object> args = new ArrayList<Object>(1 + additionalArguments.length);
+                    args.add(new BufferedReader(new StringReader("")));
+                    args.addAll(Arrays.asList(additionalArguments));
+                    constructor = ConstructorInstantiator.getConstructor(objectClass, convertStringArguments, true, namedInstances, args);
+                    arguments = args.toArray();
                 }
             } catch (NoSuchInstantiatorException e) {
                 throw new IllegalArgumentException("Cannot get text stream constructor for " + objectClass + ": " + e);
