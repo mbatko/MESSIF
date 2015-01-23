@@ -97,7 +97,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @param arguments the arguments for the constructor
      * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    protected ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    public ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         this(getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments));
     }
 
