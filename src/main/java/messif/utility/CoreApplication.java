@@ -2522,7 +2522,7 @@ public class CoreApplication {
         Object[] objArgs = new Object[args.length - 4];
         System.arraycopy(args, 4, objArgs, 0, objArgs.length);
         try {
-            Object instance = new ConstructorInstantiator<Object>(instanceClass, true, getExtendedNamedInstances("lastOperation", getLastOperation(), true), objArgs).instantiate(objArgs);
+            Object instance = ConstructorInstantiator.instantiateByConstructor(instanceClass, true, getExtendedNamedInstances("lastOperation", getLastOperation(), true), objArgs);
             namedInstances.put(args[1], instance);
             return true;
         } catch (NoSuchInstantiatorException e) {

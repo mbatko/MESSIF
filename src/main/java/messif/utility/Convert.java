@@ -164,7 +164,7 @@ public abstract class Convert {
         // try to instantiate contructor/method/field
         if (string.lastIndexOf('.') != -1) {
             try {
-                return type.cast(InstantiatorSignature.createInstanceWithStringArgs(string, type, (Map) namedInstances));
+                return InstantiatorSignature.createInstanceWithStringArgs(string, type, namedInstances);
             } catch (NoSuchInstantiatorException e) {
             } catch (InvocationTargetException e) {
                 throw new InstantiationException(e.getCause().toString());

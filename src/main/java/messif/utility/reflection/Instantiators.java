@@ -173,7 +173,7 @@ public abstract class Instantiators {
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      * @return <tt>null</tt> if the arguments are compatible with the prototype or a textual error why the match was not found
      */
-    public static String isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments, Map<String, Object> namedInstances) {
+    public static String isPrototypeMatching(Class<?>[] prototype, Object[] arguments, boolean convertStringArguments, Map<String, ?> namedInstances) {
         // Not enough arguments
         if (prototype.length != arguments.length)
             return "Wrong number of arguments";

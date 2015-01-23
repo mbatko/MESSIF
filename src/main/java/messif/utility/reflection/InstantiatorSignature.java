@@ -43,7 +43,7 @@ public class InstantiatorSignature {
      * @param signature a fully specified constructor/method/field signature
      * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
      */
-    public InstantiatorSignature(String signature, Map<String, Object> namedInstances) {
+    public InstantiatorSignature(String signature, Map<String, ?> namedInstances) {
         // Find left parenthesis
         int leftParenthesis = signature.indexOf('(');
         Class<?> constructorClass = null;
@@ -175,7 +175,7 @@ public class InstantiatorSignature {
      * @throws NoSuchInstantiatorException if the instantiator cannot be created
      * @throws InvocationTargetException if there was an exception during instantiation
      */
-    public <T> T create(Class<? extends T> checkClass, Map<String, Object> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
+    public <T> T create(Class<? extends T> checkClass, Map<String, ?> namedInstances) throws NoSuchInstantiatorException, InvocationTargetException {
         if (isFieldSignature()) {
             if (instance == null)
                 return new FieldInstantiator<T>(checkClass, objectClass, name).instantiate();
@@ -250,7 +250,7 @@ public class InstantiatorSignature {
      *              there was an error during instantiation
      * @throws NoSuchInstantiatorException if the class in the constructor signature was not found or is not a descendant of checkClass
      */
-    public static <E> E createInstanceWithStringArgs(String signature, Class<E> checkClass, Map<String, Object> namedInstances) throws InvocationTargetException, NoSuchInstantiatorException {
+    public static <E> E createInstanceWithStringArgs(String signature, Class<E> checkClass, Map<String, ?> namedInstances) throws InvocationTargetException, NoSuchInstantiatorException {
         return new InstantiatorSignature(signature, namedInstances).create(checkClass, namedInstances);
     }
 }

@@ -97,7 +97,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @param arguments the arguments for the constructor
      * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    private ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    protected ConstructorInstantiator(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         this(getConstructor(objectClass, convertStringArguments, true, namedInstances, arguments));
     }
 
@@ -109,7 +109,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @param arguments the arguments for the constructor
      * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
      */
-    public ConstructorInstantiator(Class<? extends T> objectClass, Object... arguments) throws NoSuchInstantiatorException {
+    public ConstructorInstantiator(Class<? extends T> objectClass, Object[] arguments) throws NoSuchInstantiatorException {
         this(objectClass, false, null, arguments);
     }
 
@@ -179,7 +179,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @return a constructor for the specified class
      * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
      */
-    private static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    private static <T> Constructor<T> getConstructor(Constructor<T>[] constructors, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         if (constructors.length == 0)
             throw new NoSuchInstantiatorException("There are no constructors available");
         String error = null;
@@ -215,7 +215,7 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
      * @return a constructor for the specified class
      * @throws NoSuchInstantiatorException if there was no constructor for the specified list of arguments
      */
-    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    private static <T> Constructor<T> getConstructor(Class<T> constructorClass, boolean convertStringArguments, boolean publicOnlyConstructors, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         return getConstructor(Convert.getConstructors(constructorClass, publicOnlyConstructors), convertStringArguments, namedInstances, arguments);
     }
 
@@ -318,6 +318,21 @@ public class ConstructorInstantiator<T> implements Instantiator<T> {
 
 
     //****************** Instantiation support ******************//
+
+    /**
+     * Creates a new instance using a constructor from the given class that matches the arguments.
+     * @param objectClass the class the instances of which will be created
+     * @param convertStringArguments if <tt>true</tt> the string values from the arguments are converted using {@link messif.utility.Convert#stringToType}
+     * @param namedInstances map of named instances - an instance from this map is returned if the <code>string</code> matches a key in the map
+     * @param arguments the arguments for the constructor
+     * @return the new instance
+     * @throws NoSuchInstantiatorException if the provided class does not have a proper constructor
+     * @throws IllegalArgumentException if the arguments are not compatible with the constructor prototype
+     * @throws InvocationTargetException if there was an exception thrown when the constructor was invoked
+     */
+    public static <T> T instantiateByConstructor(Class<? extends T> objectClass, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException, IllegalArgumentException, InvocationTargetException {
+        return new ConstructorInstantiator<T>(objectClass, convertStringArguments, namedInstances, arguments).instantiate(arguments);
+    }
 
     /**
      * Creates a new instance using the encapsulated constructor.

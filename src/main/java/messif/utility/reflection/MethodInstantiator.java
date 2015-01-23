@@ -119,7 +119,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the there is no method for the given name and number of arguments or
      *          if such method is not static or does not return the given objectClass
      */
-    public MethodInstantiator(Class<? extends T> checkClass, Class<?> methodClass, String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    public MethodInstantiator(Class<? extends T> checkClass, Class<?> methodClass, String methodName, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         this(checkClass, getMethod(methodClass, methodName, convertStringArguments, true, namedInstances, arguments), null);
     }
 
@@ -139,7 +139,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the there is no method for the given name and number of arguments or
      *          if such method is not static or does not return the given objectClass
      */
-    public MethodInstantiator(Class<? extends T> checkClass, Object callInstance, String methodName, boolean convertStringArguments, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    public MethodInstantiator(Class<? extends T> checkClass, Object callInstance, String methodName, boolean convertStringArguments, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         this(checkClass, getMethod(callInstance.getClass(), methodName, convertStringArguments, true, namedInstances, arguments), callInstance);
     }
 
@@ -212,9 +212,10 @@ public class MethodInstantiator<T> implements Instantiator<T> {
         Class<?> currentClass = methodClass;
         do {
             Method[] methods = publicOnlyMethods ? currentClass.getMethods() : currentClass.getDeclaredMethods();
-            for (int i = 0; i < methods.length; i++)
-                if (name.equals(methods[i].getName()) && methods[i].getParameterTypes().length == argumentCount)
-                    return methods[i];
+            for (Method method : methods) {
+                if (name.equals(method.getName()) && method.getParameterTypes().length == argumentCount)
+                    return method;
+            }
             currentClass = currentClass.getSuperclass();
         } while (!publicOnlyMethods && currentClass != null);
         throw new NoSuchInstantiatorException(methodClass, name, argumentCount);
@@ -231,14 +232,15 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @return the method found
      * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
      */
-    public static Method getMethod(Class<?> methodClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, Object> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
+    public static Method getMethod(Class<?> methodClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, ?> namedInstances, Object[] arguments) throws NoSuchInstantiatorException {
         Class<?> currentClass = methodClass;
         String error = null;
         do {
             Method[] methods = publicOnlyMethods ? currentClass.getMethods() : currentClass.getDeclaredMethods();
-            for (int i = 0; i < methods.length; i++)
-                if (name.equals(methods[i].getName()) && (error = Instantiators.isPrototypeMatching(methods[i].getParameterTypes(), arguments, convertStringArguments, namedInstances)) == null)
-                    return methods[i];
+            for (Method method : methods) {
+                if (name.equals(method.getName()) && (error = Instantiators.isPrototypeMatching(method.getParameterTypes(), arguments, convertStringArguments, namedInstances)) == null)
+                    return method;
+            }
             currentClass = currentClass.getSuperclass();
         } while (!publicOnlyMethods && currentClass != null);
         throw new NoSuchInstantiatorException(methodClass, name, convertStringArguments, arguments, error);
@@ -256,7 +258,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
      * @throws InvocationTargetException if there was an exception when calling the constructor
      */
-    public static Object callMethod(Object methodInstanceOrClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, Object> namedInstances, Object... arguments) throws NoSuchInstantiatorException, InvocationTargetException {
+    public static Object callMethod(Object methodInstanceOrClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, ?> namedInstances, Object... arguments) throws NoSuchInstantiatorException, InvocationTargetException {
         // Convert method instance from string using named instances
         if (convertStringArguments && methodInstanceOrClass instanceof String && namedInstances != null)
             methodInstanceOrClass = namedInstances.get((String)methodInstanceOrClass);
@@ -298,7 +300,7 @@ public class MethodInstantiator<T> implements Instantiator<T> {
      * @throws NoSuchInstantiatorException if the there is no method for the given name and prototype
      * @throws InvocationTargetException if there was an exception when calling the constructor
      */
-    public static <T> T callFactoryMethod(Class<? extends T> factoryClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, Object> namedInstances, Object... arguments) throws NoSuchInstantiatorException, InvocationTargetException {
+    public static <T> T callFactoryMethod(Class<? extends T> factoryClass, String name, boolean convertStringArguments, boolean publicOnlyMethods, Map<String, ?> namedInstances, Object... arguments) throws NoSuchInstantiatorException, InvocationTargetException {
         return factoryClass.cast(callMethod(factoryClass, name, convertStringArguments, publicOnlyMethods, namedInstances, arguments));
     }
 
