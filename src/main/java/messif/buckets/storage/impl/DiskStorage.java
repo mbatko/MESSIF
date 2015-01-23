@@ -49,6 +49,7 @@ import java.util.logging.Logger;
 import messif.buckets.BucketStorageException;
 import messif.buckets.CapacityFullException;
 import messif.buckets.StorageFailureException;
+import messif.buckets.TemporaryCloseable;
 import messif.buckets.index.IndexComparator;
 import messif.buckets.index.impl.AbstractSearch;
 import messif.buckets.storage.LongAddress;
@@ -74,7 +75,7 @@ import messif.utility.Convert;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
+public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable, TemporaryCloseable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 1L;
 
@@ -821,17 +822,8 @@ public class DiskStorage<T> implements LongStorageIndexed<T>, Serializable {
         outChan.close();
     }
 
-
-    /**
-     * Release the resources associated with this storage.
-     * After this method is called, the storage still can read/write data but
-     * next access will be more expensive.
-     * @param resetAccessCounter flag whether to reset the access counter
-     * @return <tt>true</tt> if the close was successful and resources were released or
-     *      <tt>false</tt> if the current access count is higher than {@code maximalAccessCount}
-     * @throws IOException if there was a problem closing the file channel
-     */
-    public synchronized boolean softClose(boolean resetAccessCounter) throws IOException {
+    @Override
+    public synchronized boolean closeTemporarilyIfIdle(boolean resetAccessCounter) throws IOException {
         if (accessCounter > 0) {
             if (resetAccessCounter)
                 accessCounter = 0;

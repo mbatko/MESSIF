@@ -16,6 +16,7 @@
  */
 package messif.buckets;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -53,12 +54,12 @@ import messif.pivotselection.AbstractPivotChooser;
  * @author Vlastislav Dohnal, Masaryk University, Brno, Czech Republic, dohnal@fi.muni.cz
  * @author David Novak, Masaryk University, Brno, Czech Republic, david.novak@fi.muni.cz
  */
-public class BucketDispatcher implements Serializable {
+public class BucketDispatcher implements Serializable, TemporaryCloseable {
     /** class serial id for serialization */
     private static final long serialVersionUID = 2L;
 
     /** Logger for the bucket dispatcher */
-    protected static Logger log = Logger.getLogger(BucketDispatcher.class.getName());
+    protected static final Logger log = Logger.getLogger(BucketDispatcher.class.getName());
 
 
     //****************** Bucket dispatcher data ******************//
@@ -76,22 +77,22 @@ public class BucketDispatcher implements Serializable {
     public static final int UNASSIGNED_BUCKET_ID = 0;
 
     /** Default bucket hard capacity for newly created buckets */
-    protected long bucketCapacity;
+    private long bucketCapacity;
 
     /** Default bucket soft capacity for newly created buckets */
-    protected long bucketSoftCapacity;
+    private long bucketSoftCapacity;
 
     /** Default bucket hard low-occupation for newly created buckets */
-    protected long bucketLowOccupation;
+    private long bucketLowOccupation;
 
     /** Default flag whether to store occupation & capacity in bytes (<tt>true</tt>) or number of objects (<tt>false</tt>) for newly created buckets */
-    protected boolean bucketOccupationAsBytes;
+    private boolean bucketOccupationAsBytes;
 
     /** Default class for newly created buckets */
-    protected Class<? extends LocalBucket> defaultBucketClass;
+    private Class<? extends LocalBucket> defaultBucketClass;
 
     /** Default parameters for newly created buckets with default bucket class */
-    protected Map<String, Object> defaultBucketClassParams;
+    private Map<String, Object> defaultBucketClassParams;
 
 
     //****************** Constructors ******************//
@@ -150,6 +151,7 @@ public class BucketDispatcher implements Serializable {
      * @throws Throwable if there was an error during releasing resources
      */
     @Override
+    @SuppressWarnings({"FinalizeNotProtected", "FinalizeCalledExplicitly"})
     public void finalize() throws Throwable {
         Throwable posponedThrowable = null;
         for (LocalBucket bucket : getAllBuckets())
@@ -183,13 +185,13 @@ public class BucketDispatcher implements Serializable {
     //****************** Automatic pivot choosers ******************//
 
     /** The class of pivot chooser that is automatically created for newly created buckets */
-    protected Class<? extends AbstractPivotChooser> autoPivotChooserClass = null;
+    private Class<? extends AbstractPivotChooser> autoPivotChooserClass = null;
 
     /** The pivot chooser instance that chooses pivots for all the buckets in this dispatcher */
-    protected AbstractPivotChooser autoPivotChooserInstance = null;
+    private AbstractPivotChooser autoPivotChooserInstance = null;
 
     /** The hash table of pivot choosers that are assigned to buckets of this dispatcher */
-    protected final Map<LocalBucket, AbstractPivotChooser> createdPivotChoosers = Collections.synchronizedMap(new HashMap<LocalBucket, AbstractPivotChooser>());
+    private final Map<LocalBucket, AbstractPivotChooser> createdPivotChoosers = Collections.synchronizedMap(new HashMap<LocalBucket, AbstractPivotChooser>());
 
     /**
      * Returns pivot chooser that was automatically created for a bucket of this dispatcher.
@@ -255,7 +257,7 @@ public class BucketDispatcher implements Serializable {
      * return it for the bucket.
      *
      * @param bucket the bucket for which to create pivot chooser
-     * @return the newly created pivot chooser or the whole dispatcher's pivot chooser instance; <tt>null</tt> is returned
+     * @return the newly created pivot chooser or the whole dispatcher pivot chooser instance; <tt>null</tt> is returned
      *         if either the class/instance of autoPivotChooser is not specified in this dispatcher or there was an error creating
      *         a new pivot chooser
      */
@@ -269,7 +271,7 @@ public class BucketDispatcher implements Serializable {
                     // Constructor with bucket parameter not found, try no-param constructor
                     rtv = autoPivotChooserClass.newInstance();
                 } catch (Exception e) {
-                    log.warning("Can't create automatic pivot chooser " + autoPivotChooserClass.toString() + ": " + e.toString());
+                    log.log(Level.WARNING, "Can''t create automatic pivot chooser {0}: {1}", new Object[]{autoPivotChooserClass.toString(), e.toString()});
                     return null;
                 }
             } else if (autoPivotChooserInstance != null) {
@@ -303,7 +305,7 @@ public class BucketDispatcher implements Serializable {
     }
 
     /**
-     * Set param "low occupeation" for all new buckets
+     * Set parameter "low occupation" for all new buckets
      * @param bucketLowOccupation new low occupation.
      */
     public void setBucketLowOccupation(long bucketLowOccupation) {
@@ -311,8 +313,8 @@ public class BucketDispatcher implements Serializable {
     }
 
     /**
-     * Set param {@link #bucketOccupationAsBytes} for all new buckets.
-     * @param bucketOccupationAsBytes new value for param {@link #bucketOccupationAsBytes}.
+     * Set parameter {@link #bucketOccupationAsBytes} for all new buckets.
+     * @param bucketOccupationAsBytes new value for parameter {@link #bucketOccupationAsBytes}.
      */
     public void setBucketOccupationAsBytes(boolean bucketOccupationAsBytes) {
         this.bucketOccupationAsBytes = bucketOccupationAsBytes;
@@ -320,7 +322,7 @@ public class BucketDispatcher implements Serializable {
 
     /**
      * Set new soft capacity for all new buckets.
-     * @param bucketSoftCapacity new soft capacity param
+     * @param bucketSoftCapacity new soft capacity parameter
      */
     public void setBucketSoftCapacity(long bucketSoftCapacity) {
         this.bucketSoftCapacity = bucketSoftCapacity;
@@ -336,10 +338,10 @@ public class BucketDispatcher implements Serializable {
 
     /**
      * New parameters for all new default buckets
-     * @param defaultBucketClassParams new params for default buckets
+     * @param defaultBucketClassParams new parameters for default buckets
      */
     public void setDefaultBucketClassParams(Map<String, Object> defaultBucketClassParams) {
-        this.defaultBucketClassParams = defaultBucketClassParams;
+        this.defaultBucketClassParams = new HashMap<String, Object>(defaultBucketClassParams);
     }
 
     /**
@@ -353,7 +355,7 @@ public class BucketDispatcher implements Serializable {
     }
 
     /**
-     * Set the low occupattion for all buckets registered by this dispatcher.
+     * Set the low occupation for all buckets registered by this dispatcher.
      * @param bucketLowOccupation new low occupation.
      */
     public void setAllBucketLowOccupation(long bucketLowOccupation) {
@@ -364,6 +366,14 @@ public class BucketDispatcher implements Serializable {
 
 
     //****************** Info Methods *******************//
+
+    /**
+     * Returns the maximal number of buckets maintained by this dispatcher.
+     * @return the maximal number of buckets maintained by this dispatcher
+     */
+    public int getMaxBuckets() {
+        return maxBuckets;
+    }
 
     /**
      * Returns the default hard capactity limit for new buckets.
@@ -461,8 +471,8 @@ public class BucketDispatcher implements Serializable {
     //****************** Bucket access ******************//
 
     /**
-     * Returns the set of bucket IDs maintaned by this dispatcher.
-     * @return the set of bucket IDs maintaned by this dispatcher
+     * Returns the set of bucket IDs maintained by this dispatcher.
+     * @return the set of bucket IDs maintained by this dispatcher
      */
     public synchronized Set<Integer> getAllBucketIDs() {      
         return Collections.unmodifiableSet(buckets.keySet());
@@ -489,6 +499,49 @@ public class BucketDispatcher implements Serializable {
             throw new NoSuchElementException("Bucket ID " + bucketID + " doesn't exist.");
         
         return rtv;
+    }
+
+
+    //****************** Autoclosing disk buckets ******************//
+
+    /** Internal thread used for periodical check for temporarily-closeable buckets */
+    private TemporaryCloseableThread closeTeporarilyThread;
+
+    @Override
+    public boolean closeTemporarilyIfIdle(boolean resetAccessCounter) throws IOException {
+        boolean ret = false;
+        for (LocalBucket bucket : buckets.values()) {
+            if (bucket instanceof TemporaryCloseable) {
+                if (((TemporaryCloseable)bucket).closeTemporarilyIfIdle(resetAccessCounter))
+                    ret = true;
+            } else if (bucket.getModifiableIndex() instanceof TemporaryCloseable) {
+                if (((TemporaryCloseable)bucket.getModifiableIndex()).closeTemporarilyIfIdle(resetAccessCounter))
+                    ret = true;
+            }
+        }
+        return ret;
+    }
+
+    /**
+     * Update the period of the automatic temporary-closeable checking of the buckets.
+     * @param period the new checking period in milliseconds;
+     *          zero value means disable the checking
+     */
+    public void setTemporaryClosePeriod(long period) {
+        if (period <= 0) {
+            if (closeTeporarilyThread != null) {
+                closeTeporarilyThread.interrupt();
+                closeTeporarilyThread = null;
+            }
+        } else {
+            if (closeTeporarilyThread != null) {
+                closeTeporarilyThread.setPeriod(period);
+            } else {
+                closeTeporarilyThread = new TemporaryCloseableThread(period);
+                closeTeporarilyThread.add(this);
+                closeTeporarilyThread.start();
+            }
+        }
     }
 
 
@@ -533,13 +586,13 @@ public class BucketDispatcher implements Serializable {
                          );
             }
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Storage " + storageClass + " lacks proper constructor: " + e.getMessage());
+            throw new IllegalArgumentException("Storage " + storageClass + " lacks proper constructor: " + e.getMessage(), e);
         } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException("Storage " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage());
+            throw new IllegalArgumentException("Storage " + storageClass + " constructor with capacity is unaccesible: " + e.getMessage(), e);
         } catch (InstantiationException e) {
-            throw new IllegalArgumentException("Storage " + storageClass + " cannot be created because it is an abstract class");
+            throw new IllegalArgumentException("Storage " + storageClass + " cannot be created because it is an abstract class", e);
         } catch (InvocationTargetException e) {
-            throw new IllegalArgumentException("Storage " + storageClass + " constructor invocation failed: " + e.getCause());
+            throw new IllegalArgumentException("Storage " + storageClass + " constructor invocation failed: " + e.getCause(), e.getCause());
         }
     }
 
@@ -717,7 +770,7 @@ public class BucketDispatcher implements Serializable {
     public LocalBucket moveBucket(int bucketID, BucketDispatcher targetDispatcher) throws NoSuchElementException, BucketStorageException {
         LocalBucket bucket;
         synchronized (targetDispatcher) {
-            if (targetDispatcher.getBucketCount() >= targetDispatcher.maxBuckets)
+            if (targetDispatcher.getBucketCount() >= targetDispatcher.getMaxBuckets())
                 throw new CapacityFullException();
             bucket = removeBucket(bucketID, false);
         }
