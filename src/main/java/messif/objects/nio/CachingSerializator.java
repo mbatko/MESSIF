@@ -78,7 +78,7 @@ public class CachingSerializator<T> extends MultiClassSerializator<T> {
      * @param cachedClasses the classes that are used frequently and should be cached
      * @throws IllegalArgumentException if there is an invalid value in <code>cachedClasses</code>
      */
-    public CachingSerializator(Class<? extends T> defaultClass, Class... cachedClasses) throws IllegalArgumentException {
+    public CachingSerializator(Class<? extends T> defaultClass, Class<?>[] cachedClasses) throws IllegalArgumentException {
         super(defaultClass);
 
         if (cachedClasses == null || cachedClasses.length == 0)

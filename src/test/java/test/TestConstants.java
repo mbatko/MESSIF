@@ -112,8 +112,9 @@ public class TestConstants {
 
     public static BinarySerializator createSerializator() {
         return new CachingSerializator<LocalAbstractObject>(
-                LocalAbstractObject.class, AbstractObjectKey.class, ObjectIntVectorL1.class,
-                PrecomputedDistancesFixedArrayFilter.class
+                LocalAbstractObject.class,
+                new Class<?>[] { AbstractObjectKey.class, ObjectIntVectorL1.class,
+                PrecomputedDistancesFixedArrayFilter.class}
         );
 //        return new CachingSerializator<LocalAbstractObject>(
 //                LocalAbstractObject.class, AbstractObjectKey.class, MetaObjectSAPIRWeightedDist2.class,
